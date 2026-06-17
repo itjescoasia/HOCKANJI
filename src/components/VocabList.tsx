@@ -26,7 +26,11 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
       Reading: d.reading,
       Meaning: d.meaning
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
+    
+    const ws = data.length > 0 
+      ? XLSX.utils.json_to_sheet(data) 
+      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Meaning"] });
+      
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Vocab");
     XLSX.writeFile(wb, "KanjiFlow_Vocab.xlsx");
