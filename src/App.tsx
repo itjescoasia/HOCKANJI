@@ -1,17 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import Dashboard from './components/Dashboard';
 import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
 import ReviewSession from './components/ReviewSession';
-import { BookMarked, Home, PlusCircle } from 'lucide-react';
+import Login from './components/Login';
+import { BookMarked, Home, PlusCircle, LogOut } from 'lucide-react';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 export default function App() {
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const { deck, addCard, removeCard, reviewCard, getDueCards, isLoaded } = useVocabDeck();
   const [view, setView] = useState<ViewState>('dashboard');
 
-  if (!isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
+  if (authLoading || !isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
+
+  if (!user) {
+    return <Login />;
+  }
 
   const dueCards = getDueCards();
 
@@ -51,6 +69,14 @@ export default function App() {
                 <span className="hidden sm:inline tracking-widest uppercase text-[10px] sm:text-[11px]">{item.label}</span>
               </button>
             ))}
+
+            <button
+              onClick={() => signOut(auth)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-[#d4d4d4]/60 hover:text-red-500 hover:bg-[#1a1a1a]"
+              title="Đăng xuất"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </nav>
         </div>
       </header>
