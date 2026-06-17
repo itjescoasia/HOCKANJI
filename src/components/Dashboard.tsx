@@ -83,7 +83,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
           <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Mức độ ghi nhớ</h3>
           <div className="h-[250px] w-full flex-1 relative">
             {deck.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={progressData}
@@ -125,7 +125,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
           <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Dự báo ôn tập (7 ngày)</h3>
           <div className="h-[250px] w-full flex-1 mt-6 relative">
             {deck.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={forecastData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
                   <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />

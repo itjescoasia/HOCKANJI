@@ -75,10 +75,10 @@ export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSes
           >
             {/* Front */}
             <div 
-              className={`absolute inset-0 flex items-center justify-center bg-[#121212] ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              className={`absolute inset-0 flex items-center justify-center bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <h1 className="text-[140px] sm:text-[180px] font-serif text-white leading-none tracking-tighter" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h1>
+              <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h1>
             </div>
 
             {/* Back */}
@@ -86,16 +86,16 @@ export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSes
               className={`absolute inset-0 flex flex-col items-center justify-center bg-[#121212] ${!showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
-              <div className="text-center space-y-4 sm:space-y-6 px-4 w-full">
-                <p className="text-2xl sm:text-3xl font-serif text-[#c5a059] italic mb-2 tracking-wide">{currentCard.reading}</p>
-                <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-4"></div>
-                <h2 className="text-3xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words">{currentCard.meaning}</h2>
+              <div className="absolute inset-0 overflow-y-auto flex flex-col items-center justify-center p-6 pb-12 sm:p-8 space-y-4 sm:space-y-6">
+                <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic mb-2 tracking-wide">{currentCard.reading}</p>
+                <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-2 sm:my-4 flex-shrink-0"></div>
+                <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
               </div>
               
-              <div className="absolute bottom-6 right-6 flex items-center gap-2 opacity-30">
-                <span className="text-[10px] tracking-widest uppercase">Độ Khó: {currentCard.easeFactor.toFixed(2)}</span>
+              <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 flex items-center gap-2 opacity-30 bg-[#121212] px-2">
+                <span className="text-[9px] sm:text-[10px] tracking-widest uppercase">Độ Khó: {currentCard.easeFactor.toFixed(2)}</span>
                 <span>|</span>
-                <span className="text-[10px] tracking-widest uppercase italic font-serif">Chu Kỳ: {currentCard.interval} ngày</span>
+                <span className="text-[9px] sm:text-[10px] tracking-widest uppercase italic font-serif">Chu Kỳ: {currentCard.interval} ngày</span>
               </div>
             </div>
           </motion.div>
