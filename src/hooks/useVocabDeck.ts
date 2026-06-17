@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { calculateNextReview } from '../lib/sm2';
 import { db, auth } from '../lib/firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 
 export function useVocabDeck() {
   const [deck, setDeck] = useState<KanjiCard[]>([]);
@@ -133,5 +133,55 @@ export function useVocabDeck() {
     return deck.filter(card => card.nextReviewDate <= now);
   };
 
-  return { deck, addCard, removeCard, reviewCard, getDueCards, isLoaded };
+  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string }[]) => {
+    // Check duplicates
+    const existingKanji = new Set(deck.map(c => c.kanji));
+    const newCardsToIterate = importedCards.filter(c => !existingKanji.has(c.kanji));
+    
+    // De-duplicate within the imported cards themselves
+    const uniqueImported = new Map<string, any>();
+    for (const c of newCardsToIterate) {
+        if (!uniqueImported.has(c.kanji)) {
+            uniqueImported.set(c.kanji, c);
+        }
+    }
+    const finalNewCards = Array.from(uniqueImported.values());
+    if (finalNewCards.length === 0) return 0; // Nothing to import
+
+    const cardsToAdd: KanjiCard[] = finalNewCards.map(c => ({
+      id: crypto.randomUUID(),
+      kanji: c.kanji,
+      reading: c.reading || '',
+      meaning: c.meaning || '',
+      interval: 0,
+      repetition: 0,
+      easeFactor: 2.5,
+      nextReviewDate: Date.now(),
+      createdAt: Date.now()
+    }));
+
+    if (auth.currentUser) {
+        try {
+            // Firestore transactions or batches have a limit of 500 operations per batch
+            for (let i = 0; i < cardsToAdd.length; i += 400) {
+                const batch = writeBatch(db);
+                const chunk = cardsToAdd.slice(i, i + 400);
+                for (const card of chunk) {
+                    const cardRef = doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', card.id);
+                    batch.set(cardRef, card);
+                }
+                await batch.commit();
+            }
+        } catch (err) {
+             console.error("Error batch importing cards:", err);
+             throw err; // Re-throw to handle it in UI
+        }
+    } else {
+        setDeck(prev => [...cardsToAdd, ...prev]);
+    }
+    
+    return cardsToAdd.length;
+  };
+
+  return { deck, addCard, removeCard, reviewCard, getDueCards, importCards, isLoaded };
 }

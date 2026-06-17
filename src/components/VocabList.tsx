@@ -1,14 +1,18 @@
 import { KanjiCard } from '../types';
-import { Trash2, Search } from 'lucide-react';
-import { useState } from 'react';
+import { Trash2, Search, Upload, Download } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
+  onImport: (cards: { kanji: string; reading: string; meaning: string }[]) => Promise<number>;
 }
 
-export default function VocabList({ deck, onRemove }: VocabListProps) {
+export default function VocabList({ deck, onRemove, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDeck = deck.filter(c => 
     c.kanji.toLowerCase().includes(search.toLowerCase()) || 
@@ -16,12 +20,86 @@ export default function VocabList({ deck, onRemove }: VocabListProps) {
     c.reading.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleExport = () => {
+    const data = deck.map(d => ({
+      Kanji: d.kanji,
+      Reading: d.reading,
+      Meaning: d.meaning
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Vocab");
+    XLSX.writeFile(wb, "KanjiFlow_Vocab.xlsx");
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json<any>(ws);
+
+        const importedCards = data.map((row: any) => ({
+          kanji: String(row.Kanji || row.kanji || '').trim(),
+          reading: String(row.Reading || row.reading || '').trim(),
+          meaning: String(row.Meaning || row.meaning || '').trim()
+        })).filter(c => c.kanji !== '');
+
+        if (importedCards.length > 0) {
+          const addedCount = await onImport(importedCards);
+          alert(`Đã thêm ${addedCount} từ vựng mới (Bỏ qua các từ bị trùng Kanji).`);
+        } else {
+          alert('Không tìm thấy từ vựng hợp lệ trong file.');
+        }
+      } catch (err) {
+        console.error("Lỗi khi import file Excel:", err);
+        alert('Có lỗi xảy ra khi đọc file Excel.');
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif text-[#c5a059] mb-1 tracking-widest uppercase">Kho từ vựng</h2>
-          <p className="text-[#d4d4d4] opacity-50 text-[10px] uppercase tracking-widest">Tổng cộng {deck.length} từ đã được thêm</p>
+          <h2 className="text-2xl font-serif text-[#c5a059] mb-2 tracking-widest uppercase">Kho từ vựng</h2>
+          <div className="flex items-center gap-4">
+            <span className="text-[#d4d4d4] opacity-50 text-[10px] uppercase tracking-widest">Tổng cộng {deck.length} từ đã được thêm</span>
+            <div className="h-4 w-px bg-[#2a2a2a]"></div>
+            <button
+              onClick={handleExport}
+              className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors flex items-center gap-1"
+            >
+              <Download className="w-3 h-3" /> Xuất Excel
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors flex items-center gap-1"
+            >
+              <Upload className="w-3 h-3" /> {isImporting ? 'Đang Import...' : 'Nhập Excel'}
+            </button>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleImport}
+            />
+          </div>
         </div>
         
         <div className="relative">

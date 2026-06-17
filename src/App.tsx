@@ -22,7 +22,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const { deck, addCard, removeCard, reviewCard, getDueCards, isLoaded } = useVocabDeck();
+  const { deck, addCard, removeCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
   const [view, setView] = useState<ViewState>('dashboard');
 
   if (authLoading || !isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
@@ -93,7 +93,7 @@ export default function App() {
         )}
         
         {view === 'list' && (
-          <VocabList deck={deck} onRemove={removeCard} />
+          <VocabList deck={deck} onRemove={removeCard} onImport={importCards} />
         )}
         
         {view === 'add' && (

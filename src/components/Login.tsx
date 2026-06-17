@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { auth, googleProvider } from '../lib/firebase';
 import { 
   signInWithPopup, 
@@ -39,7 +39,7 @@ export default function Login() {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        setError('Đăng nhập Google thất bại.');
+        setError(`Đăng nhập Google thất bại: ${err.message}. Nếu bạn đang xem trước ứng dụng, hãy thử mở ở thẻ (tab) mới vì tính năng popup bị chặn trong khung xem trước.`);
       }
     } finally {
       setLoading(false);
