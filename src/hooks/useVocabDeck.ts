@@ -9,36 +9,18 @@ export function useVocabDeck() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const defaultDeck: KanjiCard[] = [
-      {
-        id: 'mock-1',
-        kanji: '日',
-        reading: 'nichi, hi',
-        meaning: 'Mặt trời, Ngày',
-        interval: 0,
-        repetition: 0,
-        easeFactor: 2.5,
-        nextReviewDate: Date.now(),
-        createdAt: Date.now() - 100000
-      },
-      {
-        id: 'mock-2',
-        kanji: '月',
-        reading: 'getsu, tsuki',
-        meaning: 'Mặt trăng, Tháng',
-        interval: 0,
-        repetition: 0,
-        easeFactor: 2.5,
-        nextReviewDate: Date.now(),
-        createdAt: Date.now() - 50000
-      }
-    ];
+    let unsubscribeSnapshot: (() => void) | undefined;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = undefined;
+      }
+
       if (user) {
         // User logged in, fetch from Firestore
         const q = query(collection(db, 'users', user.uid, 'kanjiDeck'));
-        const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
           const loadedDeck: KanjiCard[] = [];
           snapshot.forEach((docSnap) => {
             loadedDeck.push(docSnap.data() as KanjiCard);
@@ -49,8 +31,6 @@ export function useVocabDeck() {
           console.error("Firestore error:", error);
           setIsLoaded(true); // Don't block UI if error
         });
-
-        return () => unsubscribeSnapshot();
       } else {
         // Not logged in, load from localStorage if possible (fallback)
         const stored = localStorage.getItem('kanji_srs_deck');
@@ -59,13 +39,39 @@ export function useVocabDeck() {
             setDeck(JSON.parse(stored));
           } catch (e) {}
         } else {
-          setDeck(defaultDeck);
+          setDeck([
+            {
+              id: 'mock-1',
+              kanji: '日',
+              reading: 'nichi, hi',
+              meaning: 'Mặt trời, Ngày',
+              interval: 0,
+              repetition: 0,
+              easeFactor: 2.5,
+              nextReviewDate: Date.now(),
+              createdAt: Date.now() - 100000
+            },
+            {
+              id: 'mock-2',
+              kanji: '月',
+              reading: 'getsu, tsuki',
+              meaning: 'Mặt trăng, Tháng',
+              interval: 0,
+              repetition: 0,
+              easeFactor: 2.5,
+              nextReviewDate: Date.now(),
+              createdAt: Date.now() - 50000
+            }
+          ]);
         }
         setIsLoaded(true);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+    };
   }, []);
 
   // Sync to localStorage as a backup when not authenticated
