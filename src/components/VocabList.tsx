@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onImport: (cards: { kanji: string; reading: string; meaning: string }[]) => Promise<number>;
+  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => Promise<number>;
 }
 
 export default function VocabList({ deck, onRemove, onImport }: VocabListProps) {
@@ -24,12 +24,14 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
     const data = deck.map(d => ({
       Kanji: d.kanji,
       Reading: d.reading,
-      Meaning: d.meaning
+      "Hán Việt": d.sinoVietnamese || '',
+      Meaning: d.meaning,
+      Example: d.example || ''
     }));
     
     const ws = data.length > 0 
       ? XLSX.utils.json_to_sheet(data) 
-      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Meaning"] });
+      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Hán Việt", "Meaning", "Example"] });
       
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Vocab");
@@ -53,7 +55,9 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
         const importedCards = data.map((row: any) => ({
           kanji: String(row.Kanji || row.kanji || '').trim(),
           reading: String(row.Reading || row.reading || '').trim(),
-          meaning: String(row.Meaning || row.meaning || '').trim()
+          meaning: String(row.Meaning || row.meaning || '').trim(),
+          sinoVietnamese: String(row['Hán Việt'] || row.hanviet || row.sinoVietnamese || '').trim(),
+          example: String(row.Example || row.example || row['Ví dụ'] || '').trim()
         })).filter(c => c.kanji !== '');
 
         if (importedCards.length > 0) {
@@ -154,8 +158,16 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
                         <div className="text-3xl font-serif text-white">{card.kanji}</div>
                       </td>
                       <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
-                        <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 mb-1 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
+                          {card.sinoVietnamese && (
+                            <span className="text-[10px] text-[#c5a059] uppercase tracking-widest border border-[#c5a059]/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
+                          )}
+                        </div>
                         <div className="text-sm tracking-widest uppercase text-white font-light break-words whitespace-normal max-w-[200px] sm:max-w-md">{card.meaning}</div>
+                        {card.example && (
+                          <div className="text-[11px] text-[#d4d4d4] opacity-50 mt-1 max-w-[200px] sm:max-w-md truncate">{card.example}</div>
+                        )}
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-col gap-2">

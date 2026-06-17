@@ -2,7 +2,9 @@ export interface KanjiCard {
   id: string;
   kanji: string;
   reading: string;
+  sinoVietnamese?: string;
   meaning: string;
+  example?: string;
   interval: number;
   repetition: number;
   easeFactor: number;

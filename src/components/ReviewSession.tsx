@@ -87,9 +87,27 @@ export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSes
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
               <div className="absolute inset-0 overflow-y-auto flex flex-col items-center justify-center p-6 pb-12 sm:p-8 space-y-4 sm:space-y-6">
-                <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic mb-2 tracking-wide">{currentCard.reading}</p>
+                <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
+                  <div className="flex justify-end flex-1">
+                    <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic tracking-wide text-right">{currentCard.reading}</p>
+                  </div>
+                  {currentCard.sinoVietnamese && (
+                    <>
+                      <div className="w-px h-8 sm:h-12 bg-[#2a2a2a] flex-shrink-0"></div>
+                      <div className="flex justify-start flex-1">
+                        <p className="text-xl sm:text-3xl font-serif text-[#c5a059] uppercase tracking-widest">{currentCard.sinoVietnamese}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-2 sm:my-4 flex-shrink-0"></div>
                 <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
+                {currentCard.example && (
+                  <p className="text-sm sm:text-base text-[#d4d4d4] opacity-70 mt-4 text-center max-w-md px-4 leading-relaxed font-light">
+                    “{currentCard.example}”
+                  </p>
+                )}
               </div>
               
               <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 flex items-center gap-2 opacity-30 bg-[#121212] px-2">

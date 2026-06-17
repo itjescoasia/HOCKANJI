@@ -89,12 +89,14 @@ export function useVocabDeck() {
     }
   }, [deck, isLoaded]);
 
-  const addCard = async (kanji: string, reading: string, meaning: string) => {
+  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string) => {
     const newCard: KanjiCard = {
       id: crypto.randomUUID(),
       kanji,
       reading,
+      sinoVietnamese,
       meaning,
+      example,
       interval: 0,
       repetition: 0,
       easeFactor: 2.5,
@@ -147,7 +149,7 @@ export function useVocabDeck() {
     return deck.filter(card => card.nextReviewDate <= now);
   };
 
-  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string }[]) => {
+  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => {
     // Check duplicates
     const existingKanji = new Set(deck.map(c => c.kanji));
     const newCardsToIterate = importedCards.filter(c => !existingKanji.has(c.kanji));
@@ -166,7 +168,9 @@ export function useVocabDeck() {
       id: crypto.randomUUID(),
       kanji: c.kanji,
       reading: c.reading || '',
+      sinoVietnamese: c.sinoVietnamese || '',
       meaning: c.meaning || '',
+      example: c.example || '',
       interval: 0,
       repetition: 0,
       easeFactor: 2.5,

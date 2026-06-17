@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 
 interface AddVocabProps {
-  onAdd: (kanji: string, reading: string, meaning: string) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string) => void;
 }
 
 export default function AddVocab({ onAdd }: AddVocabProps) {
   const [kanji, setKanji] = useState('');
   const [reading, setReading] = useState('');
+  const [sinoVietnamese, setSinoVietnamese] = useState('');
   const [meaning, setMeaning] = useState('');
+  const [example, setExample] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) return;
-    onAdd(kanji.trim(), reading.trim(), meaning.trim());
+    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim());
     setKanji('');
     setReading('');
+    setSinoVietnamese('');
     setMeaning('');
+    setExample('');
     
     // Simple visual feedback could go here, but clearing the form is enough for now
   };
@@ -50,7 +54,17 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
           />
         </div>
         <div>
-          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Ý nghĩa <span className="text-[#8b0000]">*</span></label>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Hán Việt</label>
+          <input 
+            type="text" 
+            value={sinoVietnamese}
+            onChange={e => setSinoVietnamese(e.target.value)}
+            className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#c5a059] font-serif uppercase tracking-widest text-center"
+            placeholder="NGỘ"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Ý nghĩa (Tiếng Việt) <span className="text-[#8b0000]">*</span></label>
           <input 
             type="text" 
             required
@@ -58,6 +72,16 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             onChange={e => setMeaning(e.target.value)}
             className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-white font-serif uppercase tracking-widest text-center"
             placeholder="NGÔN NGỮ"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Ví dụ / Ghi chú</label>
+          <input 
+            type="text" 
+            value={example}
+            onChange={e => setExample(e.target.value)}
+            className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#d4d4d4] font-light text-center"
+            placeholder="Ví dụ: 日本語 (Tiếng Nhật)"
           />
         </div>
         <button 
