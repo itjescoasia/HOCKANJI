@@ -176,10 +176,10 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
                       <td className="px-8 py-5 text-right">
                         <button 
                           onClick={() => onRemove(card.id)}
-                          className="p-2 text-[#2a2a2a] hover:text-red-500 transition-colors inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100"
+                          className="p-2 text-[#555] hover:text-red-500 transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100"
                           title="Xóa thẻ"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </td>
                     </tr>
