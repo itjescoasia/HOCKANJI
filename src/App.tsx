@@ -73,7 +73,7 @@ export default function App() {
             <button
               onClick={() => signOut(auth)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-[#d4d4d4]/60 hover:text-red-500 hover:bg-[#1a1a1a]"
-              title="Đăng xuất"
+              title={`Đăng xuất (${user?.email})`}
             >
               <LogOut className="w-4 h-4" />
             </button>
