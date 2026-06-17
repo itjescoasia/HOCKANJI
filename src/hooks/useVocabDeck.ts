@@ -20,15 +20,23 @@ export function useVocabDeck() {
       if (user) {
         // User logged in, fetch from Firestore
         const q = query(collection(db, 'users', user.uid, 'kanjiDeck'));
-        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        
+        // Listen to changes
+        unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
           const loadedDeck: KanjiCard[] = [];
           snapshot.forEach((docSnap) => {
             loadedDeck.push(docSnap.data() as KanjiCard);
           });
           setDeck(loadedDeck.sort((a,b) => b.createdAt - a.createdAt));
           setIsLoaded(true);
+          
+          if (snapshot.metadata.hasPendingWrites) {
+            console.log("Local changes haven't synced to server yet.");
+          } else {
+            console.log("Synced to server.");
+          }
         }, (error) => {
-          console.error("Firestore error:", error);
+          console.error("Firestore error in onSnapshot:", error);
           setIsLoaded(true); // Don't block UI if error
         });
       } else {
