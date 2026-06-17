@@ -1,0 +1,6 @@
+{
+  "name": "Kanji Spaced Repetition",
+  "description": "Ứng dụng học từ vựng Kanji theo phương pháp lặp lại ngắt quãng (Spaced Repetition).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
