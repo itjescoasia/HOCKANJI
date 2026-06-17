@@ -153,9 +153,9 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
                       <td className="px-8 py-5">
                         <div className="text-3xl font-serif text-white">{card.kanji}</div>
                       </td>
-                      <td className="px-8 py-5">
-                        <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 mb-1 tracking-wide">{card.reading || '---'}</div>
-                        <div className="text-sm tracking-widest uppercase text-white font-light">{card.meaning}</div>
+                      <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
+                        <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 mb-1 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
+                        <div className="text-sm tracking-widest uppercase text-white font-light break-words whitespace-normal max-w-[200px] sm:max-w-md">{card.meaning}</div>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-col gap-2">

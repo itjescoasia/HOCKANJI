@@ -78,19 +78,19 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
       </div>
 
       {/* Charts Section */}
-      {deck.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-            <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Mức độ ghi nhớ</h3>
-            <div className="h-48 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Mức độ ghi nhớ</h3>
+          <div className="h-[250px] w-full flex-1 relative">
+            {deck.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={progressData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
+                    innerRadius={60}
+                    outerRadius={85}
                     paddingAngle={5}
                     dataKey="value"
                     stroke="none"
@@ -105,7 +105,11 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
                   />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest">Chưa có dữ liệu</div>
+            )}
+          </div>
+          {deck.length > 0 && (
             <div className="flex justify-center gap-6 mt-4">
               {progressData.map(item => (
                 <div key={item.name} className="flex items-center gap-2">
@@ -114,11 +118,13 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
                 </div>
               ))}
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-            <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Dự báo ôn tập (7 ngày)</h3>
-            <div className="h-48 flex-1 mt-6">
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Dự báo ôn tập (7 ngày)</h3>
+          <div className="h-[250px] w-full flex-1 mt-6 relative">
+            {deck.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={forecastData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
@@ -132,10 +138,12 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
                   <Bar dataKey="count" name="Số từ" fill="#c5a059" radius={[2, 2, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            ) : (
+               <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest">Chưa có dữ liệu</div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       <div className="bg-[#0a0a0a] border border-[#2a2a2a] p-8 sm:p-14 text-center relative overflow-hidden mt-2">
         <h2 className="text-2xl sm:text-3xl font-serif mb-4 relative z-10 text-[#c5a059] tracking-widest uppercase">
