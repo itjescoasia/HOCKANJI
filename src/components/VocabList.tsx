@@ -7,7 +7,7 @@ interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>) => void;
-  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => Promise<number>;
+  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
@@ -93,8 +93,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         })).filter(c => c.kanji !== '');
 
         if (importedCards.length > 0) {
-          const addedCount = await onImport(importedCards);
-          alert(`Đã thêm ${addedCount} từ vựng mới (Bỏ qua các từ bị trùng Kanji).`);
+          const result = await onImport(importedCards);
+          alert(`Đã thêm ${result.added} từ vựng mới và cập nhật thông tin cho ${result.updated} từ đã có.`);
         } else {
           alert('Không tìm thấy từ vựng hợp lệ trong file.');
         }

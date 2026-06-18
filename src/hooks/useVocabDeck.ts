@@ -150,55 +150,85 @@ export function useVocabDeck() {
   };
 
   const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => {
-    // Check duplicates
-    const existingKanji = new Set(deck.map(c => c.kanji));
-    const newCardsToIterate = importedCards.filter(c => !existingKanji.has(c.kanji));
+    const existingKanjiMap = new Map(deck.map(c => [c.kanji, c]));
     
-    // De-duplicate within the imported cards themselves
+    // De-duplicate within the imported cards themselves (keep last one in the file if kanji match)
     const uniqueImported = new Map<string, any>();
-    for (const c of newCardsToIterate) {
-        if (!uniqueImported.has(c.kanji)) {
+    for (const c of importedCards) {
+        if (c.kanji) {
             uniqueImported.set(c.kanji, c);
         }
     }
-    const finalNewCards = Array.from(uniqueImported.values());
-    if (finalNewCards.length === 0) return 0; // Nothing to import
+    
+    const cardsToAdd: KanjiCard[] = [];
+    const cardsToUpdate: KanjiCard[] = [];
 
-    const cardsToAdd: KanjiCard[] = finalNewCards.map(c => ({
-      id: crypto.randomUUID(),
-      kanji: c.kanji,
-      reading: c.reading || '',
-      sinoVietnamese: c.sinoVietnamese || '',
-      meaning: c.meaning || '',
-      example: c.example || '',
-      interval: 0,
-      repetition: 0,
-      easeFactor: 2.5,
-      nextReviewDate: Date.now(),
-      createdAt: Date.now()
-    }));
+    for (const imported of uniqueImported.values()) {
+        const existing = existingKanjiMap.get(imported.kanji);
+        if (existing) {
+             const hasChanges = (imported.reading && existing.reading !== imported.reading) ||
+                                (imported.sinoVietnamese && existing.sinoVietnamese !== imported.sinoVietnamese) ||
+                                (imported.example && existing.example !== imported.example) ||
+                                (imported.meaning && existing.meaning !== imported.meaning);
+             
+             if (hasChanges) {
+                 cardsToUpdate.push({
+                     ...existing,
+                     reading: imported.reading || existing.reading,
+                     sinoVietnamese: imported.sinoVietnamese || existing.sinoVietnamese,
+                     meaning: imported.meaning || existing.meaning,
+                     example: imported.example || existing.example
+                 });
+             }
+        } else {
+            cardsToAdd.push({
+               id: crypto.randomUUID(),
+               kanji: imported.kanji,
+               reading: imported.reading || '',
+               sinoVietnamese: imported.sinoVietnamese || '',
+               meaning: imported.meaning || '',
+               example: imported.example || '',
+               interval: 0,
+               repetition: 0,
+               easeFactor: 2.5,
+               nextReviewDate: Date.now(),
+               createdAt: Date.now()
+            });
+        }
+    }
+
+    if (cardsToAdd.length === 0 && cardsToUpdate.length === 0) return { added: 0, updated: 0 };
 
     if (auth.currentUser) {
         try {
-            // Firestore transactions or batches have a limit of 500 operations per batch
-            for (let i = 0; i < cardsToAdd.length; i += 400) {
+            const allOps = [...cardsToAdd, ...cardsToUpdate];
+            for (let i = 0; i < allOps.length; i += 400) {
                 const batch = writeBatch(db);
-                const chunk = cardsToAdd.slice(i, i + 400);
+                const chunk = allOps.slice(i, i + 400);
                 for (const card of chunk) {
-                    const cardRef = doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', card.id);
-                    batch.set(cardRef, card);
+                    const cardRef = doc(db, 'users', auth.currentUser!.uid, 'kanjiDeck', card.id);
+                    batch.set(cardRef, card, { merge: true });
                 }
                 await batch.commit();
             }
         } catch (err) {
              console.error("Error batch importing cards:", err);
-             throw err; // Re-throw to handle it in UI
+             throw err;
         }
     } else {
-        setDeck(prev => [...cardsToAdd, ...prev]);
+        setDeck(prev => {
+            const newDeck = [...prev];
+            // Process updates
+            cardsToUpdate.forEach(updatedCard => {
+                 const idx = newDeck.findIndex(c => c.id === updatedCard.id);
+                 if (idx !== -1) newDeck[idx] = updatedCard;
+            });
+            // Process adds
+            return [...cardsToAdd, ...newDeck];
+        });
     }
     
-    return cardsToAdd.length;
+    return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
   const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>) => {
