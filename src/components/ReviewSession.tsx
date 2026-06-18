@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 
 interface ReviewSessionProps {
   dueCards: KanjiCard[];
   onReview: (id: string, grade: ReviewGrade) => void;
   onClose: () => void;
+  onRemoveCard: (id: string) => void;
 }
 
-export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSessionProps) {
+export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCard }: ReviewSessionProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
@@ -45,8 +46,24 @@ export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSes
     setCurrentIndex(prev => prev + 1);
   };
 
+  const handleDelete = () => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa từ vựng này không?')) {
+      onRemoveCard(currentCard.id);
+      setShowAnswer(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-[#0c0c0c] flex flex-col items-center justify-center z-50 p-4 font-sans text-[#d4d4d4]">
+      <button 
+        onClick={handleDelete}
+        className="absolute top-6 left-6 p-2 text-red-500 opacity-50 hover:opacity-100 hover:text-red-400 transition-opacity flex items-center gap-2"
+        title="Xóa từ vựng"
+      >
+        <Trash2 className="w-6 h-6 font-light" strokeWidth={1.5} />
+        <span className="hidden sm:inline text-sm">Xóa</span>
+      </button>
+
       <button 
         onClick={onClose}
         className="absolute top-6 right-6 p-2 text-[#d4d4d4] opacity-50 hover:opacity-100 transition-opacity"

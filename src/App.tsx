@@ -110,6 +110,7 @@ export default function App() {
           dueCards={dueCards}
           onReview={reviewCard}
           onClose={handleCloseReview}
+          onRemoveCard={removeCard}
         />
       )}
     </div>
