@@ -201,5 +201,17 @@ export function useVocabDeck() {
     return cardsToAdd.length;
   };
 
-  return { deck, addCard, removeCard, reviewCard, getDueCards, importCards, isLoaded };
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>) => {
+    if (auth.currentUser) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });
+      } catch (err) {
+        console.error("Error updating card:", err);
+      }
+    } else {
+      setDeck(prev => prev.map(card => card.id === id ? { ...card, ...updates } : card));
+    }
+  };
+
+  return { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded };
 }

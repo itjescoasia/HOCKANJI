@@ -1,18 +1,50 @@
 import { KanjiCard } from '../types';
-import { Trash2, Search, Upload, Download } from 'lucide-react';
+import { Trash2, Search, Upload, Download, Edit2, Check, X } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>) => void;
   onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => Promise<number>;
 }
 
-export default function VocabList({ deck, onRemove, onImport }: VocabListProps) {
+export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const startEdit = (card: KanjiCard) => {
+    setEditingId(card.id);
+    setEditForm({
+      kanji: card.kanji,
+      reading: card.reading || '',
+      sinoVietnamese: card.sinoVietnamese || '',
+      meaning: card.meaning,
+      example: card.example || '',
+    });
+  };
+
+  const saveEdit = () => {
+    if (editingId && editForm.kanji && editForm.meaning && onUpdate) {
+      onUpdate(editingId, {
+        kanji: editForm.kanji.trim(),
+        reading: editForm.reading?.trim() || '',
+        sinoVietnamese: editForm.sinoVietnamese?.trim() || '',
+        meaning: editForm.meaning.trim(),
+        example: editForm.example?.trim() || ''
+      });
+      setEditingId(null);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({});
+  };
 
   const filteredDeck = deck.filter(c => 
     c.kanji.toLowerCase().includes(search.toLowerCase()) || 
@@ -151,6 +183,74 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
               <tbody className="divide-y divide-[#2a2a2a]">
                 {filteredDeck.map((card) => {
                   const isDue = card.nextReviewDate <= Date.now();
+                  const isEditing = editingId === card.id;
+
+                  if (isEditing) {
+                    return (
+                      <tr key={card.id} className="bg-[#1a1a1a] shadow-inner">
+                        <td className="px-4 py-4 w-32 align-top">
+                          <input 
+                            value={editForm.kanji} 
+                            onChange={e => setEditForm({...editForm, kanji: e.target.value})}
+                            className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xl font-serif text-white px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                            placeholder="Kanji"
+                          />
+                        </td>
+                        <td className="px-4 py-4 min-w-[250px] align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2">
+                              <input 
+                                value={editForm.reading} 
+                                onChange={e => setEditForm({...editForm, reading: e.target.value})}
+                                className="flex-1 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                placeholder="Cách đọc"
+                              />
+                              <input 
+                                value={editForm.sinoVietnamese} 
+                                onChange={e => setEditForm({...editForm, sinoVietnamese: e.target.value})}
+                                className="w-24 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#c5a059] uppercase px-3 py-2 px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                placeholder="Hán Việt"
+                              />
+                            </div>
+                            <input 
+                              value={editForm.meaning} 
+                              onChange={e => setEditForm({...editForm, meaning: e.target.value})}
+                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-white px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              placeholder="Ý nghĩa"
+                            />
+                            <input 
+                              value={editForm.example} 
+                              onChange={e => setEditForm({...editForm, example: e.target.value})}
+                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              placeholder="Ví dụ"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center text-[#d4d4d4] opacity-50 text-xs italic font-serif align-middle">
+                          Đang chỉnh sửa
+                        </td>
+                        <td className="px-4 py-4 text-right align-middle">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={saveEdit}
+                              disabled={!editForm.kanji || !editForm.meaning}
+                              className="p-2 bg-[#c5a059] text-black hover:bg-[#d6b16a] transition-colors inline-flex items-center justify-center rounded-sm disabled:opacity-50"
+                              title="Lưu"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={cancelEdit}
+                              className="p-2 border border-[#2a2a2a] text-[#d4d4d4] hover:bg-[#2a2a2a] transition-colors inline-flex items-center justify-center rounded-sm"
+                              title="Hủy"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
                   
                   return (
                     <tr key={card.id} className="hover:bg-[#1a1a1a] transition-colors group">
@@ -189,13 +289,20 @@ export default function VocabList({ deck, onRemove, onImport }: VocabListProps) 
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-5 text-right">
+                      <td className="px-8 py-5 text-right whitespace-nowrap">
+                        <button 
+                          onClick={() => startEdit(card)}
+                          className="p-2 text-[#555] hover:text-[#c5a059] transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100 mr-1"
+                          title="Sửa thẻ"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
                         <button 
                           onClick={() => onRemove(card.id)}
                           className="p-2 text-[#555] hover:text-red-500 transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100"
                           title="Xóa thẻ"
                         >
-                          <Trash2 className="w-5 h-5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
