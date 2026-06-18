@@ -151,10 +151,10 @@ export function useVocabDeck() {
   };
 
   const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }[]) => {
-    const existingKanjiMap = new Map(deck.map(c => [c.kanji, c]));
+    const existingKanjiMap = new Map<string, KanjiCard>(deck.map(c => [c.kanji, c]));
     
     // De-duplicate within the imported cards themselves (keep last one in the file if kanji match)
-    const uniqueImported = new Map<string, any>();
+    const uniqueImported = new Map<string, { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }>();
     for (const c of importedCards) {
         if (c.kanji) {
             uniqueImported.set(c.kanji, c);
