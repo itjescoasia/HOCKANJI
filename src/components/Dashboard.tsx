@@ -1,5 +1,5 @@
 import { KanjiCard } from '../types';
-import { BookOpen, Brain, Clock, Zap } from 'lucide-react';
+import { BookOpen, Brain, Clock, Zap, Target } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DashboardProps {
@@ -12,13 +12,20 @@ interface DashboardProps {
 export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd }: DashboardProps) {
   const isDue = dueCards.length > 0;
 
+  // Cấp độ ghi nhớ
+  const matureCards = deck.filter(c => c.interval >= 21).length;
+  const learningCards = deck.filter(c => c.interval > 0 && c.interval < 21).length;
+  const newCards = deck.filter(c => c.interval === 0).length;
+  
+  const totalCards = deck.length;
+  const masteryRate = totalCards > 0 ? Math.round(((matureCards + learningCards) / totalCards) * 100) : 0;
+
   // Chart 1: Progress Data
-  const learnedCards = deck.filter(c => c.interval > 0).length;
-  const newCards = deck.length - learnedCards;
   const progressData = [
-    { name: 'Đã thuộc', value: learnedCards, color: '#c5a059' },
-    { name: 'Mới / Sắp quên', value: newCards, color: '#2a2a2a' }
-  ];
+    { name: 'Đã khắc sâu', value: matureCards, color: '#c5a059' },
+    { name: 'Đang học', value: learningCards, color: '#4a4a4a' },
+    { name: 'Mới học / Quên', value: newCards, color: '#1a1a1a' }
+  ].filter(item => item.value > 0 || totalCards === 0);
 
   // Chart 2: 7-Day Forecast Data
   const today = new Date();
@@ -49,7 +56,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
         <h1 className="text-3xl sm:text-4xl font-serif text-[#c5a059] tracking-widest mb-3 uppercase" style={{ fontFamily: 'serif' }}>Thống Kê Học Tập</h1>
-        <p className="text-[11px] text-[#d4d4d4] opacity-50 uppercase tracking-[0.2em]">Đánh giá hiệu quả và tiến độ ghi nhớ</p>
+        <p className="text-[11px] text-[#d4d4d4] opacity-50 uppercase tracking-[0.2em]">Tiến độ học và biểu diễn dữ liệu</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -63,17 +70,15 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
           <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{dueCards.length}</span>
           <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Cần Ôn Hôm Nay</span>
         </div>
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col sm:col-span-2 justify-between">
-          <div className="flex justify-between items-start mb-4 opacity-70 text-[#c5a059]">
-            <Brain className="w-6 h-6" />
-            <Zap className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-lg font-serif text-[#c5a059] block mb-2 tracking-widest uppercase">Thuật toán SM-2</span>
-            <span className="text-xs text-[#d4d4d4] opacity-60 leading-relaxed block tracking-wide">
-              Hệ thống sử dụng thuật toán lặp lại ngắt quãng để tối ưu hóa việc phân bổ lịch ôn tập.
-            </span>
-          </div>
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <Brain className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
+          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{matureCards}</span>
+          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Từ Đã Khắc Sâu (&gt;21 ngày)</span>
+        </div>
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <Target className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
+          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{masteryRate}%</span>
+          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Tiến độ (Đang + Đã học)</span>
         </div>
       </div>
 
@@ -110,7 +115,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
             )}
           </div>
           {deck.length > 0 && (
-            <div className="flex justify-center gap-6 mt-4">
+            <div className="flex flex-wrap justify-center gap-4 mt-4">
               {progressData.map(item => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -122,7 +127,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
         </div>
 
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Dự báo ôn tập (7 ngày)</h3>
+          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Lịch trình ôn tập (7 ngày tới)</h3>
           <div className="h-[250px] w-full flex-1 mt-6 relative">
             {deck.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
@@ -152,10 +157,10 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
         
         <p className="opacity-60 mb-10 max-w-xl mx-auto relative z-10 text-[13px] leading-relaxed tracking-wide">
           {isDue 
-            ? "Danh sách ôn tập hằng ngày gồm các từ đã quên và đến hạn. Hãy đánh giá độ nhớ để AI tính chu kỳ."
+            ? "Danh sách ôn tập hằng ngày gồm các từ đã quên và đến hạn. Thẻ từ sẽ lặp lại liên tục ngắt quãng cho đến khi bạn khắc sâu."
             : deck.length === 0 
-                ? "Kho từ vựng trống. Hãy bắt đầu xây dựng bộ thẻ của riêng bạn để học."
-                : "Bạn đã hoàn thành mục tiêu hôm nay. Hãy quay lại vào ngày mai hoặc thu thập thêm từ vựng mới nhé."}
+                ? "Kho từ vựng trống. Hãy bắt đầu thêm các chữ mới vào từ điển của bạn."
+                : "Bạn đã hoàn thành mục tiêu hôm nay. Hãy quay lại vào ngày mai hoặc thu thập thêm từ vựng mới."}
         </p>
 
         {isDue ? (
@@ -170,7 +175,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
             onClick={onNavigateAdd}
             className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px] relative z-10"
           >
-             Thêm Kanji mới
+             Thêm từ vựng mới
           </button>
         )}
       </div>
