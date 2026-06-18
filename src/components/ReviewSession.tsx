@@ -103,10 +103,19 @@ export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSes
 
                 <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-2 sm:my-4 flex-shrink-0"></div>
                 <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
-                {currentCard.example && (
-                  <p className="text-sm sm:text-base text-[#d4d4d4] opacity-70 mt-4 text-center max-w-md px-4 leading-relaxed font-light">
-                    “{currentCard.example}”
-                  </p>
+                {(currentCard.example || currentCard.exampleTranslation) && (
+                  <div className="mt-4 flex flex-col items-center gap-1">
+                    {currentCard.example && (
+                      <p className="text-sm sm:text-base text-[#d4d4d4] opacity-70 text-center max-w-md px-4 leading-relaxed font-light">
+                        “{currentCard.example}”
+                      </p>
+                    )}
+                    {currentCard.exampleTranslation && (
+                      <p className="text-sm sm:text-base text-[#c5a059] opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic">
+                        {currentCard.exampleTranslation}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               

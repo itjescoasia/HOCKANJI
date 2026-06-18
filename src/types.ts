@@ -5,6 +5,7 @@ export interface KanjiCard {
   sinoVietnamese?: string;
   meaning: string;
   example?: string;
+  exampleTranslation?: string;
   interval: number;
   repetition: number;
   easeFactor: number;

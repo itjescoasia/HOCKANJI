@@ -89,7 +89,7 @@ export function useVocabDeck() {
     }
   }, [deck, isLoaded]);
 
-  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string) => {
+  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string) => {
     const newCard: KanjiCard = {
       id: crypto.randomUUID(),
       kanji,
@@ -97,6 +97,7 @@ export function useVocabDeck() {
       sinoVietnamese,
       meaning,
       example,
+      exampleTranslation,
       interval: 0,
       repetition: 0,
       easeFactor: 2.5,
@@ -149,7 +150,7 @@ export function useVocabDeck() {
     return deck.filter(card => card.nextReviewDate <= now);
   };
 
-  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => {
+  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }[]) => {
     const existingKanjiMap = new Map(deck.map(c => [c.kanji, c]));
     
     // De-duplicate within the imported cards themselves (keep last one in the file if kanji match)
@@ -169,6 +170,7 @@ export function useVocabDeck() {
              const hasChanges = (imported.reading && existing.reading !== imported.reading) ||
                                 (imported.sinoVietnamese && existing.sinoVietnamese !== imported.sinoVietnamese) ||
                                 (imported.example && existing.example !== imported.example) ||
+                                (imported.exampleTranslation && existing.exampleTranslation !== imported.exampleTranslation) ||
                                 (imported.meaning && existing.meaning !== imported.meaning);
              
              if (hasChanges) {
@@ -177,7 +179,8 @@ export function useVocabDeck() {
                      reading: imported.reading || existing.reading,
                      sinoVietnamese: imported.sinoVietnamese || existing.sinoVietnamese,
                      meaning: imported.meaning || existing.meaning,
-                     example: imported.example || existing.example
+                     example: imported.example || existing.example,
+                     exampleTranslation: imported.exampleTranslation || existing.exampleTranslation
                  });
              }
         } else {
@@ -188,6 +191,7 @@ export function useVocabDeck() {
                sinoVietnamese: imported.sinoVietnamese || '',
                meaning: imported.meaning || '',
                example: imported.example || '',
+               exampleTranslation: imported.exampleTranslation || '',
                interval: 0,
                repetition: 0,
                easeFactor: 2.5,
@@ -231,7 +235,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>) => {
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation'>>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });

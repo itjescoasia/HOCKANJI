@@ -6,15 +6,15 @@ import * as XLSX from 'xlsx';
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>) => void;
-  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string }[]) => Promise<{added: number, updated: number}>;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation'>>) => void;
+  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (card: KanjiCard) => {
@@ -25,6 +25,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       sinoVietnamese: card.sinoVietnamese || '',
       meaning: card.meaning,
       example: card.example || '',
+      exampleTranslation: card.exampleTranslation || '',
     });
   };
 
@@ -35,7 +36,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         reading: editForm.reading?.trim() || '',
         sinoVietnamese: editForm.sinoVietnamese?.trim() || '',
         meaning: editForm.meaning.trim(),
-        example: editForm.example?.trim() || ''
+        example: editForm.example?.trim() || '',
+        exampleTranslation: editForm.exampleTranslation?.trim() || ''
       });
       setEditingId(null);
     }
@@ -58,12 +60,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       Reading: d.reading,
       "Hán Việt": d.sinoVietnamese || '',
       Meaning: d.meaning,
-      Example: d.example || ''
+      Example: d.example || '',
+      "Ví dụ (Dịch)": d.exampleTranslation || ''
     }));
     
     const ws = data.length > 0 
       ? XLSX.utils.json_to_sheet(data) 
-      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Hán Việt", "Meaning", "Example"] });
+      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Hán Việt", "Meaning", "Example", "Ví dụ (Dịch)"] });
       
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Vocab");
@@ -89,7 +92,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
           reading: String(row.Reading || row.reading || '').trim(),
           meaning: String(row.Meaning || row.meaning || '').trim(),
           sinoVietnamese: String(row['Hán Việt'] || row.hanviet || row.sinoVietnamese || '').trim(),
-          example: String(row.Example || row.example || row['Ví dụ'] || '').trim()
+          example: String(row.Example || row.example || row['Ví dụ'] || '').trim(),
+          exampleTranslation: String(row['Ví dụ (Dịch)'] || row.exampleTranslation || row.ExampleTranslation || '').trim()
         })).filter(c => c.kanji !== '');
 
         if (importedCards.length > 0) {
@@ -222,7 +226,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                               value={editForm.example} 
                               onChange={e => setEditForm({...editForm, example: e.target.value})}
                               className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
-                              placeholder="Ví dụ"
+                              placeholder="Ví dụ (Tiếng Nhật)"
+                            />
+                            <input 
+                              value={editForm.exampleTranslation} 
+                              onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
+                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              placeholder="Dịch nghĩa (Tiếng Việt)"
                             />
                           </div>
                         </td>
@@ -265,8 +275,15 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                           )}
                         </div>
                         <div className="text-sm tracking-widest uppercase text-white font-light break-words whitespace-normal max-w-[200px] sm:max-w-md">{card.meaning}</div>
-                        {card.example && (
-                          <div className="text-[11px] text-[#d4d4d4] opacity-50 mt-1 max-w-[200px] sm:max-w-md truncate">{card.example}</div>
+                        {(card.example || card.exampleTranslation) && (
+                          <div className="mt-2 space-y-1 border-t border-[#2a2a2a] pt-2 max-w-[200px] sm:max-w-md">
+                            {card.example && (
+                              <div className="text-[11px] text-[#d4d4d4] opacity-70 truncate" title={card.example}>{card.example}</div>
+                            )}
+                            {card.exampleTranslation && (
+                              <div className="text-[11px] text-[#c5a059] opacity-70 truncate italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-8 py-5">
