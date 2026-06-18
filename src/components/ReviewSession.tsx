@@ -87,6 +87,7 @@ export default function ReviewSession({ dueCards, onReview, onClose }: ReviewSes
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
               <div className="absolute inset-0 overflow-y-auto flex flex-col items-center justify-center p-6 pb-12 sm:p-8 space-y-4 sm:space-y-6">
+                <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80 mb-2 sm:mb-4" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
                 <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
                   <div className="flex justify-end flex-1">
                     <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic tracking-wide text-right">{currentCard.reading}</p>
