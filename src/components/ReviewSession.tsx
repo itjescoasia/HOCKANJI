@@ -6,12 +6,13 @@ import { X, Trash2 } from 'lucide-react';
 interface ReviewSessionProps {
   dueCards: KanjiCard[];
   onReview: (id: string, grade: ReviewGrade) => void;
+  onFreeStudyReview?: (id: string, isRemember: boolean) => void;
   onClose: () => void;
   onRemoveCard: (id: string) => void;
   isFreeStudy?: boolean;
 }
 
-export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCard, isFreeStudy = false }: ReviewSessionProps) {
+export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, isFreeStudy = false }: ReviewSessionProps) {
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -49,11 +50,13 @@ export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCar
   };
 
   const handleFreeStudyRemember = () => {
+    if (onFreeStudyReview) onFreeStudyReview(currentCard.id, true);
     setShowAnswer(false);
     setCurrentIndex(prev => prev + 1);
   };
 
   const handleFreeStudyForgot = () => {
+    if (onFreeStudyReview) onFreeStudyReview(currentCard.id, false);
     setReviewQueue(prev => [...prev, currentCard]);
     setShowAnswer(false);
     setCurrentIndex(prev => prev + 1);

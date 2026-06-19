@@ -7,6 +7,7 @@ export interface KanjiCard {
   example?: string;
   exampleTranslation?: string;
   wordType?: string;
+  freeStudyScore?: number;
   interval: number;
   repetition: number;
   easeFactor: number;

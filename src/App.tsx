@@ -44,9 +44,27 @@ export default function App() {
     setView('review');
   };
 
+  const handleFreeStudyReview = (id: string, isRemember: boolean) => {
+    const card = deck.find(c => c.id === id);
+    if (!card) return;
+    const currentScore = card.freeStudyScore || 0;
+    const newScore = isRemember ? currentScore + 1 : currentScore - 1;
+    updateCard(id, { freeStudyScore: newScore });
+  };
+
   const handleCloseReview = () => {
     setIsFreeStudyMode(false);
     setView('dashboard');
+  };
+
+  const getFreeStudyDeck = () => {
+    return [...deck]
+      .map(card => ({
+        card,
+        sortKey: Math.random() + (card.freeStudyScore || 0) * 0.5
+      }))
+      .sort((a, b) => a.sortKey - b.sortKey)
+      .map(item => item.card);
   };
 
   const navItems = [
@@ -121,8 +139,9 @@ export default function App() {
       {/* Review Overlay */}
       {view === 'review' && (
         <ReviewSession 
-          dueCards={isFreeStudyMode ? [...deck].sort(() => 0.5 - Math.random()) : dueCards}
+          dueCards={isFreeStudyMode ? getFreeStudyDeck() : dueCards}
           onReview={reviewCard}
+          onFreeStudyReview={handleFreeStudyReview}
           onClose={handleCloseReview}
           onRemoveCard={removeCard}
           isFreeStudy={isFreeStudyMode}

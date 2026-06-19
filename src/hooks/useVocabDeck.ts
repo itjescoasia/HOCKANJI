@@ -99,6 +99,7 @@ export function useVocabDeck() {
       example,
       exampleTranslation,
       wordType,
+      freeStudyScore: 0,
       interval: 0,
       repetition: 0,
       easeFactor: 2.5,
@@ -196,6 +197,7 @@ export function useVocabDeck() {
                example: imported.example || '',
                exampleTranslation: imported.exampleTranslation || '',
                wordType: imported.wordType || '',
+               freeStudyScore: 0,
                interval: 0,
                repetition: 0,
                easeFactor: 2.5,
@@ -239,7 +241,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType'>>) => {
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType' | 'freeStudyScore'>>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });
