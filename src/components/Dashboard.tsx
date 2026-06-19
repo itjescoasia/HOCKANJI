@@ -6,10 +6,11 @@ interface DashboardProps {
   deck: KanjiCard[];
   dueCards: KanjiCard[];
   onStartReview: () => void;
+  onStartFreeStudy?: () => void;
   onNavigateAdd: () => void;
 }
 
-export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeStudy, onNavigateAdd }: DashboardProps) {
   const isDue = dueCards.length > 0;
 
   // Cấp độ ghi nhớ
@@ -164,19 +165,39 @@ export default function Dashboard({ deck, dueCards, onStartReview, onNavigateAdd
         </p>
 
         {isDue ? (
-          <button 
-            onClick={onStartReview}
-            className="border border-[#c5a059] text-[#c5a059] bg-[#121212] hover:bg-[#c5a059] hover:text-black font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px] relative z-10"
-          >
-             Bắt đầu phiên ôn tập
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10">
+            <button 
+              onClick={onStartReview}
+              className="border border-[#c5a059] text-[#c5a059] bg-[#121212] hover:bg-[#c5a059] hover:text-black font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+            >
+               Bắt đầu phiên ôn tập
+            </button>
+            {onStartFreeStudy && (
+              <button 
+                onClick={onStartFreeStudy}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn tập tự do (Học nhồi)
+              </button>
+            )}
+          </div>
         ) : (
-          <button 
-            onClick={onNavigateAdd}
-            className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px] relative z-10"
-          >
-             Thêm từ vựng mới
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10">
+            <button 
+              onClick={onNavigateAdd}
+              className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+            >
+               Thêm từ vựng mới
+            </button>
+            {deck.length > 0 && onStartFreeStudy && (
+               <button 
+                 onClick={onStartFreeStudy}
+                 className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+               >
+                  Ôn tập tự do (Học nhồi)
+               </button>
+            )}
+          </div>
         )}
       </div>
     </div>

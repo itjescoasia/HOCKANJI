@@ -23,7 +23,8 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
-  const [view, setView] = useState<ViewState>('dashboard');
+  const [view, setView] = useState<any>('dashboard');
+  const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
 
   if (authLoading || !isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
 
@@ -33,8 +34,20 @@ export default function App() {
 
   const dueCards = getDueCards();
 
-  const handleStartReview = () => setView('review');
-  const handleCloseReview = () => setView('dashboard');
+  const handleStartReview = () => {
+    setIsFreeStudyMode(false);
+    setView('review');
+  };
+
+  const handleStartFreeStudy = () => {
+    setIsFreeStudyMode(true);
+    setView('review');
+  };
+
+  const handleCloseReview = () => {
+    setIsFreeStudyMode(false);
+    setView('dashboard');
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
@@ -88,6 +101,7 @@ export default function App() {
             deck={deck} 
             dueCards={dueCards} 
             onStartReview={handleStartReview} 
+            onStartFreeStudy={handleStartFreeStudy}
             onNavigateAdd={() => setView('add')} 
           />
         )}
@@ -107,10 +121,11 @@ export default function App() {
       {/* Review Overlay */}
       {view === 'review' && (
         <ReviewSession 
-          dueCards={dueCards}
+          dueCards={isFreeStudyMode ? [...deck].sort(() => 0.5 - Math.random()) : dueCards}
           onReview={reviewCard}
           onClose={handleCloseReview}
           onRemoveCard={removeCard}
+          isFreeStudy={isFreeStudyMode}
         />
       )}
     </div>

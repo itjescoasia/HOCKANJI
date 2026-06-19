@@ -8,13 +8,15 @@ interface ReviewSessionProps {
   onReview: (id: string, grade: ReviewGrade) => void;
   onClose: () => void;
   onRemoveCard: (id: string) => void;
+  isFreeStudy?: boolean;
 }
 
-export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCard }: ReviewSessionProps) {
+export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCard, isFreeStudy = false }: ReviewSessionProps) {
+  const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
-  if (currentIndex >= dueCards.length) {
+  if (currentIndex >= reviewQueue.length) {
     return (
       <div className="fixed inset-0 bg-[#0c0c0c]/95 flex flex-col items-center justify-center z-50 p-4">
         <motion.div 
@@ -38,7 +40,7 @@ export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCar
     );
   }
 
-  const currentCard = dueCards[currentIndex];
+  const currentCard = reviewQueue[currentIndex];
 
   const handleGrade = (grade: ReviewGrade) => {
     onReview(currentCard.id, grade);
@@ -46,9 +48,21 @@ export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCar
     setCurrentIndex(prev => prev + 1);
   };
 
+  const handleFreeStudyRemember = () => {
+    setShowAnswer(false);
+    setCurrentIndex(prev => prev + 1);
+  };
+
+  const handleFreeStudyForgot = () => {
+    setReviewQueue(prev => [...prev, currentCard]);
+    setShowAnswer(false);
+    setCurrentIndex(prev => prev + 1);
+  };
+
   const handleDelete = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa từ vựng này không?')) {
       onRemoveCard(currentCard.id);
+      setReviewQueue(prev => prev.filter((_, i) => i !== currentIndex));
       setShowAnswer(false);
     }
   };
@@ -75,7 +89,7 @@ export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCar
         <div className="mb-8 w-full flex justify-between items-center opacity-50">
           <span className="text-[10px] uppercase tracking-[0.2em] text-[#c5a059]">Phiên học hiện tại</span>
           <span className="text-[10px] uppercase tracking-widest font-serif">
-            {currentIndex + 1} / {dueCards.length}
+            {currentIndex + 1} / {reviewQueue.length}
           </span>
         </div>
 
@@ -160,6 +174,27 @@ export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCar
             >
               Xem đáp án
             </motion.button>
+          ) : isFreeStudy ? (
+            <motion.div 
+              initial={{ y: 5, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="grid grid-cols-2 gap-2 sm:gap-4 w-full"
+            >
+              <button 
+                onClick={handleFreeStudyForgot}
+                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-red-900/30 hover:border-red-500 group transition-all"
+              >
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Cần ôn lại</span>
+                <span className="text-xs sm:text-sm text-red-500 font-serif italic">Quên</span>
+              </button>
+              <button 
+                onClick={handleFreeStudyRemember}
+                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
+              >
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Đã thuộc</span>
+                <span className="text-xs sm:text-sm text-green-500 font-serif italic">Nhớ</span>
+              </button>
+            </motion.div>
           ) : (
             <motion.div 
               initial={{ y: 5, opacity: 0 }}
