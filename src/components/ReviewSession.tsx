@@ -176,12 +176,6 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   </div>
                 )}
               </div>
-              
-              <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 flex items-center gap-2 opacity-30 bg-[#121212] px-2">
-                <span className="text-[9px] sm:text-[10px] tracking-widest uppercase">Độ Khó: {currentCard.easeFactor.toFixed(2)}</span>
-                <span>|</span>
-                <span className="text-[9px] sm:text-[10px] tracking-widest uppercase italic font-serif">Chu Kỳ: {currentCard.interval} ngày</span>
-              </div>
             </div>
           </motion.div>
         </div>
