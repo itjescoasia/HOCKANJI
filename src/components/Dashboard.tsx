@@ -1,16 +1,18 @@
 import { KanjiCard } from '../types';
-import { BookOpen, Brain, Clock, Zap, Target } from 'lucide-react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { UserStats } from '../hooks/useStudyStats';
+import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface DashboardProps {
   deck: KanjiCard[];
   dueCards: KanjiCard[];
+  stats?: UserStats;
   onStartReview: () => void;
   onStartFreeStudy?: () => void;
   onNavigateAdd: () => void;
 }
 
-export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeStudy, onNavigateAdd }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, onStartFreeStudy, onNavigateAdd }: DashboardProps) {
   const isDue = dueCards.length > 0;
 
   // Cấp độ ghi nhớ
@@ -53,11 +55,88 @@ export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeSt
     };
   });
 
+  // Calculate Progress Stats
+  const todayStr = new Date().toISOString().split('T')[0];
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+  const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0 };
+  const yesterdayStats = stats[yesterdayStr] || { reviewed: 0, correct: 0, mastered: 0 };
+
+  const reviewedDiff = todayStats.reviewed - yesterdayStats.reviewed;
+  const correctRateToday = todayStats.reviewed > 0 ? Math.round((todayStats.correct / todayStats.reviewed) * 100) : 0;
+  const correctRateYesterday = yesterdayStats.reviewed > 0 ? Math.round((yesterdayStats.correct / yesterdayStats.reviewed) * 100) : 0;
+  const errorRateDiff = (100 - correctRateToday) - (100 - correctRateYesterday); // negative means fewer errors today
+
+  const studyHistoryData = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dStr = d.toISOString().split('T')[0];
+    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0 };
+    return {
+      date: d.toLocaleDateString('vi-VN', { weekday: 'short' }),
+      reviewed: s.reviewed,
+      correct: s.correct,
+    };
+  });
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
         <h1 className="text-3xl sm:text-4xl font-serif text-[#c5a059] tracking-widest mb-3 uppercase" style={{ fontFamily: 'serif' }}>Thống Kê Học Tập</h1>
         <p className="text-[11px] text-[#d4d4d4] opacity-50 uppercase tracking-[0.2em]">Tiến độ học và biểu diễn dữ liệu</p>
+      </div>
+
+      {/* Progress Indicators (Chỉ số tiến bộ) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#121212] p-5 border border-[#2a2a2a] flex flex-col">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-60">Số từ ôn hôm nay</span>
+            <Zap className="w-4 h-4 text-[#c5a059] opacity-70" />
+          </div>
+          <div className="flex items-end gap-3 mt-1">
+            <span className="text-3xl font-serif text-white">{todayStats.reviewed}</span>
+            {reviewedDiff !== 0 && (
+              <span className={`flex items-center text-[11px] uppercase tracking-widest ${reviewedDiff > 0 ? 'text-green-500' : 'text-red-500'} mb-1`}>
+                {reviewedDiff > 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                {Math.abs(reviewedDiff)} so với h.qua
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-[#121212] p-5 border border-[#2a2a2a] flex flex-col">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-60">Thẻ nhớ đúng hôm nay</span>
+            <Target className="w-4 h-4 text-green-500 opacity-70" />
+          </div>
+          <div className="flex items-end gap-3 mt-1">
+            <span className="text-3xl font-serif text-white">{todayStats.correct}</span>
+            <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">
+              / {todayStats.reviewed}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-[#121212] p-5 border border-[#2a2a2a] flex flex-col">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-60">Tỷ lệ trả lời sai</span>
+            <Brain className="w-4 h-4 text-red-500 opacity-70" />
+          </div>
+          <div className="flex items-end gap-3 mt-1">
+            <span className="text-3xl font-serif text-white">{todayStats.reviewed > 0 ? 100 - correctRateToday : 0}%</span>
+            {errorRateDiff !== 0 && todayStats.reviewed > 0 && yesterdayStats.reviewed > 0 && (
+              <span className={`flex items-center text-[11px] uppercase tracking-widest ${errorRateDiff < 0 ? 'text-green-500' : 'text-red-500'} mb-1`}>
+                {errorRateDiff < 0 ? <TrendingDown className="w-3 h-3 mr-1" /> : <TrendingUp className="w-3 h-3 mr-1" />}
+                {Math.abs(errorRateDiff)}% so với h.qua
+              </span>
+            )}
+            {errorRateDiff === 0 && todayStats.reviewed > 0 && (
+               <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">Không đổi</span>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -86,6 +165,26 @@ export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeSt
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Lịch sử ôn tập (7 ngày qua)</h3>
+          <div className="h-[250px] w-full flex-1 relative">
+             <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={studyHistoryData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <RechartsTooltip 
+                    cursor={{fill: '#1a1a1a'}}
+                    contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
+                    itemStyle={{ fontSize: '12px' }}
+                    labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
+                  />
+                  <Line type="monotone" dataKey="reviewed" name="Đã ôn" stroke="#4a4a4a" strokeWidth={2} dot={{ fill: '#4a4a4a', r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="correct" name="Nhớ đúng" stroke="#c5a059" strokeWidth={2} dot={{ fill: '#c5a059', r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
           <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Mức độ ghi nhớ</h3>
           <div className="h-[250px] w-full flex-1 relative">
             {deck.length > 0 ? (
@@ -105,7 +204,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeSt
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
                     itemStyle={{ color: '#d4d4d4', fontSize: '12px' }}
                   />
@@ -126,7 +225,10 @@ export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeSt
             </div>
           )}
         </div>
+      </div>
 
+      {/* Forecast Section */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
           <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Lịch trình ôn tập (7 ngày tới)</h3>
           <div className="h-[250px] w-full flex-1 mt-6 relative">
@@ -135,7 +237,7 @@ export default function Dashboard({ deck, dueCards, onStartReview, onStartFreeSt
                 <BarChart data={forecastData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
                   <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip 
+                  <RechartsTooltip 
                     cursor={{fill: '#1a1a1a'}}
                     contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
                     itemStyle={{ color: '#c5a059', fontSize: '12px' }}

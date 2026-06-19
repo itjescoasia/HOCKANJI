@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
+import { useStudyStats } from './hooks/useStudyStats';
 import Dashboard from './components/Dashboard';
 import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
@@ -23,6 +24,7 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
+  const { stats, recordReview } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
 
@@ -45,11 +47,28 @@ export default function App() {
   };
 
   const handleFreeStudyReview = (id: string, isRemember: boolean) => {
+    // Record free study interaction
+    recordReview(isRemember, false);
+
     const card = deck.find(c => c.id === id);
     if (!card) return;
     const currentScore = card.freeStudyScore || 0;
     const newScore = isRemember ? currentScore + 1 : currentScore - 1;
     updateCard(id, { freeStudyScore: newScore });
+  };
+
+  const handleReviewCard = async (id: string, grade: any) => {
+    // Also record standard SRS reviews
+    const cardToReview = deck.find(c => c.id === id);
+    if (cardToReview) {
+      const isCorrect = grade !== 'forgot';
+      // Newly mastered if the previous interval < 21 but next interval is handled inside reviewCard,
+      // it's tricky to know exactly here without re-running calculateNextReview.
+      // For simplicity, we just assume any grade 'easy' or 'good' on an existing somewhat mature card is progress.
+      // Let's just track correct vs incorrect roughly for 'recordReview'.
+      recordReview(isCorrect, false); 
+    }
+    await reviewCard(id, grade);
   };
 
   const handleCloseReview = () => {
@@ -120,6 +139,7 @@ export default function App() {
           <Dashboard 
             deck={deck} 
             dueCards={dueCards} 
+            stats={stats}
             onStartReview={handleStartReview} 
             onStartFreeStudy={handleStartFreeStudy}
             onNavigateAdd={() => setView('add')} 
@@ -142,7 +162,7 @@ export default function App() {
       {view === 'review' && (
         <ReviewSession 
           dueCards={isFreeStudyMode ? getFreeStudyDeck() : dueCards}
-          onReview={reviewCard}
+          onReview={handleReviewCard}
           onFreeStudyReview={handleFreeStudyReview}
           onClose={handleCloseReview}
           onRemoveCard={removeCard}
