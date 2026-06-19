@@ -16,15 +16,66 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [successCounts, setSuccessCounts] = useState<Record<string, number>>({});
 
   const [readingInput, setReadingInput] = useState('');
   const [inputError, setInputError] = useState(false);
+  
+  const [exerciseType, setExerciseType] = useState<'typing_reading' | 'mcq_meaning' | 'mcq_reading' | 'flip'>('flip');
+  const [mcqOptions, setMcqOptions] = useState<string[]>([]);
+
+  const currentCard = reviewQueue[currentIndex];
 
   // Reset internal states when current index changes
   useEffect(() => {
     setReadingInput('');
     setInputError(false);
-  }, [currentIndex]);
+
+    if (isFreeStudy && currentCard) {
+      const isWordWithKanji = currentCard.kanji && currentCard.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
+      const types: ('typing_reading' | 'mcq_meaning' | 'mcq_reading')[] = [];
+      
+      if (isWordWithKanji) {
+        types.push('typing_reading');
+        types.push('mcq_reading');
+      }
+      if (currentCard.meaning) {
+        types.push('mcq_meaning');
+      }
+
+      if (types.length === 0) {
+        setExerciseType('flip');
+        return;
+      }
+
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      
+      if (randomType === 'mcq_meaning' || randomType === 'mcq_reading') {
+        const field = randomType === 'mcq_meaning' ? 'meaning' : 'reading';
+        const correctAnswer = currentCard[field] || '';
+        const allOptions = Array.from(new Set(dueCards.map(c => c[field]).filter(Boolean))) as string[];
+        
+        if (allOptions.length < 2) {
+           if (isWordWithKanji) {
+             setExerciseType('typing_reading');
+           } else {
+             setExerciseType('flip');
+           }
+        } else {
+          setExerciseType(randomType);
+          const wrongOptions = allOptions.filter(o => o.trim().toLowerCase() !== correctAnswer.trim().toLowerCase());
+          const shuffledWrong = wrongOptions.sort(() => 0.5 - Math.random()).slice(0, 3);
+          const finalOptions = [correctAnswer, ...shuffledWrong].sort(() => 0.5 - Math.random());
+          setMcqOptions(finalOptions);
+        }
+      } else {
+        setExerciseType('typing_reading');
+      }
+    } else {
+      setExerciseType('flip');
+    }
+  }, [currentIndex, isFreeStudy, currentCard, dueCards]);
+
 
   if (currentIndex >= reviewQueue.length) {
     return (
@@ -50,8 +101,6 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     );
   }
 
-  const currentCard = reviewQueue[currentIndex];
-
   const handleGrade = (grade: ReviewGrade) => {
     onReview(currentCard.id, grade);
     setShowAnswer(false);
@@ -60,6 +109,20 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
   const handleFreeStudyRemember = () => {
     if (onFreeStudyReview) onFreeStudyReview(currentCard.id, true);
+    
+    const count = (successCounts[currentCard.id] || 0) + 1;
+    setSuccessCounts(prev => ({ ...prev, [currentCard.id]: count }));
+
+    if (count < 3) {
+      setReviewQueue(prev => {
+        const newQueue = [...prev];
+        const offset = count === 1 ? 4 : 6;
+        const insertIndex = Math.min(newQueue.length, currentIndex + offset);
+        newQueue.splice(insertIndex, 0, currentCard);
+        return newQueue;
+      });
+    }
+
     setShowAnswer(false);
     setCurrentIndex(prev => prev + 1);
   };
@@ -80,7 +143,17 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     }
   };
 
-  const isWordWithKanji = currentCard.kanji && currentCard.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
+  const isWordWithKanji = currentCard?.kanji && currentCard?.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
+
+  const handleMcqSelect = (option: string) => {
+    const field = exerciseType === 'mcq_meaning' ? 'meaning' : 'reading';
+    if (option === currentCard[field]) {
+      setInputError(false);
+      setShowAnswer(true);
+    } else {
+      setInputError(true);
+    }
+  };
 
   const handleDelete = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa từ vựng này không?')) {
@@ -90,8 +163,19 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     }
   };
 
+  const totalGoal = dueCards.length * 3;
+  const currentProgress = Object.values(successCounts).reduce((acc, count) => acc + Math.min(count, 3), 0);
+  const progressPercent = totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0;
+  const currentCardProgress = successCounts[currentCard?.id] || 0;
+
   return (
     <div className="fixed inset-0 bg-[#0c0c0c] flex flex-col items-center justify-center z-50 p-4 font-sans text-[#d4d4d4]">
+      {isFreeStudy && (
+        <div className="absolute top-0 left-0 w-full h-1 bg-[#1a1a1a]">
+          <div className="h-full bg-[#c5a059] transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}></div>
+        </div>
+      )}
+
       <button 
         onClick={handleDelete}
         className="absolute top-6 left-6 p-2 text-red-500 opacity-50 hover:opacity-100 hover:text-red-400 transition-opacity flex items-center gap-2"
@@ -109,17 +193,26 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
       </button>
 
       <div className="w-full max-w-2xl flex flex-col items-center">
-        <div className="mb-8 w-full flex justify-between items-center opacity-50">
-          <span className="text-[10px] uppercase tracking-[0.2em] text-[#c5a059]">Phiên học hiện tại</span>
+        <div className="mb-6 w-full flex justify-between items-center opacity-50">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[#c5a059]">Phiên học hiện tại</span>
+            {isFreeStudy && (
+              <div className="flex gap-1.5 opacity-80">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className={`w-1.5 h-1.5 bg-[#c5a059] transform rotate-45 ${i < currentCardProgress ? 'opacity-100' : 'opacity-20'}`} />
+                ))}
+              </div>
+            )}
+          </div>
           <span className="text-[10px] uppercase tracking-widest font-serif">
             {currentIndex + 1} / {reviewQueue.length}
           </span>
         </div>
 
         <div 
-          className={`w-full aspect-[4/3] bg-[#121212] border border-[#2a2a2a] relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 ${(!showAnswer && isFreeStudy && isWordWithKanji) ? '' : 'cursor-pointer'}`}
+          className={`w-full aspect-[4/3] bg-[#121212] border border-[#2a2a2a] relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 ${(!showAnswer && isFreeStudy && exerciseType !== 'flip') ? '' : 'cursor-pointer'}`}
           style={{ perspective: 1000 }}
-          onClick={() => !showAnswer && !(isFreeStudy && isWordWithKanji) && setShowAnswer(true)}
+          onClick={() => !showAnswer && !(isFreeStudy && exerciseType !== 'flip') && setShowAnswer(true)}
         >
           <motion.div
             className="w-full h-full relative"
@@ -129,10 +222,15 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
           >
             {/* Front */}
             <div 
-              className={`absolute inset-0 flex items-center justify-center bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              className={`absolute inset-0 flex flex-col gap-4 items-center justify-center bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h1>
+              <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
+              {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
+                <div className="text-[#c5a059] opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
+                  {exerciseType === 'mcq_meaning' ? 'Chọn Ý Nghĩa' : 'Chọn/Nhập Cách Đọc'}
+                </div>
+              )}
             </div>
 
             {/* Back */}
@@ -183,41 +281,72 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
         <div className="h-32 w-full">
           {!showAnswer ? (
-            isFreeStudy && isWordWithKanji ? (
-              <motion.div
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="w-full flex flex-col items-center gap-2"
-              >
-                <div className="flex w-full gap-2 relative h-12">
-                  <input 
-                    type="text"
-                    value={readingInput}
-                    onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
-                    placeholder="Nhập Hiragana..."
-                    className={`flex-1 bg-[#1a1a1a] border ${inputError ? 'border-red-500' : 'border-[#c5a059]/30 focus:border-[#c5a059]'} text-[#d4d4d4] px-4 py-2 focus:outline-none placeholder:opacity-40 text-center text-lg`}
-                    autoFocus
-                  />
-                  <button 
-                    onClick={handleCheckReading}
-                    className="bg-[#c5a059] text-black px-6 uppercase tracking-widest font-medium hover:bg-[#d6af6a] transition-colors text-[11px]"
-                  >
-                    Kiểm tra
-                  </button>
-                </div>
-                {inputError && (
-                  <div className="w-full flex justify-between items-center px-2 py-1">
-                    <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
+            isFreeStudy && exerciseType !== 'flip' ? (
+              exerciseType === 'typing_reading' ? (
+                <motion.div
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="w-full flex flex-col items-center gap-2"
+                >
+                  <div className="flex w-full gap-2 relative h-12">
+                    <input 
+                      type="text"
+                      value={readingInput}
+                      onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
+                      placeholder="Nhập Hiragana..."
+                      className={`flex-1 bg-[#1a1a1a] border ${inputError ? 'border-red-500' : 'border-[#c5a059]/30 focus:border-[#c5a059]'} text-[#d4d4d4] px-4 py-2 focus:outline-none placeholder:opacity-40 text-center text-lg`}
+                      autoFocus
+                    />
                     <button 
-                      onClick={() => setShowAnswer(true)}
-                      className="text-[#c5a059] opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
+                      onClick={handleCheckReading}
+                      className="bg-[#c5a059] text-black px-6 uppercase tracking-widest font-medium hover:bg-[#d6af6a] transition-colors text-[11px]"
                     >
-                      Quên (Xem đáp án)
+                      Kiểm tra
                     </button>
                   </div>
-                )}
-              </motion.div>
+                  {inputError && (
+                    <div className="w-full flex justify-between items-center px-2 py-1">
+                      <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
+                      <button 
+                        onClick={() => setShowAnswer(true)}
+                        className="text-[#c5a059] opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
+                      >
+                        Quên (Xem đáp án)
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="w-full flex flex-col gap-2"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                    {mcqOptions.map((opt, i) => (
+                      <button 
+                        key={i}
+                        onClick={() => handleMcqSelect(opt)}
+                        className={`bg-[#1a1a1a] border ${inputError ? 'border-red-500/30' : 'border-[#2a2a2a]'} hover:border-[#c5a059] text-[#d4d4d4] py-3 px-4 text-center text-sm transition-colors tracking-wide truncate`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  {inputError && (
+                    <div className="w-full flex justify-between items-center px-2 py-1">
+                      <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
+                      <button 
+                        onClick={() => setShowAnswer(true)}
+                        className="text-[#c5a059] opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
+                      >
+                        Quên (Xem đáp án)
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )
             ) : (
               <motion.button
                 initial={{ y: 10, opacity: 0 }}
@@ -232,7 +361,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
             <motion.div 
               initial={{ y: 5, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className={`grid ${inputError && isWordWithKanji ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 w-full`}
+              className={`grid ${(inputError && exerciseType !== 'flip') ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 w-full`}
             >
               <button 
                 onClick={handleFreeStudyForgot}
@@ -241,7 +370,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Cần ôn lại</span>
                 <span className="text-xs sm:text-sm text-red-500 font-serif italic">Quên</span>
               </button>
-              {!(inputError && isWordWithKanji) && (
+              {!(inputError && exerciseType !== 'flip') && (
                 <button 
                   onClick={handleFreeStudyRemember}
                   className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
