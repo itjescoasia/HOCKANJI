@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import { useStudyStats } from './hooks/useStudyStats';
@@ -27,18 +27,52 @@ export default function App() {
   const { stats, recordReview, recordFreeStudyTime } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
-  const [freeStudyStartTime, setFreeStudyStartTime] = useState<number | null>(null);
+  const lastActivityRef = useRef(Date.now());
+  const activeSecondsRef = useRef(0);
 
   useEffect(() => {
+    if (!isFreeStudyMode || view !== 'review') return;
+    
+    lastActivityRef.current = Date.now();
+    activeSecondsRef.current = 0;
+
+    const handleActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
+    const interval = setInterval(() => {
+      // Allow max 2 minutes (120000ms) of inactivity before pausing tracking
+      if (document.visibilityState === 'visible' && Date.now() - lastActivityRef.current < 120000) {
+        activeSecondsRef.current += 1;
+      }
+    }, 1000);
+
     const handleBeforeUnload = () => {
-      if (isFreeStudyMode && freeStudyStartTime) {
-        const durationSeconds = Math.floor((Date.now() - freeStudyStartTime) / 1000);
-        recordFreeStudyTime(durationSeconds);
+      if (activeSecondsRef.current > 0) {
+        recordFreeStudyTime(activeSecondsRef.current);
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isFreeStudyMode, freeStudyStartTime, recordFreeStudyTime]);
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearInterval(interval);
+      
+      if (activeSecondsRef.current > 0) {
+        recordFreeStudyTime(activeSecondsRef.current);
+        activeSecondsRef.current = 0;
+      }
+    };
+  }, [isFreeStudyMode, view, recordFreeStudyTime]);
 
   if (authLoading || !isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
 
@@ -75,7 +109,6 @@ export default function App() {
 
   const handleStartFreeStudy = () => {
     setIsFreeStudyMode(true);
-    setFreeStudyStartTime(Date.now());
     setView('review');
   };
 
@@ -106,10 +139,8 @@ export default function App() {
   };
 
   const handleNavigate = (newView: string) => {
-    if (isFreeStudyMode && freeStudyStartTime) {
-      const durationSeconds = Math.floor((Date.now() - freeStudyStartTime) / 1000);
-      recordFreeStudyTime(durationSeconds);
-      setFreeStudyStartTime(null);
+    // The active time saving is handled by the unmount effect of the tracker above
+    if (isFreeStudyMode) {
       setIsFreeStudyMode(false);
     }
     setView(newView);
