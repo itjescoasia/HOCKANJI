@@ -32,6 +32,8 @@ export function useStudyStats() {
           } else {
             setStats({});
           }
+        }, (error) => {
+          console.error('Firestore useStudyStats error:', error);
         });
       } else {
         const localStats = localStorage.getItem('kanji_srs_stats');
