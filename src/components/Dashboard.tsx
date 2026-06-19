@@ -61,8 +61,8 @@ export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, o
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
 
-  const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0 };
-  const yesterdayStats = stats[yesterdayStr] || { reviewed: 0, correct: 0, mastered: 0 };
+  const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
+  const yesterdayStats = stats[yesterdayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
 
   const reviewedDiff = todayStats.reviewed - yesterdayStats.reviewed;
   const correctRateToday = todayStats.reviewed > 0 ? Math.round((todayStats.correct / todayStats.reviewed) * 100) : 0;
@@ -139,16 +139,29 @@ export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, o
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col relative overflow-hidden">
           <BookOpen className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
-          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{deck.length}</span>
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-4xl font-serif text-white">{deck.length}</span>
+          </div>
           <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Tổng Số Thẻ Từ</span>
         </div>
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
           <Clock className="w-6 h-6 text-red-500 mb-4 opacity-70" />
-          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{dueCards.length}</span>
-          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Cần Ôn Hôm Nay</span>
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-4xl font-serif text-white">{dueCards.length}</span>
+            <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">/ 150</span>
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-red-400 opacity-70">Cần Ôn Tập</span>
+        </div>
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <Zap className="w-6 h-6 text-blue-500 mb-4 opacity-70" />
+          <div className="flex items-end gap-2 mb-2">
+            <span className="text-4xl font-serif text-white">{todayStats.newLearned || 0}</span>
+            <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">/ 15</span>
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-blue-400 opacity-70">Thẻ Mới Đã Học</span>
         </div>
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
           <Brain className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />

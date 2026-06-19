@@ -6,6 +6,7 @@ export interface DailyStats {
   reviewed: number;
   correct: number;
   mastered: number;
+  newLearned: number;
 }
 
 export interface UserStats {
@@ -47,12 +48,12 @@ export function useStudyStats() {
     };
   }, []);
 
-  const recordReview = async (isCorrect: boolean, isNewlyMastered: boolean) => {
+  const recordReview = async (isCorrect: boolean, isNewlyMastered: boolean, isNewCard?: boolean) => {
     const today = new Date().toISOString().split('T')[0];
     
     // Optimistic local update
     const prevStats = { ...stats };
-    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0 };
+    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
     
     const newStats = {
       ...prevStats,
@@ -60,6 +61,7 @@ export function useStudyStats() {
         reviewed: todayStats.reviewed + 1,
         correct: todayStats.correct + (isCorrect ? 1 : 0),
         mastered: todayStats.mastered + (isNewlyMastered ? 1 : 0),
+        newLearned: (todayStats.newLearned || 0) + (isNewCard ? 1 : 0),
       }
     };
     
