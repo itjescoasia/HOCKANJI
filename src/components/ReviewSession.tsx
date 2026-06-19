@@ -237,7 +237,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
             <motion.div 
               initial={{ y: 5, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="grid grid-cols-2 gap-2 sm:gap-4 w-full"
+              className={`grid ${inputError && isWordWithKanji ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 w-full`}
             >
               <button 
                 onClick={handleFreeStudyForgot}
@@ -246,13 +246,15 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Cần ôn lại</span>
                 <span className="text-xs sm:text-sm text-red-500 font-serif italic">Quên</span>
               </button>
-              <button 
-                onClick={handleFreeStudyRemember}
-                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
-              >
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Đã thuộc</span>
-                <span className="text-xs sm:text-sm text-green-500 font-serif italic">Nhớ</span>
-              </button>
+              {!(inputError && isWordWithKanji) && (
+                <button 
+                  onClick={handleFreeStudyRemember}
+                  className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
+                >
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Đã thuộc</span>
+                  <span className="text-xs sm:text-sm text-green-500 font-serif italic">Nhớ</span>
+                </button>
+              )}
             </motion.div>
           ) : (
             <motion.div 
