@@ -73,11 +73,12 @@ export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, o
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const dStr = d.toISOString().split('T')[0];
-    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0 };
+    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0, freeStudyTime: 0 };
     return {
       date: d.toLocaleDateString('vi-VN', { weekday: 'short' }),
       reviewed: s.reviewed,
       correct: s.correct,
+      freeStudyTimeMinutes: Math.ceil((s.freeStudyTime || 0) / 60)
     };
   });
 
@@ -240,8 +241,8 @@ export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, o
         </div>
       </div>
 
-      {/* Forecast Section */}
-      <div className="grid grid-cols-1 gap-4">
+      {/* Forecast & Free Study Time Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
           <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Lịch trình ôn tập (7 ngày tới)</h3>
           <div className="h-[250px] w-full flex-1 mt-6 relative">
@@ -261,6 +262,31 @@ export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, o
               </ResponsiveContainer>
             ) : (
                <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest">Chưa có dữ liệu</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Thời gian học nhồi (7 ngày qua)</h3>
+          <div className="h-[250px] w-full flex-1 mt-6 relative">
+            {studyHistoryData.some(d => d.freeStudyTimeMinutes > 0) ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={studyHistoryData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <RechartsTooltip 
+                    cursor={{fill: '#1a1a1a'}}
+                    contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
+                    itemStyle={{ color: '#4a90e2', fontSize: '12px' }}
+                    labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
+                  />
+                  <Bar dataKey="freeStudyTimeMinutes" name="Phút" fill="#4a90e2" radius={[2, 2, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+               <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest text-[#d4d4d4] text-center px-4">
+                 Bạn chưa học nhồi trong 7 ngày qua.
+               </div>
             )}
           </div>
         </div>

@@ -24,9 +24,21 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
-  const { stats, recordReview } = useStudyStats();
+  const { stats, recordReview, recordFreeStudyTime } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
+  const [freeStudyStartTime, setFreeStudyStartTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isFreeStudyMode && freeStudyStartTime) {
+        const durationSeconds = Math.floor((Date.now() - freeStudyStartTime) / 1000);
+        recordFreeStudyTime(durationSeconds);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFreeStudyMode, freeStudyStartTime, recordFreeStudyTime]);
 
   if (authLoading || !isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
 
@@ -63,6 +75,7 @@ export default function App() {
 
   const handleStartFreeStudy = () => {
     setIsFreeStudyMode(true);
+    setFreeStudyStartTime(Date.now());
     setView('review');
   };
 
@@ -92,9 +105,18 @@ export default function App() {
     await reviewCard(id, grade);
   };
 
+  const handleNavigate = (newView: string) => {
+    if (isFreeStudyMode && freeStudyStartTime) {
+      const durationSeconds = Math.floor((Date.now() - freeStudyStartTime) / 1000);
+      recordFreeStudyTime(durationSeconds);
+      setFreeStudyStartTime(null);
+      setIsFreeStudyMode(false);
+    }
+    setView(newView);
+  };
+
   const handleCloseReview = () => {
-    setIsFreeStudyMode(false);
-    setView('dashboard');
+    handleNavigate('dashboard');
   };
 
   const getFreeStudyDeck = () => {
@@ -120,7 +142,7 @@ export default function App() {
       {/* Header / Nav */}
       <header className="bg-[#121212] border-b border-[#2a2a2a] sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4 cursor-pointer" onClick={() => setView('dashboard')}>
+          <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
             <div className="w-10 h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-[#c5a059]">
               <span className="text-white font-serif text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
             </div>
@@ -131,7 +153,7 @@ export default function App() {
             {navItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => setView(item.id)}
+                onClick={() => handleNavigate(item.id)}
                 className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded ${
                   view === item.id 
                     ? 'bg-[#1a1a1a] text-[#c5a059] border border-[#2a2a2a]' 
@@ -163,7 +185,7 @@ export default function App() {
             stats={stats}
             onStartReview={handleStartReview} 
             onStartFreeStudy={handleStartFreeStudy}
-            onNavigateAdd={() => setView('add')} 
+            onNavigateAdd={() => handleNavigate('add')} 
           />
         )}
         
@@ -174,7 +196,7 @@ export default function App() {
         {view === 'add' && (
           <AddVocab onAdd={(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType) => {
             addCard(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType);
-            setView('list'); // Redirect to list to show success
+            handleNavigate('list'); // Redirect to list to show success
           }} />
         )}
       </main>

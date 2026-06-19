@@ -7,6 +7,7 @@ export interface DailyStats {
   correct: number;
   mastered: number;
   newLearned: number;
+  freeStudyTime?: number;
 }
 
 export interface UserStats {
@@ -79,5 +80,35 @@ export function useStudyStats() {
     }
   };
 
-  return { stats, recordReview };
+  const recordFreeStudyTime = async (seconds: number) => {
+    if (seconds <= 0) return;
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Optimistic local update
+    const prevStats = { ...stats };
+    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
+    
+    const newStats = {
+      ...prevStats,
+      [today]: {
+        ...todayStats,
+        freeStudyTime: (todayStats.freeStudyTime || 0) + seconds,
+      }
+    };
+    
+    setStats(newStats);
+
+    if (auth.currentUser) {
+      try {
+        const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
+        await setDoc(statsRef, newStats, { merge: true });
+      } catch (err) {
+        console.error('Error saving stats:', err);
+      }
+    } else {
+      localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
+    }
+  };
+
+  return { stats, recordReview, recordFreeStudyTime };
 }
