@@ -73,7 +73,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
   const handleCheckReading = () => {
     if (readingInput.trim() === currentCard.reading.trim()) {
-      handleFreeStudyRemember();
+      setInputError(false);
+      setShowAnswer(true);
     } else {
       setInputError(true);
     }
@@ -245,8 +246,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   onClick={handleFreeStudyRemember}
                   className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
                 >
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Đã thuộc</span>
-                  <span className="text-xs sm:text-sm text-green-500 font-serif italic">Nhớ</span>
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Hoàn thành</span>
+                  <span className="text-xs sm:text-sm text-green-500 font-serif italic">Đã nhớ</span>
                 </button>
               )}
             </motion.div>
