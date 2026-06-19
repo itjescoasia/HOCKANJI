@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
 import { X, Trash2 } from 'lucide-react';
@@ -16,6 +16,15 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+
+  const [readingInput, setReadingInput] = useState('');
+  const [inputError, setInputError] = useState(false);
+
+  // Reset internal states when current index changes
+  useEffect(() => {
+    setReadingInput('');
+    setInputError(false);
+  }, [currentIndex]);
 
   if (currentIndex >= reviewQueue.length) {
     return (
@@ -62,6 +71,16 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     setCurrentIndex(prev => prev + 1);
   };
 
+  const handleCheckReading = () => {
+    if (readingInput.trim() === currentCard.reading.trim()) {
+      handleFreeStudyRemember();
+    } else {
+      setInputError(true);
+    }
+  };
+
+  const isWordWithKanji = currentCard.kanji && currentCard.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
+
   const handleDelete = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa từ vựng này không?')) {
       onRemoveCard(currentCard.id);
@@ -97,9 +116,9 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         </div>
 
         <div 
-          className="w-full aspect-[4/3] bg-[#121212] border border-[#2a2a2a] relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 cursor-pointer"
+          className={`w-full aspect-[4/3] bg-[#121212] border border-[#2a2a2a] relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 ${(!showAnswer && isFreeStudy && isWordWithKanji) ? '' : 'cursor-pointer'}`}
           style={{ perspective: 1000 }}
-          onClick={() => !showAnswer && setShowAnswer(true)}
+          onClick={() => !showAnswer && !(isFreeStudy && isWordWithKanji) && setShowAnswer(true)}
         >
           <motion.div
             className="w-full h-full relative"
@@ -169,14 +188,51 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
         <div className="h-32 w-full">
           {!showAnswer ? (
-            <motion.button
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              onClick={() => setShowAnswer(true)}
-              className="w-full bg-[#1a1a1a] border border-[#c5a059] hover:bg-[#c5a059] hover:text-black py-5 uppercase tracking-[0.2em] text-[#c5a059] text-[11px] transition-colors"
-            >
-              Xem đáp án
-            </motion.button>
+            isFreeStudy && isWordWithKanji ? (
+              <motion.div
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="w-full flex flex-col items-center gap-2"
+              >
+                <div className="flex w-full gap-2 relative h-12">
+                  <input 
+                    type="text"
+                    value={readingInput}
+                    onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
+                    placeholder="Nhập Hiragana..."
+                    className={`flex-1 bg-[#1a1a1a] border ${inputError ? 'border-red-500' : 'border-[#c5a059]/30 focus:border-[#c5a059]'} text-[#d4d4d4] px-4 py-2 focus:outline-none placeholder:opacity-40 text-center text-lg`}
+                    autoFocus
+                  />
+                  <button 
+                    onClick={handleCheckReading}
+                    className="bg-[#c5a059] text-black px-6 uppercase tracking-widest font-medium hover:bg-[#d6af6a] transition-colors text-[11px]"
+                  >
+                    Kiểm tra
+                  </button>
+                </div>
+                {inputError && (
+                  <div className="w-full flex justify-between items-center px-2 py-1">
+                    <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
+                    <button 
+                      onClick={() => setShowAnswer(true)}
+                      className="text-[#c5a059] opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
+                    >
+                      Quên (Xem đáp án)
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.button
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                onClick={() => setShowAnswer(true)}
+                className="w-full bg-[#1a1a1a] border border-[#c5a059] hover:bg-[#c5a059] hover:text-black py-5 uppercase tracking-[0.2em] text-[#c5a059] text-[11px] transition-colors"
+              >
+                Xem đáp án
+              </motion.button>
+            )
           ) : isFreeStudy ? (
             <motion.div 
               initial={{ y: 5, opacity: 0 }}
