@@ -59,12 +59,14 @@ export default function App() {
 
   const getFreeStudyDeck = () => {
     return [...deck]
-      .map(card => ({
-        card,
-        sortKey: Math.random() + (card.freeStudyScore || 0) * 0.5
-      }))
-      .sort((a, b) => a.sortKey - b.sortKey)
-      .map(item => item.card);
+      .sort((a, b) => {
+        const scoreA = a.freeStudyScore || 0;
+        const scoreB = b.freeStudyScore || 0;
+        if (scoreA !== scoreB) {
+          return scoreA - scoreB; // Lower score (most forgotten) comes first
+        }
+        return Math.random() - 0.5; // Randomize order within same score
+      });
   };
 
   const navItems = [
