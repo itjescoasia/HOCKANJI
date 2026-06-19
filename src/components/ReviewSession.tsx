@@ -119,6 +119,10 @@ export default function ReviewSession({ dueCards, onReview, onClose, onRemoveCar
                   )}
                 </div>
 
+                {currentCard.wordType && (
+                  <div className="text-[10px] sm:text-xs text-[#d4d4d4] opacity-50 bg-[#1a1a1a] px-3 py-1 rounded-sm border border-[#2a2a2a] uppercase tracking-widest mt-2">{currentCard.wordType}</div>
+                )}
+
                 <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-2 sm:my-4 flex-shrink-0"></div>
                 <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
                 {(currentCard.example || currentCard.exampleTranslation) && (

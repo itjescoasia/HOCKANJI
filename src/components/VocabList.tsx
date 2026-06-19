@@ -6,15 +6,15 @@ import * as XLSX from 'xlsx';
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation'>>) => void;
-  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }[]) => Promise<{added: number, updated: number}>;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType'>>) => void;
+  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (card: KanjiCard) => {
@@ -26,6 +26,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       meaning: card.meaning,
       example: card.example || '',
       exampleTranslation: card.exampleTranslation || '',
+      wordType: card.wordType || '',
     });
   };
 
@@ -37,7 +38,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         sinoVietnamese: editForm.sinoVietnamese?.trim() || '',
         meaning: editForm.meaning.trim(),
         example: editForm.example?.trim() || '',
-        exampleTranslation: editForm.exampleTranslation?.trim() || ''
+        exampleTranslation: editForm.exampleTranslation?.trim() || '',
+        wordType: editForm.wordType?.trim() || ''
       });
       setEditingId(null);
     }
@@ -59,6 +61,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       Kanji: d.kanji,
       Reading: d.reading,
       "Hán Việt": d.sinoVietnamese || '',
+      "Từ loại": d.wordType || '',
       Meaning: d.meaning,
       Example: d.example || '',
       "Ví dụ (Dịch)": d.exampleTranslation || ''
@@ -66,7 +69,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
     
     const ws = data.length > 0 
       ? XLSX.utils.json_to_sheet(data) 
-      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Hán Việt", "Meaning", "Example", "Ví dụ (Dịch)"] });
+      : XLSX.utils.json_to_sheet([], { header: ["Kanji", "Reading", "Hán Việt", "Từ loại", "Meaning", "Example", "Ví dụ (Dịch)"] });
       
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Vocab");
@@ -91,6 +94,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
           kanji: String(row.Kanji || row.kanji || '').trim(),
           reading: String(row.Reading || row.reading || '').trim(),
           meaning: String(row.Meaning || row.meaning || '').trim(),
+          wordType: String(row['Từ loại'] || row.wordType || row.Từ_loại || '').trim(),
           sinoVietnamese: String(row['Hán Việt'] || row.hanviet || row.sinoVietnamese || '').trim(),
           example: String(row.Example || row.example || row['Ví dụ'] || '').trim(),
           exampleTranslation: String(row['Ví dụ (Dịch)'] || row.exampleTranslation || row.ExampleTranslation || '').trim()
@@ -209,10 +213,24 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                                 className="flex-1 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
                                 placeholder="Cách đọc"
                               />
+                              <select 
+                                value={editForm.wordType} 
+                                onChange={e => setEditForm({...editForm, wordType: e.target.value})}
+                                className="w-32 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059] appearance-none"
+                              >
+                                <option value="">Loại từ</option>
+                                <option value="Động từ nhóm I">Động từ nhóm I</option>
+                                <option value="Động từ nhóm II">Động từ nhóm II</option>
+                                <option value="Động từ nhóm III">Động từ nhóm III</option>
+                                <option value="Danh từ">Danh từ</option>
+                                <option value="Tính từ i">Tính từ i</option>
+                                <option value="Tính từ na">Tính từ na</option>
+                                <option value="Khác">Khác</option>
+                              </select>
                               <input 
                                 value={editForm.sinoVietnamese} 
                                 onChange={e => setEditForm({...editForm, sinoVietnamese: e.target.value})}
-                                className="w-24 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#c5a059] uppercase px-3 py-2 px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                className="w-24 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#c5a059] uppercase px-3 py-2 focus:outline-none focus:border-[#c5a059]"
                                 placeholder="Hán Việt"
                               />
                             </div>
@@ -270,6 +288,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                       <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
                         <div className="flex items-center gap-2 mb-1">
                           <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
+                          {card.wordType && (
+                            <span className="text-[10px] text-[#4a4a4a] bg-[#1a1a1a] px-1.5 py-0.5 rounded-sm border border-[#2a2a2a]">{card.wordType}</span>
+                          )}
                           {card.sinoVietnamese && (
                             <span className="text-[10px] text-[#c5a059] uppercase tracking-widest border border-[#c5a059]/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
                           )}

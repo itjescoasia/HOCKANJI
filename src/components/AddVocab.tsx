@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface AddVocabProps {
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string) => void;
 }
 
 export default function AddVocab({ onAdd }: AddVocabProps) {
@@ -11,17 +11,19 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   const [meaning, setMeaning] = useState('');
   const [example, setExample] = useState('');
   const [exampleTranslation, setExampleTranslation] = useState('');
+  const [wordType, setWordType] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) return;
-    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim());
+    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim(), wordType);
     setKanji('');
     setReading('');
     setSinoVietnamese('');
     setMeaning('');
     setExample('');
     setExampleTranslation('');
+    setWordType('');
     
     // Simple visual feedback could go here, but clearing the form is enough for now
   };
@@ -54,6 +56,23 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#d4d4d4] font-serif italic text-center"
             placeholder="go, kataru"
           />
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Từ loại</label>
+          <select
+            value={wordType}
+            onChange={e => setWordType(e.target.value)}
+            className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#d4d4d4] text-center"
+          >
+            <option value="">-- Chọn từ loại --</option>
+            <option value="Động từ nhóm I">Động từ nhóm I</option>
+            <option value="Động từ nhóm II">Động từ nhóm II</option>
+            <option value="Động từ nhóm III">Động từ nhóm III</option>
+            <option value="Danh từ">Danh từ</option>
+            <option value="Tính từ i">Tính từ i</option>
+            <option value="Tính từ na">Tính từ na</option>
+            <option value="Khác">Khác</option>
+          </select>
         </div>
         <div>
           <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Hán Việt</label>

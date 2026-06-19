@@ -89,7 +89,7 @@ export function useVocabDeck() {
     }
   }, [deck, isLoaded]);
 
-  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string) => {
+  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string) => {
     const newCard: KanjiCard = {
       id: crypto.randomUUID(),
       kanji,
@@ -98,6 +98,7 @@ export function useVocabDeck() {
       meaning,
       example,
       exampleTranslation,
+      wordType,
       interval: 0,
       repetition: 0,
       easeFactor: 2.5,
@@ -150,11 +151,11 @@ export function useVocabDeck() {
     return deck.filter(card => card.nextReviewDate <= now);
   };
 
-  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }[]) => {
+  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => {
     const existingKanjiMap = new Map<string, KanjiCard>(deck.map(c => [c.kanji, c]));
     
     // De-duplicate within the imported cards themselves (keep last one in the file if kanji match)
-    const uniqueImported = new Map<string, { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string }>();
+    const uniqueImported = new Map<string, { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string; wordType?: string }>();
     for (const c of importedCards) {
         if (c.kanji) {
             uniqueImported.set(c.kanji, c);
@@ -171,6 +172,7 @@ export function useVocabDeck() {
                                 (imported.sinoVietnamese && existing.sinoVietnamese !== imported.sinoVietnamese) ||
                                 (imported.example && existing.example !== imported.example) ||
                                 (imported.exampleTranslation && existing.exampleTranslation !== imported.exampleTranslation) ||
+                                (imported.wordType && existing.wordType !== imported.wordType) ||
                                 (imported.meaning && existing.meaning !== imported.meaning);
              
              if (hasChanges) {
@@ -180,7 +182,8 @@ export function useVocabDeck() {
                      sinoVietnamese: imported.sinoVietnamese || existing.sinoVietnamese,
                      meaning: imported.meaning || existing.meaning,
                      example: imported.example || existing.example,
-                     exampleTranslation: imported.exampleTranslation || existing.exampleTranslation
+                     exampleTranslation: imported.exampleTranslation || existing.exampleTranslation,
+                     wordType: imported.wordType || existing.wordType
                  });
              }
         } else {
@@ -192,6 +195,7 @@ export function useVocabDeck() {
                meaning: imported.meaning || '',
                example: imported.example || '',
                exampleTranslation: imported.exampleTranslation || '',
+               wordType: imported.wordType || '',
                interval: 0,
                repetition: 0,
                easeFactor: 2.5,
@@ -235,7 +239,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation'>>) => {
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType'>>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });

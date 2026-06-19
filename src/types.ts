@@ -6,6 +6,7 @@ export interface KanjiCard {
   meaning: string;
   example?: string;
   exampleTranslation?: string;
+  wordType?: string;
   interval: number;
   repetition: number;
   easeFactor: number;
