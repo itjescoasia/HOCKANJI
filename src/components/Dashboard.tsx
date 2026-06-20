@@ -6,13 +6,14 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTo
 interface DashboardProps {
   deck: KanjiCard[];
   dueCards: KanjiCard[];
+  leftoverNewCards?: number;
   stats?: UserStats;
   onStartReview: () => void;
   onStartFreeStudy?: () => void;
   onNavigateAdd: () => void;
 }
 
-export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, onStartFreeStudy, onNavigateAdd }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onNavigateAdd }: DashboardProps) {
   const isDue = dueCards.length > 0;
 
   // Cấp độ ghi nhớ
@@ -297,13 +298,28 @@ export default function Dashboard({ deck, dueCards, stats = {}, onStartReview, o
           {isDue ? `Cần thực hiện: Ôn ${dueCards.length} từ` : "Tuyệt vời, chưa có từ nào cần ôn"}
         </h2>
         
-        <p className="opacity-60 mb-10 max-w-xl mx-auto relative z-10 text-[13px] leading-relaxed tracking-wide">
+        <p className="opacity-60 mb-8 max-w-xl mx-auto relative z-10 text-[13px] leading-relaxed tracking-wide">
           {isDue 
             ? "Danh sách ôn tập hằng ngày gồm các từ đã quên và đến hạn. Thẻ từ sẽ lặp lại liên tục ngắt quãng cho đến khi bạn khắc sâu."
             : deck.length === 0 
                 ? "Kho từ vựng trống. Hãy bắt đầu thêm các chữ mới vào từ điển của bạn."
                 : "Bạn đã hoàn thành mục tiêu hôm nay. Hãy quay lại vào ngày mai hoặc thu thập thêm từ vựng mới."}
         </p>
+
+        {!isDue && leftoverNewCards > 0 && (
+          <div className="mb-10 w-full flex justify-center">
+             <div className="bg-[#1a1a1a] border border-[#2a2a2a] inline-flex items-center gap-2 px-4 py-2 opacity-80">
+               <span className="w-2 h-2 rounded-full bg-[#c5a059]"></span>
+               <span className="text-xs uppercase tracking-widest text-[#d4d4d4]">Hiện đang còn <strong className="text-[#c5a059]">{leftoverNewCards} từ mới</strong> chờ bạn khám phá vào ngày mai!</span>
+             </div>
+          </div>
+        )}
+        
+        {isDue && leftoverNewCards > 0 && (
+           <div className="mb-8 opacity-60 text-xs uppercase tracking-widest text-[#c5a059]">
+              Còn {leftoverNewCards} từ mới đang đợi được học vào ngày mai do đã đạt giới hạn học từ mới hôm nay.
+           </div>
+        )}
 
         {isDue ? (
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10">

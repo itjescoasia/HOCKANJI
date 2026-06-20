@@ -87,7 +87,7 @@ export default function App() {
   const newCards = rawDueCards.filter(c => c.repetition === 0);
   const reviewCards = rawDueCards.filter(c => c.repetition > 0);
 
-  const maxNewPerDay = 15;
+  const maxNewPerDay = 25;
   const newLearnedToday = todayStats.newLearned || 0;
   const availableNewSlots = Math.max(0, maxNewPerDay - newLearnedToday);
 
@@ -99,6 +99,8 @@ export default function App() {
   const limitedReview = reviewCards
     .sort((a,b) => a.nextReviewDate - b.nextReviewDate)
     .slice(0, maxReviewPerDay);
+
+  const leftoverNewCards = Math.max(0, newCards.length - availableNewSlots);
 
   const dueCards = [...limitedNew, ...limitedReview];
 
@@ -214,6 +216,7 @@ export default function App() {
             deck={deck} 
             dueCards={dueCards} 
             stats={stats}
+            leftoverNewCards={leftoverNewCards}
             onStartReview={handleStartReview} 
             onStartFreeStudy={handleStartFreeStudy}
             onNavigateAdd={() => handleNavigate('add')} 
