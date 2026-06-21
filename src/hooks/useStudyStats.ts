@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { getLocalDateString } from '../lib/dateUtils';
 
 export interface DailyStats {
   reviewed: number;
@@ -51,7 +52,7 @@ export function useStudyStats() {
   }, []);
 
   const recordReview = async (isCorrect: boolean, isNewlyMastered: boolean, isNewCard?: boolean) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     
     // Optimistic local update
     const prevStats = { ...stats };
@@ -83,7 +84,7 @@ export function useStudyStats() {
 
   const recordFreeStudyTime = async (seconds: number) => {
     if (seconds <= 0) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     
     // Optimistic local update
     const prevStats = { ...stats };
@@ -112,7 +113,7 @@ export function useStudyStats() {
   };
 
   const recordWordOfTheDay = async (wotdId: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     
     const prevStats = { ...stats };
     const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };

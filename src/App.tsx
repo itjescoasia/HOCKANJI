@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import { useStudyStats } from './hooks/useStudyStats';
+import { getLocalDateString } from './lib/dateUtils';
 import Dashboard from './components/Dashboard';
 import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
@@ -14,6 +15,28 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [dayTrigger, setDayTrigger] = useState(getLocalDateString());
+
+  useEffect(() => {
+    const calculateTimeUntilMidnight = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      return tomorrow.getTime() - now.getTime();
+    };
+
+    let timerId: ReturnType<typeof setTimeout>;
+    
+    const setMidnightTimer = () => {
+      timerId = setTimeout(() => {
+        setDayTrigger(getLocalDateString());
+        setMidnightTimer(); // Set up for the next day
+      }, calculateTimeUntilMidnight() + 1000); // add 1 second padding
+    };
+
+    setMidnightTimer();
+
+    return () => clearTimeout(timerId);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -82,7 +105,7 @@ export default function App() {
   }
 
   const rawDueCards = getDueCards();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
   
   const newCards = rawDueCards.filter(c => c.interval === 0);

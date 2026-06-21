@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { KanjiCard } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
+import { getLocalDateString } from '../lib/dateUtils';
 import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -60,10 +61,10 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
   });
 
   // Calculate Progress Stats
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+  const yesterdayStr = getLocalDateString(yesterdayDate);
 
   const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
   const yesterdayStats = stats[yesterdayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
@@ -76,7 +77,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
   const studyHistoryData = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
-    const dStr = d.toISOString().split('T')[0];
+    const dStr = getLocalDateString(d);
     const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0, freeStudyTime: 0 };
     return {
       date: d.toLocaleDateString('vi-VN', { weekday: 'short' }),
