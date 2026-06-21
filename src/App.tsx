@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import { useStudyStats } from './hooks/useStudyStats';
-import { getLocalDateString } from './lib/dateUtils';
+import { getLocalDateString, getEndOfTodayTimestamp } from './lib/dateUtils';
 import Dashboard from './components/Dashboard';
 import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
@@ -19,9 +19,8 @@ export default function App() {
 
   useEffect(() => {
     const calculateTimeUntilMidnight = () => {
-      const now = new Date();
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      return tomorrow.getTime() - now.getTime();
+      const msUntilEnd = getEndOfTodayTimestamp() - new Date().getTime();
+      return Math.max(0, msUntilEnd);
     };
 
     let timerId: ReturnType<typeof setTimeout>;

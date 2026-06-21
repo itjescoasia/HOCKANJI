@@ -3,6 +3,7 @@ import { KanjiCard, ReviewGrade } from '../types';
 import { calculateNextReview } from '../lib/sm2';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
+import { getEndOfTodayTimestamp } from '../lib/dateUtils';
 
 export function useVocabDeck() {
   const [deck, setDeck] = useState<KanjiCard[]>([]);
@@ -154,9 +155,7 @@ export function useVocabDeck() {
   };
 
   const getDueCards = () => {
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
-    const nowThreshold = endOfToday.getTime();
+    const nowThreshold = getEndOfTodayTimestamp();
     return deck.filter(card => card.nextReviewDate <= nowThreshold);
   };
 

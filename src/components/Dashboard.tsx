@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { KanjiCard } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
-import { getLocalDateString } from '../lib/dateUtils';
+import { getLocalDateString, getVietnamDate } from '../lib/dateUtils';
 import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -88,7 +88,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
   });
 
   // Calculate Word of the Day
-  const todayForSeed = new Date();
+  const todayForSeed = getVietnamDate();
   const seed = todayForSeed.getFullYear() * 10000 + (todayForSeed.getMonth() + 1) * 100 + todayForSeed.getDate();
   
   const wordOfTheDay = useMemo(() => {
