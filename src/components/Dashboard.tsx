@@ -26,8 +26,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
   const newCards = deck.filter(c => c.interval === 0).length;
   
   const totalCards = deck.length;
-  const masteryRate = totalCards > 0 ? Math.round(((matureCards + learningCards) / totalCards) * 100) : 0;
-
+  
   // Chart 1: Progress Data
   const progressData = [
     { name: 'Đã khắc sâu', value: matureCards, color: '#c5a059' },
@@ -68,6 +67,11 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
 
   const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
   const yesterdayStats = stats[yesterdayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
+
+  // Tiến độ ôn tập hôm nay
+  const studiedToday = todayStats.reviewed || 0;
+  const todayGoal = studiedToday + dueCards.length;
+  const todayProgressRate = todayGoal > 0 ? Math.round((studiedToday / todayGoal) * 100) : 100;
 
   const reviewedDiff = todayStats.reviewed - yesterdayStats.reviewed;
   const correctRateToday = todayStats.reviewed > 0 ? Math.round((todayStats.correct / todayStats.reviewed) * 100) : 0;
@@ -246,8 +250,8 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
         </div>
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
           <Target className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
-          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{masteryRate}%</span>
-          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Tiến độ (Đang + Đã học)</span>
+          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{todayProgressRate}%</span>
+          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Tiến độ hôm nay</span>
         </div>
       </div>
 
