@@ -87,7 +87,19 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
   // Calculate Word of the Day
   const todayForSeed = new Date();
   const seed = todayForSeed.getFullYear() * 10000 + (todayForSeed.getMonth() + 1) * 100 + todayForSeed.getDate();
-  const wordOfTheDay = deck.length > 0 ? deck[seed % deck.length] : null;
+  
+  const difficultWords = [...deck]
+    .filter(c => (c.difficultScore || 0) < 0)
+    .sort((a, b) => (a.difficultScore || 0) - (b.difficultScore || 0))
+    .slice(0, 30);
+
+  let wordOfTheDay = null;
+  if (difficultWords.length > 0) {
+    wordOfTheDay = difficultWords[seed % difficultWords.length];
+  } else if (deck.length > 0) {
+    // Fallback to random word if there are no difficult words yet
+    wordOfTheDay = deck[seed % deck.length];
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
