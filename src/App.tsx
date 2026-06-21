@@ -85,8 +85,8 @@ export default function App() {
   const todayStr = new Date().toISOString().split('T')[0];
   const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
   
-  const newCards = rawDueCards.filter(c => c.repetition === 0);
-  const reviewCards = rawDueCards.filter(c => c.repetition > 0);
+  const newCards = rawDueCards.filter(c => c.interval === 0);
+  const reviewCards = rawDueCards.filter(c => c.interval > 0);
 
   const maxNewPerDay = 25;
   const newLearnedToday = todayStats.newLearned || 0;
@@ -150,7 +150,7 @@ export default function App() {
     const cardToReview = deck.find(c => c.id === id);
     if (cardToReview) {
       const isCorrect = grade !== 'forgot';
-      const isNewCard = cardToReview.repetition === 0;
+      const isNewCard = cardToReview.interval === 0;
       // Newly mastered if the previous interval < 21 but next interval is handled inside reviewCard,
       // it's tricky to know exactly here without re-running calculateNextReview.
       // For simplicity, we just assume any grade 'easy' or 'good' on an existing somewhat mature card is progress.
