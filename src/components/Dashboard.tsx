@@ -84,12 +84,47 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
     };
   });
 
+  // Calculate Word of the Day
+  const todayForSeed = new Date();
+  const seed = todayForSeed.getFullYear() * 10000 + (todayForSeed.getMonth() + 1) * 100 + todayForSeed.getDate();
+  const wordOfTheDay = deck.length > 0 ? deck[seed % deck.length] : null;
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
         <h1 className="text-3xl sm:text-4xl font-serif text-[#c5a059] tracking-widest mb-3 uppercase" style={{ fontFamily: 'serif' }}>Thống Kê Học Tập</h1>
         <p className="text-[11px] text-[#d4d4d4] opacity-50 uppercase tracking-[0.2em]">Tiến độ học và biểu diễn dữ liệu</p>
       </div>
+
+      {/* Word of the Day */}
+      {wordOfTheDay && (
+        <div className="bg-[#121212] border border-[#c5a059] p-6 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-2 opacity-10">
+            <span className="text-8xl font-serif">{wordOfTheDay.kanji}</span>
+          </div>
+          <div className="relative z-10">
+            <h2 className="text-[10px] uppercase tracking-widest text-[#c5a059] mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-[#c5a059] rounded-full inline-block"></span>
+              Từ vựng mỗi ngày
+            </h2>
+            <div className="flex flex-col sm:flex-row items-baseline gap-4 mb-2">
+              <span className="text-4xl sm:text-5xl font-serif text-white">{wordOfTheDay.kanji}</span>
+              {wordOfTheDay.reading && (
+                <span className="text-lg text-[#d4d4d4] opacity-80">{wordOfTheDay.reading}</span>
+              )}
+            </div>
+            <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl">{wordOfTheDay.meaning}</p>
+            {wordOfTheDay.example && (
+              <div className="mt-4 border-t border-[#2a2a2a] pt-3">
+                <p className="text-xs text-[#d4d4d4] italic opacity-80">"{wordOfTheDay.example}"</p>
+                {wordOfTheDay.exampleTranslation && (
+                  <p className="text-[11px] text-[#d4d4d4] opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Progress Indicators (Chỉ số tiến bộ) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

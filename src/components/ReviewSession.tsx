@@ -10,9 +10,10 @@ interface ReviewSessionProps {
   onClose: () => void;
   onRemoveCard: (id: string) => void;
   isFreeStudy?: boolean;
+  isDifficultReview?: boolean;
 }
 
-export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, isFreeStudy = false }: ReviewSessionProps) {
+export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -31,12 +32,14 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     setReadingInput('');
     setInputError(false);
 
-    if (isFreeStudy && currentCard) {
+    if ((isFreeStudy || isDifficultReview) && currentCard) {
       const isWordWithKanji = currentCard.kanji && currentCard.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
       const types: ('typing_reading' | 'mcq_meaning' | 'mcq_reading')[] = [];
       
       if (isWordWithKanji) {
-        types.push('typing_reading');
+        if (!isDifficultReview) {
+          types.push('typing_reading');
+        }
         types.push('mcq_reading');
       }
       if (currentCard.meaning) {
@@ -56,7 +59,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         const allOptions = Array.from(new Set(dueCards.map(c => c[field]).filter(Boolean))) as string[];
         
         if (allOptions.length < 2) {
-           if (isWordWithKanji) {
+           if (isWordWithKanji && !isDifficultReview) {
              setExerciseType('typing_reading');
            } else {
              setExerciseType('flip');
@@ -74,7 +77,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     } else {
       setExerciseType('flip');
     }
-  }, [currentIndex, isFreeStudy, currentCard, dueCards]);
+  }, [currentIndex, isFreeStudy, isDifficultReview, currentCard, dueCards]);
 
 
   if (currentIndex >= reviewQueue.length) {

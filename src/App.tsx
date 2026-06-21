@@ -278,6 +278,7 @@ export default function App() {
           onClose={handleCloseReview}
           onRemoveCard={removeCard}
           isFreeStudy={isFreeStudyMode || isDifficultReviewMode}
+          isDifficultReview={isDifficultReviewMode}
         />
       )}
     </div>
