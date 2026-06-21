@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Volume2 } from 'lucide-react';
 
 interface ReviewSessionProps {
   dueCards: KanjiCard[];
@@ -170,6 +170,17 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     }
   };
 
+  const handleSpeak = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ja-JP';
+      // Mute errors if it fails or voices are missing
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const totalGoal = dueCards.length * 3;
   const currentProgress = Object.values(successCounts).reduce((acc, count) => acc + Math.min(count, 3), 0);
   const progressPercent = totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0;
@@ -232,7 +243,16 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
               className={`absolute inset-0 flex flex-col gap-4 items-center justify-center bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
+              <div className="flex flex-col items-center gap-6">
+                <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
+                <button 
+                  onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
+                  className="p-3 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
+                  title="Phát âm"
+                >
+                  <Volume2 className="w-8 h-8 sm:w-10 sm:h-10 font-light" strokeWidth={1.5} />
+                </button>
+              </div>
               {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
                 <div className="text-[#c5a059] opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
                   {exerciseType === 'mcq_meaning' ? 'Chọn Ý Nghĩa' : 'Chọn/Nhập Cách Đọc'}
@@ -246,7 +266,16 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
               <div className="absolute inset-0 overflow-y-auto flex flex-col items-center justify-center p-6 pb-12 sm:p-8 space-y-4 sm:space-y-6">
-                <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80 mb-2 sm:mb-4" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
+                <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
+                  <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
+                  <button 
+                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
+                    className="p-2 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
+                    title="Phát âm"
+                  >
+                    <Volume2 className="w-6 h-6 sm:w-8 sm:h-8 font-light" strokeWidth={1.5} />
+                  </button>
+                </div>
                 <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
                   <div className="flex justify-end flex-1">
                     <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic tracking-wide text-right">{currentCard.reading}</p>
