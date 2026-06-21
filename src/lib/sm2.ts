@@ -28,9 +28,8 @@ export function calculateNextReview(card: KanjiCard, grade: ReviewGrade): KanjiC
   if (easeFactor < 1.3) easeFactor = 1.3;
 
   const nextReviewDate = new Date();
-  // Ensure we jump to the start of the day after adding the interval for proper spaced feeling,
-  // or just exact time. For exact time, simple add works.
   nextReviewDate.setDate(nextReviewDate.getDate() + interval);
+  nextReviewDate.setHours(0, 0, 0, 0);
 
   return {
     ...card,

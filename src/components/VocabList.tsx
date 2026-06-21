@@ -190,7 +190,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
               </thead>
               <tbody className="divide-y divide-[#2a2a2a]">
                 {filteredDeck.map((card) => {
-                  const isDue = card.nextReviewDate <= Date.now();
+                  const endOfToday = new Date();
+                  endOfToday.setHours(23, 59, 59, 999);
+                  const isDue = card.nextReviewDate <= endOfToday.getTime();
                   const isEditing = editingId === card.id;
 
                   if (isEditing) {

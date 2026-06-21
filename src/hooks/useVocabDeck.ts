@@ -148,8 +148,10 @@ export function useVocabDeck() {
   };
 
   const getDueCards = () => {
-    const now = Date.now();
-    return deck.filter(card => card.nextReviewDate <= now);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const nowThreshold = endOfToday.getTime();
+    return deck.filter(card => card.nextReviewDate <= nowThreshold);
   };
 
   const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => {
