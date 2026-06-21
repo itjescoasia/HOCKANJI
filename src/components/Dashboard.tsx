@@ -10,10 +10,11 @@ interface DashboardProps {
   stats?: UserStats;
   onStartReview: () => void;
   onStartFreeStudy?: () => void;
+  onStartDifficultReview?: () => void;
   onNavigateAdd: () => void;
 }
 
-export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onNavigateAdd }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onNavigateAdd }: DashboardProps) {
   const isDue = dueCards.length > 0;
 
   // Cấp độ ghi nhớ
@@ -337,6 +338,14 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                   Ôn tập tự do (Học nhồi)
               </button>
             )}
+            {onStartDifficultReview && deck.length > 0 && (
+              <button 
+                onClick={onStartDifficultReview}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn các từ hay quên
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10">
@@ -353,6 +362,14 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                >
                   Ôn tập tự do (Học nhồi)
                </button>
+            )}
+            {deck.length > 0 && onStartDifficultReview && (
+              <button 
+                onClick={onStartDifficultReview}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn các từ hay quên
+              </button>
             )}
           </div>
         )}

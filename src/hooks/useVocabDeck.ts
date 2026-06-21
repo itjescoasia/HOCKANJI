@@ -100,6 +100,7 @@ export function useVocabDeck() {
       exampleTranslation,
       wordType,
       freeStudyScore: 0,
+      difficultScore: 0,
       interval: 0,
       repetition: 0,
       easeFactor: 2.5,
@@ -135,6 +136,11 @@ export function useVocabDeck() {
     if (!cardToReview) return;
 
     const updatedCard = calculateNextReview(cardToReview, grade);
+    
+    // Decrease difficult score if forgotten in normal review, making it more prioritized for difficult review
+    if (grade === 'forgot') {
+      updatedCard.difficultScore = (updatedCard.difficultScore || 0) - 1;
+    }
 
     if (auth.currentUser) {
       try {
@@ -200,6 +206,7 @@ export function useVocabDeck() {
                exampleTranslation: imported.exampleTranslation || '',
                wordType: imported.wordType || '',
                freeStudyScore: 0,
+               difficultScore: 0,
                interval: 0,
                repetition: 0,
                easeFactor: 2.5,
@@ -243,7 +250,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType' | 'freeStudyScore'>>) => {
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType' | 'freeStudyScore' | 'difficultScore'>>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });

@@ -8,6 +8,7 @@ export interface KanjiCard {
   exampleTranslation?: string;
   wordType?: string;
   freeStudyScore?: number;
+  difficultScore?: number;
   interval: number;
   repetition: number;
   easeFactor: number;
@@ -17,4 +18,4 @@ export interface KanjiCard {
 
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
 
-export type ViewState = 'dashboard' | 'review' | 'list' | 'add';
+export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review';

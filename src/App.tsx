@@ -27,11 +27,12 @@ export default function App() {
   const { stats, recordReview, recordFreeStudyTime } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
+  const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
   const lastActivityRef = useRef(Date.now());
   const activeSecondsRef = useRef(0);
 
   useEffect(() => {
-    if (!isFreeStudyMode || view !== 'review') return;
+    if ((!isFreeStudyMode && !isDifficultReviewMode) || view !== 'review') return;
     
     lastActivityRef.current = Date.now();
     activeSecondsRef.current = 0;
@@ -106,11 +107,19 @@ export default function App() {
 
   const handleStartReview = () => {
     setIsFreeStudyMode(false);
+    setIsDifficultReviewMode(false);
     setView('review');
   };
 
   const handleStartFreeStudy = () => {
     setIsFreeStudyMode(true);
+    setIsDifficultReviewMode(false);
+    setView('review');
+  };
+
+  const handleStartDifficultReview = () => {
+    setIsFreeStudyMode(false);
+    setIsDifficultReviewMode(true);
     setView('review');
   };
 
@@ -123,6 +132,17 @@ export default function App() {
     const currentScore = card.freeStudyScore || 0;
     const newScore = isRemember ? currentScore + 1 : currentScore - 1;
     updateCard(id, { freeStudyScore: newScore });
+  };
+
+  const handleDifficultReview = (id: string, isRemember: boolean) => {
+    recordReview(isRemember, false);
+
+    const card = deck.find(c => c.id === id);
+    if (!card) return;
+    const currentScore = card.difficultScore || 0;
+    // Lower score means more forgotten. Initially 0. Quên -> subtract 1, Nhớ -> add 1
+    const newScore = isRemember ? currentScore + 1 : currentScore - 1;
+    updateCard(id, { difficultScore: newScore });
   };
 
   const handleReviewCard = async (id: string, grade: any) => {
@@ -142,14 +162,27 @@ export default function App() {
 
   const handleNavigate = (newView: string) => {
     // The active time saving is handled by the unmount effect of the tracker above
-    if (isFreeStudyMode) {
+    if (isFreeStudyMode || isDifficultReviewMode) {
       setIsFreeStudyMode(false);
+      setIsDifficultReviewMode(false);
     }
     setView(newView);
   };
 
   const handleCloseReview = () => {
     handleNavigate('dashboard');
+  };
+
+  const getDifficultStudyDeck = () => {
+    return [...deck]
+      .sort((a, b) => {
+        const scoreA = a.difficultScore || 0;
+        const scoreB = b.difficultScore || 0;
+        if (scoreA !== scoreB) {
+          return scoreA - scoreB;
+        }
+        return Math.random() - 0.5;
+      });
   };
 
   const getFreeStudyDeck = () => {
@@ -219,6 +252,7 @@ export default function App() {
             leftoverNewCards={leftoverNewCards}
             onStartReview={handleStartReview} 
             onStartFreeStudy={handleStartFreeStudy}
+            onStartDifficultReview={handleStartDifficultReview}
             onNavigateAdd={() => handleNavigate('add')} 
           />
         )}
@@ -238,12 +272,12 @@ export default function App() {
       {/* Review Overlay */}
       {view === 'review' && (
         <ReviewSession 
-          dueCards={isFreeStudyMode ? getFreeStudyDeck() : dueCards}
+          dueCards={isDifficultReviewMode ? getDifficultStudyDeck() : (isFreeStudyMode ? getFreeStudyDeck() : dueCards)}
           onReview={handleReviewCard}
-          onFreeStudyReview={handleFreeStudyReview}
+          onFreeStudyReview={isDifficultReviewMode ? handleDifficultReview : handleFreeStudyReview}
           onClose={handleCloseReview}
           onRemoveCard={removeCard}
-          isFreeStudy={isFreeStudyMode}
+          isFreeStudy={isFreeStudyMode || isDifficultReviewMode}
         />
       )}
     </div>
