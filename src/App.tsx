@@ -200,10 +200,19 @@ export default function App() {
       .sort((a, b) => {
         const scoreA = a.difficultScore || 0;
         const scoreB = b.difficultScore || 0;
-        if (scoreA !== scoreB) {
-          return scoreA - scoreB;
+        
+        // Gom nhóm những từ có độ khó gần giống nhau (cùng mức độ hay quên, mỗi mức cách nhau 2 điểm)
+        const groupA = Math.floor(scoreA / 2);
+        const groupB = Math.floor(scoreB / 2);
+
+        if (groupA !== groupB) {
+          return groupA - groupB;
         }
-        return Math.random() - 0.5;
+        
+        // Nếu ở cùng mức độ khó, sắp xếp theo Kanji để các từ đồng dạng đứng gần nhau
+        const kanjiA = a.kanji || a.reading;
+        const kanjiB = b.kanji || b.reading;
+        return kanjiA.localeCompare(kanjiB, 'ja');
       });
   };
 
