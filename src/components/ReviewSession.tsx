@@ -207,6 +207,35 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     }
   };
 
+  const renderExampleWithHighlight = (example: string, kanji: string | undefined, reading: string | undefined) => {
+    const escapeRegExp = (string: string) => {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
+    let searchWord = null;
+    if (kanji && example.includes(kanji)) {
+      searchWord = kanji;
+    } else if (reading && example.includes(reading)) {
+      searchWord = reading;
+    }
+
+    if (!searchWord) return <>“{example}”</>;
+
+    const safeSearchWord = escapeRegExp(searchWord);
+    const parts = example.split(new RegExp(`(${safeSearchWord})`, 'gi'));
+    return (
+      <>
+        “{parts.map((part, i) => 
+          part.toLowerCase() === searchWord.toLowerCase() ? (
+            <span key={i} className="text-[#c5a059] font-bold">{part}</span>
+          ) : (
+            part
+          )
+        )}”
+      </>
+    );
+  };
+
   const totalGoal = dueCards.length * 3;
   const currentProgress = Object.values(successCounts).reduce((acc, count) => acc + Math.min(count, 3), 0);
   const progressPercent = totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0;
@@ -325,12 +354,14 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 {(currentCard.example || currentCard.exampleTranslation) && (
                   <div className="mt-4 flex flex-col items-center gap-1">
                     {currentCard.example && (
-                      <p className="text-sm sm:text-base text-[#d4d4d4] opacity-70 text-center max-w-md px-4 leading-relaxed font-light">
-                        “{currentCard.example}”
-                      </p>
+                      <div className="w-full max-w-[90vw] overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <p className="text-xl sm:text-2xl text-[#d4d4d4] opacity-90 text-center whitespace-nowrap px-4 leading-relaxed font-light">
+                          {renderExampleWithHighlight(currentCard.example, currentCard.kanji, currentCard.reading)}
+                        </p>
+                      </div>
                     )}
                     {currentCard.exampleTranslation && (
-                      <p className="text-sm sm:text-base text-[#c5a059] opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic">
+                      <p className="text-sm sm:text-base text-[#c5a059] opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic mt-2">
                         {currentCard.exampleTranslation}
                       </p>
                     )}
