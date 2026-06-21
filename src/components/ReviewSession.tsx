@@ -170,13 +170,39 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     }
   };
 
+  useEffect(() => {
+    // Triggers speech synthesis voices to load on mount
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
+  const getJapaneseVoice = () => {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    // Prioritize high quality/native voices if available on the user's OS/Browser
+    return voices.find(v => v.lang === 'ja-JP' && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Natural') || v.name.includes('Kyoko') || v.name.includes('Otoya') || v.name.includes('Ayumi'))) 
+        || voices.find(v => v.lang === 'ja-JP')
+        || voices.find(v => v.lang.startsWith('ja'));
+  };
+
   const handleSpeak = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'ja-JP';
-      // Mute errors if it fails or voices are missing
+      // Tùy chỉnh tham số phụ để nghe tự nhiên hơn một chút
+      utterance.rate = 0.9; // Đọc chậm lại một xíu giúp nghe rõ hơn
+      
+      const bestVoice = getJapaneseVoice();
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
+
       window.speechSynthesis.speak(utterance);
     }
   };

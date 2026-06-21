@@ -18,6 +18,7 @@ export interface UserStats {
 
 export function useStudyStats() {
   const [stats, setStats] = useState<UserStats>({});
+  const [isStatsLoaded, setIsStatsLoaded] = useState(false);
   
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -36,12 +37,15 @@ export function useStudyStats() {
           } else {
             setStats({});
           }
+          setIsStatsLoaded(true);
         }, (error) => {
           console.error('Firestore useStudyStats error:', error);
+          setIsStatsLoaded(true);
         });
       } else {
         const localStats = localStorage.getItem('kanji_srs_stats');
         setStats(localStats ? JSON.parse(localStats) : {});
+        setIsStatsLoaded(true);
       }
     });
 
@@ -143,5 +147,5 @@ export function useStudyStats() {
     }
   };
 
-  return { stats, recordReview, recordFreeStudyTime, recordWordOfTheDay };
+  return { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay };
 }

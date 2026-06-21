@@ -46,7 +46,7 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
-  const { stats, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
+  const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
@@ -97,7 +97,7 @@ export default function App() {
     };
   }, [isFreeStudyMode, view, recordFreeStudyTime]);
 
-  if (authLoading || !isLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
+  if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
 
   if (!user) {
     return <Login />;
