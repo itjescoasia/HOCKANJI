@@ -21,6 +21,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
   const [readingInput, setReadingInput] = useState('');
   const [inputError, setInputError] = useState(false);
+  const [wrongMcqOption, setWrongMcqOption] = useState<string | null>(null);
   
   const [exerciseType, setExerciseType] = useState<'typing_reading' | 'mcq_meaning' | 'mcq_reading' | 'flip'>('flip');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
@@ -31,6 +32,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   useEffect(() => {
     setReadingInput('');
     setInputError(false);
+    setWrongMcqOption(null);
 
     if ((isFreeStudy || isDifficultReview) && currentCard) {
       const isWordWithKanji = currentCard.kanji && currentCard.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
@@ -152,9 +154,11 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     const field = exerciseType === 'mcq_meaning' ? 'meaning' : 'reading';
     if (option === currentCard[field]) {
       setInputError(false);
+      setWrongMcqOption(null);
       setShowAnswer(true);
     } else {
       setInputError(true);
+      setWrongMcqOption(option);
     }
   };
 
@@ -327,15 +331,18 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   className="w-full flex flex-col gap-2"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-                    {mcqOptions.map((opt, i) => (
-                      <button 
-                        key={i}
-                        onClick={() => handleMcqSelect(opt)}
-                        className={`bg-[#1a1a1a] border ${inputError ? 'border-red-500/30' : 'border-[#2a2a2a]'} hover:border-[#c5a059] text-[#d4d4d4] py-3 px-4 text-center text-sm transition-colors tracking-wide truncate`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+                    {mcqOptions.map((opt, i) => {
+                      const isWrong = inputError && wrongMcqOption === opt;
+                      return (
+                        <button 
+                          key={i}
+                          onClick={() => handleMcqSelect(opt)}
+                          className={`bg-[#1a1a1a] border ${isWrong ? 'border-red-500 bg-red-500/10 text-red-100' : 'border-[#2a2a2a]'} hover:border-[#c5a059] text-[15px] sm:text-sm text-[#d4d4d4] py-4 sm:py-3 px-4 text-center transition-colors tracking-wide`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
                   </div>
                   {inputError && (
                     <div className="w-full flex justify-between items-center px-2 py-1">

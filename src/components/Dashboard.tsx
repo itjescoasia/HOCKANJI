@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { KanjiCard } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
 import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown } from 'lucide-react';
@@ -86,20 +87,49 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
 
   // Calculate Word of the Day
   const todayForSeed = new Date();
+  const todayStrForWotd = `${todayForSeed.getFullYear()}-${todayForSeed.getMonth() + 1}-${todayForSeed.getDate()}`;
   const seed = todayForSeed.getFullYear() * 10000 + (todayForSeed.getMonth() + 1) * 100 + todayForSeed.getDate();
   
-  const difficultWords = [...deck]
-    .filter(c => (c.difficultScore || 0) < 0)
-    .sort((a, b) => (a.difficultScore || 0) - (b.difficultScore || 0))
-    .slice(0, 30);
+  const wordOfTheDay = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('wotd');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.date === todayStrForWotd) {
+          const cachedWord = deck.find(c => c.id === parsed.id);
+          // If the cached word still exists and hasn't been completely mastered out of the difficult list
+          // Actually, the prompt says "nếu 1 từ nào đó đã nhớ rồi thì sẽ không hiển thị ở đây nữa"
+          // If the score is now >= 0 (meaning remembered), we should probably pick a new word!
+          // Let's check its latest score.
+          if (cachedWord) {
+             const isStillDifficult = (cachedWord.difficultScore || 0) < 0;
+             if (isStillDifficult || deck.filter(c => (c.difficultScore || 0) < 0).length === 0) {
+               return cachedWord;
+             }
+          }
+        }
+      }
+    } catch(e) {}
+    
+    const difficultWords = [...deck]
+      .filter(c => (c.difficultScore || 0) < 0)
+      .sort((a, b) => (a.difficultScore || 0) - (b.difficultScore || 0))
+      .slice(0, 30);
 
-  let wordOfTheDay = null;
-  if (difficultWords.length > 0) {
-    wordOfTheDay = difficultWords[seed % difficultWords.length];
-  } else if (deck.length > 0) {
-    // Fallback to random word if there are no difficult words yet
-    wordOfTheDay = deck[seed % deck.length];
-  }
+    let newWord = null;
+    if (difficultWords.length > 0) {
+      newWord = difficultWords[seed % difficultWords.length];
+    } else if (deck.length > 0) {
+      // Fallback to random word if there are no difficult words yet
+      newWord = deck[seed % deck.length];
+    }
+    
+    if (newWord) {
+      localStorage.setItem('wotd', JSON.stringify({ date: todayStrForWotd, id: newWord.id }));
+    }
+    
+    return newWord;
+  }, [deck, todayStrForWotd, seed]);
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
