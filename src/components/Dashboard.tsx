@@ -111,21 +111,21 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
       {/* Word of the Day */}
       {wordOfTheDay && (
         <div className="bg-[#121212] border border-[#c5a059] p-6 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-2 opacity-10">
-            <span className="text-8xl font-serif">{wordOfTheDay.kanji}</span>
+          <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none hidden sm:block">
+            <span className="text-8xl font-serif whitespace-nowrap max-w-full overflow-hidden text-ellipsis block">{wordOfTheDay.kanji}</span>
           </div>
           <div className="relative z-10">
             <h2 className="text-[10px] uppercase tracking-widest text-[#c5a059] mb-4 flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-[#c5a059] rounded-full inline-block"></span>
               Từ vựng mỗi ngày
             </h2>
-            <div className="flex flex-col sm:flex-row items-baseline gap-4 mb-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-2 sm:gap-4 mb-2">
               <span className="text-4xl sm:text-5xl font-serif text-white">{wordOfTheDay.kanji}</span>
               {wordOfTheDay.reading && (
                 <span className="text-lg text-[#d4d4d4] opacity-80">{wordOfTheDay.reading}</span>
               )}
             </div>
-            <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl">{wordOfTheDay.meaning}</p>
+            <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
             {wordOfTheDay.example && (
               <div className="mt-4 border-t border-[#2a2a2a] pt-3">
                 <p className="text-xs text-[#d4d4d4] italic opacity-80">"{wordOfTheDay.example}"</p>
