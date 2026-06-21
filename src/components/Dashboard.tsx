@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { KanjiCard } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
 import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown } from 'lucide-react';
@@ -13,9 +13,10 @@ interface DashboardProps {
   onStartFreeStudy?: () => void;
   onStartDifficultReview?: () => void;
   onNavigateAdd: () => void;
+  onRecordWordOfTheDay?: (id: string) => void;
 }
 
-export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onNavigateAdd }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
   const isDue = dueCards.length > 0;
 
   // Cấp độ ghi nhớ
@@ -87,29 +88,20 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
 
   // Calculate Word of the Day
   const todayForSeed = new Date();
-  const todayStrForWotd = `${todayForSeed.getFullYear()}-${todayForSeed.getMonth() + 1}-${todayForSeed.getDate()}`;
   const seed = todayForSeed.getFullYear() * 10000 + (todayForSeed.getMonth() + 1) * 100 + todayForSeed.getDate();
   
   const wordOfTheDay = useMemo(() => {
-    try {
-      const stored = localStorage.getItem('wotd');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.date === todayStrForWotd) {
-          const cachedWord = deck.find(c => c.id === parsed.id);
-          // If the cached word still exists and hasn't been completely mastered out of the difficult list
-          // Actually, the prompt says "nếu 1 từ nào đó đã nhớ rồi thì sẽ không hiển thị ở đây nữa"
-          // If the score is now >= 0 (meaning remembered), we should probably pick a new word!
-          // Let's check its latest score.
-          if (cachedWord) {
-             const isStillDifficult = (cachedWord.difficultScore || 0) < 0;
-             if (isStillDifficult || deck.filter(c => (c.difficultScore || 0) < 0).length === 0) {
-               return cachedWord;
-             }
-          }
-        }
+    const syncedWotdId = stats[todayStr]?.wotdId;
+
+    if (syncedWotdId) {
+      const cachedWord = deck.find(c => c.id === syncedWotdId);
+      if (cachedWord) {
+         const isStillDifficult = (cachedWord.difficultScore || 0) < 0;
+         if (isStillDifficult || deck.filter(c => (c.difficultScore || 0) < 0).length === 0) {
+           return cachedWord;
+         }
       }
-    } catch(e) {}
+    }
     
     const difficultWords = [...deck]
       .filter(c => (c.difficultScore || 0) < 0)
@@ -124,12 +116,15 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
       newWord = deck[seed % deck.length];
     }
     
-    if (newWord) {
-      localStorage.setItem('wotd', JSON.stringify({ date: todayStrForWotd, id: newWord.id }));
-    }
-    
     return newWord;
-  }, [deck, todayStrForWotd, seed]);
+  }, [deck, seed, stats, todayStr]);
+
+  // Sync back to stats if WOTD changes and we have a function
+  useEffect(() => {
+    if (wordOfTheDay && onRecordWordOfTheDay && (!stats[todayStr] || stats[todayStr].wotdId !== wordOfTheDay.id)) {
+      onRecordWordOfTheDay(wordOfTheDay.id);
+    }
+  }, [wordOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">

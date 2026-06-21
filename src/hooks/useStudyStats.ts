@@ -8,6 +8,7 @@ export interface DailyStats {
   mastered: number;
   newLearned: number;
   freeStudyTime?: number;
+  wotdId?: string;
 }
 
 export interface UserStats {
@@ -110,5 +111,36 @@ export function useStudyStats() {
     }
   };
 
-  return { stats, recordReview, recordFreeStudyTime };
+  const recordWordOfTheDay = async (wotdId: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const prevStats = { ...stats };
+    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
+    
+    // Check if it's already recorded to prevent infinite loops / multiple writes
+    if (todayStats.wotdId === wotdId) return;
+
+    const newStats = {
+      ...prevStats,
+      [today]: {
+        ...todayStats,
+        wotdId,
+      }
+    };
+    
+    setStats(newStats);
+
+    if (auth.currentUser) {
+      try {
+        const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
+        await setDoc(statsRef, newStats, { merge: true });
+      } catch (err) {
+        console.error('Error saving stats:', err);
+      }
+    } else {
+      localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
+    }
+  };
+
+  return { stats, recordReview, recordFreeStudyTime, recordWordOfTheDay };
 }

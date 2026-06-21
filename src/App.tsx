@@ -24,7 +24,7 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
-  const { stats, recordReview, recordFreeStudyTime } = useStudyStats();
+  const { stats, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
@@ -254,6 +254,7 @@ export default function App() {
             onStartFreeStudy={handleStartFreeStudy}
             onStartDifficultReview={handleStartDifficultReview}
             onNavigateAdd={() => handleNavigate('add')} 
+            onRecordWordOfTheDay={recordWordOfTheDay}
           />
         )}
         
