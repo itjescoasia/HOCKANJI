@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
 import { X, Trash2, Volume2 } from 'lucide-react';
@@ -208,32 +208,64 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   };
 
   const renderExampleWithHighlight = (example: string, kanji: string | undefined, reading: string | undefined) => {
-    const escapeRegExp = (string: string) => {
-      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    };
-
-    let searchWord = null;
-    if (kanji && example.includes(kanji)) {
-      searchWord = kanji;
-    } else if (reading && example.includes(reading)) {
-      searchWord = reading;
+    if (!example) return null;
+    
+    const targetKanji = kanji && example.includes(kanji) ? kanji : null;
+    if (targetKanji) {
+      const parts = example.split(targetKanji);
+      return (
+        <Fragment>
+          “{parts.map((p, i) => (
+            <Fragment key={i}>
+              {p}
+              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold">{targetKanji}</span>}
+            </Fragment>
+          ))}”
+        </Fragment>
+      );
     }
 
-    if (!searchWord) return <>“{example}”</>;
+    const kanjiChars = kanji ? kanji.match(/[\u4e00-\u9faf]+/g) : null;
+    if (kanjiChars && kanjiChars.length > 0) {
+      const stem = kanjiChars.join(''); // Try exactly first just in case
+      let targetStem = stem;
+      
+      if (!example.includes(stem)) {
+        // Just take the first kanji cluster if they don't appear together
+        targetStem = kanjiChars[0];
+      }
+      
+      if (example.includes(targetStem)) {
+        const parts = example.split(targetStem);
+        return (
+          <Fragment>
+            “{parts.map((p, i) => (
+              <Fragment key={i}>
+                {p}
+                {i < parts.length - 1 && <span className="text-[#c5a059] font-bold">{targetStem}</span>}
+              </Fragment>
+            ))}”
+          </Fragment>
+        );
+      }
+    }
 
-    const safeSearchWord = escapeRegExp(searchWord);
-    const parts = example.split(new RegExp(`(${safeSearchWord})`, 'gi'));
-    return (
-      <>
-        “{parts.map((part, i) => 
-          part.toLowerCase() === searchWord.toLowerCase() ? (
-            <span key={i} className="text-[#c5a059] font-bold">{part}</span>
-          ) : (
-            part
-          )
-        )}”
-      </>
-    );
+    const targetReading = reading && example.includes(reading) ? reading : null;
+    if (targetReading) {
+      const parts = example.split(targetReading);
+      return (
+        <Fragment>
+          “{parts.map((p, i) => (
+            <Fragment key={i}>
+              {p}
+              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold">{targetReading}</span>}
+            </Fragment>
+          ))}”
+        </Fragment>
+      );
+    }
+
+    return <Fragment>“{example}”</Fragment>;
   };
 
   const totalGoal = dueCards.length * 3;
@@ -360,8 +392,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 {(currentCard.example || currentCard.exampleTranslation) && (
                   <div className="mt-4 flex flex-col items-center gap-1">
                     {currentCard.example && (
-                      <div className="w-full max-w-[90vw] overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        <p className="text-xl sm:text-2xl text-[#d4d4d4] opacity-90 text-center whitespace-nowrap px-4 leading-relaxed font-light">
+                      <div className="w-full">
+                        <p className="text-xl sm:text-2xl text-[#d4d4d4] opacity-90 text-center leading-relaxed font-serif px-4">
                           {renderExampleWithHighlight(currentCard.example, currentCard.kanji, currentCard.reading)}
                         </p>
                       </div>
