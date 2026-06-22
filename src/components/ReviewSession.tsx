@@ -298,7 +298,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
               className={`absolute inset-0 flex flex-col bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <div className="m-auto flex flex-col gap-4 items-center w-full py-4">
+              <div className="flex-1 shrink-0"></div>
+              <div className="flex flex-col gap-4 items-center w-full py-4 shrink-0">
                 <div className="flex flex-col items-center gap-6">
                   <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
                   <button 
@@ -315,6 +316,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   </div>
                 )}
               </div>
+              <div className="flex-1 shrink-0"></div>
             </div>
 
             {/* Back */}
@@ -323,7 +325,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
               <div className="absolute inset-0 overflow-y-auto flex flex-col p-6 pb-12 sm:p-8">
-                <div className="m-auto flex flex-col items-center space-y-4 sm:space-y-6 w-full py-4">
+                <div className="flex-1 shrink-0"></div>
+                <div className="flex flex-col items-center space-y-4 sm:space-y-6 w-full py-4 shrink-0">
                   <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
                     <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
                   <button 
@@ -371,6 +374,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   </div>
                 )}
                 </div>
+                <div className="flex-1 shrink-0"></div>
               </div>
             </div>
           </motion.div>

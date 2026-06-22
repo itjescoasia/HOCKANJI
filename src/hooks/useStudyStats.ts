@@ -58,95 +58,86 @@ export function useStudyStats() {
   const recordReview = async (isCorrect: boolean, isNewlyMastered: boolean, isNewCard?: boolean, isWellRemembered?: boolean) => {
     const today = getLocalDateString();
     
-    // Optimistic local update
-    const prevStats = { ...stats };
-    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, remembered: 0 };
-    
-    const newStats = {
-      ...prevStats,
-      [today]: {
-        ...todayStats,
-        reviewed: todayStats.reviewed + 1,
-        correct: todayStats.correct + (isCorrect ? 1 : 0),
-        mastered: todayStats.mastered + (isNewlyMastered ? 1 : 0),
-        newLearned: (todayStats.newLearned || 0) + (isNewCard ? 1 : 0),
-        remembered: (todayStats.remembered || 0) + (isWellRemembered ? 1 : 0),
-      }
-    };
-    
-    setStats(newStats);
-
-    if (auth.currentUser) {
-      try {
+    setStats(prevStats => {
+      const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, remembered: 0, freeStudyTime: 0 };
+      
+      const newStats = {
+        ...prevStats,
+        [today]: {
+          ...todayStats,
+          reviewed: todayStats.reviewed + 1,
+          correct: todayStats.correct + (isCorrect ? 1 : 0),
+          mastered: todayStats.mastered + (isNewlyMastered ? 1 : 0),
+          newLearned: (todayStats.newLearned || 0) + (isNewCard ? 1 : 0),
+          remembered: (todayStats.remembered || 0) + (isWellRemembered ? 1 : 0),
+        }
+      };
+      
+      if (auth.currentUser) {
         const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
-        await setDoc(statsRef, newStats, { merge: true });
-      } catch (err) {
-        console.error('Error saving stats:', err);
+        setDoc(statsRef, newStats, { merge: true }).catch(err => console.error('Error saving stats:', err));
+      } else {
+        localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
       }
-    } else {
-      localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
-    }
+      
+      return newStats;
+    });
   };
 
   const recordFreeStudyTime = async (seconds: number) => {
     if (seconds <= 0) return;
     const today = getLocalDateString();
     
-    // Optimistic local update
-    const prevStats = { ...stats };
-    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
-    
-    const newStats = {
-      ...prevStats,
-      [today]: {
-        ...todayStats,
-        freeStudyTime: (todayStats.freeStudyTime || 0) + seconds,
-      }
-    };
-    
-    setStats(newStats);
-
-    if (auth.currentUser) {
-      try {
+    setStats(prevStats => {
+      const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
+      
+      const newStats = {
+        ...prevStats,
+        [today]: {
+          ...todayStats,
+          freeStudyTime: (todayStats.freeStudyTime || 0) + seconds,
+        }
+      };
+      
+      if (auth.currentUser) {
         const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
-        await setDoc(statsRef, newStats, { merge: true });
-      } catch (err) {
-        console.error('Error saving stats:', err);
+        setDoc(statsRef, newStats, { merge: true }).catch(err => console.error('Error saving stats:', err));
+      } else {
+        localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
       }
-    } else {
-      localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
-    }
+      
+      return newStats;
+    });
   };
 
   const recordWordOfTheDay = async (wotdId: string) => {
     const today = getLocalDateString();
     
-    const prevStats = { ...stats };
-    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
-    
-    // Check if it's already recorded to prevent infinite loops / multiple writes
-    if (todayStats.wotdId === wotdId) return;
+    setStats(prevStats => {
+      const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0, remembered: 0 };
+      
+      // Check if it's already recorded to prevent infinite loops / multiple writes
+      if (todayStats.wotdId === wotdId) return prevStats;
 
-    const newStats = {
-      ...prevStats,
-      [today]: {
-        ...todayStats,
-        wotdId,
-      }
-    };
-    
-    setStats(newStats);
-
-    if (auth.currentUser) {
-      try {
+      const newStats = {
+        ...prevStats,
+        [today]: {
+          ...todayStats,
+          wotdId,
+        }
+      };
+      
+      if (auth.currentUser) {
         const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
-        await setDoc(statsRef, newStats, { merge: true });
-      } catch (err) {
-        console.error('Error saving stats:', err);
+        setDoc(statsRef, newStats, { merge: true }).catch(err => {
+          console.error('Error saving stats:', err);
+        });
+      } else {
+        localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
       }
-    } else {
-      localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
-    }
+      
+      return newStats;
+    });
   };
 
   return { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay };
