@@ -55,20 +55,22 @@ export function useStudyStats() {
     };
   }, []);
 
-  const recordReview = async (isCorrect: boolean, isNewlyMastered: boolean, isNewCard?: boolean) => {
+  const recordReview = async (isCorrect: boolean, isNewlyMastered: boolean, isNewCard?: boolean, isWellRemembered?: boolean) => {
     const today = getLocalDateString();
     
     // Optimistic local update
     const prevStats = { ...stats };
-    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
+    const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, remembered: 0 };
     
     const newStats = {
       ...prevStats,
       [today]: {
+        ...todayStats,
         reviewed: todayStats.reviewed + 1,
         correct: todayStats.correct + (isCorrect ? 1 : 0),
         mastered: todayStats.mastered + (isNewlyMastered ? 1 : 0),
         newLearned: (todayStats.newLearned || 0) + (isNewCard ? 1 : 0),
+        remembered: (todayStats.remembered || 0) + (isWellRemembered ? 1 : 0),
       }
     };
     

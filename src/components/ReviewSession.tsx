@@ -295,34 +295,37 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
           >
             {/* Front */}
             <div 
-              className={`absolute inset-0 flex flex-col gap-4 items-center justify-center bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              className={`absolute inset-0 flex flex-col bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <div className="flex flex-col items-center gap-6">
-                <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
-                <button 
-                  onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
-                  className="p-3 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
-                  title="Phát âm"
-                >
-                  <Volume2 className="w-8 h-8 sm:w-10 sm:h-10 font-light" strokeWidth={1.5} />
-                </button>
-              </div>
-              {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
-                <div className="text-[#c5a059] opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
-                  {exerciseType === 'mcq_meaning' ? 'Chọn Ý Nghĩa' : 'Chọn/Nhập Cách Đọc'}
+              <div className="m-auto flex flex-col gap-4 items-center w-full py-4">
+                <div className="flex flex-col items-center gap-6">
+                  <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
+                  <button 
+                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
+                    className="p-3 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
+                    title="Phát âm"
+                  >
+                    <Volume2 className="w-8 h-8 sm:w-10 sm:h-10 font-light" strokeWidth={1.5} />
+                  </button>
                 </div>
-              )}
+                {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
+                  <div className="text-[#c5a059] opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
+                    {exerciseType === 'mcq_meaning' ? 'Chọn Ý Nghĩa' : 'Chọn/Nhập Cách Đọc'}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Back */}
             <div 
-              className={`absolute inset-0 flex flex-col items-center justify-center bg-[#121212] ${!showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              className={`absolute inset-0 flex flex-col bg-[#121212] ${!showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
-              <div className="absolute inset-0 overflow-y-auto flex flex-col items-center justify-center p-6 pb-12 sm:p-8 space-y-4 sm:space-y-6">
-                <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
-                  <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
+              <div className="absolute inset-0 overflow-y-auto flex flex-col p-6 pb-12 sm:p-8">
+                <div className="m-auto flex flex-col items-center space-y-4 sm:space-y-6 w-full py-4">
+                  <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
+                    <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
                   <button 
                     onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
                     className="p-2 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
@@ -367,6 +370,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                     )}
                   </div>
                 )}
+                </div>
               </div>
             </div>
           </motion.div>

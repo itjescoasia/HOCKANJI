@@ -147,7 +147,7 @@ export default function App() {
 
   const handleFreeStudyReview = (id: string, isRemember: boolean) => {
     // Record free study interaction
-    recordReview(isRemember, false);
+    recordReview(isRemember, false, false, isRemember);
 
     const card = deck.find(c => c.id === id);
     if (!card) return;
@@ -157,7 +157,7 @@ export default function App() {
   };
 
   const handleDifficultReview = (id: string, isRemember: boolean) => {
-    recordReview(isRemember, false);
+    recordReview(isRemember, false, false, isRemember);
 
     const card = deck.find(c => c.id === id);
     if (!card) return;
@@ -172,12 +172,13 @@ export default function App() {
     const cardToReview = deck.find(c => c.id === id);
     if (cardToReview) {
       const isCorrect = grade !== 'forgot';
+      const isWellRemembered = grade === 'good' || grade === 'easy';
       const isNewCard = cardToReview.interval === 0;
       // Newly mastered if the previous interval < 21 but next interval is handled inside reviewCard,
       // it's tricky to know exactly here without re-running calculateNextReview.
       // For simplicity, we just assume any grade 'easy' or 'good' on an existing somewhat mature card is progress.
       // Let's just track correct vs incorrect roughly for 'recordReview'.
-      recordReview(isCorrect, false, isNewCard); 
+      recordReview(isCorrect, false, isNewCard, isWellRemembered); 
     }
     await reviewCard(id, grade);
   };

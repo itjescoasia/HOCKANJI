@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { KanjiCard } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
 import { getLocalDateString, getVietnamDate } from '../lib/dateUtils';
-import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown } from 'lucide-react';
+import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown, RefreshCw, Search, X } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface DashboardProps {
@@ -18,6 +18,9 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
+  const [isChangingWotd, setIsChangingWotd] = useState(false);
+  const [wotdSearch, setWotdSearch] = useState('');
+
   const isDue = dueCards.length > 0;
 
   // Cấp độ ghi nhớ
@@ -82,11 +85,12 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const dStr = getLocalDateString(d);
-    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0, freeStudyTime: 0 };
+    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0, freeStudyTime: 0, remembered: 0 };
     return {
       date: d.toLocaleDateString('vi-VN', { weekday: 'short' }),
       reviewed: s.reviewed,
       correct: s.correct,
+      remembered: s.remembered || 0,
       freeStudyTimeMinutes: Math.ceil((s.freeStudyTime || 0) / 60)
     };
   });
@@ -101,10 +105,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
     if (syncedWotdId) {
       const cachedWord = deck.find(c => c.id === syncedWotdId);
       if (cachedWord) {
-         const isStillDifficult = (cachedWord.difficultScore || 0) < 0;
-         if (isStillDifficult || deck.filter(c => (c.difficultScore || 0) < 0).length === 0) {
-           return cachedWord;
-         }
+        return cachedWord;
       }
     }
     
@@ -131,6 +132,24 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
     }
   }, [wordOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
 
+  const filteredWotdList = useMemo(() => {
+    if (!wotdSearch.trim()) return deck.slice(0, 5); // Default show some words
+    const lowerSearch = wotdSearch.toLowerCase();
+    return deck.filter(c => 
+      c.kanji.toLowerCase().includes(lowerSearch) ||
+      c.reading.toLowerCase().includes(lowerSearch) ||
+      c.meaning.toLowerCase().includes(lowerSearch)
+    ).slice(0, 10);
+  }, [deck, wotdSearch]);
+
+  const handleSelectNewWotd = (id: string) => {
+    if (onRecordWordOfTheDay) {
+      onRecordWordOfTheDay(id);
+    }
+    setIsChangingWotd(false);
+    setWotdSearch('');
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
@@ -144,24 +163,72 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
           <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none hidden sm:block">
             <span className="text-8xl font-serif whitespace-nowrap max-w-full overflow-hidden text-ellipsis block">{wordOfTheDay.kanji}</span>
           </div>
-          <div className="relative z-10">
-            <h2 className="text-[10px] uppercase tracking-widest text-[#c5a059] mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-[#c5a059] rounded-full inline-block"></span>
-              Từ vựng mỗi ngày
-            </h2>
-            <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-2 sm:gap-4 mb-2">
-              <span className="text-4xl sm:text-5xl font-serif text-white">{wordOfTheDay.kanji}</span>
-              {wordOfTheDay.reading && (
-                <span className="text-lg text-[#d4d4d4] opacity-80">{wordOfTheDay.reading}</span>
-              )}
-            </div>
-            <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
-            {wordOfTheDay.example && (
-              <div className="mt-4 border-t border-[#2a2a2a] pt-3">
-                <p className="text-xs text-[#d4d4d4] italic opacity-80">"{wordOfTheDay.example}"</p>
-                {wordOfTheDay.exampleTranslation && (
-                  <p className="text-[11px] text-[#d4d4d4] opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
+          <div className="relative z-10 flex flex-col gap-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-[10px] uppercase tracking-widest text-[#c5a059] mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#c5a059] rounded-full inline-block"></span>
+                  Từ vựng mỗi ngày
+                </h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-2">
+                  <span className="text-4xl sm:text-5xl font-serif text-white">{wordOfTheDay.kanji}</span>
+                  {wordOfTheDay.reading && (
+                    <span className="text-lg text-[#d4d4d4] opacity-80">{wordOfTheDay.reading}</span>
+                  )}
+                  {wordOfTheDay.wordType && (
+                    <span className="text-[10px] uppercase border border-[#c5a059]/40 text-[#c5a059] px-2 py-0.5 rounded opacity-80 self-start sm:self-auto mt-2 sm:mt-0">{wordOfTheDay.wordType}</span>
+                  )}
+                </div>
+                <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
+                {wordOfTheDay.example && (
+                  <div className="mt-4 border-t border-[#2a2a2a] pt-3">
+                    <p className="text-xs text-[#d4d4d4] italic opacity-80">"{wordOfTheDay.example}"</p>
+                    {wordOfTheDay.exampleTranslation && (
+                      <p className="text-[11px] text-[#d4d4d4] opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
+                    )}
+                  </div>
                 )}
+              </div>
+              <button 
+                onClick={() => setIsChangingWotd(!isChangingWotd)}
+                className="text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors p-2"
+                title="Thay đổi từ vựng mỗi ngày"
+              >
+                {isChangingWotd ? <X className="w-5 h-5" /> : <RefreshCw className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {isChangingWotd && (
+              <div className="mt-4 border-t border-[#2a2a2a] pt-4 animate-in fade-in slide-in-from-top-2">
+                <div className="relative mb-4">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#d4d4d4]/50" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm kiếm từ vựng..." 
+                    value={wotdSearch}
+                    onChange={e => setWotdSearch(e.target.value)}
+                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded text-sm text-white px-9 py-2 focus:outline-none focus:border-[#c5a059]/50 transition-colors placeholder:text-[#d4d4d4]/30"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent' }}>
+                  {filteredWotdList.map(card => (
+                    <button
+                      key={card.id}
+                      onClick={() => handleSelectNewWotd(card.id)}
+                      className={`text-left px-4 py-3 rounded border transition-all ${card.id === wordOfTheDay.id ? 'bg-[#c5a059]/10 border-[#c5a059]' : 'bg-[#1a1a1a] border-[#2a2a2a] hover:border-[#c5a059]/50'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl font-serif text-white">{card.kanji}</span>
+                        {card.reading && <span className="text-sm text-[#d4d4d4] opacity-70">{card.reading}</span>}
+                        {card.id === wordOfTheDay.id && <span className="text-[10px] text-[#c5a059] ml-auto">Đang chọn</span>}
+                      </div>
+                      <p className="text-xs text-[#d4d4d4] opacity-60 mt-1 line-clamp-1">{card.meaning}</p>
+                    </button>
+                  ))}
+                  {filteredWotdList.length === 0 && (
+                    <div className="text-center text-sm text-[#d4d4d4]/50 py-4">Không tìm thấy từ vựng</div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -271,7 +338,8 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                     labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
                   />
                   <Line type="monotone" dataKey="reviewed" name="Đã ôn" stroke="#4a4a4a" strokeWidth={2} dot={{ fill: '#4a4a4a', r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="correct" name="Nhớ đúng" stroke="#c5a059" strokeWidth={2} dot={{ fill: '#c5a059', r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="correct" name="Nhớ đúng (Bao gồm Mơ hồ)" stroke="#c5a059" strokeWidth={2} dot={{ fill: '#c5a059', r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="remembered" name="Đã nhớ" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
           </div>
