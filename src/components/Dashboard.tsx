@@ -127,7 +127,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
 
   // Sync back to stats if WOTD changes and we have a function
   useEffect(() => {
-    if (wordOfTheDay && onRecordWordOfTheDay && (!stats[todayStr] || stats[todayStr].wotdId !== wordOfTheDay.id)) {
+    if (wordOfTheDay && onRecordWordOfTheDay && !stats[todayStr]?.wotdId) {
       onRecordWordOfTheDay(wordOfTheDay.id);
     }
   }, [wordOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
