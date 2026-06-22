@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { KanjiCard } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
 import { getLocalDateString, getVietnamDate } from '../lib/dateUtils';
@@ -150,6 +150,67 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
     setWotdSearch('');
   };
 
+  const renderExampleHighlight = (example: string, kanji?: string, reading?: string) => {
+    if (!example) return null;
+    
+    const targetKanji = kanji && example.includes(kanji) ? kanji : null;
+    if (targetKanji) {
+      const parts = example.split(targetKanji);
+      return (
+        <span>
+          "{parts.map((p, i) => (
+            <Fragment key={i}>
+              {p}
+              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold text-lg sm:text-xl">{targetKanji}</span>}
+            </Fragment>
+          ))}"
+        </span>
+      );
+    }
+
+    const kanjiChars = kanji ? kanji.match(/[\u4e00-\u9faf]+/g) : null;
+    if (kanjiChars && kanjiChars.length > 0) {
+      const stem = kanjiChars.join(''); // Try exactly first just in case
+      let targetStem = stem;
+      
+      if (!example.includes(stem)) {
+        // Just take the first kanji cluster if they don't appear together
+        targetStem = kanjiChars[0];
+      }
+      
+      if (example.includes(targetStem)) {
+        const parts = example.split(targetStem);
+        return (
+          <span>
+            "{parts.map((p, i) => (
+              <Fragment key={i}>
+                {p}
+                {i < parts.length - 1 && <span className="text-[#c5a059] font-bold text-lg sm:text-xl">{targetStem}</span>}
+              </Fragment>
+            ))}"
+          </span>
+        );
+      }
+    }
+
+    const targetReading = reading && example.includes(reading) ? reading : null;
+    if (targetReading) {
+      const parts = example.split(targetReading);
+      return (
+        <span>
+          "{parts.map((p, i) => (
+            <Fragment key={i}>
+              {p}
+              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold text-lg sm:text-xl">{targetReading}</span>}
+            </Fragment>
+          ))}"
+        </span>
+      );
+    }
+
+    return <span>"{example}"</span>;
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
@@ -182,9 +243,11 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                 <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
                 {wordOfTheDay.example && (
                   <div className="mt-4 border-t border-[#2a2a2a] pt-3">
-                    <p className="text-xs text-[#d4d4d4] italic opacity-80">"{wordOfTheDay.example}"</p>
+                    <p className="text-base sm:text-lg text-[#d4d4d4] opacity-90 leading-relaxed font-serif">
+                      {renderExampleHighlight(wordOfTheDay.example, wordOfTheDay.kanji, wordOfTheDay.reading)}
+                    </p>
                     {wordOfTheDay.exampleTranslation && (
-                      <p className="text-[11px] text-[#d4d4d4] opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
+                      <p className="text-xs text-[#d4d4d4] opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
                     )}
                   </div>
                 )}
