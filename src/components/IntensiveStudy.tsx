@@ -529,7 +529,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
           )}
         </div>
 
-        {word.examples.map((ex, index) => (
+        {[...word.examples].reverse().map((ex, index) => (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
