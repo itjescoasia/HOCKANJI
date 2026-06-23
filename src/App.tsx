@@ -218,15 +218,17 @@ export default function App() {
   };
 
   const getFreeStudyDeck = () => {
-    return [...deck]
-      .sort((a, b) => {
-        const scoreA = a.freeStudyScore || 0;
-        const scoreB = b.freeStudyScore || 0;
-        if (scoreA !== scoreB) {
-          return scoreA - scoreB; // Lower score (most forgotten) comes first
-        }
-        return Math.random() - 0.5; // Randomize order within same score
-      });
+    const shuffled = [...deck];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    return shuffled.sort((a, b) => {
+      const scoreA = a.freeStudyScore || 0;
+      const scoreB = b.freeStudyScore || 0;
+      return scoreA - scoreB; // Lower score (most forgotten) comes first
+    });
   };
 
   const navItems = [
