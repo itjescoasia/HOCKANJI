@@ -348,6 +348,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     explanation: word.explanation
   });
 
+  const [hideMeanings, setHideMeanings] = useState(false);
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleData, setEditExampleData] = useState({
     sentence: '',
@@ -573,15 +574,25 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-4">
           <h3 className="text-lg font-serif text-white tracking-widest uppercase">Các Câu Ví Dụ ({word.examples.length})</h3>
-          {!isAddingExample && (
-            <button
-              onClick={() => setIsAddingExample(true)}
-              className="text-[#c5a059] hover:text-[#b08d4a] flex items-center gap-1 text-sm uppercase tracking-wider font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Thêm mới</span>
-            </button>
-          )}
+          <div className="flex items-center gap-6">
+            {word.examples.length > 0 && (
+              <button
+                 onClick={() => setHideMeanings(!hideMeanings)}
+                 className="text-[#d4d4d4]/60 hover:text-white flex items-center gap-1 text-sm uppercase tracking-wider font-medium transition-colors"
+              >
+                 {hideMeanings ? "Hiện nghĩa" : "Ẩn nghĩa"}
+              </button>
+            )}
+            {!isAddingExample && (
+              <button
+                onClick={() => setIsAddingExample(true)}
+                className="text-[#c5a059] hover:text-[#b08d4a] flex items-center gap-1 text-sm uppercase tracking-wider font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Thêm mới</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {[...word.examples].reverse().map((ex, index) => (
@@ -674,16 +685,16 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                      {index + 1}
                    </div>
                    <div className="flex-1 pt-1">
-                     {ex.reading && (
+                     {ex.reading && !hideMeanings && (
                        <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
                      )}
                      <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
                        {renderHighlight(ex.sentence, word.word)}
                      </p>
-                     {ex.romaji && (
+                     {ex.romaji && !hideMeanings && (
                        <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
                      )}
-                     {ex.translation && (
+                     {ex.translation && !hideMeanings && (
                        <p className="text-sm text-[#d4d4d4]/50 italic">
                          ({ex.translation})
                        </p>
