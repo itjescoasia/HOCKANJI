@@ -21,6 +21,8 @@ export type WordCategory = 'Danh từ' | 'Động từ nhóm I' | 'Động từ 
 export interface IntensiveExample {
   id: string;
   sentence: string;
+  reading?: string;
+  romaji?: string;
   translation: string;
 }
 

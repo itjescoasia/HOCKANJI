@@ -267,6 +267,8 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
 }) {
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
   const [newSentence, setNewSentence] = useState('');
+  const [newReading, setNewReading] = useState('');
+  const [newRomaji, setNewRomaji] = useState('');
   const [newTranslation, setNewTranslation] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
@@ -295,6 +297,8 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     const newExample: IntensiveExample = {
       id: crypto.randomUUID(),
       sentence: newSentence.trim(),
+      reading: newReading.trim(),
+      romaji: newRomaji.trim(),
       translation: newTranslation.trim()
     };
 
@@ -303,6 +307,8 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     });
 
     setNewSentence('');
+    setNewReading('');
+    setNewRomaji('');
     setNewTranslation('');
     setIsAddingExample(false);
   };
@@ -469,9 +475,15 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                  {index + 1}
                </div>
                <div className="flex-1 pt-1">
+                 {ex.reading && (
+                   <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
+                 )}
                  <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
                    {renderHighlight(ex.sentence, word.word)}
                  </p>
+                 {ex.romaji && (
+                   <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
+                 )}
                  {ex.translation && (
                    <p className="text-sm text-[#d4d4d4]/50 italic">
                      ({ex.translation})
@@ -501,6 +513,28 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                     className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] font-serif text-lg transition-colors placeholder:text-[#2a2a2a]"
                     placeholder="e.g. この情報は大切です。"
                   />
+               </div>
+               <div className="flex flex-col sm:flex-row gap-4">
+                 <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Hiragana</label>
+                    <input
+                      type="text"
+                      value={newReading}
+                      onChange={e => setNewReading(e.target.value)}
+                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                      placeholder="e.g. この じょうほう は たいせつ です"
+                    />
+                 </div>
+                 <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Romaji</label>
+                    <input
+                      type="text"
+                      value={newRomaji}
+                      onChange={e => setNewRomaji(e.target.value)}
+                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                      placeholder="e.g. Kono jōhō wa taisetsu desu."
+                    />
+                 </div>
                </div>
                <div className="space-y-2">
                   <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Bản dịch</label>
