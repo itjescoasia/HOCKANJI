@@ -293,6 +293,49 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     explanation: word.explanation
   });
 
+  const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
+  const [editExampleData, setEditExampleData] = useState({
+    sentence: '',
+    reading: '',
+    romaji: '',
+    translation: ''
+  });
+
+  const handleStartEditExample = (ex: IntensiveExample) => {
+    setEditingExampleId(ex.id);
+    setEditExampleData({
+      sentence: ex.sentence,
+      reading: ex.reading || '',
+      romaji: ex.romaji || '',
+      translation: ex.translation || ''
+    });
+  };
+
+  const handleCancelEditExample = () => {
+    setEditingExampleId(null);
+  };
+
+  const handleEditExampleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editExampleData.sentence.trim() || !editingExampleId) return;
+
+    const updatedExamples = word.examples.map(ex => {
+      if (ex.id === editingExampleId) {
+        return {
+          ...ex,
+          sentence: editExampleData.sentence.trim(),
+          reading: editExampleData.reading.trim(),
+          romaji: editExampleData.romaji.trim(),
+          translation: editExampleData.translation.trim()
+        };
+      }
+      return ex;
+    });
+
+    onUpdateWord(word.id, { examples: updatedExamples });
+    setEditingExampleId(null);
+  };
+
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editWordData.word.trim()) return;
@@ -460,9 +503,11 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                 <span className="bg-[#1a1a1a] text-[#d4d4d4]/60 px-2 py-1 rounded text-[10px] uppercase border border-[#2a2a2a] tracking-wider">{word.category}</span>
               </div>
               {word.explanation && (
-                <p className="text-[#d4d4d4]/90 text-sm sm:text-base leading-relaxed bg-[#1a1a1a]/50 p-4 rounded border-l-2 border-l-[#c5a059] mt-2">
-                  {word.explanation}
-                </p>
+                <div className="text-[#d4d4d4]/90 text-sm sm:text-base leading-relaxed bg-[#1a1a1a]/50 p-5 rounded-lg border border-[#2a2a2a] border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar">
+                  <div className="whitespace-pre-wrap font-sans">
+                    {word.explanation}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -491,34 +536,107 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
             key={ex.id} 
             className="bg-[#1a1a1a] border border-[#2a2a2a] p-6 rounded-lg relative group overflow-hidden"
           >
-             <button
-                onClick={() => handleRemoveExample(ex.id)}
-                className="absolute top-2 right-2 p-2 text-[#d4d4d4]/20 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-[#121212] z-10"
-                title="Xoá ví dụ"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-             <div className="flex gap-4">
-               <div className="w-8 h-8 shrink-0 bg-[#0c0c0c] border border-[#2a2a2a] flex items-center justify-center rounded-full text-[#c5a059] font-serif text-sm">
-                 {index + 1}
-               </div>
-               <div className="flex-1 pt-1">
-                 {ex.reading && (
-                   <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
-                 )}
-                 <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
-                   {renderHighlight(ex.sentence, word.word)}
-                 </p>
-                 {ex.romaji && (
-                   <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
-                 )}
-                 {ex.translation && (
-                   <p className="text-sm text-[#d4d4d4]/50 italic">
-                     ({ex.translation})
-                   </p>
-                 )}
-               </div>
-             </div>
+             {editingExampleId === ex.id ? (
+               <form onSubmit={handleEditExampleSubmit} className="space-y-4">
+                 <h4 className="text-xs uppercase tracking-wider text-[#c5a059] mb-4 font-medium">Chỉnh sửa câu ví dụ</h4>
+                 <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Câu ví dụ *</label>
+                    <textarea
+                      autoFocus
+                      required
+                      rows={2}
+                      value={editExampleData.sentence}
+                      onChange={e => setEditExampleData({...editExampleData, sentence: e.target.value})}
+                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] font-serif text-lg transition-colors placeholder:text-[#2a2a2a]"
+                    />
+                 </div>
+                 <div className="flex flex-col sm:flex-row gap-4">
+                   <div className="flex-1 space-y-2">
+                      <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Hiragana</label>
+                      <input
+                        type="text"
+                        value={editExampleData.reading}
+                        onChange={e => setEditExampleData({...editExampleData, reading: e.target.value})}
+                        className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                      />
+                   </div>
+                   <div className="flex-1 space-y-2">
+                      <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Romaji</label>
+                      <input
+                        type="text"
+                        value={editExampleData.romaji}
+                        onChange={e => setEditExampleData({...editExampleData, romaji: e.target.value})}
+                        className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                      />
+                   </div>
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Bản dịch</label>
+                    <input
+                      type="text"
+                      value={editExampleData.translation}
+                      onChange={e => setEditExampleData({...editExampleData, translation: e.target.value})}
+                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                    />
+                 </div>
+                 <div className="flex items-center gap-3 pt-2">
+                   <button
+                      type="submit"
+                      disabled={!editExampleData.sentence.trim()}
+                      className="bg-[#c5a059] hover:bg-[#b08d4a] disabled:bg-[#2a2a2a] disabled:text-[#d4d4d4]/40 text-[#121212] font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
+                    >
+                      Lưu
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEditExample}
+                      className="text-[#d4d4d4]/60 hover:text-white px-4 py-2 uppercase tracking-wider text-sm transition-colors"
+                    >
+                      Hủy
+                    </button>
+                 </div>
+               </form>
+             ) : (
+               <>
+                 <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-all">
+                   <button
+                      onClick={() => handleStartEditExample(ex)}
+                      className="p-2 text-[#d4d4d4]/40 hover:text-[#c5a059] rounded hover:bg-[#121212]"
+                      title="Chỉnh sửa ví dụ"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleRemoveExample(ex.id)}
+                      className="p-2 text-[#d4d4d4]/20 hover:text-red-500 rounded hover:bg-[#121212]"
+                      title="Xoá ví dụ"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                 </div>
+                 <div className="flex gap-4 pr-16">
+                   <div className="w-8 h-8 shrink-0 bg-[#0c0c0c] border border-[#2a2a2a] flex items-center justify-center rounded-full text-[#c5a059] font-serif text-sm">
+                     {index + 1}
+                   </div>
+                   <div className="flex-1 pt-1">
+                     {ex.reading && (
+                       <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
+                     )}
+                     <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
+                       {renderHighlight(ex.sentence, word.word)}
+                     </p>
+                     {ex.romaji && (
+                       <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
+                     )}
+                     {ex.translation && (
+                       <p className="text-sm text-[#d4d4d4]/50 italic">
+                         ({ex.translation})
+                       </p>
+                     )}
+                   </div>
+                 </div>
+               </>
+             )}
           </motion.div>
         ))}
 
