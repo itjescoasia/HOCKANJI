@@ -310,6 +310,7 @@ export default function App() {
         {view === 'intensive_vocab' && (
           <IntensiveStudy 
             deck={intensiveDeck}
+            mainDeck={deck}
             onAddWord={addIntensiveWord}
             onRemoveWord={removeIntensiveWord}
             onUpdateWord={updateIntensiveWord}
