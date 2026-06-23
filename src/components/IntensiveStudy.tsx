@@ -24,6 +24,7 @@ export default function IntensiveStudy({ deck, onAddWord, onRemoveWord, onUpdate
   const [newWordData, setNewWordData] = useState({
     word: '',
     reading: '',
+    romaji: '',
     category: 'Danh từ' as WordCategory,
     explanation: ''
   });
@@ -43,6 +44,7 @@ export default function IntensiveStudy({ deck, onAddWord, onRemoveWord, onUpdate
       id: crypto.randomUUID(),
       word: newWordData.word.trim(),
       reading: newWordData.reading.trim(),
+      romaji: newWordData.romaji.trim(),
       category: newWordData.category,
       explanation: newWordData.explanation.trim(),
       examples: [],
@@ -51,7 +53,7 @@ export default function IntensiveStudy({ deck, onAddWord, onRemoveWord, onUpdate
 
     onAddWord(newWord);
     setViewState('list');
-    setNewWordData({ word: '', reading: '', category: 'Danh từ', explanation: '' });
+    setNewWordData({ word: '', reading: '', romaji: '', category: 'Danh từ', explanation: '' });
   };
 
   const renderExampleHighlight = (example: string, targetKanji: string) => {
@@ -127,15 +129,27 @@ export default function IntensiveStudy({ deck, onAddWord, onRemoveWord, onUpdate
                   placeholder="e.g. 情報"
                 />
               </div>
-              <div className="flex-1 space-y-2">
-                <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Cách đọc (Hiragana)</label>
-                <input
-                  type="text"
-                  value={newWordData.reading}
-                  onChange={e => setNewWordData({...newWordData, reading: e.target.value})}
-                  className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
-                  placeholder="e.g. じょうほう"
-                />
+              <div className="flex-1 flex flex-col sm:flex-row gap-5">
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Cách đọc (Hiragana)</label>
+                  <input
+                    type="text"
+                    value={newWordData.reading}
+                    onChange={e => setNewWordData({...newWordData, reading: e.target.value})}
+                    className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                    placeholder="e.g. じょうほう"
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Romaji</label>
+                  <input
+                    type="text"
+                    value={newWordData.romaji}
+                    onChange={e => setNewWordData({...newWordData, romaji: e.target.value})}
+                    className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                    placeholder="e.g. jōhō"
+                  />
+                </div>
               </div>
             </div>
 
@@ -274,6 +288,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
   const [editWordData, setEditWordData] = useState({
     word: word.word,
     reading: word.reading,
+    romaji: word.romaji || '',
     category: word.category as WordCategory,
     explanation: word.explanation
   });
@@ -284,6 +299,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     onUpdateWord(word.id, {
       word: editWordData.word.trim(),
       reading: editWordData.reading.trim(),
+      romaji: editWordData.romaji.trim(),
       category: editWordData.category,
       explanation: editWordData.explanation.trim()
     });
@@ -352,14 +368,25 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] font-serif text-lg transition-colors placeholder:text-[#2a2a2a]"
                   />
                 </div>
-                <div className="flex-1 space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Cách đọc (Hiragana)</label>
-                  <input
-                    type="text"
-                    value={editWordData.reading}
-                    onChange={e => setEditWordData({...editWordData, reading: e.target.value})}
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
-                  />
+                <div className="flex-1 flex flex-col sm:flex-row gap-5">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Cách đọc (Hiragana)</label>
+                    <input
+                      type="text"
+                      value={editWordData.reading}
+                      onChange={e => setEditWordData({...editWordData, reading: e.target.value})}
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Romaji</label>
+                    <input
+                      type="text"
+                      value={editWordData.romaji}
+                      onChange={e => setEditWordData({...editWordData, romaji: e.target.value})}
+                      className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -399,7 +426,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                   type="button"
                   onClick={() => {
                     setEditWordData({
-                      word: word.word, reading: word.reading, category: word.category as WordCategory, explanation: word.explanation
+                      word: word.word, reading: word.reading, romaji: word.romaji || '', category: word.category as WordCategory, explanation: word.explanation
                     });
                     setIsEditing(false);
                   }}
@@ -429,6 +456,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
             <div className="flex-1 flex flex-col justify-center text-center sm:text-left h-full pr-8">
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-2">
                 <span className="text-2xl text-[#c5a059] font-medium">{word.reading}</span>
+                {word.romaji && <span className="text-lg text-[#d4d4d4]/60">{word.romaji}</span>}
                 <span className="bg-[#1a1a1a] text-[#d4d4d4]/60 px-2 py-1 rounded text-[10px] uppercase border border-[#2a2a2a] tracking-wider">{word.category}</span>
               </div>
               {word.explanation && (

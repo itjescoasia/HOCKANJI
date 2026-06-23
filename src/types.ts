@@ -30,6 +30,7 @@ export interface IntensiveWord {
   id: string;
   word: string;
   reading: string;
+  romaji?: string;
   category: WordCategory | string;
   explanation: string;
   examples: IntensiveExample[];
