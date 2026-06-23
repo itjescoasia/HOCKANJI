@@ -16,6 +16,24 @@ export interface KanjiCard {
   createdAt: number;
 }
 
+export type WordCategory = 'Danh từ' | 'Động từ nhóm I' | 'Động từ nhóm II' | 'Động từ nhóm III' | 'Tính từ đuôi-i' | 'Tính từ đuôi-na' | 'Ngữ pháp' | 'Khác';
+
+export interface IntensiveExample {
+  id: string;
+  sentence: string;
+  translation: string;
+}
+
+export interface IntensiveWord {
+  id: string;
+  word: string;
+  reading: string;
+  category: WordCategory | string;
+  explanation: string;
+  examples: IntensiveExample[];
+  createdAt: number;
+}
+
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
 
-export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review';
+export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab';

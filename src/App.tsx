@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import { useStudyStats } from './hooks/useStudyStats';
+import { useIntensiveVocab } from './hooks/useIntensiveVocab';
 import { getLocalDateString, getEndOfTodayTimestamp } from './lib/dateUtils';
 import Dashboard from './components/Dashboard';
 import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
 import ReviewSession from './components/ReviewSession';
+import IntensiveStudy from './components/IntensiveStudy';
 import Login from './components/Login';
-import { BookMarked, Home, PlusCircle, LogOut } from 'lucide-react';
+import { BookMarked, Home, PlusCircle, LogOut, Lightbulb } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -46,6 +48,7 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
+  const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord } = useIntensiveVocab();
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
@@ -234,6 +237,7 @@ export default function App() {
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
+    { id: 'intensive_vocab', label: 'Chuyên đề', icon: Lightbulb },
     { id: 'add', label: 'Thêm thẻ', icon: PlusCircle },
   ] as const;
 
@@ -301,6 +305,15 @@ export default function App() {
             addCard(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType);
             handleNavigate('list'); // Redirect to list to show success
           }} />
+        )}
+
+        {view === 'intensive_vocab' && (
+          <IntensiveStudy 
+            deck={intensiveDeck}
+            onAddWord={addIntensiveWord}
+            onRemoveWord={removeIntensiveWord}
+            onUpdateWord={updateIntensiveWord}
+          />
         )}
       </main>
 
