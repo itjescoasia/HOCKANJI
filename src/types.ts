@@ -35,8 +35,9 @@ export interface IntensiveWord {
   explanation: string;
   examples: IntensiveExample[];
   createdAt: number;
+  reviewScore?: number;
 }
 
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
 
-export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab';
+export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study';

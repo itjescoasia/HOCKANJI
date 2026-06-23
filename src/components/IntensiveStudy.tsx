@@ -1,6 +1,6 @@
 import React, { useState, Fragment } from 'react';
 import { IntensiveWord, IntensiveExample, WordCategory, KanjiCard } from '../types';
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2 } from 'lucide-react';
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface IntensiveStudyProps {
@@ -261,13 +261,15 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-2xl font-serif text-white tracking-wider">ÔN CHUYÊN TỪ VỰNG</h2>
-        <button
-          onClick={() => setViewState('add')}
-          className="bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#c5a059] border border-[#2a2a2a] px-4 py-2 rounded flex items-center gap-2 transition-all font-medium uppercase tracking-wider text-xs sm:text-sm"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Thêm Từ</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setViewState('add')}
+            className="bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#c5a059] border border-[#2a2a2a] px-4 py-2 rounded flex items-center gap-2 transition-all font-medium uppercase tracking-wider text-xs sm:text-sm"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Thêm Từ</span>
+          </button>
+        </div>
       </div>
 
       {deck.length > 0 && (
@@ -348,7 +350,23 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     explanation: word.explanation
   });
 
-  const [hideMeanings, setHideMeanings] = useState(false);
+  const [hiddenMeaningIds, setHiddenMeaningIds] = useState<string[]>([]);
+  const isAllHidden = word.examples.length > 0 && hiddenMeaningIds.length === word.examples.length;
+  
+  const toggleAllMeanings = () => {
+    if (isAllHidden) {
+      setHiddenMeaningIds([]);
+    } else {
+      setHiddenMeaningIds(word.examples.map(ex => ex.id));
+    }
+  };
+
+  const toggleMeaning = (id: string) => {
+    setHiddenMeaningIds(prev => 
+      prev.includes(id) ? prev.filter(hid => hid !== id) : [...prev, id]
+    );
+  };
+
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleData, setEditExampleData] = useState({
     sentence: '',
@@ -577,10 +595,10 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
           <div className="flex items-center gap-6">
             {word.examples.length > 0 && (
               <button
-                 onClick={() => setHideMeanings(!hideMeanings)}
+                 onClick={toggleAllMeanings}
                  className="text-[#d4d4d4]/60 hover:text-white flex items-center gap-1 text-sm uppercase tracking-wider font-medium transition-colors"
               >
-                 {hideMeanings ? "Hiện nghĩa" : "Ẩn nghĩa"}
+                 {isAllHidden ? "Hiện tất cả" : "Ẩn tất cả"}
               </button>
             )}
             {!isAddingExample && (
@@ -666,6 +684,13 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                <>
                  <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-all">
                    <button
+                     onClick={(e) => toggleMeaning(ex.id, e)}
+                     className="p-2 text-[#d4d4d4]/40 hover:text-[#c5a059] rounded hover:bg-[#121212]"
+                     title={hiddenMeaningIds.includes(ex.id) ? "Hiện nghĩa" : "Ẩn nghĩa"}
+                   >
+                     {hiddenMeaningIds.includes(ex.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                   </button>
+                   <button
                       onClick={() => handleStartEditExample(ex)}
                       className="p-2 text-[#d4d4d4]/40 hover:text-[#c5a059] rounded hover:bg-[#121212]"
                       title="Chỉnh sửa ví dụ"
@@ -685,16 +710,16 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                      {index + 1}
                    </div>
                    <div className="flex-1 pt-1">
-                     {ex.reading && !hideMeanings && (
+                     {ex.reading && !hiddenMeaningIds.includes(ex.id) && (
                        <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
                      )}
                      <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
                        {renderHighlight(ex.sentence, word.word)}
                      </p>
-                     {ex.romaji && !hideMeanings && (
+                     {ex.romaji && !hiddenMeaningIds.includes(ex.id) && (
                        <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
                      )}
-                     {ex.translation && !hideMeanings && (
+                     {ex.translation && !hiddenMeaningIds.includes(ex.id) && (
                        <p className="text-sm text-[#d4d4d4]/50 italic">
                          ({ex.translation})
                        </p>

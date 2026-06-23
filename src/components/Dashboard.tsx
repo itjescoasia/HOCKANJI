@@ -13,11 +13,12 @@ interface DashboardProps {
   onStartReview: () => void;
   onStartFreeStudy?: () => void;
   onStartDifficultReview?: () => void;
+  onStartShortStudy?: () => void;
   onNavigateAdd: () => void;
   onRecordWordOfTheDay?: (id: string) => void;
 }
 
-export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onStartShortStudy, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
   const [isChangingWotd, setIsChangingWotd] = useState(false);
   const [wotdSearch, setWotdSearch] = useState('');
 
@@ -538,6 +539,14 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
             >
                Bắt đầu phiên ôn tập
             </button>
+            {onStartShortStudy && deck.length > 0 && (
+              <button 
+                onClick={onStartShortStudy}
+                className="border border-[#2a2a2a] text-[#c5a059] bg-[#121212] hover:border-[#c5a059] hover:bg-[#1a1a1a] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Học ngắn (5 từ hay quên)
+              </button>
+            )}
             {onStartFreeStudy && (
               <button 
                 onClick={onStartFreeStudy}
@@ -563,6 +572,14 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
             >
                Thêm từ vựng mới
             </button>
+            {deck.length > 0 && onStartShortStudy && (
+               <button 
+                 onClick={onStartShortStudy}
+                 className="border border-[#2a2a2a] text-[#c5a059] bg-[#121212] hover:border-[#c5a059] hover:bg-[#1a1a1a] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+               >
+                  Học ngắn (5 từ hay quên)
+               </button>
+            )}
             {deck.length > 0 && onStartFreeStudy && (
                <button 
                  onClick={onStartFreeStudy}

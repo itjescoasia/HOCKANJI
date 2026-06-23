@@ -9,6 +9,7 @@ import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
 import ReviewSession from './components/ReviewSession';
 import IntensiveStudy from './components/IntensiveStudy';
+import ShortStudySession from './components/ShortStudySession';
 import Login from './components/Login';
 import { BookMarked, Home, PlusCircle, LogOut, Lightbulb } from 'lucide-react';
 import { auth } from './lib/firebase';
@@ -53,6 +54,7 @@ export default function App() {
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
+  const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);
   const lastActivityRef = useRef(Date.now());
   const activeSecondsRef = useRef(0);
 
@@ -146,6 +148,14 @@ export default function App() {
     setIsFreeStudyMode(false);
     setIsDifficultReviewMode(true);
     setView('review');
+  };
+
+  const handleStartShortStudy = () => {
+    // 5 từ hay quên nhất (difficultScore thấp nhất)
+    const sorted = [...deck].sort((a, b) => (a.difficultScore ?? 0) - (b.difficultScore ?? 0));
+    const top5 = sorted.slice(0, 5);
+    setShortStudyQueue(top5);
+    setView('short_study');
   };
 
   const handleFreeStudyReview = (id: string, isRemember: boolean) => {
@@ -291,6 +301,7 @@ export default function App() {
             onStartReview={handleStartReview} 
             onStartFreeStudy={handleStartFreeStudy}
             onStartDifficultReview={handleStartDifficultReview}
+            onStartShortStudy={handleStartShortStudy}
             onNavigateAdd={() => handleNavigate('add')} 
             onRecordWordOfTheDay={recordWordOfTheDay}
           />
@@ -315,6 +326,16 @@ export default function App() {
             onRemoveWord={removeIntensiveWord}
             onUpdateWord={updateIntensiveWord}
           />
+        )}
+        
+        {view === 'short_study' && (
+          <div className="fixed inset-0 z-50 bg-[#0c0c0c] overflow-y-auto w-full h-full">
+            <ShortStudySession
+              queue={shortStudyQueue}
+              onExit={() => setView('dashboard')}
+              onUpdateCard={updateCard}
+            />
+          </div>
         )}
       </main>
 
