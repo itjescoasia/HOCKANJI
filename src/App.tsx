@@ -59,7 +59,8 @@ export default function App() {
   const activeSecondsRef = useRef(0);
 
   useEffect(() => {
-    if ((!isFreeStudyMode && !isDifficultReviewMode) || view !== 'review') return;
+    const isTrackingView = view === 'short_study' || ((isFreeStudyMode || isDifficultReviewMode) && view === 'review');
+    if (!isTrackingView) return;
     
     lastActivityRef.current = Date.now();
     activeSecondsRef.current = 0;
@@ -100,7 +101,7 @@ export default function App() {
         activeSecondsRef.current = 0;
       }
     };
-  }, [isFreeStudyMode, view, recordFreeStudyTime]);
+  }, [isFreeStudyMode, isDifficultReviewMode, view, recordFreeStudyTime]);
 
   if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
 
