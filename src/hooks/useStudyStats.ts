@@ -61,21 +61,24 @@ export function useStudyStats() {
     setStats(prevStats => {
       const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, remembered: 0, freeStudyTime: 0 };
       
+      const newTodayStats = {
+        ...todayStats,
+        reviewed: todayStats.reviewed + 1,
+        correct: todayStats.correct + (isCorrect ? 1 : 0),
+        mastered: todayStats.mastered + (isNewlyMastered ? 1 : 0),
+        newLearned: (todayStats.newLearned || 0) + (isNewCard ? 1 : 0),
+        remembered: (todayStats.remembered || 0) + (isWellRemembered ? 1 : 0),
+      };
+
       const newStats = {
         ...prevStats,
-        [today]: {
-          ...todayStats,
-          reviewed: todayStats.reviewed + 1,
-          correct: todayStats.correct + (isCorrect ? 1 : 0),
-          mastered: todayStats.mastered + (isNewlyMastered ? 1 : 0),
-          newLearned: (todayStats.newLearned || 0) + (isNewCard ? 1 : 0),
-          remembered: (todayStats.remembered || 0) + (isWellRemembered ? 1 : 0),
-        }
+        [today]: newTodayStats
       };
       
       if (auth.currentUser) {
         const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
-        setDoc(statsRef, newStats, { merge: true }).catch(err => console.error('Error saving stats:', err));
+        // Only write today's stats to prevent overwriting other days or devices' data when out of sync
+        setDoc(statsRef, { [today]: newTodayStats }, { merge: true }).catch(err => console.error('Error saving stats:', err));
       } else {
         localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
       }
@@ -91,17 +94,19 @@ export function useStudyStats() {
     setStats(prevStats => {
       const todayStats = prevStats[today] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
       
+      const newTodayStats = {
+        ...todayStats,
+        freeStudyTime: (todayStats.freeStudyTime || 0) + seconds,
+      };
+
       const newStats = {
         ...prevStats,
-        [today]: {
-          ...todayStats,
-          freeStudyTime: (todayStats.freeStudyTime || 0) + seconds,
-        }
+        [today]: newTodayStats
       };
       
       if (auth.currentUser) {
         const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
-        setDoc(statsRef, newStats, { merge: true }).catch(err => console.error('Error saving stats:', err));
+        setDoc(statsRef, { [today]: newTodayStats }, { merge: true }).catch(err => console.error('Error saving stats:', err));
       } else {
         localStorage.setItem('kanji_srs_stats', JSON.stringify(newStats));
       }
@@ -119,17 +124,19 @@ export function useStudyStats() {
       // Check if it's already recorded to prevent infinite loops / multiple writes
       if (todayStats.wotdId === wotdId) return prevStats;
 
+      const newTodayStats = {
+        ...todayStats,
+        wotdId,
+      };
+
       const newStats = {
         ...prevStats,
-        [today]: {
-          ...todayStats,
-          wotdId,
-        }
+        [today]: newTodayStats
       };
       
       if (auth.currentUser) {
         const statsRef = doc(db, 'users', auth.currentUser.uid, 'userStats', 'daily');
-        setDoc(statsRef, newStats, { merge: true }).catch(err => {
+        setDoc(statsRef, { [today]: newTodayStats }, { merge: true }).catch(err => {
           console.error('Error saving stats:', err);
         });
       } else {

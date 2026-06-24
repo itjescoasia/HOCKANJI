@@ -402,7 +402,6 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                     labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
                   />
                   <Line type="monotone" dataKey="reviewed" name="Đã ôn" stroke="#4a4a4a" strokeWidth={2} dot={{ fill: '#4a4a4a', r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="correct" name="Nhớ đúng (Bao gồm Mơ hồ)" stroke="#c5a059" strokeWidth={2} dot={{ fill: '#c5a059', r: 4 }} activeDot={{ r: 6 }} />
                   <Line type="monotone" dataKey="remembered" name="Đã nhớ" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
