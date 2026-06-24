@@ -32,8 +32,11 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
   const currentWord = queue[currentIndex];
 
   const handleRemember = () => {
-    // Tăng difficultScore để ghi nhận là bớt quên hơn (hoặc giữ nguyên tuỳ chiến lược)
-    onUpdateCard(currentWord.id, { difficultScore: (currentWord.difficultScore ?? 0) + 1 });
+    const currentScore = currentWord.difficultScore ?? 0;
+    // Phục hồi điểm nhanh hơn nếu bị âm quá sâu (giảm một nửa số âm + 1)
+    const newScore = Math.min(0, Math.floor(currentScore / 2) + 1);
+    
+    onUpdateCard(currentWord.id, { difficultScore: newScore });
     
     // Loại bỏ thẻ vựng khỏi queue ngắn do đã nhớ
     const newQueue = [...queue];

@@ -176,8 +176,8 @@ export default function App() {
     const card = deck.find(c => c.id === id);
     if (!card) return;
     const currentScore = card.difficultScore || 0;
-    // Lower score means more forgotten. Initially 0. Quên -> subtract 1, Nhớ -> add 1
-    const newScore = isRemember ? currentScore + 1 : currentScore - 1;
+    // Phục hồi điểm nhanh hơn nếu nhớ (chia đôi số âm + 1)
+    const newScore = isRemember ? Math.min(0, Math.floor(currentScore / 2) + 1) : currentScore - 1;
     updateCard(id, { difficultScore: newScore });
   };
 

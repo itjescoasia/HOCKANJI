@@ -141,6 +141,9 @@ export function useVocabDeck() {
     // Decrease difficult score if forgotten in normal review, making it more prioritized for difficult review
     if (grade === 'forgot') {
       updatedCard.difficultScore = (updatedCard.difficultScore || 0) - 1;
+    } else if (grade === 'good' || grade === 'easy') {
+      // Nhớ trong ôn tập bình thường cũng giúp phục hồi điểm hay quên
+      updatedCard.difficultScore = Math.min(0, Math.floor((updatedCard.difficultScore || 0) / 2) + 1);
     }
 
     if (auth.currentUser) {
