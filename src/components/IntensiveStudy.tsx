@@ -1,7 +1,8 @@
 import React, { useState, Fragment } from 'react';
 import { IntensiveWord, IntensiveExample, WordCategory, KanjiCard } from '../types';
 import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Eye, EyeOff, GripVertical } from 'lucide-react';
-import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface IntensiveStudyProps {
   deck: IntensiveWord[];
@@ -341,6 +342,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void,
   renderHighlight: (text: string, kanji: string) => React.ReactNode
 }) {
+
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
   const [newSentence, setNewSentence] = useState('');
   const [newReading, setNewReading] = useState('');
@@ -458,43 +460,25 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
   };
 
   const ExampleItem = ({ ex, index }: { ex: IntensiveExample, index: number }) => {
-    const dragControls = useDragControls();
-
     return (
-      <Reorder.Item 
-        value={ex} 
-        dragListener={false} 
-        dragControls={dragControls}
-        className="relative rounded-lg overflow-hidden border border-[#2a2a2a] bg-[#121212] group"
-      >
-        {/* Delete Background */}
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-red-600/90 flex flex-col items-center justify-center text-white z-0">
-          <Trash2 className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Xoá</span>
-        </div>
-
-        <motion.div 
-          drag={editingExampleId === ex.id ? false : "x"}
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={{ left: 0.5, right: 0 }}
-          onDragEnd={(e, info) => {
-            if (info.offset.x < -80) {
-              if (window.confirm("Bạn có chắc chắn muốn xóa ví dụ này?")) {
-                handleRemoveExample(ex.id);
-              }
-            }
-          }}
-          className={`bg-[#1a1a1a] p-6 relative z-10 w-full min-h-full ${!editingExampleId ? 'pl-14' : ''}`}
-        >
-           {/* Drag Handle */}
-           {!editingExampleId && (
-             <div 
-               onPointerDown={(e) => dragControls.start(e)}
-               className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-[#d4d4d4]/20 hover:text-[#c5a059] transition-colors z-20 touch-none border-r border-[#2a2a2a]"
-             >
-               <GripVertical className="w-5 h-5" />
-             </div>
-           )}
+      <Draggable draggableId={ex.id} index={index} isDragDisabled={editingExampleId === ex.id}>
+        {(provided, snapshot) => (
+          <div 
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            className={`relative rounded-lg overflow-hidden border ${snapshot.isDragging ? 'border-[#c5a059] shadow-2xl z-50' : 'border-[#2a2a2a]'} bg-[#121212] group mb-4`}
+            style={provided.draggableProps.style}
+          >
+            <div className={`bg-[#1a1a1a] p-6 relative z-10 w-full min-h-full ${!editingExampleId ? 'pl-14' : ''}`}>
+               {/* Drag Handle */}
+               {!editingExampleId && (
+                 <div 
+                   {...provided.dragHandleProps}
+                   className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-[#d4d4d4]/20 hover:text-[#c5a059] transition-colors z-20 border-r border-[#2a2a2a]"
+                 >
+                   <GripVertical className="w-5 h-5" />
+                 </div>
+               )}
 
            {editingExampleId === ex.id ? (
              <form onSubmit={handleEditExampleSubmit} className="space-y-4">
@@ -568,37 +552,50 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                  </button>
                  <button
                     onClick={() => handleStartEditExample(ex)}
-                    className="p-2 text-[#d4d4d4]/40 hover:text-[#c5a059] rounded hover:bg-[#121212]"
-                    title="Chỉnh sửa ví dụ"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-               </div>
-               <div className="flex gap-4 pr-16 pointer-events-none">
-                 <div className="w-8 h-8 shrink-0 bg-[#0c0c0c] border border-[#2a2a2a] flex items-center justify-center rounded-full text-[#c5a059] font-serif text-sm">
-                   {index + 1}
-                 </div>
-                 <div className="flex-1 pt-1">
-                   {ex.reading && !hiddenMeaningIds.includes(ex.id) && (
-                     <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
-                   )}
-                   <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
-                     {renderHighlight(ex.sentence, word.word)}
-                   </p>
-                   {ex.romaji && !hiddenMeaningIds.includes(ex.id) && (
-                     <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
-                   )}
-                   {ex.translation && !hiddenMeaningIds.includes(ex.id) && (
-                     <p className="text-sm text-[#d4d4d4]/50 italic">
-                       ({ex.translation})
-                     </p>
-                   )}
-                 </div>
-               </div>
-             </>
-           )}
-        </motion.div>
-      </Reorder.Item>
+                     className="p-2 text-[#d4d4d4]/40 hover:text-[#c5a059] rounded hover:bg-[#121212]"
+                     title="Chỉnh sửa ví dụ"
+                   >
+                     <Edit2 className="w-4 h-4" />
+                   </button>
+                   <button
+                      onClick={() => {
+                        if (window.confirm("Bạn có chắc chắn muốn xóa ví dụ này?")) {
+                          handleRemoveExample(ex.id);
+                        }
+                      }}
+                      className="p-2 text-[#d4d4d4]/20 hover:text-red-500 rounded hover:bg-[#121212]"
+                      title="Xoá ví dụ"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+                <div className="flex gap-4 pr-16 pointer-events-none">
+                  <div className="w-8 h-8 shrink-0 bg-[#0c0c0c] border border-[#2a2a2a] flex items-center justify-center rounded-full text-[#c5a059] font-serif text-sm">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    {ex.reading && !hiddenMeaningIds.includes(ex.id) && (
+                      <p className="text-sm text-[#c5a059] opacity-80 mb-1">{ex.reading}</p>
+                    )}
+                    <p className="text-xl sm:text-2xl text-[#d4d4d4] font-serif leading-relaxed mb-3">
+                      {renderHighlight(ex.sentence, word.word)}
+                    </p>
+                    {ex.romaji && !hiddenMeaningIds.includes(ex.id) && (
+                      <p className="text-sm text-[#d4d4d4]/60 mb-1">{ex.romaji}</p>
+                    )}
+                    {ex.translation && !hiddenMeaningIds.includes(ex.id) && (
+                      <p className="text-sm text-[#d4d4d4]/50 italic">
+                        ({ex.translation})
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+         </div>
+          </div>
+        )}
+      </Draggable>
     );
   };
 
@@ -763,16 +760,29 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
           </div>
         </div>
 
-        <Reorder.Group 
-          axis="y" 
-          values={word.examples} 
-          onReorder={(newOrder) => onUpdateWord(word.id, { examples: newOrder })}
-          className="flex flex-col gap-4"
+        <DragDropContext 
+          onDragEnd={(result: DropResult) => {
+            if (!result.destination) return;
+            const newExamples = Array.from(word.examples);
+            const [reorderedItem] = newExamples.splice(result.source.index, 1);
+            newExamples.splice(result.destination.index, 0, reorderedItem);
+            onUpdateWord(word.id, { examples: newExamples });
+          }}
         >
-          {word.examples.map((ex, index) => (
-            <ExampleItem key={ex.id} ex={ex} index={index} />
-          ))}
-        </Reorder.Group>
+          <Droppable droppableId="examples">
+            {(provided) => (
+              <div 
+                {...provided.droppableProps} 
+                ref={provided.innerRef}
+              >
+                {word.examples.map((ex, index) => (
+                  <ExampleItem key={ex.id} ex={ex} index={index} />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
 
         {isAddingExample && (
           <motion.div 
