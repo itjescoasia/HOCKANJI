@@ -3,6 +3,7 @@ export interface KanjiCard {
   kanji: string;
   reading: string;
   sinoVietnamese?: string;
+  kanjiExplanation?: string;
   meaning: string;
   example?: string;
   exampleTranslation?: string;

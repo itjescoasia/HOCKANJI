@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 
 interface AddVocabProps {
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string) => void;
 }
 
 export default function AddVocab({ onAdd }: AddVocabProps) {
   const [kanji, setKanji] = useState('');
   const [reading, setReading] = useState('');
   const [sinoVietnamese, setSinoVietnamese] = useState('');
+  const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
   const [example, setExample] = useState('');
   const [exampleTranslation, setExampleTranslation] = useState('');
@@ -16,10 +17,11 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) return;
-    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim(), wordType);
+    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim(), wordType, kanjiExplanation.trim());
     setKanji('');
     setReading('');
     setSinoVietnamese('');
+    setKanjiExplanation('');
     setMeaning('');
     setExample('');
     setExampleTranslation('');
@@ -82,6 +84,16 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             onChange={e => setSinoVietnamese(e.target.value)}
             className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#c5a059] font-serif uppercase tracking-widest text-center"
             placeholder="NGỘ"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Giải thích Hán tự (Bản chất)</label>
+          <textarea 
+            value={kanjiExplanation}
+            onChange={e => setKanjiExplanation(e.target.value)}
+            className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-white font-sans text-sm"
+            placeholder="Giải thích nguồn gốc, cách nhớ chữ Hán..."
+            rows={3}
           />
         </div>
         <div>

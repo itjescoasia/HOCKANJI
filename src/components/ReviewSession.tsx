@@ -403,6 +403,11 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
                 <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-2 sm:my-4 flex-shrink-0"></div>
                 <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
+                {currentCard.kanjiExplanation && (
+                  <div className="mt-4 px-6 py-4 bg-[#1a1a1a]/50 border border-[#2a2a2a] rounded text-sm sm:text-base text-[#d4d4d4] font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap">
+                    {currentCard.kanjiExplanation}
+                  </div>
+                )}
                 {(currentCard.example || currentCard.exampleTranslation) && (
                   <div className="mt-4 flex flex-col items-center gap-1">
                     {currentCard.example && (

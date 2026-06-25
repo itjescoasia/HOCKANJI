@@ -6,15 +6,15 @@ import * as XLSX from 'xlsx';
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType'>>) => void;
-  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>) => void;
+  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (card: KanjiCard) => {
@@ -23,6 +23,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       kanji: card.kanji,
       reading: card.reading || '',
       sinoVietnamese: card.sinoVietnamese || '',
+      kanjiExplanation: card.kanjiExplanation || '',
       meaning: card.meaning,
       example: card.example || '',
       exampleTranslation: card.exampleTranslation || '',
@@ -36,6 +37,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         kanji: editForm.kanji.trim(),
         reading: editForm.reading?.trim() || '',
         sinoVietnamese: editForm.sinoVietnamese?.trim() || '',
+        kanjiExplanation: editForm.kanjiExplanation?.trim() || '',
         meaning: editForm.meaning.trim(),
         example: editForm.example?.trim() || '',
         exampleTranslation: editForm.exampleTranslation?.trim() || '',
@@ -242,6 +244,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                               className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-white px-3 py-2 focus:outline-none focus:border-[#c5a059]"
                               placeholder="Ý nghĩa"
                             />
+                            <textarea 
+                              value={editForm.kanjiExplanation || ''} 
+                              onChange={e => setEditForm({...editForm, kanjiExplanation: e.target.value})}
+                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              placeholder="Giải thích Hán tự"
+                              rows={2}
+                            />
                             <input 
                               value={editForm.example} 
                               onChange={e => setEditForm({...editForm, example: e.target.value})}
@@ -298,6 +307,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                           )}
                         </div>
                         <div className="text-sm tracking-widest uppercase text-white font-light break-words whitespace-normal max-w-[200px] sm:max-w-md">{card.meaning}</div>
+                        {card.kanjiExplanation && (
+                          <div className="mt-2 text-xs text-[#d4d4d4] font-sans opacity-80 whitespace-pre-wrap leading-relaxed max-w-[200px] sm:max-w-md">
+                            {card.kanjiExplanation}
+                          </div>
+                        )}
                         {(card.example || card.exampleTranslation) && (
                           <div className="mt-2 space-y-1 border-t border-[#2a2a2a] pt-2 max-w-[200px] sm:max-w-md">
                             {card.example && (
