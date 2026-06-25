@@ -313,8 +313,8 @@ export default function App() {
         )}
         
         {view === 'add' && (
-          <AddVocab onAdd={(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType) => {
-            addCard(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType);
+          <AddVocab onAdd={(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType, kanjiExplanation, romaji) => {
+            addCard(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType, kanjiExplanation, romaji);
             handleNavigate('list'); // Redirect to list to show success
           }} />
         )}

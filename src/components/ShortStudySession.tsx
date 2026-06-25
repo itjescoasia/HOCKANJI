@@ -92,7 +92,12 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
           
           {isMeaningShown ? (
             <div className="mt-8 space-y-6">
-               <div className="text-2xl text-[#c5a059] font-medium">{currentWord.reading}</div>
+               <div className="flex flex-col items-center gap-1">
+                 <div className="text-2xl text-[#c5a059] font-medium">{currentWord.reading}</div>
+                 {currentWord.romaji && (
+                   <div className="text-sm text-[#d4d4d4] opacity-50 italic">{currentWord.romaji}</div>
+                 )}
+               </div>
                <div className="text-xl text-[#d4d4d4] font-medium mt-2">{currentWord.meaning}</div>
                {currentWord.kanjiExplanation && (
                  <div className="mt-4 px-6 py-4 bg-[#1a1a1a]/50 border border-[#2a2a2a] rounded text-sm text-[#d4d4d4] font-sans opacity-90 leading-relaxed max-w-lg mx-auto whitespace-pre-wrap">

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
 interface AddVocabProps {
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string) => void;
 }
 
 export default function AddVocab({ onAdd }: AddVocabProps) {
   const [kanji, setKanji] = useState('');
   const [reading, setReading] = useState('');
+  const [romaji, setRomaji] = useState('');
   const [sinoVietnamese, setSinoVietnamese] = useState('');
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
@@ -17,9 +18,10 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) return;
-    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim(), wordType, kanjiExplanation.trim());
+    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim(), wordType, kanjiExplanation.trim(), romaji.trim());
     setKanji('');
     setReading('');
+    setRomaji('');
     setSinoVietnamese('');
     setKanjiExplanation('');
     setMeaning('');
@@ -57,6 +59,16 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             onChange={e => setReading(e.target.value)}
             className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#d4d4d4] font-serif italic text-center"
             placeholder="go, kataru"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-[#c5a059] opacity-80 mb-2">Romaji</label>
+          <input 
+            type="text" 
+            value={romaji}
+            onChange={e => setRomaji(e.target.value)}
+            className="w-full px-5 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-[#d4d4d4] font-serif italic text-center"
+            placeholder="Romaji"
           />
         </div>
         <div>

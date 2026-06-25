@@ -90,11 +90,12 @@ export function useVocabDeck() {
     }
   }, [deck, isLoaded]);
 
-  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string) => {
+  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string) => {
     const newCard: KanjiCard = {
       id: crypto.randomUUID(),
       kanji,
       reading,
+      romaji,
       sinoVietnamese,
       kanjiExplanation,
       meaning,
@@ -163,11 +164,11 @@ export function useVocabDeck() {
     return deck.filter(card => card.nextReviewDate <= nowThreshold);
   };
 
-  const importCards = async (importedCards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => {
+  const importCards = async (importedCards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => {
     const existingKanjiMap = new Map<string, KanjiCard>(deck.map(c => [c.kanji, c]));
     
     // De-duplicate within the imported cards themselves (keep last one in the file if kanji match)
-    const uniqueImported = new Map<string, { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }>();
+    const uniqueImported = new Map<string, { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }>();
     for (const c of importedCards) {
         if (c.kanji) {
             uniqueImported.set(c.kanji, c);
@@ -181,6 +182,7 @@ export function useVocabDeck() {
         const existing = existingKanjiMap.get(imported.kanji);
         if (existing) {
              const hasChanges = (imported.reading && existing.reading !== imported.reading) ||
+                                (imported.romaji && existing.romaji !== imported.romaji) ||
                                 (imported.sinoVietnamese && existing.sinoVietnamese !== imported.sinoVietnamese) ||
                                 (imported.kanjiExplanation && existing.kanjiExplanation !== imported.kanjiExplanation) ||
                                 (imported.example && existing.example !== imported.example) ||
@@ -192,6 +194,7 @@ export function useVocabDeck() {
                  cardsToUpdate.push({
                      ...existing,
                      reading: imported.reading || existing.reading,
+                     romaji: imported.romaji || existing.romaji,
                      sinoVietnamese: imported.sinoVietnamese || existing.sinoVietnamese,
                      kanjiExplanation: imported.kanjiExplanation || existing.kanjiExplanation,
                      meaning: imported.meaning || existing.meaning,
@@ -205,6 +208,7 @@ export function useVocabDeck() {
                id: crypto.randomUUID(),
                kanji: imported.kanji,
                reading: imported.reading || '',
+               romaji: imported.romaji || '',
                sinoVietnamese: imported.sinoVietnamese || '',
                kanjiExplanation: imported.kanjiExplanation || '',
                meaning: imported.meaning || '',
@@ -256,7 +260,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType' | 'freeStudyScore' | 'difficultScore'>>) => {
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType' | 'freeStudyScore' | 'difficultScore'>>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });

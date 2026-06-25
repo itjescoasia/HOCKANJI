@@ -384,8 +384,11 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   </button>
                 </div>
                 <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
-                  <div className="flex justify-end flex-1">
+                  <div className="flex justify-end flex-1 flex-col items-end gap-1">
                     <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic tracking-wide text-right">{currentCard.reading}</p>
+                    {currentCard.romaji && (
+                      <p className="text-sm text-[#d4d4d4] opacity-50 italic text-right">{currentCard.romaji}</p>
+                    )}
                   </div>
                   {currentCard.sinoVietnamese && (
                     <>

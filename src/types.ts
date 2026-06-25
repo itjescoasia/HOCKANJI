@@ -2,6 +2,7 @@ export interface KanjiCard {
   id: string;
   kanji: string;
   reading: string;
+  romaji?: string;
   sinoVietnamese?: string;
   kanjiExplanation?: string;
   meaning: string;

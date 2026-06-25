@@ -6,15 +6,15 @@ import * as XLSX from 'xlsx';
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>) => void;
-  onImport: (cards: { kanji: string; reading: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>) => void;
+  onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (card: KanjiCard) => {
@@ -22,6 +22,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
     setEditForm({
       kanji: card.kanji,
       reading: card.reading || '',
+      romaji: card.romaji || '',
       sinoVietnamese: card.sinoVietnamese || '',
       kanjiExplanation: card.kanjiExplanation || '',
       meaning: card.meaning,
@@ -36,6 +37,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       onUpdate(editingId, {
         kanji: editForm.kanji.trim(),
         reading: editForm.reading?.trim() || '',
+        romaji: editForm.romaji?.trim() || '',
         sinoVietnamese: editForm.sinoVietnamese?.trim() || '',
         kanjiExplanation: editForm.kanjiExplanation?.trim() || '',
         meaning: editForm.meaning.trim(),
@@ -217,6 +219,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                                 className="flex-1 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
                                 placeholder="Cách đọc"
                               />
+                              <input 
+                                value={editForm.romaji || ''} 
+                                onChange={e => setEditForm({...editForm, romaji: e.target.value})}
+                                className="w-24 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                placeholder="Romaji"
+                              />
                               <select 
                                 value={editForm.wordType} 
                                 onChange={e => setEditForm({...editForm, wordType: e.target.value})}
@@ -297,8 +305,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                         <div className="text-3xl font-serif text-white">{card.kanji}</div>
                       </td>
                       <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
+                          {card.romaji && (
+                            <div className="text-xs font-serif text-[#d4d4d4] opacity-50 italic">{card.romaji}</div>
+                          )}
                           {card.wordType && (
                             <span className="text-[10px] text-[#4a4a4a] bg-[#1a1a1a] px-1.5 py-0.5 rounded-sm border border-[#2a2a2a]">{card.wordType}</span>
                           )}
