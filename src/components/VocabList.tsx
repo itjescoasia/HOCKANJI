@@ -12,6 +12,7 @@ interface VocabListProps {
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
@@ -54,11 +55,15 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
     setEditForm({});
   };
 
-  const filteredDeck = deck.filter(c => 
-    c.kanji.toLowerCase().includes(search.toLowerCase()) || 
-    c.meaning.toLowerCase().includes(search.toLowerCase()) ||
-    c.reading.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDeck = deck.filter(c => {
+    const matchesSearch = c.kanji.toLowerCase().includes(search.toLowerCase()) || 
+                          c.meaning.toLowerCase().includes(search.toLowerCase()) ||
+                          c.reading.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filterType === 'all' || c.wordType === filterType;
+    return matchesSearch && matchesFilter;
+  });
+
+  const uniqueWordTypes = Array.from(new Set(deck.map(c => c.wordType).filter(Boolean)));
 
   const handleExport = () => {
     const data = deck.map(d => ({
@@ -154,17 +159,29 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
           </div>
         </div>
         
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-[#c5a059] opacity-50" />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-4 py-2 bg-[#0c0c0c] border border-[#2a2a2a] text-[#d4d4d4] focus:outline-none focus:border-[#c5a059] transition-colors rounded-none text-sm w-full sm:w-auto min-w-[150px]"
+          >
+            <option value="all">Tất cả loại từ</option>
+            {uniqueWordTypes.map((type, idx) => (
+              <option key={idx} value={type}>{type}</option>
+            ))}
+          </select>
+          <div className="relative w-full sm:w-auto">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-[#c5a059] opacity-50" />
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm kiếm Kanji, nghĩa..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-11 pr-4 py-2 bg-[#0c0c0c] border border-[#2a2a2a] text-[#d4d4d4] w-full sm:w-72 focus:outline-none focus:border-[#c5a059] transition-colors rounded-none placeholder:opacity-30 text-sm"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Tìm kiếm Kanji, nghĩa..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-11 pr-4 py-2 bg-[#0c0c0c] border border-[#2a2a2a] text-[#d4d4d4] w-full sm:w-72 focus:outline-none focus:border-[#c5a059] transition-colors rounded-none placeholder:opacity-30 text-sm"
-          />
         </div>
       </div>
       
