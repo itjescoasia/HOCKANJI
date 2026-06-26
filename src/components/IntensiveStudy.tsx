@@ -639,6 +639,79 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
           </div>
         </div>
 
+        {isAddingExample && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-[#0c0c0c] border border-[#c5a059]/30 p-6 rounded-lg relative shadow-xl mb-4"
+          >
+             <h4 className="text-xs uppercase tracking-wider text-[#c5a059] mb-4 font-medium">Thêm Câu Ví Dụ Mới</h4>
+             <form onSubmit={handleAddExample} className="space-y-4">
+               <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Câu ví dụ (nên có chứa từ "{word.word}") *</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={newSentence}
+                    onChange={e => setNewSentence(e.target.value)}
+                    className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] font-serif text-lg transition-colors placeholder:text-[#2a2a2a]"
+                    placeholder="e.g. この情報は大切です。"
+                  />
+               </div>
+               <div className="flex flex-col sm:flex-row gap-4">
+                 <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Hiragana</label>
+                    <input
+                      type="text"
+                      value={newReading}
+                      onChange={e => setNewReading(e.target.value)}
+                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                      placeholder="e.g. この じょうほう は たいせつ です"
+                    />
+                 </div>
+                 <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Romaji</label>
+                    <input
+                      type="text"
+                      value={newRomaji}
+                      onChange={e => setNewRomaji(e.target.value)}
+                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                      placeholder="e.g. Kono jōhō wa taisetsu desu."
+                    />
+                 </div>
+               </div>
+               <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Bản dịch</label>
+                  <input
+                    type="text"
+                    value={newTranslation}
+                    onChange={e => setNewTranslation(e.target.value)}
+                    className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
+                    placeholder="e.g. Thông tin này quan trọng."
+                  />
+               </div>
+               <div className="flex items-center gap-3 pt-2">
+                 <button
+                    type="submit"
+                    disabled={!newSentence.trim()}
+                    className="bg-[#c5a059] hover:bg-[#b08d4a] disabled:bg-[#2a2a2a] disabled:text-[#d4d4d4]/40 text-[#121212] font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
+                  >
+                    Lưu Ví Dụ
+                  </button>
+                  {word.examples.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingExample(false)}
+                      className="text-[#d4d4d4]/60 hover:text-white px-4 py-2 uppercase tracking-wider text-sm transition-colors"
+                    >
+                      Hủy
+                    </button>
+                  )}
+               </div>
+             </form>
+          </motion.div>
+        )}
+
         <DragDropContext 
           onDragEnd={(result: DropResult) => {
             if (!result.destination) return;
@@ -796,79 +869,6 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
             )}
           </Droppable>
         </DragDropContext>
-
-        {isAddingExample && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0c0c0c] border border-[#c5a059]/30 p-6 rounded-lg relative shadow-xl"
-          >
-             <h4 className="text-xs uppercase tracking-wider text-[#c5a059] mb-4 font-medium">Thêm Câu Ví Dụ Mới</h4>
-             <form onSubmit={handleAddExample} className="space-y-4">
-               <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Câu ví dụ (nên có chứa từ "{word.word}") *</label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={newSentence}
-                    onChange={e => setNewSentence(e.target.value)}
-                    className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] font-serif text-lg transition-colors placeholder:text-[#2a2a2a]"
-                    placeholder="e.g. この情報は大切です。"
-                  />
-               </div>
-               <div className="flex flex-col sm:flex-row gap-4">
-                 <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Hiragana</label>
-                    <input
-                      type="text"
-                      value={newReading}
-                      onChange={e => setNewReading(e.target.value)}
-                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
-                      placeholder="e.g. この じょうほう は たいせつ です"
-                    />
-                 </div>
-                 <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Phiên âm Romaji</label>
-                    <input
-                      type="text"
-                      value={newRomaji}
-                      onChange={e => setNewRomaji(e.target.value)}
-                      className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
-                      placeholder="e.g. Kono jōhō wa taisetsu desu."
-                    />
-                 </div>
-               </div>
-               <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Bản dịch</label>
-                  <input
-                    type="text"
-                    value={newTranslation}
-                    onChange={e => setNewTranslation(e.target.value)}
-                    className="w-full bg-[#121212] border border-[#2a2a2a] rounded px-4 py-3 text-white focus:outline-none focus:border-[#c5a059] transition-colors placeholder:text-[#2a2a2a]"
-                    placeholder="e.g. Thông tin này quan trọng."
-                  />
-               </div>
-               <div className="flex items-center gap-3 pt-2">
-                 <button
-                    type="submit"
-                    disabled={!newSentence.trim()}
-                    className="bg-[#c5a059] hover:bg-[#b08d4a] disabled:bg-[#2a2a2a] disabled:text-[#d4d4d4]/40 text-[#121212] font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
-                  >
-                    Lưu Ví Dụ
-                  </button>
-                  {word.examples.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingExample(false)}
-                      className="text-[#d4d4d4]/60 hover:text-white px-4 py-2 uppercase tracking-wider text-sm transition-colors"
-                    >
-                      Hủy
-                    </button>
-                  )}
-               </div>
-             </form>
-          </motion.div>
-        )}
       </div>
 
     </div>
