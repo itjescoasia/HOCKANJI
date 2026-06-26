@@ -86,12 +86,12 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const dStr = getLocalDateString(d);
-    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0, freeStudyTime: 0, remembered: 0 };
+    const s = stats[dStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0, freeStudyTime: 0 };
     return {
       date: d.toLocaleDateString('vi-VN', { weekday: 'short' }),
       reviewed: s.reviewed,
       correct: s.correct,
-      remembered: s.remembered || 0,
+      newLearned: s.newLearned || 0,
       freeStudyTimeMinutes: Math.ceil((s.freeStudyTime || 0) / 60)
     };
   });
@@ -402,7 +402,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                     labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
                   />
                   <Line type="monotone" dataKey="reviewed" name="Đã ôn" stroke="#4a4a4a" strokeWidth={2} dot={{ fill: '#4a4a4a', r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="remembered" name="Đã nhớ" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="newLearned" name="Đã nhớ" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
           </div>

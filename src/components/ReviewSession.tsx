@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
 import { X, Trash2, Volume2 } from 'lucide-react';
@@ -283,7 +283,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   };
 
   const totalGoal = dueCards.length * 3;
-  const currentProgress = Object.values(successCounts).reduce((acc, count) => acc + Math.min(count, 3), 0);
+  const currentProgress = Object.values(successCounts).reduce((acc: number, count: number) => acc + Math.min(count, 3), 0) as number;
   const progressPercent = totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0;
   const currentCardProgress = successCounts[currentCard?.id] || 0;
 

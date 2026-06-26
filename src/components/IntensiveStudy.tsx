@@ -459,7 +459,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     });
   };
 
-  const ExampleItem = ({ ex, index }: { ex: IntensiveExample, index: number }) => {
+  const ExampleItem: React.FC<{ ex: IntensiveExample, index: number }> = ({ ex, index }) => {
     return (
       <Draggable draggableId={ex.id} index={index} isDragDisabled={editingExampleId === ex.id}>
         {(provided, snapshot) => (
@@ -544,7 +544,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
              <>
                <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                  <button
-                   onClick={(e) => toggleMeaning(ex.id, e)}
+                   onClick={(e) => { e.stopPropagation(); toggleMeaning(ex.id); }}
                    className="p-2 text-[#d4d4d4]/40 hover:text-[#c5a059] rounded hover:bg-[#121212]"
                    title={hiddenMeaningIds.includes(ex.id) ? "Hiện nghĩa" : "Ẩn nghĩa"}
                  >
