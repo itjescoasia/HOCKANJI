@@ -354,6 +354,7 @@ export default function App() {
               mainDeck={deck}
               mode={sentenceReviewMode}
               onClose={() => setView('dashboard')}
+              onUpdateWord={updateIntensiveWord}
             />
           </div>
         )}

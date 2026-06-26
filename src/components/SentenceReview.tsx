@@ -9,13 +9,15 @@ interface SentenceReviewProps {
   mainDeck?: KanjiCard[];
   mode: 'JA_TO_VI' | 'VI_TO_JA';
   onClose: () => void;
+  onUpdateWord?: (id: string, updates: Partial<IntensiveWord>) => void;
 }
 
 interface ExampleWithWord extends IntensiveExample {
   word: string;
+  wordId: string;
 }
 
-export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, mode, onClose }) => {
+export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, mode, onClose, onUpdateWord }) => {
   const [examples, setExamples] = useState<ExampleWithWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -26,7 +28,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
     deck.forEach(word => {
       word.examples.forEach(ex => {
         if (ex.sentence && ex.translation) {
-          allExamples.push({ ...ex, word: word.word });
+          allExamples.push({ ...ex, word: word.word, wordId: word.id });
         }
       });
     });
@@ -75,6 +77,25 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
     }
   };
 
+  const handleGrade = (mastered: boolean) => {
+    if (onUpdateWord) {
+      const word = deck.find(w => w.id === currentExample.wordId);
+      if (word) {
+        const updatedExamples = word.examples.map(ex => 
+          ex.id === currentExample.id ? { ...ex, mastered } : ex
+        );
+        onUpdateWord(word.id, { examples: updatedExamples });
+      }
+    }
+    
+    // Update local state to reflect the change immediately
+    setExamples(prev => prev.map((ex, i) => 
+      i === currentIndex ? { ...ex, mastered } : ex
+    ));
+    
+    handleNext();
+  };
+
   const handleReveal = () => {
     setShowAnswer(true);
   };
@@ -110,7 +131,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
               </span>
               
               <div className="mb-8 mt-4">
-                <p className={`font-serif leading-relaxed text-[#d4d4d4] ${mode === 'JA_TO_VI' ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'}`}>
+                <p className={`font-serif leading-relaxed ${mode === 'JA_TO_VI' ? 'text-blue-100 text-2xl sm:text-3xl' : 'text-[#d4d4d4] text-xl sm:text-2xl'}`}>
                   {mode === 'JA_TO_VI' ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck) : questionText}
                 </p>
                 {mode === 'JA_TO_VI' && currentExample.reading && (
@@ -122,7 +143,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
                 <span className="text-xs font-mono text-[#c5a059]/30 mb-4 block uppercase">
                   {mode === 'JA_TO_VI' ? 'VIỆT' : 'NHẬT'}
                 </span>
-                <p className={`font-serif leading-relaxed text-[#c5a059] ${mode === 'VI_TO_JA' ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'}`}>
+                <p className={`font-serif leading-relaxed ${mode === 'VI_TO_JA' ? 'text-blue-100 text-2xl sm:text-3xl' : 'text-[#c5a059] text-xl sm:text-2xl'}`}>
                   {mode === 'VI_TO_JA' ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck) : answerText}
                 </p>
                 {mode === 'VI_TO_JA' && currentExample.reading && (
@@ -134,6 +155,11 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
                 <div className="mt-6 pt-6 border-t border-[#2a2a2a]/50 text-xs text-[#d4d4d4]/40 flex gap-2 items-center justify-center">
                   <span>Từ vựng gốc:</span>
                   <strong className="text-[#d4d4d4]/70 font-serif text-sm">{currentExample.word}</strong>
+                  {currentExample.mastered !== undefined && (
+                    <span className={`ml-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${currentExample.mastered ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                      {currentExample.mastered ? 'Đã nhớ' : 'Chưa nhớ'}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -149,16 +175,33 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          <button
-            onClick={showAnswer ? handleNext : handleReveal}
-            className="flex-1 max-w-[200px] border border-[#c5a059] text-[#121212] bg-[#c5a059] hover:bg-[#b08d4a] font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-2"
-          >
-            {showAnswer ? (
-              <>Tiếp theo <ArrowRight className="w-4 h-4" /></>
-            ) : (
-              <><Eye className="w-4 h-4" /> Xem đáp án</>
-            )}
-          </button>
+          {mode === 'VI_TO_JA' && showAnswer ? (
+            <div className="flex-1 flex gap-4 max-w-[400px]">
+              <button
+                onClick={() => handleGrade(false)}
+                className="flex-1 border border-red-500/50 text-red-500 bg-[#121212] hover:bg-red-500/10 font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                Chưa nói được
+              </button>
+              <button
+                onClick={() => handleGrade(true)}
+                className="flex-1 border border-green-500 text-green-500 bg-[#121212] hover:bg-green-500/10 font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                Nói được
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={showAnswer ? handleNext : handleReveal}
+              className="flex-1 max-w-[200px] border border-[#c5a059] text-[#121212] bg-[#c5a059] hover:bg-[#b08d4a] font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-2"
+            >
+              {showAnswer ? (
+                <>Tiếp theo <ArrowRight className="w-4 h-4" /></>
+              ) : (
+                <><Eye className="w-4 h-4" /> Xem đáp án</>
+              )}
+            </button>
+          )}
 
           <button
             onClick={handleNext}

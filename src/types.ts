@@ -26,6 +26,7 @@ export interface IntensiveExample {
   reading?: string;
   romaji?: string;
   translation: string;
+  mastered?: boolean;
 }
 
 export interface IntensiveWord {

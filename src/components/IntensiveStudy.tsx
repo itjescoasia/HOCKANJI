@@ -1,4 +1,5 @@
 import React, { useState, Fragment } from 'react';
+import Fuse from 'fuse.js';
 import { IntensiveWord, IntensiveExample, WordCategory, KanjiCard } from '../types';
 import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Eye, EyeOff, GripVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -34,10 +35,21 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
 
   const selectedWord = deck.find(w => w.id === selectedWordId);
 
-  const filteredDeck = deck.filter(w => 
-    w.word.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    w.reading.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const fuse = React.useMemo(() => new Fuse(deck, {
+    keys: [
+      'word',
+      'reading',
+      'examples.sentence',
+      'examples.translation',
+      'examples.reading'
+    ],
+    threshold: 0.4,
+    ignoreLocation: true
+  }), [deck]);
+
+  const filteredDeck = searchQuery.trim() 
+    ? fuse.search(searchQuery).map(result => result.item)
+    : deck;
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,7 +199,7 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-[#d4d4d4]/40" />
           <input
             type="text"
-            placeholder="Tìm kiếm chuyên đề..."
+            placeholder="Tìm kiếm chuyên đề, câu ví dụ..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-[#121212] border border-[#2a2a2a] rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#c5a059] transition-colors"
@@ -232,9 +244,19 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
                 <div className="text-xs text-[#d4d4d4]/60 line-clamp-2 italic">
                   {word.explanation || "Không có giải thích"}
                 </div>
-                <div className="mt-4 pt-3 border-t border-[#2a2a2a] w-full flex justify-between items-center text-xs text-[#d4d4d4]/40">
-                  <span>{word.examples.length} câu ví dụ</span>
-                  <span className="text-[#c5a059]">Học ngay &rarr;</span>
+                <div className="mt-4 pt-3 border-t border-[#2a2a2a] w-full flex flex-col gap-2 text-xs text-[#d4d4d4]/40">
+                  <div className="flex justify-between items-center w-full">
+                    <span>{word.examples.length} câu ví dụ</span>
+                    <span className="text-[#c5a059]">Học ngay &rarr;</span>
+                  </div>
+                  {word.examples.length > 0 && (
+                    <div className="w-full bg-[#121212] h-1.5 rounded-full overflow-hidden flex" title={`${word.examples.filter(ex => ex.mastered).length} / ${word.examples.length} câu đã nhớ`}>
+                      <div 
+                        className="bg-green-500 h-full transition-all duration-500"
+                        style={{ width: `${(word.examples.filter(ex => ex.mastered).length / word.examples.length) * 100}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}
