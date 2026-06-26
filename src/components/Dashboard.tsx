@@ -14,11 +14,12 @@ interface DashboardProps {
   onStartFreeStudy?: () => void;
   onStartDifficultReview?: () => void;
   onStartShortStudy?: () => void;
+  onStartSentenceReview?: (mode: 'JA_TO_VI' | 'VI_TO_JA') => void;
   onNavigateAdd: () => void;
   onRecordWordOfTheDay?: (id: string) => void;
 }
 
-export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onStartShortStudy, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
+export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onStartShortStudy, onStartSentenceReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
   const [isChangingWotd, setIsChangingWotd] = useState(false);
   const [wotdSearch, setWotdSearch] = useState('');
 
@@ -531,7 +532,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
         )}
 
         {isDue ? (
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
             <button 
               onClick={onStartReview}
               className="border border-[#c5a059] text-[#c5a059] bg-[#121212] hover:bg-[#c5a059] hover:text-black font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
@@ -562,9 +563,25 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                   Ôn các từ hay quên
               </button>
             )}
+            {onStartSentenceReview && (
+              <button 
+                onClick={() => onStartSentenceReview('JA_TO_VI')}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn câu (Nhật → Việt)
+              </button>
+            )}
+            {onStartSentenceReview && (
+              <button 
+                onClick={() => onStartSentenceReview('VI_TO_JA')}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn câu (Việt → Nhật)
+              </button>
+            )}
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-10">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
             <button 
               onClick={onNavigateAdd}
               className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
@@ -593,6 +610,22 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                 className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn các từ hay quên
+              </button>
+            )}
+            {onStartSentenceReview && (
+              <button 
+                onClick={() => onStartSentenceReview('JA_TO_VI')}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn câu (Nhật → Việt)
+              </button>
+            )}
+            {onStartSentenceReview && (
+              <button 
+                onClick={() => onStartSentenceReview('VI_TO_JA')}
+                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              >
+                  Ôn câu (Việt → Nhật)
               </button>
             )}
           </div>

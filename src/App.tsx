@@ -10,6 +10,7 @@ import VocabList from './components/VocabList';
 import ReviewSession from './components/ReviewSession';
 import IntensiveStudy from './components/IntensiveStudy';
 import ShortStudySession from './components/ShortStudySession';
+import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
 import { BookMarked, Home, PlusCircle, LogOut, Lightbulb } from 'lucide-react';
 import { auth } from './lib/firebase';
@@ -55,6 +56,7 @@ export default function App() {
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
   const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);
+  const [sentenceReviewMode, setSentenceReviewMode] = useState<'JA_TO_VI' | 'VI_TO_JA'>('JA_TO_VI');
   const lastActivityRef = useRef(Date.now());
   const activeSecondsRef = useRef(0);
 
@@ -157,6 +159,11 @@ export default function App() {
     const top5 = sorted.slice(0, 5);
     setShortStudyQueue(top5);
     setView('short_study');
+  };
+
+  const handleStartSentenceReview = (mode: 'JA_TO_VI' | 'VI_TO_JA') => {
+    setSentenceReviewMode(mode);
+    setView('sentence_review');
   };
 
   const handleFreeStudyReview = (id: string, isRemember: boolean) => {
@@ -303,6 +310,7 @@ export default function App() {
             onStartFreeStudy={handleStartFreeStudy}
             onStartDifficultReview={handleStartDifficultReview}
             onStartShortStudy={handleStartShortStudy}
+            onStartSentenceReview={handleStartSentenceReview}
             onNavigateAdd={() => handleNavigate('add')} 
             onRecordWordOfTheDay={recordWordOfTheDay}
           />
@@ -335,6 +343,16 @@ export default function App() {
               queue={shortStudyQueue}
               onExit={() => setView('dashboard')}
               onUpdateCard={updateCard}
+            />
+          </div>
+        )}
+
+        {view === 'sentence_review' && (
+          <div className="fixed inset-0 z-50 bg-[#0c0c0c] overflow-y-auto w-full h-full">
+            <SentenceReview
+              deck={intensiveDeck}
+              mode={sentenceReviewMode}
+              onClose={() => setView('dashboard')}
             />
           </div>
         )}

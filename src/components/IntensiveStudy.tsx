@@ -176,7 +176,6 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
               <div className="flex-1 space-y-2">
                 <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Từ vựng (Kanji) *</label>
                 <input
-                  autoFocus
                   required
                   type="text"
                   value={newWordData.word}
@@ -400,6 +399,16 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     e.preventDefault();
     if (!editExampleData.sentence.trim() || !editingExampleId) return;
 
+    const isDuplicate = word.examples.some(ex => 
+      ex.id !== editingExampleId && 
+      ex.sentence.trim().toLowerCase() === editExampleData.sentence.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      window.alert("Câu ví dụ này đã tồn tại trong chuyên đề!");
+      return;
+    }
+
     const updatedExamples = word.examples.map(ex => {
       if (ex.id === editingExampleId) {
         return {
@@ -433,6 +442,15 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
   const handleAddExample = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSentence.trim()) return;
+
+    const isDuplicate = word.examples.some(ex => 
+      ex.sentence.trim().toLowerCase() === newSentence.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      window.alert("Câu ví dụ này đã tồn tại trong chuyên đề!");
+      return;
+    }
 
     const newExample: IntensiveExample = {
       id: crypto.randomUUID(),
@@ -486,7 +504,6 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                 <div className="flex-1 space-y-2">
                   <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Từ vựng (Kanji) *</label>
                   <input
-                    autoFocus
                     required
                     type="text"
                     value={editWordData.word}
@@ -647,9 +664,9 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                         className={`relative rounded-lg overflow-hidden border ${snapshot.isDragging ? 'border-[#c5a059] shadow-2xl z-50' : 'border-[#2a2a2a]'} bg-[#121212] group mb-4`}
                         style={provided.draggableProps.style}
                       >
-                        <div className={`bg-[#1a1a1a] p-6 relative z-10 w-full min-h-full ${!editingExampleId ? 'pl-14' : ''}`}>
+                        <div className={`bg-[#1a1a1a] p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? 'pl-14' : ''}`}>
                            {/* Drag Handle */}
-                           {!editingExampleId && (
+                           {editingExampleId !== ex.id && (
                              <div 
                                {...provided.dragHandleProps}
                                className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-[#d4d4d4]/20 hover:text-[#c5a059] transition-colors z-20 border-r border-[#2a2a2a]"
@@ -664,7 +681,6 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                            <div className="space-y-2">
                               <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Câu ví dụ *</label>
                               <textarea
-                                autoFocus
                                 required
                                 rows={2}
                                 value={editExampleData.sentence}
@@ -792,7 +808,6 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                <div className="space-y-2">
                   <label className="text-xs uppercase tracking-wider text-[#d4d4d4]/60 font-medium">Câu ví dụ (nên có chứa từ "{word.word}") *</label>
                   <textarea
-                    autoFocus
                     required
                     rows={2}
                     value={newSentence}
