@@ -351,6 +351,7 @@ export default function App() {
           <div className="fixed inset-0 z-50 bg-[#0c0c0c] overflow-y-auto w-full h-full">
             <SentenceReview
               deck={intensiveDeck}
+              mainDeck={deck}
               mode={sentenceReviewMode}
               onClose={() => setView('dashboard')}
             />

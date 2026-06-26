@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ArrowRight, ArrowLeft, Eye } from 'lucide-react';
-import { IntensiveExample, IntensiveWord } from '../types';
+import { IntensiveExample, IntensiveWord, KanjiCard } from '../types';
+import { renderExampleHighlight } from '../utils/highlight';
 
 interface SentenceReviewProps {
   deck: IntensiveWord[];
+  mainDeck?: KanjiCard[];
   mode: 'JA_TO_VI' | 'VI_TO_JA';
   onClose: () => void;
 }
@@ -13,7 +15,7 @@ interface ExampleWithWord extends IntensiveExample {
   word: string;
 }
 
-export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mode, onClose }) => {
+export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, mode, onClose }) => {
   const [examples, setExamples] = useState<ExampleWithWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -109,7 +111,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mode, onCl
               
               <div className="mb-8 mt-4">
                 <p className={`font-serif leading-relaxed text-[#d4d4d4] ${mode === 'JA_TO_VI' ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'}`}>
-                  {questionText}
+                  {mode === 'JA_TO_VI' ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck) : questionText}
                 </p>
                 {mode === 'JA_TO_VI' && currentExample.reading && (
                    <p className="text-[#c5a059] opacity-80 mt-4 text-sm">{currentExample.reading}</p>
@@ -121,7 +123,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mode, onCl
                   {mode === 'JA_TO_VI' ? 'VIỆT' : 'NHẬT'}
                 </span>
                 <p className={`font-serif leading-relaxed text-[#c5a059] ${mode === 'VI_TO_JA' ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'}`}>
-                  {answerText}
+                  {mode === 'VI_TO_JA' ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck) : answerText}
                 </p>
                 {mode === 'VI_TO_JA' && currentExample.reading && (
                    <p className="text-[#d4d4d4]/60 mt-4 text-sm">{currentExample.reading}</p>
