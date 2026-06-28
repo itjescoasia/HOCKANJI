@@ -303,6 +303,7 @@ export default function App() {
         {view === 'dashboard' && (
           <Dashboard 
             deck={deck} 
+            intensiveDeck={intensiveDeck}
             dueCards={dueCards} 
             stats={stats}
             leftoverNewCards={leftoverNewCards}

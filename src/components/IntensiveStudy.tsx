@@ -250,10 +250,10 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
                     <span className="text-[#c5a059]">Học ngay &rarr;</span>
                   </div>
                   {word.examples.length > 0 && (
-                    <div className="w-full bg-[#121212] h-1.5 rounded-full overflow-hidden flex" title={`${word.examples.filter(ex => ex.mastered).length} / ${word.examples.length} câu đã nhớ`}>
+                    <div className="w-full bg-[#121212] h-1.5 rounded-full overflow-hidden flex" title={`${word.examples.filter(ex => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length} / ${word.examples.length} câu đã nhớ`}>
                       <div 
                         className="bg-green-500 h-full transition-all duration-500"
-                        style={{ width: `${(word.examples.filter(ex => ex.mastered).length / word.examples.length) * 100}%` }}
+                        style={{ width: `${(word.examples.filter(ex => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length / word.examples.length) * 100}%` }}
                       />
                     </div>
                   )}

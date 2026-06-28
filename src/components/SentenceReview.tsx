@@ -21,8 +21,11 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
   const [examples, setExamples] = useState<ExampleWithWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    if (isInitialized) return;
+
     // Extract all examples from the deck
     const allExamples: ExampleWithWord[] = [];
     deck.forEach(word => {
@@ -33,14 +36,29 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
       });
     });
 
-    // Shuffle examples
+    // Shuffle examples first to randomize within categories
     for (let i = allExamples.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [allExamples[i], allExamples[j]] = [allExamples[j], allExamples[i]];
     }
 
+    // Sort so unmastered examples come first for the current mode
+    allExamples.sort((a, b) => {
+      const aMastered = mode === 'VI_TO_JA' ? a.viToJaMastered : a.jaToViMastered;
+      const bMastered = mode === 'VI_TO_JA' ? b.viToJaMastered : b.jaToViMastered;
+      
+      // Fallback to legacy mastered if the new properties don't exist yet
+      const finalAMastered = aMastered !== undefined ? aMastered : a.mastered;
+      const finalBMastered = bMastered !== undefined ? bMastered : b.mastered;
+      
+      if (finalAMastered === finalBMastered) return 0;
+      if (finalAMastered) return 1;
+      return -1;
+    });
+
     setExamples(allExamples);
-  }, [deck]);
+    setIsInitialized(true);
+  }, [deck, mode, isInitialized]);
 
   if (examples.length === 0) {
     return (
@@ -81,17 +99,27 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
     if (onUpdateWord) {
       const word = deck.find(w => w.id === currentExample.wordId);
       if (word) {
-        const updatedExamples = word.examples.map(ex => 
-          ex.id === currentExample.id ? { ...ex, mastered } : ex
-        );
+        const updatedExamples = word.examples.map(ex => {
+          if (ex.id === currentExample.id) {
+            return mode === 'VI_TO_JA' 
+              ? { ...ex, viToJaMastered: mastered } 
+              : { ...ex, jaToViMastered: mastered };
+          }
+          return ex;
+        });
         onUpdateWord(word.id, { examples: updatedExamples });
       }
     }
     
     // Update local state to reflect the change immediately
-    setExamples(prev => prev.map((ex, i) => 
-      i === currentIndex ? { ...ex, mastered } : ex
-    ));
+    setExamples(prev => prev.map((ex, i) => {
+      if (i === currentIndex) {
+        return mode === 'VI_TO_JA' 
+          ? { ...ex, viToJaMastered: mastered } 
+          : { ...ex, jaToViMastered: mastered };
+      }
+      return ex;
+    }));
     
     handleNext();
   };
@@ -155,11 +183,19 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
                 <div className="mt-6 pt-6 border-t border-[#2a2a2a]/50 text-xs text-[#d4d4d4]/40 flex gap-2 items-center justify-center">
                   <span>Từ vựng gốc:</span>
                   <strong className="text-[#d4d4d4]/70 font-serif text-sm">{currentExample.word}</strong>
-                  {currentExample.mastered !== undefined && (
-                    <span className={`ml-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${currentExample.mastered ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                      {currentExample.mastered ? 'Đã nhớ' : 'Chưa nhớ'}
-                    </span>
-                  )}
+                  {(() => {
+                    const isMastered = mode === 'VI_TO_JA' ? currentExample.viToJaMastered : currentExample.jaToViMastered;
+                    const finalIsMastered = isMastered !== undefined ? isMastered : currentExample.mastered;
+                    
+                    if (finalIsMastered !== undefined) {
+                      return (
+                        <span className={`ml-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${finalIsMastered ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                          {finalIsMastered ? (mode === 'VI_TO_JA' ? 'Nói được' : 'Đã nhớ') : (mode === 'VI_TO_JA' ? 'Chưa nói được' : 'Chưa nhớ')}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             </div>
@@ -175,19 +211,19 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
             <ArrowLeft className="w-5 h-5" />
           </button>
           
-          {mode === 'VI_TO_JA' && showAnswer ? (
+          {showAnswer ? (
             <div className="flex-1 flex gap-4 max-w-[400px]">
               <button
                 onClick={() => handleGrade(false)}
                 className="flex-1 border border-red-500/50 text-red-500 bg-[#121212] hover:bg-red-500/10 font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
-                Chưa nói được
+                {mode === 'VI_TO_JA' ? 'Chưa nói được' : 'Chưa nhớ'}
               </button>
               <button
                 onClick={() => handleGrade(true)}
                 className="flex-1 border border-green-500 text-green-500 bg-[#121212] hover:bg-green-500/10 font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
-                Nói được
+                {mode === 'VI_TO_JA' ? 'Nói được' : 'Đã nhớ'}
               </button>
             </div>
           ) : (

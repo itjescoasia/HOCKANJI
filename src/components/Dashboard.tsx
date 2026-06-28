@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Fragment } from 'react';
-import { KanjiCard } from '../types';
+import { KanjiCard, IntensiveWord } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
 import { getLocalDateString, getVietnamDate } from '../lib/dateUtils';
 import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown, RefreshCw, Search, X } from 'lucide-react';
@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTo
 
 interface DashboardProps {
   deck: KanjiCard[];
+  intensiveDeck?: IntensiveWord[];
   dueCards: KanjiCard[];
   leftoverNewCards?: number;
   stats?: UserStats;
@@ -19,7 +20,7 @@ interface DashboardProps {
   onRecordWordOfTheDay?: (id: string) => void;
 }
 
-export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onStartShortStudy, onStartSentenceReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
+export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onStartShortStudy, onStartSentenceReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
   const [isChangingWotd, setIsChangingWotd] = useState(false);
   const [wotdSearch, setWotdSearch] = useState('');
 
@@ -32,12 +33,41 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
   
   const totalCards = deck.length;
   
-  // Chart 1: Progress Data
-  const progressData = [
-    { name: 'Đã khắc sâu', value: matureCards, color: '#c5a059' },
-    { name: 'Đang học', value: learningCards, color: '#4a4a4a' },
-    { name: 'Mới học / Quên', value: newCards, color: '#1a1a1a' }
-  ].filter(item => item.value > 0 || totalCards === 0);
+  // Chart 1: Word Type Distribution Data
+  const wordTypeData = useMemo(() => {
+    const stats: Record<string, number> = {
+      'Danh từ': 0,
+      'Động từ': 0,
+      'Tính từ': 0,
+      'Ngữ pháp': 0,
+      'Khác/Chưa phân loại': 0
+    };
+
+    const processType = (type?: string) => {
+      if (!type) {
+        stats['Khác/Chưa phân loại']++;
+        return;
+      }
+      if (type.includes('Danh từ')) stats['Danh từ']++;
+      else if (type.includes('Động từ')) stats['Động từ']++;
+      else if (type.includes('Tính từ')) stats['Tính từ']++;
+      else if (type.includes('Ngữ pháp')) stats['Ngữ pháp']++;
+      else stats['Khác/Chưa phân loại']++;
+    };
+
+    deck.forEach(word => processType(word.wordType));
+    intensiveDeck.forEach(word => processType(word.category));
+
+    const colors = ['#c5a059', '#4a4a4a', '#8b5a2b', '#2a2a2a', '#1a1a1a'];
+    
+    return Object.entries(stats)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        color: colors[index % colors.length]
+      }))
+      .filter(item => item.value > 0);
+  }, [deck, intensiveDeck]);
 
   // Chart 2: 7-Day Forecast Data
   const today = new Date();
@@ -410,13 +440,13 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
         </div>
 
         <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Mức độ ghi nhớ</h3>
+          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Tỉ lệ loại từ trong CSDL</h3>
           <div className="h-[250px] w-full flex-1 relative">
-            {deck.length > 0 ? (
+            {wordTypeData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
-                    data={progressData}
+                    data={wordTypeData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -425,7 +455,7 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                     dataKey="value"
                     stroke="none"
                   >
-                    {progressData.map((entry, index) => (
+                    {wordTypeData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -436,12 +466,12 @@ export default function Dashboard({ deck, dueCards, leftoverNewCards = 0, stats 
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest">Chưa có dữ liệu</div>
+              <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest">Chưa có dữ liệu từ loại</div>
             )}
           </div>
-          {deck.length > 0 && (
+          {wordTypeData.length > 0 && (
             <div className="flex flex-wrap justify-center gap-4 mt-4">
-              {progressData.map(item => (
+              {wordTypeData.map(item => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className="text-[10px] text-[#d4d4d4] opacity-70 tracking-widest uppercase">{item.name} ({item.value})</span>
