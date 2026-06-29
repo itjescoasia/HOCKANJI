@@ -1,12 +1,12 @@
-import { KanjiCard } from '../types';
-import { Trash2, Search, Upload, Download, Edit2, Check, X } from 'lucide-react';
+import { KanjiCard, KanjiExample } from '../types';
+import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType'>>) => void;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
@@ -15,7 +15,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
   const [filterType, setFilterType] = useState('all');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (card: KanjiCard) => {
@@ -29,12 +29,22 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       meaning: card.meaning,
       example: card.example || '',
       exampleTranslation: card.exampleTranslation || '',
+      examples: card.examples ? JSON.parse(JSON.stringify(card.examples)) : [], // Deep copy
       wordType: card.wordType || '',
     });
   };
 
   const saveEdit = () => {
     if (editingId && editForm.kanji && editForm.meaning && onUpdate) {
+      
+      const validExamples = editForm.examples?.filter(ex => ex.sentence.trim() || ex.translation.trim()).map(ex => ({
+        id: ex.id || crypto.randomUUID(),
+        sentence: ex.sentence.trim(),
+        reading: ex.reading?.trim() || '',
+        romaji: ex.romaji?.trim() || '',
+        translation: ex.translation.trim()
+      })) || [];
+        
       onUpdate(editingId, {
         kanji: editForm.kanji.trim(),
         reading: editForm.reading?.trim() || '',
@@ -44,6 +54,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         meaning: editForm.meaning.trim(),
         example: editForm.example?.trim() || '',
         exampleTranslation: editForm.exampleTranslation?.trim() || '',
+        examples: validExamples.length > 0 ? validExamples : undefined,
         wordType: editForm.wordType?.trim() || ''
       });
       setEditingId(null);
@@ -276,18 +287,104 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                               placeholder="Giải thích Hán tự"
                               rows={2}
                             />
-                            <input 
-                              value={editForm.example} 
-                              onChange={e => setEditForm({...editForm, example: e.target.value})}
-                              className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                              placeholder="Ví dụ (Tiếng Nhật)"
-                            />
-                            <input 
-                              value={editForm.exampleTranslation} 
-                              onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
-                              className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                              placeholder="Dịch nghĩa (Tiếng Việt)"
-                            />
+                            
+                            <div className="pt-2 border-t border-theme-subtle mt-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">Các ví dụ (Mở rộng)</label>
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    const newExamples = editForm.examples ? [...editForm.examples] : [];
+                                    newExamples.push({ id: crypto.randomUUID(), sentence: '', translation: '' });
+                                    setEditForm({...editForm, examples: newExamples});
+                                  }}
+                                  className="p-1 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors flex items-center gap-1 text-[10px]"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Thêm</span>
+                                </button>
+                              </div>
+                              
+                              <div className="flex flex-col gap-2">
+                                {(!editForm.examples || editForm.examples.length === 0) ? (
+                                  <div className="flex flex-col gap-2 p-2 border border-theme-subtle bg-theme-base/50 rounded-sm">
+                                    <input 
+                                      value={editForm.example || ''} 
+                                      onChange={e => setEditForm({...editForm, example: e.target.value})}
+                                      className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                      placeholder="Ví dụ (Tiếng Nhật) - Cũ"
+                                    />
+                                    <input 
+                                      value={editForm.exampleTranslation || ''} 
+                                      onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
+                                      className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                      placeholder="Dịch nghĩa (Tiếng Việt) - Cũ"
+                                    />
+                                  </div>
+                                ) : (
+                                  editForm.examples.map((ex, index) => (
+                                    <div key={ex.id || index} className="relative p-2 border border-theme-subtle bg-theme-base/50 rounded-sm flex flex-col gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newExamples = [...(editForm.examples || [])];
+                                          newExamples.splice(index, 1);
+                                          setEditForm({...editForm, examples: newExamples});
+                                        }}
+                                        className="absolute top-1 right-1 p-1 text-theme-primary/40 hover:text-red-500"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                      
+                                      <input 
+                                        value={ex.sentence} 
+                                        onChange={e => {
+                                          const newExamples = [...(editForm.examples || [])];
+                                          newExamples[index] = { ...newExamples[index], sentence: e.target.value };
+                                          setEditForm({...editForm, examples: newExamples});
+                                        }}
+                                        className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent pr-6"
+                                        placeholder="Câu ví dụ (Tiếng Nhật)"
+                                      />
+                                      
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <input 
+                                          value={ex.reading || ''} 
+                                          onChange={e => {
+                                            const newExamples = [...(editForm.examples || [])];
+                                            newExamples[index] = { ...newExamples[index], reading: e.target.value };
+                                            setEditForm({...editForm, examples: newExamples});
+                                          }}
+                                          className="w-full bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1 focus:outline-none focus:border-theme-accent italic"
+                                          placeholder="Hiragana"
+                                        />
+                                        <input 
+                                          value={ex.romaji || ''} 
+                                          onChange={e => {
+                                            const newExamples = [...(editForm.examples || [])];
+                                            newExamples[index] = { ...newExamples[index], romaji: e.target.value };
+                                            setEditForm({...editForm, examples: newExamples});
+                                          }}
+                                          className="w-full bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1 focus:outline-none focus:border-theme-accent italic"
+                                          placeholder="Romaji"
+                                        />
+                                      </div>
+                                      
+                                      <input 
+                                        value={ex.translation} 
+                                        onChange={e => {
+                                          const newExamples = [...(editForm.examples || [])];
+                                          newExamples[index] = { ...newExamples[index], translation: e.target.value };
+                                          setEditForm({...editForm, examples: newExamples});
+                                        }}
+                                        className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent"
+                                        placeholder="Dịch nghĩa (Tiếng Việt)"
+                                      />
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-center text-theme-primary opacity-50 text-xs italic font-serif align-middle">
@@ -340,15 +437,35 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                             {card.kanjiExplanation}
                           </div>
                         )}
-                        {(card.example || card.exampleTranslation) && (
-                          <div className="mt-2 space-y-1 border-t border-theme-subtle pt-2 max-w-[200px] sm:max-w-md">
-                            {card.example && (
-                              <div className="text-[11px] text-theme-primary opacity-70 truncate" title={card.example}>{card.example}</div>
-                            )}
-                            {card.exampleTranslation && (
-                              <div className="text-[11px] text-theme-accent opacity-70 truncate italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
-                            )}
+                        
+                        {/* Display multiple examples if present */}
+                        {card.examples && card.examples.length > 0 ? (
+                          <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 max-w-[200px] sm:max-w-md">
+                            {card.examples.map(ex => (
+                              <div key={ex.id} className="bg-theme-base-alt p-2 rounded-sm border border-theme-subtle">
+                                <div className="text-[11px] text-theme-primary opacity-80 mb-1" title={ex.sentence}>{ex.sentence}</div>
+                                {(ex.reading || ex.romaji) && (
+                                  <div className="flex gap-2 mb-1">
+                                    {ex.reading && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.reading}</span>}
+                                    {ex.romaji && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.romaji}</span>}
+                                  </div>
+                                )}
+                                <div className="text-[10px] text-theme-accent opacity-70 italic" title={ex.translation}>{ex.translation}</div>
+                              </div>
+                            ))}
                           </div>
+                        ) : (
+                          /* Legacy single example fallback */
+                          (card.example || card.exampleTranslation) && (
+                            <div className="mt-2 space-y-1 border-t border-theme-subtle pt-2 max-w-[200px] sm:max-w-md">
+                              {card.example && (
+                                <div className="text-[11px] text-theme-primary opacity-70 truncate" title={card.example}>{card.example}</div>
+                              )}
+                              {card.exampleTranslation && (
+                                <div className="text-[11px] text-theme-accent opacity-70 truncate italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
+                              )}
+                            </div>
+                          )
                         )}
                       </td>
                       <td className="px-8 py-5">

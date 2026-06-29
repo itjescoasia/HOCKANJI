@@ -90,7 +90,7 @@ export function useVocabDeck() {
     }
   }, [deck, isLoaded]);
 
-  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string) => {
+  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string, examples?: any[]) => {
     const newCard: KanjiCard = {
       id: crypto.randomUUID(),
       kanji,
@@ -101,6 +101,7 @@ export function useVocabDeck() {
       meaning,
       example,
       exampleTranslation,
+      examples,
       wordType,
       freeStudyScore: 0,
       difficultScore: 0,
@@ -260,7 +261,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'wordType' | 'freeStudyScore' | 'difficultScore'>>) => {
+  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'freeStudyScore' | 'difficultScore'>>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });

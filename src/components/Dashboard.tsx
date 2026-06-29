@@ -278,15 +278,32 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
                   )}
                 </div>
                 <p className="text-sm text-theme-primary opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
-                {wordOfTheDay.example && (
-                  <div className="mt-4 border-t border-theme-subtle pt-3">
-                    <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
-                      {renderExampleHighlight(wordOfTheDay.example, wordOfTheDay.kanji, wordOfTheDay.reading)}
-                    </p>
-                    {wordOfTheDay.exampleTranslation && (
-                      <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
-                    )}
+                {wordOfTheDay.examples && wordOfTheDay.examples.length > 0 ? (
+                  <div className="mt-4 border-t border-theme-subtle pt-3 flex flex-col gap-4">
+                    {wordOfTheDay.examples.map(ex => (
+                      <div key={ex.id}>
+                        <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
+                          {renderExampleHighlight(ex.sentence, wordOfTheDay.kanji, wordOfTheDay.reading)}
+                        </p>
+                        <div className="flex gap-3 mt-1">
+                          {ex.reading && <span className="text-[10px] text-theme-primary opacity-50 italic">{ex.reading}</span>}
+                          {ex.romaji && <span className="text-[10px] text-theme-primary opacity-50 italic">{ex.romaji}</span>}
+                        </div>
+                        <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">{ex.translation}</p>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  wordOfTheDay.example && (
+                    <div className="mt-4 border-t border-theme-subtle pt-3">
+                      <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
+                        {renderExampleHighlight(wordOfTheDay.example, wordOfTheDay.kanji, wordOfTheDay.reading)}
+                      </p>
+                      {wordOfTheDay.exampleTranslation && (
+                        <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
+                      )}
+                    </div>
+                  )
                 )}
               </div>
               <button 

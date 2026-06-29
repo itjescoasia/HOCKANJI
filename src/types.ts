@@ -1,3 +1,11 @@
+export interface KanjiExample {
+  id: string;
+  sentence: string;
+  reading?: string;
+  romaji?: string;
+  translation: string;
+}
+
 export interface KanjiCard {
   id: string;
   kanji: string;
@@ -8,6 +16,7 @@ export interface KanjiCard {
   meaning: string;
   example?: string;
   exampleTranslation?: string;
+  examples?: KanjiExample[];
   wordType?: string;
   freeStudyScore?: number;
   difficultScore?: number;

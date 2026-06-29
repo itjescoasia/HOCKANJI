@@ -344,8 +344,9 @@ export default function App() {
         )}
         
         {view === 'add' && (
-          <AddVocab onAdd={(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType, kanjiExplanation, romaji) => {
-            addCard(kanji, reading, meaning, sinoVietnamese, example, exampleTranslation, wordType, kanjiExplanation, romaji);
+          <AddVocab onAdd={(kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji) => {
+            // Note: addCard still needs to be updated or we can just pass examples as part of a new signature
+            addCard(kanji, reading, meaning, sinoVietnamese, undefined, undefined, wordType, kanjiExplanation, romaji, examples);
             handleNavigate('list'); // Redirect to list to show success
           }} />
         )}

@@ -411,21 +411,46 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                     {currentCard.kanjiExplanation}
                   </div>
                 )}
-                {(currentCard.example || currentCard.exampleTranslation) && (
-                  <div className="mt-4 flex flex-col items-center gap-1">
-                    {currentCard.example && (
-                      <div className="w-full">
-                        <p className="text-xl sm:text-2xl text-theme-primary opacity-90 text-center leading-relaxed font-serif px-4">
-                          {renderExampleWithHighlight(currentCard.example, currentCard.kanji, currentCard.reading)}
-                        </p>
+                {currentCard.examples && currentCard.examples.length > 0 ? (
+                  <div className="mt-4 flex flex-col items-center gap-6">
+                    {currentCard.examples.map(ex => (
+                      <div key={ex.id} className="w-full flex flex-col items-center gap-1">
+                        <div className="w-full">
+                          <p className="text-xl sm:text-2xl text-theme-primary opacity-90 text-center leading-relaxed font-serif px-4">
+                            {renderExampleWithHighlight(ex.sentence, currentCard.kanji, currentCard.reading)}
+                          </p>
+                        </div>
+                        {(ex.reading || ex.romaji) && (
+                          <div className="flex gap-3 text-sm text-theme-primary/60 italic font-serif">
+                            {ex.reading && <span>{ex.reading}</span>}
+                            {ex.romaji && <span>{ex.romaji}</span>}
+                          </div>
+                        )}
+                        {ex.translation && (
+                          <p className="text-sm sm:text-base text-theme-accent opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic mt-1">
+                            {ex.translation}
+                          </p>
+                        )}
                       </div>
-                    )}
-                    {currentCard.exampleTranslation && (
-                      <p className="text-sm sm:text-base text-theme-accent opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic mt-2">
-                        {currentCard.exampleTranslation}
-                      </p>
-                    )}
+                    ))}
                   </div>
+                ) : (
+                  (currentCard.example || currentCard.exampleTranslation) && (
+                    <div className="mt-4 flex flex-col items-center gap-1">
+                      {currentCard.example && (
+                        <div className="w-full">
+                          <p className="text-xl sm:text-2xl text-theme-primary opacity-90 text-center leading-relaxed font-serif px-4">
+                            {renderExampleWithHighlight(currentCard.example, currentCard.kanji, currentCard.reading)}
+                          </p>
+                        </div>
+                      )}
+                      {currentCard.exampleTranslation && (
+                        <p className="text-sm sm:text-base text-theme-accent opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic mt-2">
+                          {currentCard.exampleTranslation}
+                        </p>
+                      )}
+                    </div>
+                  )
                 )}
                 </div>
                 <div className="flex-1 shrink-0"></div>

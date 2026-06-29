@@ -15,6 +15,7 @@
   --color-theme-muted: var(--text-muted);
   --color-theme-accent-dark: var(--text-accent-dark);
   --color-theme-inverted: var(--text-inverted);
+  --color-theme-japanese: var(--text-japanese);
   
   --color-theme-accent: var(--accent);
   --color-theme-accent-hover: var(--accent-hover);
@@ -37,6 +38,7 @@
   --text-muted: #4a4a4a;
   --text-accent-dark: #8b5a2b;
   --text-inverted: #121212;
+  --text-japanese: #dbeafe; /* Light blue for dark mode */
   
   --accent: #c5a059;
   --accent-hover: #b08d4a;
@@ -59,6 +61,7 @@
   --text-muted: #8c8577;
   --text-accent-dark: #b07d35;
   --text-inverted: #ffffff;
+  --text-japanese: #1e3a8a; /* Dark blue for light mode */
   
   --accent: #b07d35;
   --accent-hover: #966829;

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { KanjiExample } from '../types';
+import { Plus, X } from 'lucide-react';
 
 interface AddVocabProps {
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string) => void;
 }
 
 export default function AddVocab({ onAdd }: AddVocabProps) {
@@ -11,25 +13,50 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   const [sinoVietnamese, setSinoVietnamese] = useState('');
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
-  const [example, setExample] = useState('');
-  const [exampleTranslation, setExampleTranslation] = useState('');
+  const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
   const [wordType, setWordType] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) return;
-    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), example.trim(), exampleTranslation.trim(), wordType, kanjiExplanation.trim(), romaji.trim());
+    
+    // Filter out empty examples
+    const validExamples = examples.filter(ex => ex.sentence.trim() || ex.translation.trim()).map(ex => ({
+      id: crypto.randomUUID(),
+      sentence: ex.sentence.trim(),
+      reading: ex.reading.trim(),
+      romaji: ex.romaji.trim(),
+      translation: ex.translation.trim()
+    }));
+    
+    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), validExamples.length > 0 ? validExamples : undefined, wordType, kanjiExplanation.trim(), romaji.trim());
     setKanji('');
     setReading('');
     setRomaji('');
     setSinoVietnamese('');
     setKanjiExplanation('');
     setMeaning('');
-    setExample('');
-    setExampleTranslation('');
+    setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }]);
     setWordType('');
-    
-    // Simple visual feedback could go here, but clearing the form is enough for now
+  };
+
+  const addExampleField = () => {
+    setExamples([...examples, { sentence: '', reading: '', romaji: '', translation: '' }]);
+  };
+
+  const removeExampleField = (index: number) => {
+    const newExamples = [...examples];
+    newExamples.splice(index, 1);
+    if (newExamples.length === 0) {
+      newExamples.push({ sentence: '', reading: '', romaji: '', translation: '' });
+    }
+    setExamples(newExamples);
+  };
+
+  const updateExample = (index: number, field: string, value: string) => {
+    const newExamples = [...examples];
+    newExamples[index] = { ...newExamples[index], [field]: value };
+    setExamples(newExamples);
   };
 
   return (
@@ -119,25 +146,64 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             placeholder="NGÔN NGỮ"
           />
         </div>
-        <div>
-          <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Ví dụ (Tiếng Nhật)</label>
-          <input 
-            type="text" 
-            value={example}
-            onChange={e => setExample(e.target.value)}
-            className="w-full px-5 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center"
-            placeholder="Ví dụ: 日本語"
-          />
-        </div>
-        <div>
-          <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Dịch nghĩa ví dụ (Tiếng Việt)</label>
-          <input 
-            type="text" 
-            value={exampleTranslation}
-            onChange={e => setExampleTranslation(e.target.value)}
-            className="w-full px-5 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center"
-            placeholder="Ví dụ: Tiếng Nhật"
-          />
+        <div className="pt-4 border-t border-theme-subtle">
+          <div className="flex items-center justify-between mb-4">
+            <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">Các ví dụ (Tiếng Nhật - Tiếng Việt)</label>
+            <button 
+              type="button" 
+              onClick={addExampleField}
+              className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
+              title="Thêm ví dụ"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="flex flex-col gap-6">
+            {examples.map((ex, index) => (
+              <div key={index} className="relative p-4 border border-theme-subtle bg-theme-base-alt rounded-sm">
+                <button
+                  type="button"
+                  onClick={() => removeExampleField(index)}
+                  className="absolute -top-3 -right-3 p-1.5 rounded-full bg-theme-panel border border-theme-subtle text-theme-primary/50 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <div className="flex flex-col gap-3">
+                  <input 
+                    type="text" 
+                    value={ex.sentence}
+                    onChange={e => updateExample(index, 'sentence', e.target.value)}
+                    className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center"
+                    placeholder="Câu ví dụ (Tiếng Nhật)"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input 
+                      type="text" 
+                      value={ex.reading}
+                      onChange={e => updateExample(index, 'reading', e.target.value)}
+                      className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-serif italic text-center"
+                      placeholder="Hiragana"
+                    />
+                    <input 
+                      type="text" 
+                      value={ex.romaji}
+                      onChange={e => updateExample(index, 'romaji', e.target.value)}
+                      className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-serif italic text-center"
+                      placeholder="Romaji"
+                    />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={ex.translation}
+                    onChange={e => updateExample(index, 'translation', e.target.value)}
+                    className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center"
+                    placeholder="Dịch nghĩa (Tiếng Việt)"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <button 
           type="submit"
