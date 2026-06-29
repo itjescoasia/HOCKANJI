@@ -18,7 +18,10 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!kanji.trim() || !meaning.trim()) return;
+    if (!kanji.trim() || !meaning.trim()) {
+      alert("Vui lòng điền đầy đủ Kanji (Từ vựng) và Ý nghĩa!");
+      return;
+    }
     
     // Filter out empty examples
     const validExamples = examples.filter(ex => ex.sentence.trim() || ex.translation.trim()).map(ex => ({

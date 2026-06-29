@@ -54,7 +54,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         meaning: editForm.meaning.trim(),
         example: editForm.example?.trim() || '',
         exampleTranslation: editForm.exampleTranslation?.trim() || '',
-        examples: validExamples.length > 0 ? validExamples : undefined,
+        examples: validExamples,
         wordType: editForm.wordType?.trim() || ''
       });
       setEditingId(null);
