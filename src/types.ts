@@ -38,6 +38,10 @@ export interface IntensiveExample {
   mastered?: boolean; // legacy
   jaToViMastered?: boolean;
   viToJaMastered?: boolean;
+  jaToViNextReviewDate?: number;
+  viToJaNextReviewDate?: number;
+  jaToViInterval?: number;
+  viToJaInterval?: number;
 }
 
 export interface IntensiveWord {

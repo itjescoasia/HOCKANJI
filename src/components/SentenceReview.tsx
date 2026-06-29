@@ -36,27 +36,24 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
       });
     });
 
-    // Shuffle examples first to randomize within categories
-    for (let i = allExamples.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [allExamples[i], allExamples[j]] = [allExamples[j], allExamples[i]];
-    }
+    const now = Date.now();
+    const dueExamples = allExamples.filter(ex => {
+      const isMastered = mode === 'VI_TO_JA' ? (ex.viToJaMastered ?? ex.mastered) : (ex.jaToViMastered ?? ex.mastered);
+      if (!isMastered) return true; // always show unmastered (Chưa nhớ)
 
-    // Sort so unmastered examples come first for the current mode
-    allExamples.sort((a, b) => {
-      const aMastered = mode === 'VI_TO_JA' ? a.viToJaMastered : a.jaToViMastered;
-      const bMastered = mode === 'VI_TO_JA' ? b.viToJaMastered : b.jaToViMastered;
-      
-      // Fallback to legacy mastered if the new properties don't exist yet
-      const finalAMastered = aMastered !== undefined ? aMastered : a.mastered;
-      const finalBMastered = bMastered !== undefined ? bMastered : b.mastered;
-      
-      if (finalAMastered === finalBMastered) return 0;
-      if (finalAMastered) return 1;
-      return -1;
+      const nextReviewDate = mode === 'VI_TO_JA' ? ex.viToJaNextReviewDate : ex.jaToViNextReviewDate;
+      if (!nextReviewDate) return true; // show if mastered but no review date set
+
+      return nextReviewDate <= now;
     });
 
-    setExamples(allExamples);
+    // Shuffle examples to randomize (both unmastered and due mastered)
+    for (let i = dueExamples.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [dueExamples[i], dueExamples[j]] = [dueExamples[j], dueExamples[i]];
+    }
+
+    setExamples(dueExamples);
     setIsInitialized(true);
   }, [deck, mode, isInitialized]);
 
@@ -101,9 +98,34 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
       if (word) {
         const updatedExamples = word.examples.map(ex => {
           if (ex.id === currentExample.id) {
+            // Calculate Spaced Repetition values
+            const currentInterval = mode === 'VI_TO_JA' ? ex.viToJaInterval : ex.jaToViInterval;
+            
+            let nextInterval = 0;
+            let nextReviewDate = Date.now(); // default to now if not mastered
+            
+            if (mastered) {
+              // Simple SM-2 style intervals
+              nextInterval = (!currentInterval || currentInterval === 0) 
+                ? 1 
+                : (currentInterval === 1 ? 3 : (currentInterval === 3 ? 7 : currentInterval * 2));
+                
+              nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
+            }
+
             return mode === 'VI_TO_JA' 
-              ? { ...ex, viToJaMastered: mastered } 
-              : { ...ex, jaToViMastered: mastered };
+              ? { 
+                  ...ex, 
+                  viToJaMastered: mastered,
+                  viToJaInterval: nextInterval,
+                  viToJaNextReviewDate: nextReviewDate
+                } 
+              : { 
+                  ...ex, 
+                  jaToViMastered: mastered,
+                  jaToViInterval: nextInterval,
+                  jaToViNextReviewDate: nextReviewDate
+                };
           }
           return ex;
         });
@@ -114,9 +136,30 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
     // Update local state to reflect the change immediately
     setExamples(prev => prev.map((ex, i) => {
       if (i === currentIndex) {
+        // Also update local state SRS properties
+        const currentInterval = mode === 'VI_TO_JA' ? ex.viToJaInterval : ex.jaToViInterval;
+        let nextInterval = 0;
+        let nextReviewDate = Date.now();
+        
+        if (mastered) {
+          nextInterval = (!currentInterval || currentInterval === 0) 
+            ? 1 : (currentInterval === 1 ? 3 : (currentInterval === 3 ? 7 : currentInterval * 2));
+          nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
+        }
+
         return mode === 'VI_TO_JA' 
-          ? { ...ex, viToJaMastered: mastered } 
-          : { ...ex, jaToViMastered: mastered };
+          ? { 
+              ...ex, 
+              viToJaMastered: mastered,
+              viToJaInterval: nextInterval,
+              viToJaNextReviewDate: nextReviewDate
+            } 
+          : { 
+              ...ex, 
+              jaToViMastered: mastered,
+              jaToViInterval: nextInterval,
+              jaToViNextReviewDate: nextReviewDate
+            };
       }
       return ex;
     }));
