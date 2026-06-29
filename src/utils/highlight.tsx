@@ -1,5 +1,60 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useState, useRef, useEffect } from 'react';
 import { KanjiCard } from '../types';
+
+const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard }> = ({ text, status, card }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  let colorClass = "text-theme-accent";
+  if (status === 'good') colorClass = "text-green-500";
+  if (status === 'bad') colorClass = "text-red-400";
+  if (status === 'new') colorClass = "text-theme-primary/80";
+
+  if (!card) {
+    return <span className={`${colorClass} font-bold`}>{text}</span>;
+  }
+
+  return (
+    <span className="relative inline-block" ref={containerRef}>
+      <span 
+        className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current`}
+        onClick={(e) => {
+           e.stopPropagation();
+           setIsOpen(!isOpen);
+        }}
+        title="Nhấn để xem nghĩa"
+      >
+        {text}
+      </span>
+      {isOpen && (
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[250px] bg-theme-panel border border-theme-subtle rounded shadow-lg p-3 z-50 flex flex-col gap-1 text-left font-sans text-base whitespace-normal">
+          <span className="flex items-end justify-between gap-3">
+            <strong className="text-xl font-serif text-theme-primary leading-none">{card.kanji || card.reading}</strong>
+            {card.sinoVietnamese && <span className="text-[10px] text-theme-accent uppercase tracking-wider mb-0.5">{card.sinoVietnamese}</span>}
+          </span>
+          {card.reading && card.kanji && (
+            <span className="text-sm text-theme-primary/70">{card.reading} {card.romaji ? `(${card.romaji})` : ''}</span>
+          )}
+          <span className="text-sm text-theme-primary mt-1 border-t border-theme-subtle/50 pt-1">{card.meaning}</span>
+        </span>
+      )}
+    </span>
+  );
+};
 
 export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[]) => {
   if (!example) return <Fragment>“{example}”</Fragment>;
@@ -27,38 +82,41 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
     return bStr.length - aStr.length;
   });
 
-  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' }[] = [
+  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard }[] = [
     { text: example, status: 'neutral' }
   ];
 
   deckWordsInExample.forEach(card => {
     const wordStr = card.kanji || card.reading;
     
-    let status: 'good' | 'bad' | 'neutral' = 'good';
+    let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
     if (card.repetition === 0 && card.interval === 0) {
-      status = 'neutral';
+      status = 'new';
     } else if (card.repetition === 0 || card.interval <= 1) {
       status = 'bad';
     }
 
-    if (status !== 'neutral') {
-      const newTokens: typeof tokens = [];
-      tokens.forEach(token => {
-        if (token.status !== 'neutral') {
-          newTokens.push(token);
-          return;
-        }
-        const parts = token.text.split(wordStr);
-        parts.forEach((part, i) => {
-          if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
-          if (i < parts.length - 1) newTokens.push({ text: wordStr, status: status });
-        });
+    const newTokens: typeof tokens = [];
+    tokens.forEach(token => {
+      if (token.status !== 'neutral') {
+        newTokens.push(token);
+        return;
+      }
+      const parts = token.text.split(wordStr);
+      parts.forEach((part, i) => {
+        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
+        if (i < parts.length - 1) newTokens.push({ text: wordStr, status: status, card: card });
       });
-      tokens = newTokens;
-    }
+    });
+    tokens = newTokens;
   });
 
   // Fallback for the targetWord of this intensive item
+  let targetWordCard: KanjiCard | undefined = undefined;
+  if (targetWord) {
+     targetWordCard = mainDeck?.find(c => c.kanji === targetWord || c.reading === targetWord);
+  }
+
   const newTokens: typeof tokens = [];
   tokens.forEach(token => {
     if (token.status !== 'neutral' || !targetWord) {
@@ -80,7 +138,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
       const parts = token.text.split(targetToHighlight);
       parts.forEach((part, i) => {
         if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
-        if (i < parts.length - 1) newTokens.push({ text: targetToHighlight, status: 'target' });
+        if (i < parts.length - 1) newTokens.push({ text: targetToHighlight, status: 'target', card: targetWordCard });
       });
     } else {
       newTokens.push(token);
@@ -91,11 +149,10 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
   return (
     <Fragment>
       {tokens.map((t, i) => {
-        if (t.status === 'good') return <span key={i} className="text-green-500 font-bold" title="Từ này bạn đã nhớ (Tốt)">{t.text}</span>;
-        if (t.status === 'bad') return <span key={i} className="text-red-400 font-bold" title="Từ này bạn cần học thêm (Khó / Lặp lại)">{t.text}</span>;
-        if (t.status === 'target') return <span key={i} className="text-theme-accent font-bold">{t.text}</span>;
-        return <Fragment key={i}>{t.text}</Fragment>;
+        if (t.status === 'neutral') return <Fragment key={i}>{t.text}</Fragment>;
+        return <InteractiveWord key={i} text={t.text} status={t.status} card={t.card} />;
       })}
     </Fragment>
   );
 };
+

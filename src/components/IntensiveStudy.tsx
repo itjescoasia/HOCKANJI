@@ -666,7 +666,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                       <div 
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative rounded-lg overflow-hidden border ${snapshot.isDragging ? 'border-theme-accent shadow-2xl z-50' : 'border-theme-subtle'} bg-theme-panel group mb-4`}
+                        className={`relative rounded-lg border ${snapshot.isDragging ? 'border-theme-accent shadow-2xl z-50' : 'border-theme-subtle'} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
                         <div className={`bg-theme-hover p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? 'pl-14' : ''}`}>

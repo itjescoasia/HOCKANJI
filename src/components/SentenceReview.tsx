@@ -196,7 +196,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({ deck, mainDeck, 
             exit={{ opacity: 0, y: -10 }}
             className="w-full max-w-2xl"
           >
-            <div className="bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center relative overflow-hidden group">
+            <div className="bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center relative group">
               <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/30">
                 {mode === 'JA_TO_VI' ? 'NHẬT' : 'VIỆT'}
               </span>
