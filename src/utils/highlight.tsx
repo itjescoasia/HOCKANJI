@@ -93,7 +93,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
       {tokens.map((t, i) => {
         if (t.status === 'good') return <span key={i} className="text-green-500 font-bold" title="Từ này bạn đã nhớ (Tốt)">{t.text}</span>;
         if (t.status === 'bad') return <span key={i} className="text-red-400 font-bold" title="Từ này bạn cần học thêm (Khó / Lặp lại)">{t.text}</span>;
-        if (t.status === 'target') return <span key={i} className="text-[#c5a059] font-bold">{t.text}</span>;
+        if (t.status === 'target') return <span key={i} className="text-theme-accent font-bold">{t.text}</span>;
         return <Fragment key={i}>{t.text}</Fragment>;
       })}
     </Fragment>

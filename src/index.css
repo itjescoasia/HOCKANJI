@@ -1,5 +1,75 @@
 @import "tailwindcss";
 
+@theme {
+  --color-theme-base: var(--bg-base);
+  --color-theme-base-alt: var(--bg-base-alt);
+  --color-theme-panel: var(--bg-panel);
+  --color-theme-hover: var(--bg-hover);
+  --color-theme-active: var(--bg-active);
+  --color-theme-active-alt: var(--bg-active-alt);
+  
+  --color-theme-subtle: var(--border-subtle);
+  --color-theme-strong: var(--border-strong);
+  
+  --color-theme-primary: var(--text-primary);
+  --color-theme-muted: var(--text-muted);
+  --color-theme-accent-dark: var(--text-accent-dark);
+  --color-theme-inverted: var(--text-inverted);
+  
+  --color-theme-accent: var(--accent);
+  --color-theme-accent-hover: var(--accent-hover);
+  --color-theme-accent-light: var(--accent-light);
+}
+
+:root {
+  /* Default: Dark Mode */
+  --bg-base: #0a0a0a;
+  --bg-base-alt: #0c0c0c;
+  --bg-panel: #121212;
+  --bg-hover: #1a1a1a;
+  --bg-active: #2a2a2a;
+  --bg-active-alt: #333333;
+  
+  --border-subtle: #2a2a2a;
+  --border-strong: #3a3a3a;
+  
+  --text-primary: #d4d4d4;
+  --text-muted: #4a4a4a;
+  --text-accent-dark: #8b5a2b;
+  --text-inverted: #121212;
+  
+  --accent: #c5a059;
+  --accent-hover: #b08d4a;
+  --accent-light: #d6b16a;
+}
+
+.theme-light {
+  /* Soft, eye-friendly light mode */
+  --bg-base: #f9f7f3;
+  --bg-base-alt: #f4f1ea;
+  --bg-panel: #fcfbfa;
+  --bg-hover: #efece4;
+  --bg-active: #e3decb;
+  --bg-active-alt: #d5cfb9;
+  
+  --border-subtle: #e5dfd3;
+  --border-strong: #d0c8b6;
+  
+  --text-primary: #3d3933;
+  --text-muted: #8c8577;
+  --text-accent-dark: #b07d35;
+  --text-inverted: #ffffff;
+  
+  --accent: #b07d35;
+  --accent-hover: #966829;
+  --accent-light: #c49551;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -8,10 +78,10 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #2a2a2a;
+    background-color: var(--border-subtle);
     border-radius: 20px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: #3f3f3f;
+    background-color: var(--border-strong);
   }
 }

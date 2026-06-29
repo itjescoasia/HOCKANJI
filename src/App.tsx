@@ -12,7 +12,7 @@ import IntensiveStudy from './components/IntensiveStudy';
 import ShortStudySession from './components/ShortStudySession';
 import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
-import { BookMarked, Home, PlusCircle, LogOut, Lightbulb } from 'lucide-react';
+import { BookMarked, Home, PlusCircle, LogOut, Lightbulb, Sun, Moon } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -20,6 +20,21 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [dayTrigger, setDayTrigger] = useState(getLocalDateString());
+  
+  // Theme state
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('app_theme');
+    return (saved as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('theme-light');
+    } else {
+      document.documentElement.classList.remove('theme-light');
+    }
+    localStorage.setItem('app_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const calculateTimeUntilMidnight = () => {
@@ -105,7 +120,7 @@ export default function App() {
     };
   }, [isFreeStudyMode, isDifficultReviewMode, view, recordFreeStudyTime]);
 
-  if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen bg-[#0c0c0c] flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-[#2a2a2a] border-t-[#c5a059] rounded-full animate-spin"></div></div>;
+  if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen bg-theme-base-alt flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-theme-subtle border-t-[#c5a059] rounded-full animate-spin"></div></div>;
 
   if (!user) {
     return <Login />;
@@ -260,26 +275,33 @@ export default function App() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[#0c0c0c] text-[#d4d4d4] font-sans flex flex-col">
+    <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex flex-col">
       {/* Header / Nav */}
-      <header className="bg-[#121212] border-b border-[#2a2a2a] sticky top-0 z-40">
+      <header className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
-            <div className="w-10 h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-[#c5a059]">
+            <div className="w-10 h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent">
               <span className="text-white font-serif text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
             </div>
-            <h1 className="text-xl font-serif tracking-widest text-[#c5a059]" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
+            <h1 className="text-xl font-serif tracking-widest text-theme-accent" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
           </div>
           
           <nav className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover rounded transition-all"
+              title="Giao diện Sáng/Tối"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             {navItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.id)}
                 className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded ${
                   view === item.id 
-                    ? 'bg-[#1a1a1a] text-[#c5a059] border border-[#2a2a2a]' 
-                    : 'text-[#d4d4d4]/60 hover:text-[#c5a059] hover:bg-[#1a1a1a]'
+                    ? 'bg-theme-hover text-theme-accent border border-theme-subtle' 
+                    : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
                 }`}
               >
                 <item.icon className="w-4 h-4" />
@@ -289,7 +311,7 @@ export default function App() {
 
             <button
               onClick={() => signOut(auth)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-[#d4d4d4]/60 hover:text-red-500 hover:bg-[#1a1a1a]"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-theme-primary/60 hover:text-red-500 hover:bg-theme-hover"
               title={`Đăng xuất (${user?.email})`}
             >
               <LogOut className="w-4 h-4" />
@@ -339,7 +361,7 @@ export default function App() {
         )}
         
         {view === 'short_study' && (
-          <div className="fixed inset-0 z-50 bg-[#0c0c0c] overflow-y-auto w-full h-full">
+          <div className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
             <ShortStudySession
               queue={shortStudyQueue}
               onExit={() => setView('dashboard')}
@@ -349,7 +371,7 @@ export default function App() {
         )}
 
         {view === 'sentence_review' && (
-          <div className="fixed inset-0 z-50 bg-[#0c0c0c] overflow-y-auto w-full h-full">
+          <div className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
             <SentenceReview
               deck={intensiveDeck}
               mainDeck={deck}

@@ -132,20 +132,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
     <div className="max-w-5xl mx-auto py-8 px-4 w-full">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif text-[#c5a059] mb-2 tracking-widest uppercase">Kho từ vựng</h2>
+          <h2 className="text-2xl font-serif text-theme-accent mb-2 tracking-widest uppercase">Kho từ vựng</h2>
           <div className="flex items-center gap-4">
-            <span className="text-[#d4d4d4] opacity-50 text-[10px] uppercase tracking-widest">Tổng cộng {deck.length} từ đã được thêm</span>
-            <div className="h-4 w-px bg-[#2a2a2a]"></div>
+            <span className="text-theme-primary opacity-50 text-[10px] uppercase tracking-widest">Tổng cộng {deck.length} từ đã được thêm</span>
+            <div className="h-4 w-px bg-theme-active"></div>
             <button
               onClick={handleExport}
-              className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors flex items-center gap-1"
+              className="text-[10px] uppercase tracking-widest text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors flex items-center gap-1"
             >
               <Download className="w-3 h-3" /> Xuất Excel
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors flex items-center gap-1"
+              className="text-[10px] uppercase tracking-widest text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors flex items-center gap-1"
             >
               <Upload className="w-3 h-3" /> {isImporting ? 'Đang Import...' : 'Nhập Excel'}
             </button>
@@ -163,7 +163,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-4 py-2 bg-[#0c0c0c] border border-[#2a2a2a] text-[#d4d4d4] focus:outline-none focus:border-[#c5a059] transition-colors rounded-none text-sm w-full sm:w-auto min-w-[150px]"
+            className="px-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary focus:outline-none focus:border-theme-accent transition-colors rounded-none text-sm w-full sm:w-auto min-w-[150px]"
           >
             <option value="all">Tất cả loại từ</option>
             {uniqueWordTypes.map((type, idx) => (
@@ -172,41 +172,41 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
           </select>
           <div className="relative w-full sm:w-auto">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-[#c5a059] opacity-50" />
+              <Search className="h-4 w-4 text-theme-accent opacity-50" />
             </div>
             <input
               type="text"
               placeholder="Tìm kiếm Kanji, nghĩa..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-11 pr-4 py-2 bg-[#0c0c0c] border border-[#2a2a2a] text-[#d4d4d4] w-full sm:w-72 focus:outline-none focus:border-[#c5a059] transition-colors rounded-none placeholder:opacity-30 text-sm"
+              className="pl-11 pr-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:border-theme-accent transition-colors rounded-none placeholder:opacity-30 text-sm"
             />
           </div>
         </div>
       </div>
       
       {deck.length === 0 ? (
-        <div className="bg-[#121212] border border-[#2a2a2a] p-16 text-center shadow-lg">
-          <div className="w-16 h-16 bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mx-auto mb-6">
-            <Search className="w-8 h-8 text-[#c5a059] opacity-50" />
+        <div className="bg-theme-panel border border-theme-subtle p-16 text-center shadow-lg">
+          <div className="w-16 h-16 bg-theme-hover border border-theme-subtle flex items-center justify-center mx-auto mb-6">
+            <Search className="w-8 h-8 text-theme-accent opacity-50" />
           </div>
-          <p className="text-lg font-serif text-[#c5a059] tracking-widest uppercase mb-2">Chưa có từ vựng nào</p>
-          <p className="text-[#d4d4d4] opacity-50 max-w-md mx-auto text-sm leading-relaxed tracking-wide">Hãy thêm từ vựng mới để bắt đầu quá trình học ứng dụng Spaced Repetition nhé.</p>
+          <p className="text-lg font-serif text-theme-accent tracking-widest uppercase mb-2">Chưa có từ vựng nào</p>
+          <p className="text-theme-primary opacity-50 max-w-md mx-auto text-sm leading-relaxed tracking-wide">Hãy thêm từ vựng mới để bắt đầu quá trình học ứng dụng Spaced Repetition nhé.</p>
         </div>
       ) : filteredDeck.length === 0 ? (
-        <div className="bg-[#121212] border border-[#2a2a2a] p-16 text-center">
-          <p className="text-[#d4d4d4] opacity-50 text-sm tracking-wide">Không tìm thấy kết quả phù hợp với "{search}"</p>
+        <div className="bg-theme-panel border border-theme-subtle p-16 text-center">
+          <p className="text-theme-primary opacity-50 text-sm tracking-wide">Không tìm thấy kết quả phù hợp với "{search}"</p>
         </div>
       ) : (
-        <div className="bg-[#121212] border border-[#2a2a2a] overflow-hidden shadow-lg">
+        <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
-                <tr className="bg-[#1a1a1a] border-b border-[#2a2a2a]">
-                  <th className="px-8 py-4 text-[10px] text-[#c5a059] opacity-70 uppercase tracking-widest font-normal">Kanji</th>
-                  <th className="px-8 py-4 text-[10px] text-[#c5a059] opacity-70 uppercase tracking-widest font-normal">Cách đọc / Nghĩa</th>
-                  <th className="px-8 py-4 text-[10px] text-[#c5a059] opacity-70 uppercase tracking-widest font-normal">Tiến trình (SRS)</th>
-                  <th className="px-8 py-4 text-[10px] text-[#c5a059] opacity-70 uppercase tracking-widest font-normal text-right">Quản lý</th>
+                <tr className="bg-theme-hover border-b border-theme-subtle">
+                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Kanji</th>
+                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Cách đọc / Nghĩa</th>
+                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Tiến trình (SRS)</th>
+                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal text-right">Quản lý</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2a2a2a]">
@@ -218,12 +218,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
 
                   if (isEditing) {
                     return (
-                      <tr key={card.id} className="bg-[#1a1a1a] shadow-inner">
+                      <tr key={card.id} className="bg-theme-hover shadow-inner">
                         <td className="px-4 py-4 w-32 align-top">
                           <input 
                             value={editForm.kanji} 
                             onChange={e => setEditForm({...editForm, kanji: e.target.value})}
-                            className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xl font-serif text-white px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                            className="w-full bg-theme-base-alt border border-theme-subtle text-xl font-serif text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                             placeholder="Kanji"
                           />
                         </td>
@@ -233,19 +233,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                               <input 
                                 value={editForm.reading} 
                                 onChange={e => setEditForm({...editForm, reading: e.target.value})}
-                                className="flex-1 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                className="flex-1 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                                 placeholder="Cách đọc"
                               />
                               <input 
                                 value={editForm.romaji || ''} 
                                 onChange={e => setEditForm({...editForm, romaji: e.target.value})}
-                                className="w-24 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                className="w-24 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                                 placeholder="Romaji"
                               />
                               <select 
                                 value={editForm.wordType} 
                                 onChange={e => setEditForm({...editForm, wordType: e.target.value})}
-                                className="w-32 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059] appearance-none"
+                                className="w-32 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent appearance-none"
                               >
                                 <option value="">Loại từ</option>
                                 <option value="Động từ nhóm I">Động từ nhóm I</option>
@@ -259,38 +259,38 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                               <input 
                                 value={editForm.sinoVietnamese} 
                                 onChange={e => setEditForm({...editForm, sinoVietnamese: e.target.value})}
-                                className="w-24 bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-[#c5a059] uppercase px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                                className="w-24 bg-theme-base-alt border border-theme-subtle text-sm text-theme-accent uppercase px-3 py-2 focus:outline-none focus:border-theme-accent"
                                 placeholder="Hán Việt"
                               />
                             </div>
                             <input 
                               value={editForm.meaning} 
                               onChange={e => setEditForm({...editForm, meaning: e.target.value})}
-                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-sm text-white px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              className="w-full bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                               placeholder="Ý nghĩa"
                             />
                             <textarea 
                               value={editForm.kanjiExplanation || ''} 
                               onChange={e => setEditForm({...editForm, kanjiExplanation: e.target.value})}
-                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                               placeholder="Giải thích Hán tự"
                               rows={2}
                             />
                             <input 
                               value={editForm.example} 
                               onChange={e => setEditForm({...editForm, example: e.target.value})}
-                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                               placeholder="Ví dụ (Tiếng Nhật)"
                             />
                             <input 
                               value={editForm.exampleTranslation} 
                               onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
-                              className="w-full bg-[#0c0c0c] border border-[#2a2a2a] text-xs text-[#d4d4d4] px-3 py-2 focus:outline-none focus:border-[#c5a059]"
+                              className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                               placeholder="Dịch nghĩa (Tiếng Việt)"
                             />
                           </div>
                         </td>
-                        <td className="px-4 py-4 text-center text-[#d4d4d4] opacity-50 text-xs italic font-serif align-middle">
+                        <td className="px-4 py-4 text-center text-theme-primary opacity-50 text-xs italic font-serif align-middle">
                           Đang chỉnh sửa
                         </td>
                         <td className="px-4 py-4 text-right align-middle">
@@ -298,14 +298,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                             <button 
                               onClick={saveEdit}
                               disabled={!editForm.kanji || !editForm.meaning}
-                              className="p-2 bg-[#c5a059] text-black hover:bg-[#d6b16a] transition-colors inline-flex items-center justify-center rounded-sm disabled:opacity-50"
+                              className="p-2 bg-theme-accent text-theme-inverted hover:bg-theme-accent-light transition-colors inline-flex items-center justify-center rounded-sm disabled:opacity-50"
                               title="Lưu"
                             >
                               <Check className="w-4 h-4" />
                             </button>
                             <button 
                               onClick={cancelEdit}
-                              className="p-2 border border-[#2a2a2a] text-[#d4d4d4] hover:bg-[#2a2a2a] transition-colors inline-flex items-center justify-center rounded-sm"
+                              className="p-2 border border-theme-subtle text-theme-primary hover:bg-theme-active transition-colors inline-flex items-center justify-center rounded-sm"
                               title="Hủy"
                             >
                               <X className="w-4 h-4" />
@@ -317,36 +317,36 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                   }
                   
                   return (
-                    <tr key={card.id} className="hover:bg-[#1a1a1a] transition-colors group">
+                    <tr key={card.id} className="hover:bg-theme-hover transition-colors group">
                       <td className="px-8 py-5">
-                        <div className="text-3xl font-serif text-white">{card.kanji}</div>
+                        <div className="text-3xl font-serif text-theme-primary">{card.kanji}</div>
                       </td>
                       <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <div className="text-xs font-serif text-[#d4d4d4] italic opacity-60 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
+                          <div className="text-xs font-serif text-theme-primary italic opacity-60 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
                           {card.romaji && (
-                            <div className="text-xs font-serif text-[#d4d4d4] opacity-50 italic">{card.romaji}</div>
+                            <div className="text-xs font-serif text-theme-primary opacity-50 italic">{card.romaji}</div>
                           )}
                           {card.wordType && (
-                            <span className="text-[10px] text-[#4a4a4a] bg-[#1a1a1a] px-1.5 py-0.5 rounded-sm border border-[#2a2a2a]">{card.wordType}</span>
+                            <span className="text-[10px] text-theme-muted bg-theme-hover px-1.5 py-0.5 rounded-sm border border-theme-subtle">{card.wordType}</span>
                           )}
                           {card.sinoVietnamese && (
-                            <span className="text-[10px] text-[#c5a059] uppercase tracking-widest border border-[#c5a059]/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
+                            <span className="text-[10px] text-theme-accent uppercase tracking-widest border border-theme-accent/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
                           )}
                         </div>
-                        <div className="text-sm tracking-widest uppercase text-white font-light break-words whitespace-normal max-w-[200px] sm:max-w-md">{card.meaning}</div>
+                        <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-normal max-w-[200px] sm:max-w-md">{card.meaning}</div>
                         {card.kanjiExplanation && (
-                          <div className="mt-2 text-xs text-[#d4d4d4] font-sans opacity-80 whitespace-pre-wrap leading-relaxed max-w-[200px] sm:max-w-md">
+                          <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 whitespace-pre-wrap leading-relaxed max-w-[200px] sm:max-w-md">
                             {card.kanjiExplanation}
                           </div>
                         )}
                         {(card.example || card.exampleTranslation) && (
-                          <div className="mt-2 space-y-1 border-t border-[#2a2a2a] pt-2 max-w-[200px] sm:max-w-md">
+                          <div className="mt-2 space-y-1 border-t border-theme-subtle pt-2 max-w-[200px] sm:max-w-md">
                             {card.example && (
-                              <div className="text-[11px] text-[#d4d4d4] opacity-70 truncate" title={card.example}>{card.example}</div>
+                              <div className="text-[11px] text-theme-primary opacity-70 truncate" title={card.example}>{card.example}</div>
                             )}
                             {card.exampleTranslation && (
-                              <div className="text-[11px] text-[#c5a059] opacity-70 truncate italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
+                              <div className="text-[11px] text-theme-accent opacity-70 truncate italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
                             )}
                           </div>
                         )}
@@ -354,27 +354,27 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                       <td className="px-8 py-5">
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-3">
-                            <div className="w-20 h-1 bg-[#2a2a2a] overflow-hidden border border-[#0a0a0a]">
+                            <div className="w-20 h-1 bg-theme-active overflow-hidden border border-theme-base">
                               <div 
-                                className="h-full bg-[#c5a059]" 
+                                className="h-full bg-theme-accent" 
                                 style={{ width: `${Math.min(100, (card.interval / 30) * 100)}%` }}
                               />
                             </div>
-                            <span className="text-[10px] font-serif text-[#c5a059] opacity-80">{card.interval} Ngày</span>
+                            <span className="text-[10px] font-serif text-theme-accent opacity-80">{card.interval} Ngày</span>
                           </div>
                           <div className="flex items-center gap-2 text-[10px] tracking-widest uppercase">
-                            <span className={isDue ? "text-red-500 font-medium" : "text-[#d4d4d4] opacity-50"}>
+                            <span className={isDue ? "text-red-500 font-medium" : "text-theme-primary opacity-50"}>
                               {isDue ? 'Cần Ôn Ngay' : `Sau ${Math.ceil((card.nextReviewDate - Date.now()) / (1000 * 60 * 60 * 24))} ngày`}
                             </span>
-                            <span className="text-[#2a2a2a]">|</span>
-                            <span className="text-[#d4d4d4] opacity-40 italic font-serif">Độ khó: {card.easeFactor.toFixed(1)}</span>
+                            <span className="text-theme-inverted">|</span>
+                            <span className="text-theme-primary opacity-40 italic font-serif">Độ khó: {card.easeFactor.toFixed(1)}</span>
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-5 text-right whitespace-nowrap">
                         <button 
                           onClick={() => startEdit(card)}
-                          className="p-2 text-[#555] hover:text-[#c5a059] transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100 mr-1"
+                          className="p-2 text-[#555] hover:text-theme-accent transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100 mr-1"
                           title="Sửa thẻ"
                         >
                           <Edit2 className="w-4 h-4" />

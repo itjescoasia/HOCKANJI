@@ -47,13 +47,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0c0c] text-[#d4d4d4] font-sans flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#121212] border border-[#2a2a2a] p-8 shadow-2xl">
+    <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-theme-panel border border-theme-subtle p-8 shadow-2xl">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#8b0000] border border-[#c5a059] flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-[#8b0000] border border-theme-accent flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-serif text-4xl" style={{ fontFamily: 'serif' }}>漢</span>
           </div>
-          <h1 className="text-2xl font-serif tracking-widest text-[#c5a059]">KANJI FLOW</h1>
+          <h1 className="text-2xl font-serif tracking-widest text-theme-accent">KANJI FLOW</h1>
           <p className="text-[10px] uppercase tracking-[0.2em] opacity-50 mt-2">Hệ thống Spaced Repetition</p>
         </div>
 
@@ -65,24 +65,24 @@ export default function Login() {
 
         <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70 mb-2">Email</label>
+            <label className="block text-[10px] uppercase tracking-widest text-theme-accent opacity-70 mb-2">Email</label>
             <input 
               type="email" 
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-white text-sm"
+              className="w-full px-4 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
               placeholder="email@example.com"
             />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70 mb-2">Mật khẩu</label>
+            <label className="block text-[10px] uppercase tracking-widest text-theme-accent opacity-70 mb-2">Mật khẩu</label>
             <input 
               type="password" 
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] focus:outline-none focus:border-[#c5a059] transition-colors text-white text-sm"
+              className="w-full px-4 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
               placeholder="••••••••"
             />
           </div>
@@ -90,7 +90,7 @@ export default function Login() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-[#1a1a1a] border border-[#c5a059] text-[#c5a059] hover:bg-[#c5a059] hover:text-black font-medium py-3 mt-2 transition-colors uppercase tracking-[0.2em] text-[11px] disabled:opacity-50"
+            className="w-full bg-theme-hover border border-theme-accent text-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 mt-2 transition-colors uppercase tracking-[0.2em] text-[11px] disabled:opacity-50"
           >
             {isLogin ? 'Đăng Nhập' : 'Đăng Ký'}
           </button>
@@ -119,7 +119,7 @@ export default function Login() {
         <div className="mt-8 text-center">
           <button 
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70 hover:opacity-100 transition-opacity"
+            className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70 hover:opacity-100 transition-opacity"
           >
             {isLogin ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'}
           </button>

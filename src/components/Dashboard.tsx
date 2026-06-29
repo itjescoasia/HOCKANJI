@@ -193,7 +193,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
           "{parts.map((p, i) => (
             <Fragment key={i}>
               {p}
-              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold text-lg sm:text-xl">{targetKanji}</span>}
+              {i < parts.length - 1 && <span className="text-theme-accent font-bold text-lg sm:text-xl">{targetKanji}</span>}
             </Fragment>
           ))}"
         </span>
@@ -217,7 +217,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             "{parts.map((p, i) => (
               <Fragment key={i}>
                 {p}
-                {i < parts.length - 1 && <span className="text-[#c5a059] font-bold text-lg sm:text-xl">{targetStem}</span>}
+                {i < parts.length - 1 && <span className="text-theme-accent font-bold text-lg sm:text-xl">{targetStem}</span>}
               </Fragment>
             ))}"
           </span>
@@ -233,7 +233,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
           "{parts.map((p, i) => (
             <Fragment key={i}>
               {p}
-              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold text-lg sm:text-xl">{targetReading}</span>}
+              {i < parts.length - 1 && <span className="text-theme-accent font-bold text-lg sm:text-xl">{targetReading}</span>}
             </Fragment>
           ))}"
         </span>
@@ -246,47 +246,52 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
-        <h1 className="text-3xl sm:text-4xl font-serif text-[#c5a059] tracking-widest mb-3 uppercase" style={{ fontFamily: 'serif' }}>Thống Kê Học Tập</h1>
-        <p className="text-[11px] text-[#d4d4d4] opacity-50 uppercase tracking-[0.2em]">Tiến độ học và biểu diễn dữ liệu</p>
+        <h1 className="text-3xl sm:text-4xl font-serif text-theme-accent tracking-widest mb-3 uppercase" style={{ fontFamily: 'serif' }}>Thống Kê Học Tập</h1>
+        <p className="text-[11px] text-theme-primary opacity-50 uppercase tracking-[0.2em]">Tiến độ học và biểu diễn dữ liệu</p>
       </div>
 
       {/* Word of the Day */}
       {wordOfTheDay && (
-        <div className="bg-[#121212] border border-[#c5a059] p-6 relative overflow-hidden group">
+        <div className="bg-theme-panel border border-theme-accent p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none hidden sm:block">
             <span className="text-8xl font-serif whitespace-nowrap max-w-full overflow-hidden text-ellipsis block">{wordOfTheDay.kanji}</span>
           </div>
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-[10px] uppercase tracking-widest text-[#c5a059] mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#c5a059] rounded-full inline-block"></span>
+                <h2 className="text-[10px] uppercase tracking-widest text-theme-accent mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-theme-accent rounded-full inline-block"></span>
                   Từ vựng mỗi ngày
                 </h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-2">
-                  <span className="text-4xl sm:text-5xl font-serif text-white">{wordOfTheDay.kanji}</span>
-                  {wordOfTheDay.reading && (
-                    <span className="text-lg text-[#d4d4d4] opacity-80">{wordOfTheDay.reading}</span>
-                  )}
+                  <span className="text-4xl sm:text-5xl font-serif text-theme-primary">{wordOfTheDay.kanji}</span>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3">
+                    {wordOfTheDay.reading && (
+                      <span className="text-lg text-theme-primary opacity-80">{wordOfTheDay.reading}</span>
+                    )}
+                    {wordOfTheDay.romaji && (
+                      <span className="text-sm text-theme-primary opacity-60 font-serif italic">{wordOfTheDay.romaji}</span>
+                    )}
+                  </div>
                   {wordOfTheDay.wordType && (
-                    <span className="text-[10px] uppercase border border-[#c5a059]/40 text-[#c5a059] px-2 py-0.5 rounded opacity-80 self-start sm:self-auto mt-2 sm:mt-0">{wordOfTheDay.wordType}</span>
+                    <span className="text-[10px] uppercase border border-theme-accent/40 text-theme-accent px-2 py-0.5 rounded opacity-80 self-start sm:self-auto mt-2 sm:mt-0">{wordOfTheDay.wordType}</span>
                   )}
                 </div>
-                <p className="text-sm text-[#d4d4d4] opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
+                <p className="text-sm text-theme-primary opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
                 {wordOfTheDay.example && (
-                  <div className="mt-4 border-t border-[#2a2a2a] pt-3">
-                    <p className="text-base sm:text-lg text-[#d4d4d4] opacity-90 leading-relaxed font-serif">
+                  <div className="mt-4 border-t border-theme-subtle pt-3">
+                    <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
                       {renderExampleHighlight(wordOfTheDay.example, wordOfTheDay.kanji, wordOfTheDay.reading)}
                     </p>
                     {wordOfTheDay.exampleTranslation && (
-                      <p className="text-xs text-[#d4d4d4] opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
+                      <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.exampleTranslation}</p>
                     )}
                   </div>
                 )}
               </div>
               <button 
                 onClick={() => setIsChangingWotd(!isChangingWotd)}
-                className="text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors p-2"
+                className="text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors p-2"
                 title="Thay đổi từ vựng mỗi ngày"
               >
                 {isChangingWotd ? <X className="w-5 h-5" /> : <RefreshCw className="w-5 h-5" />}
@@ -294,34 +299,35 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             </div>
 
             {isChangingWotd && (
-              <div className="mt-4 border-t border-[#2a2a2a] pt-4 animate-in fade-in slide-in-from-top-2">
+              <div className="mt-4 border-t border-theme-subtle pt-4 animate-in fade-in slide-in-from-top-2">
                 <div className="relative mb-4">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#d4d4d4]/50" />
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-theme-primary/50" />
                   <input 
                     type="text" 
                     placeholder="Tìm kiếm từ vựng..." 
                     value={wotdSearch}
                     onChange={e => setWotdSearch(e.target.value)}
-                    className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded text-sm text-white px-9 py-2 focus:outline-none focus:border-[#c5a059]/50 transition-colors placeholder:text-[#d4d4d4]/30"
+                    className="w-full bg-theme-hover border border-theme-subtle rounded text-sm text-theme-primary px-9 py-2 focus:outline-none focus:border-theme-accent/50 transition-colors placeholder:text-theme-primary/30"
                   />
                 </div>
-                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent' }}>
+                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border-subtle) transparent' }}>
                   {filteredWotdList.map(card => (
                     <button
                       key={card.id}
                       onClick={() => handleSelectNewWotd(card.id)}
-                      className={`text-left px-4 py-3 rounded border transition-all ${card.id === wordOfTheDay.id ? 'bg-[#c5a059]/10 border-[#c5a059]' : 'bg-[#1a1a1a] border-[#2a2a2a] hover:border-[#c5a059]/50'}`}
+                      className={`text-left px-4 py-3 rounded border transition-all ${card.id === wordOfTheDay.id ? 'bg-theme-accent/10 border-theme-accent' : 'bg-theme-hover border-theme-subtle hover:border-theme-accent/50'}`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-xl font-serif text-white">{card.kanji}</span>
-                        {card.reading && <span className="text-sm text-[#d4d4d4] opacity-70">{card.reading}</span>}
-                        {card.id === wordOfTheDay.id && <span className="text-[10px] text-[#c5a059] ml-auto">Đang chọn</span>}
+                        <span className="text-xl font-serif text-theme-primary">{card.kanji}</span>
+                        {card.reading && <span className="text-sm text-theme-primary opacity-70">{card.reading}</span>}
+                        {card.romaji && <span className="text-xs text-theme-primary opacity-50 font-serif italic">{card.romaji}</span>}
+                        {card.id === wordOfTheDay.id && <span className="text-[10px] text-theme-accent ml-auto">Đang chọn</span>}
                       </div>
-                      <p className="text-xs text-[#d4d4d4] opacity-60 mt-1 line-clamp-1">{card.meaning}</p>
+                      <p className="text-xs text-theme-primary opacity-60 mt-1 line-clamp-1">{card.meaning}</p>
                     </button>
                   ))}
                   {filteredWotdList.length === 0 && (
-                    <div className="text-center text-sm text-[#d4d4d4]/50 py-4">Không tìm thấy từ vựng</div>
+                    <div className="text-center text-sm text-theme-primary/50 py-4">Không tìm thấy từ vựng</div>
                   )}
                 </div>
               </div>
@@ -332,13 +338,13 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
 
       {/* Progress Indicators (Chỉ số tiến bộ) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[#121212] p-5 border border-[#2a2a2a] flex flex-col">
+        <div className="bg-theme-panel p-5 border border-theme-subtle flex flex-col">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-60">Số từ ôn hôm nay</span>
-            <Zap className="w-4 h-4 text-[#c5a059] opacity-70" />
+            <span className="text-[10px] uppercase tracking-widest text-theme-primary opacity-60">Số từ ôn hôm nay</span>
+            <Zap className="w-4 h-4 text-theme-accent opacity-70" />
           </div>
           <div className="flex items-end gap-3 mt-1">
-            <span className="text-3xl font-serif text-white">{todayStats.reviewed}</span>
+            <span className="text-3xl font-serif text-theme-primary">{todayStats.reviewed}</span>
             {reviewedDiff !== 0 && (
               <span className={`flex items-center text-[11px] uppercase tracking-widest ${reviewedDiff > 0 ? 'text-green-500' : 'text-red-500'} mb-1`}>
                 {reviewedDiff > 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
@@ -348,26 +354,26 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
           </div>
         </div>
 
-        <div className="bg-[#121212] p-5 border border-[#2a2a2a] flex flex-col">
+        <div className="bg-theme-panel p-5 border border-theme-subtle flex flex-col">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-60">Thẻ nhớ đúng hôm nay</span>
+            <span className="text-[10px] uppercase tracking-widest text-theme-primary opacity-60">Thẻ nhớ đúng hôm nay</span>
             <Target className="w-4 h-4 text-green-500 opacity-70" />
           </div>
           <div className="flex items-end gap-3 mt-1">
-            <span className="text-3xl font-serif text-white">{todayStats.correct}</span>
-            <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">
+            <span className="text-3xl font-serif text-theme-primary">{todayStats.correct}</span>
+            <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">
               / {todayStats.reviewed}
             </span>
           </div>
         </div>
 
-        <div className="bg-[#121212] p-5 border border-[#2a2a2a] flex flex-col">
+        <div className="bg-theme-panel p-5 border border-theme-subtle flex flex-col">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] uppercase tracking-widest text-[#d4d4d4] opacity-60">Tỷ lệ trả lời sai</span>
+            <span className="text-[10px] uppercase tracking-widest text-theme-primary opacity-60">Tỷ lệ trả lời sai</span>
             <Brain className="w-4 h-4 text-red-500 opacity-70" />
           </div>
           <div className="flex items-end gap-3 mt-1">
-            <span className="text-3xl font-serif text-white">{todayStats.reviewed > 0 ? 100 - correctRateToday : 0}%</span>
+            <span className="text-3xl font-serif text-theme-primary">{todayStats.reviewed > 0 ? 100 - correctRateToday : 0}%</span>
             {errorRateDiff !== 0 && todayStats.reviewed > 0 && yesterdayStats.reviewed > 0 && (
               <span className={`flex items-center text-[11px] uppercase tracking-widest ${errorRateDiff < 0 ? 'text-green-500' : 'text-red-500'} mb-1`}>
                 {errorRateDiff < 0 ? <TrendingDown className="w-3 h-3 mr-1" /> : <TrendingUp className="w-3 h-3 mr-1" />}
@@ -375,72 +381,72 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
               </span>
             )}
             {errorRateDiff === 0 && todayStats.reviewed > 0 && (
-               <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">Không đổi</span>
+               <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">Không đổi</span>
             )}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col relative overflow-hidden">
-          <BookOpen className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col relative overflow-hidden">
+          <BookOpen className="w-6 h-6 text-theme-accent mb-4 opacity-70" />
           <div className="flex items-end gap-2 mb-2">
-            <span className="text-4xl font-serif text-white">{deck.length}</span>
+            <span className="text-4xl font-serif text-theme-primary">{deck.length}</span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Tổng Số Thẻ Từ</span>
+          <span className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70">Tổng Số Thẻ Từ</span>
         </div>
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
           <Clock className="w-6 h-6 text-red-500 mb-4 opacity-70" />
           <div className="flex items-end gap-2 mb-2">
-            <span className="text-4xl font-serif text-white">{dueCards.length}</span>
-            <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">/ 150</span>
+            <span className="text-4xl font-serif text-theme-primary">{dueCards.length}</span>
+            <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">/ 150</span>
           </div>
           <span className="text-[10px] uppercase tracking-widest text-red-400 opacity-70">Cần Ôn Tập</span>
         </div>
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
           <Zap className="w-6 h-6 text-blue-500 mb-4 opacity-70" />
           <div className="flex items-end gap-2 mb-2">
-            <span className="text-4xl font-serif text-white">{todayStats.newLearned || 0}</span>
-            <span className="text-[11px] text-[#d4d4d4] opacity-40 uppercase tracking-widest mb-1">/ 15</span>
+            <span className="text-4xl font-serif text-theme-primary">{todayStats.newLearned || 0}</span>
+            <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">/ 15</span>
           </div>
           <span className="text-[10px] uppercase tracking-widest text-blue-400 opacity-70">Thẻ Mới Đã Học</span>
         </div>
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <Brain className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
-          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{matureCards}</span>
-          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Từ Đã Khắc Sâu (&gt;21 ngày)</span>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
+          <Brain className="w-6 h-6 text-theme-accent mb-4 opacity-70" />
+          <span className="text-4xl font-serif text-theme-primary mb-2" style={{ fontFamily: 'serif' }}>{matureCards}</span>
+          <span className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70">Từ Đã Khắc Sâu (&gt;21 ngày)</span>
         </div>
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <Target className="w-6 h-6 text-[#c5a059] mb-4 opacity-70" />
-          <span className="text-4xl font-serif text-white mb-2" style={{ fontFamily: 'serif' }}>{todayProgressRate}%</span>
-          <span className="text-[10px] uppercase tracking-widest text-[#c5a059] opacity-70">Tiến độ hôm nay</span>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
+          <Target className="w-6 h-6 text-theme-accent mb-4 opacity-70" />
+          <span className="text-4xl font-serif text-theme-primary mb-2" style={{ fontFamily: 'serif' }}>{todayProgressRate}%</span>
+          <span className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70">Tiến độ hôm nay</span>
         </div>
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Lịch sử ôn tập (7 ngày qua)</h3>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
+          <h3 className="text-[11px] font-sans text-theme-primary opacity-60 tracking-widest uppercase mb-8">Lịch sử ôn tập (7 ngày qua)</h3>
           <div className="h-[250px] w-full flex-1 relative">
              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={studyHistoryData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <XAxis dataKey="date" stroke="var(--border-subtle)" tick={{fill: "var(--text-muted)", fontSize: 10}} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--border-subtle)" tick={{fill: "var(--text-muted)", fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
                   <RechartsTooltip 
-                    cursor={{fill: '#1a1a1a'}}
-                    contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
-                    itemStyle={{ fontSize: '12px' }}
-                    labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
+                    cursor={{fill: "var(--bg-hover)"}}
+                    contentStyle={{ backgroundColor: "var(--bg-panel)", borderColor: "var(--border-subtle)", borderRadius: "4px" }}
+                    itemStyle={{ color: "var(--text-primary)", fontSize: "12px" }}
+                    labelStyle={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "4px" }}
                   />
-                  <Line type="monotone" dataKey="reviewed" name="Đã ôn" stroke="#4a4a4a" strokeWidth={2} dot={{ fill: '#4a4a4a', r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="reviewed" name="Đã ôn" stroke="var(--text-muted)" strokeWidth={2} dot={{ fill: "var(--text-muted)", r: 4 }} activeDot={{ r: 6 }} />
                   <Line type="monotone" dataKey="newLearned" name="Đã nhớ" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-8">Tỉ lệ loại từ trong CSDL</h3>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
+          <h3 className="text-[11px] font-sans text-theme-primary opacity-60 tracking-widest uppercase mb-8">Tỉ lệ loại từ trong CSDL</h3>
           <div className="h-[250px] w-full flex-1 relative">
             {wordTypeData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
@@ -460,8 +466,8 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
-                    itemStyle={{ color: '#d4d4d4', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: "var(--bg-panel)", borderColor: "var(--border-subtle)", borderRadius: "4px" }}
+                    itemStyle={{ color: "var(--text-primary)", fontSize: "12px" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -474,7 +480,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
               {wordTypeData.map(item => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] text-[#d4d4d4] opacity-70 tracking-widest uppercase">{item.name} ({item.value})</span>
+                  <span className="text-[10px] text-theme-primary opacity-70 tracking-widest uppercase">{item.name} ({item.value})</span>
                 </div>
               ))}
             </div>
@@ -484,21 +490,21 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
 
       {/* Forecast & Free Study Time Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Lịch trình ôn tập (7 ngày tới)</h3>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
+          <h3 className="text-[11px] font-sans text-theme-primary opacity-60 tracking-widest uppercase mb-6">Lịch trình ôn tập (7 ngày tới)</h3>
           <div className="h-[250px] w-full flex-1 mt-6 relative">
             {deck.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={forecastData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <XAxis dataKey="date" stroke="var(--border-subtle)" tick={{fill: "var(--text-muted)", fontSize: 10}} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--border-subtle)" tick={{fill: "var(--text-muted)", fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
                   <RechartsTooltip 
-                    cursor={{fill: '#1a1a1a'}}
-                    contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
+                    cursor={{fill: "var(--bg-hover)"}}
+                    contentStyle={{ backgroundColor: "var(--bg-panel)", borderColor: "var(--border-subtle)", borderRadius: "4px" }}
                     itemStyle={{ color: '#c5a059', fontSize: '12px' }}
-                    labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
+                    labelStyle={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "4px" }}
                   />
-                  <Bar dataKey="count" name="Số từ" fill="#c5a059" radius={[2, 2, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="count" name="Số từ" fill="var(--accent)" radius={[2, 2, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -507,25 +513,25 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
           </div>
         </div>
 
-        <div className="bg-[#121212] p-6 border border-[#2a2a2a] flex flex-col">
-          <h3 className="text-[11px] font-sans text-[#d4d4d4] opacity-60 tracking-widest uppercase mb-6">Thời gian học nhồi (7 ngày qua)</h3>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
+          <h3 className="text-[11px] font-sans text-theme-primary opacity-60 tracking-widest uppercase mb-6">Thời gian học nhồi (7 ngày qua)</h3>
           <div className="h-[250px] w-full flex-1 mt-6 relative">
             {studyHistoryData.some(d => d.freeStudyTimeMinutes > 0) ? (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={studyHistoryData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#2a2a2a" tick={{fill: '#d4d4d4', opacity: 0.5, fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <XAxis dataKey="date" stroke="var(--border-subtle)" tick={{fill: "var(--text-muted)", fontSize: 10}} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--border-subtle)" tick={{fill: "var(--text-muted)", fontSize: 10}} tickLine={false} axisLine={false} allowDecimals={false} />
                   <RechartsTooltip 
-                    cursor={{fill: '#1a1a1a'}}
-                    contentStyle={{ backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderRadius: '4px' }}
+                    cursor={{fill: "var(--bg-hover)"}}
+                    contentStyle={{ backgroundColor: "var(--bg-panel)", borderColor: "var(--border-subtle)", borderRadius: "4px" }}
                     itemStyle={{ color: '#4a90e2', fontSize: '12px' }}
-                    labelStyle={{ color: '#d4d4d4', fontSize: '12px', marginBottom: '4px' }}
+                    labelStyle={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "4px" }}
                   />
                   <Bar dataKey="freeStudyTimeMinutes" name="Phút" fill="#4a90e2" radius={[2, 2, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-               <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest text-[#d4d4d4] text-center px-4">
+               <div className="absolute inset-0 flex items-center justify-center text-xs opacity-40 uppercase tracking-widest text-theme-primary text-center px-4">
                  Bạn chưa học nhồi trong 7 ngày qua.
                </div>
             )}
@@ -533,8 +539,8 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
         </div>
       </div>
 
-      <div className="bg-[#0a0a0a] border border-[#2a2a2a] p-8 sm:p-14 text-center relative overflow-hidden mt-2">
-        <h2 className="text-2xl sm:text-3xl font-serif mb-4 relative z-10 text-[#c5a059] tracking-widest uppercase">
+      <div className="bg-theme-base border border-theme-subtle p-8 sm:p-14 text-center relative overflow-hidden mt-2">
+        <h2 className="text-2xl sm:text-3xl font-serif mb-4 relative z-10 text-theme-accent tracking-widest uppercase">
           {isDue ? `Cần thực hiện: Ôn ${dueCards.length} từ` : "Tuyệt vời, chưa có từ nào cần ôn"}
         </h2>
         
@@ -548,15 +554,15 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
 
         {!isDue && leftoverNewCards > 0 && (
           <div className="mb-10 w-full flex justify-center">
-             <div className="bg-[#1a1a1a] border border-[#2a2a2a] inline-flex items-center gap-2 px-4 py-2 opacity-80">
-               <span className="w-2 h-2 rounded-full bg-[#c5a059]"></span>
-               <span className="text-xs uppercase tracking-widest text-[#d4d4d4]">Hiện đang còn <strong className="text-[#c5a059]">{leftoverNewCards} từ mới</strong> chờ bạn khám phá vào ngày mai!</span>
+             <div className="bg-theme-hover border border-theme-subtle inline-flex items-center gap-2 px-4 py-2 opacity-80">
+               <span className="w-2 h-2 rounded-full bg-theme-accent"></span>
+               <span className="text-xs uppercase tracking-widest text-theme-primary">Hiện đang còn <strong className="text-theme-accent">{leftoverNewCards} từ mới</strong> chờ bạn khám phá vào ngày mai!</span>
              </div>
           </div>
         )}
         
         {isDue && leftoverNewCards > 0 && (
-           <div className="mb-8 opacity-60 text-xs uppercase tracking-widest text-[#c5a059]">
+           <div className="mb-8 opacity-60 text-xs uppercase tracking-widest text-theme-accent">
               Còn {leftoverNewCards} từ mới đang đợi được học vào ngày mai do đã đạt giới hạn học từ mới hôm nay.
            </div>
         )}
@@ -565,14 +571,14 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
           <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
             <button 
               onClick={onStartReview}
-              className="border border-[#c5a059] text-[#c5a059] bg-[#121212] hover:bg-[#c5a059] hover:text-black font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              className="border border-theme-accent text-theme-accent bg-theme-panel hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
             >
                Bắt đầu phiên ôn tập
             </button>
             {onStartShortStudy && deck.length > 0 && (
               <button 
                 onClick={onStartShortStudy}
-                className="border border-[#2a2a2a] text-[#c5a059] bg-[#121212] hover:border-[#c5a059] hover:bg-[#1a1a1a] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-hover font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Học ngắn (5 từ hay quên)
               </button>
@@ -580,7 +586,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {onStartFreeStudy && (
               <button 
                 onClick={onStartFreeStudy}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn tập tự do (Học nhồi)
               </button>
@@ -588,7 +594,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {onStartDifficultReview && deck.length > 0 && (
               <button 
                 onClick={onStartDifficultReview}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn các từ hay quên
               </button>
@@ -596,7 +602,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {onStartSentenceReview && (
               <button 
                 onClick={() => onStartSentenceReview('JA_TO_VI')}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn câu (Nhật → Việt)
               </button>
@@ -604,7 +610,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {onStartSentenceReview && (
               <button 
                 onClick={() => onStartSentenceReview('VI_TO_JA')}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn câu (Việt → Nhật)
               </button>
@@ -614,14 +620,14 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
           <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
             <button 
               onClick={onNavigateAdd}
-              className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
             >
                Thêm từ vựng mới
             </button>
             {deck.length > 0 && onStartShortStudy && (
                <button 
                  onClick={onStartShortStudy}
-                 className="border border-[#2a2a2a] text-[#c5a059] bg-[#121212] hover:border-[#c5a059] hover:bg-[#1a1a1a] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                 className="border border-theme-subtle text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-hover font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
                >
                   Học ngắn (5 từ hay quên)
                </button>
@@ -629,7 +635,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {deck.length > 0 && onStartFreeStudy && (
                <button 
                  onClick={onStartFreeStudy}
-                 className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                 className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
                >
                   Ôn tập tự do (Học nhồi)
                </button>
@@ -637,7 +643,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {deck.length > 0 && onStartDifficultReview && (
               <button 
                 onClick={onStartDifficultReview}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn các từ hay quên
               </button>
@@ -645,7 +651,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {onStartSentenceReview && (
               <button 
                 onClick={() => onStartSentenceReview('JA_TO_VI')}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn câu (Nhật → Việt)
               </button>
@@ -653,7 +659,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
             {onStartSentenceReview && (
               <button 
                 onClick={() => onStartSentenceReview('VI_TO_JA')}
-                className="border border-[#2a2a2a] text-[#d4d4d4] bg-[#121212] hover:border-[#c5a059] hover:text-[#c5a059] font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                   Ôn câu (Việt → Nhật)
               </button>

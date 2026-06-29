@@ -98,20 +98,20 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
   if (currentIndex >= reviewQueue.length) {
     return (
-      <div className="fixed inset-0 bg-[#0c0c0c]/95 flex flex-col items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-theme-base-alt/95 flex flex-col items-center justify-center z-50 p-4">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-[#121212] border border-[#2a2a2a] p-12 text-center max-w-md w-full shadow-2xl"
+          className="bg-theme-panel border border-theme-subtle p-12 text-center max-w-md w-full shadow-2xl"
         >
-          <div className="w-16 h-16 border border-[#c5a059] text-[#c5a059] flex items-center justify-center mx-auto mb-8 bg-[#1a1a1a]">
+          <div className="w-16 h-16 border border-theme-accent text-theme-accent flex items-center justify-center mx-auto mb-8 bg-theme-hover">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h2 className="text-2xl font-serif text-[#c5a059] mb-4 tracking-widest uppercase">Hoàn Tất Phiên Học</h2>
-          <p className="text-[#d4d4d4] opacity-50 mb-10 text-sm leading-relaxed tracking-wide">Tuyệt vời. Bạn đã hoàn thành tất cả các từ cần ôn cho hôm nay. Sự kiên trì sẽ tạo nên sự thành thạo.</p>
+          <h2 className="text-2xl font-serif text-theme-accent mb-4 tracking-widest uppercase">Hoàn Tất Phiên Học</h2>
+          <p className="text-theme-primary opacity-50 mb-10 text-sm leading-relaxed tracking-wide">Tuyệt vời. Bạn đã hoàn thành tất cả các từ cần ôn cho hôm nay. Sự kiên trì sẽ tạo nên sự thành thạo.</p>
           <button 
             onClick={onClose}
-            className="w-full bg-[#1a1a1a] border border-[#c5a059] hover:bg-[#c5a059] hover:text-black text-[#c5a059] font-medium py-4 uppercase tracking-[0.2em] text-[11px] transition-colors"
+            className="w-full bg-theme-hover border border-theme-accent hover:bg-theme-accent hover:text-theme-inverted text-theme-accent font-medium py-4 uppercase tracking-[0.2em] text-[11px] transition-colors"
           >
             Trở lại trang chủ
           </button>
@@ -232,7 +232,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
           “{parts.map((p, i) => (
             <Fragment key={i}>
               {p}
-              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold">{targetKanji}</span>}
+              {i < parts.length - 1 && <span className="text-theme-accent font-bold">{targetKanji}</span>}
             </Fragment>
           ))}”
         </Fragment>
@@ -256,7 +256,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
             “{parts.map((p, i) => (
               <Fragment key={i}>
                 {p}
-                {i < parts.length - 1 && <span className="text-[#c5a059] font-bold">{targetStem}</span>}
+                {i < parts.length - 1 && <span className="text-theme-accent font-bold">{targetStem}</span>}
               </Fragment>
             ))}”
           </Fragment>
@@ -272,7 +272,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
           “{parts.map((p, i) => (
             <Fragment key={i}>
               {p}
-              {i < parts.length - 1 && <span className="text-[#c5a059] font-bold">{targetReading}</span>}
+              {i < parts.length - 1 && <span className="text-theme-accent font-bold">{targetReading}</span>}
             </Fragment>
           ))}”
         </Fragment>
@@ -288,10 +288,10 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   const currentCardProgress = successCounts[currentCard?.id] || 0;
 
   return (
-    <div className="fixed inset-0 bg-[#0c0c0c] flex flex-col items-center justify-center z-50 p-4 font-sans text-[#d4d4d4]">
+    <div className="fixed inset-0 bg-theme-base-alt flex flex-col items-center justify-center z-50 p-4 font-sans text-theme-primary">
       {isFreeStudy && (
-        <div className="absolute top-0 left-0 w-full h-1 bg-[#1a1a1a]">
-          <div className="h-full bg-[#c5a059] transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-theme-hover">
+          <div className="h-full bg-theme-accent transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}></div>
         </div>
       )}
 
@@ -306,7 +306,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
       <button 
         onClick={onClose}
-        className="absolute top-6 right-6 p-2 text-[#d4d4d4] opacity-50 hover:opacity-100 transition-opacity"
+        className="absolute top-6 right-6 p-2 text-theme-primary opacity-50 hover:opacity-100 transition-opacity"
       >
         <X className="w-8 h-8 font-light" strokeWidth={1} />
       </button>
@@ -314,11 +314,11 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
       <div className="w-full max-w-2xl flex flex-col items-center">
         <div className="mb-6 w-full flex justify-between items-center opacity-50">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-[#c5a059]">Phiên học hiện tại</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-theme-accent">Phiên học hiện tại</span>
             {isFreeStudy && (
               <div className="flex gap-1.5 opacity-80">
                 {[0, 1, 2].map(i => (
-                  <div key={i} className={`w-1.5 h-1.5 bg-[#c5a059] transform rotate-45 ${i < currentCardProgress ? 'opacity-100' : 'opacity-20'}`} />
+                  <div key={i} className={`w-1.5 h-1.5 bg-theme-accent transform rotate-45 ${i < currentCardProgress ? 'opacity-100' : 'opacity-20'}`} />
                 ))}
               </div>
             )}
@@ -329,7 +329,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         </div>
 
         <div 
-          className={`w-full aspect-[4/3] bg-[#121212] border border-[#2a2a2a] relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 ${(!showAnswer && isFreeStudy && exerciseType !== 'flip') ? '' : 'cursor-pointer'}`}
+          className={`w-full aspect-[4/3] bg-theme-panel border border-theme-subtle relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 ${(!showAnswer && isFreeStudy && exerciseType !== 'flip') ? '' : 'cursor-pointer'}`}
           style={{ perspective: 1000 }}
           onClick={() => !showAnswer && !(isFreeStudy && exerciseType !== 'flip') && setShowAnswer(true)}
         >
@@ -341,23 +341,23 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
           >
             {/* Front */}
             <div 
-              className={`absolute inset-0 flex flex-col bg-[#121212] overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              className={`absolute inset-0 flex flex-col bg-theme-panel overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden' }}
             >
               <div className="flex-1 shrink-0"></div>
               <div className="flex flex-col gap-4 items-center w-full py-4 shrink-0">
                 <div className="flex flex-col items-center gap-6">
-                  <h1 className="text-6xl sm:text-[140px] font-serif text-white leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
+                  <h1 className="text-6xl sm:text-[140px] font-serif text-theme-primary leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
                   <button 
                     onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
-                    className="p-3 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
+                    className="p-3 text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors rounded-full transition-transform active:scale-95"
                     title="Phát âm"
                   >
                     <Volume2 className="w-8 h-8 sm:w-10 sm:h-10 font-light" strokeWidth={1.5} />
                   </button>
                 </div>
                 {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
-                  <div className="text-[#c5a059] opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
+                  <div className="text-theme-accent opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
                     {exerciseType === 'mcq_meaning' ? 'Chọn Ý Nghĩa' : 'Chọn/Nhập Cách Đọc'}
                   </div>
                 )}
@@ -367,17 +367,17 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
             {/* Back */}
             <div 
-              className={`absolute inset-0 flex flex-col bg-[#121212] ${!showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              className={`absolute inset-0 flex flex-col bg-theme-panel ${!showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
               style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
             >
               <div className="absolute inset-0 overflow-y-auto flex flex-col p-6 pb-12 sm:p-8">
                 <div className="flex-1 shrink-0"></div>
                 <div className="flex flex-col items-center space-y-4 sm:space-y-6 w-full py-4 shrink-0">
                   <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
-                    <h2 className="text-4xl sm:text-6xl font-serif text-white opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
+                    <h2 className="text-4xl sm:text-6xl font-serif text-theme-primary opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
                   <button 
                     onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
-                    className="p-2 text-[#d4d4d4] opacity-50 hover:opacity-100 hover:text-[#c5a059] transition-colors rounded-full transition-transform active:scale-95"
+                    className="p-2 text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors rounded-full transition-transform active:scale-95"
                     title="Phát âm"
                   >
                     <Volume2 className="w-6 h-6 sm:w-8 sm:h-8 font-light" strokeWidth={1.5} />
@@ -385,29 +385,29 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 </div>
                 <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
                   <div className="flex justify-end flex-1 flex-col items-end gap-1">
-                    <p className="text-xl sm:text-3xl font-serif text-[#c5a059] italic tracking-wide text-right">{currentCard.reading}</p>
+                    <p className="text-xl sm:text-3xl font-serif text-theme-accent italic tracking-wide text-right">{currentCard.reading}</p>
                     {currentCard.romaji && (
-                      <p className="text-sm text-[#d4d4d4] opacity-50 italic text-right">{currentCard.romaji}</p>
+                      <p className="text-sm text-theme-primary opacity-50 italic text-right">{currentCard.romaji}</p>
                     )}
                   </div>
                   {currentCard.sinoVietnamese && (
                     <>
-                      <div className="w-px h-8 sm:h-12 bg-[#2a2a2a] flex-shrink-0"></div>
+                      <div className="w-px h-8 sm:h-12 bg-theme-active flex-shrink-0"></div>
                       <div className="flex justify-start flex-1">
-                        <p className="text-xl sm:text-3xl font-serif text-[#c5a059] uppercase tracking-widest">{currentCard.sinoVietnamese}</p>
+                        <p className="text-xl sm:text-3xl font-serif text-theme-accent uppercase tracking-widest">{currentCard.sinoVietnamese}</p>
                       </div>
                     </>
                   )}
                 </div>
 
                 {currentCard.wordType && (
-                  <div className="text-[10px] sm:text-xs text-[#d4d4d4] opacity-50 bg-[#1a1a1a] px-3 py-1 rounded-sm border border-[#2a2a2a] uppercase tracking-widest mt-2">{currentCard.wordType}</div>
+                  <div className="text-[10px] sm:text-xs text-theme-primary opacity-50 bg-theme-hover px-3 py-1 rounded-sm border border-theme-subtle uppercase tracking-widest mt-2">{currentCard.wordType}</div>
                 )}
 
-                <div className="w-16 h-px bg-[#2a2a2a] mx-auto my-2 sm:my-4 flex-shrink-0"></div>
-                <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-white leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
+                <div className="w-16 h-px bg-theme-active mx-auto my-2 sm:my-4 flex-shrink-0"></div>
+                <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-theme-primary leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
                 {currentCard.kanjiExplanation && (
-                  <div className="mt-4 px-6 py-4 bg-[#1a1a1a]/50 border border-[#2a2a2a] rounded text-sm sm:text-base text-[#d4d4d4] font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap">
+                  <div className="mt-4 px-6 py-4 bg-theme-hover/50 border border-theme-subtle rounded text-sm sm:text-base text-theme-primary font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap">
                     {currentCard.kanjiExplanation}
                   </div>
                 )}
@@ -415,13 +415,13 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   <div className="mt-4 flex flex-col items-center gap-1">
                     {currentCard.example && (
                       <div className="w-full">
-                        <p className="text-xl sm:text-2xl text-[#d4d4d4] opacity-90 text-center leading-relaxed font-serif px-4">
+                        <p className="text-xl sm:text-2xl text-theme-primary opacity-90 text-center leading-relaxed font-serif px-4">
                           {renderExampleWithHighlight(currentCard.example, currentCard.kanji, currentCard.reading)}
                         </p>
                       </div>
                     )}
                     {currentCard.exampleTranslation && (
-                      <p className="text-sm sm:text-base text-[#c5a059] opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic mt-2">
+                      <p className="text-sm sm:text-base text-theme-accent opacity-70 text-center max-w-md px-4 leading-relaxed font-light italic mt-2">
                         {currentCard.exampleTranslation}
                       </p>
                     )}
@@ -450,12 +450,12 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                       onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
                       placeholder="Nhập Hiragana..."
-                      className={`flex-1 bg-[#1a1a1a] border ${inputError ? 'border-red-500' : 'border-[#c5a059]/30 focus:border-[#c5a059]'} text-[#d4d4d4] px-4 py-2 focus:outline-none placeholder:opacity-40 text-center text-lg`}
+                      className={`flex-1 bg-theme-hover border ${inputError ? 'border-red-500' : 'border-theme-accent/30 focus:border-theme-accent'} text-theme-primary px-4 py-2 focus:outline-none placeholder:opacity-40 text-center text-lg`}
                       autoFocus
                     />
                     <button 
                       onClick={handleCheckReading}
-                      className="bg-[#c5a059] text-black px-6 uppercase tracking-widest font-medium hover:bg-[#d6af6a] transition-colors text-[11px]"
+                      className="bg-theme-accent text-theme-inverted px-6 uppercase tracking-widest font-medium hover:bg-theme-accent-light transition-colors text-[11px]"
                     >
                       Kiểm tra
                     </button>
@@ -465,7 +465,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                       <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
                       <button 
                         onClick={() => setShowAnswer(true)}
-                        className="text-[#c5a059] opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
+                        className="text-theme-accent opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
                       >
                         Quên (Xem đáp án)
                       </button>
@@ -485,7 +485,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                         <button 
                           key={i}
                           onClick={() => handleMcqSelect(opt)}
-                          className={`bg-[#1a1a1a] border ${isWrong ? 'border-red-500 bg-red-500/10 text-red-100' : 'border-[#2a2a2a]'} hover:border-[#c5a059] text-[15px] sm:text-sm text-[#d4d4d4] py-4 sm:py-3 px-4 text-center transition-colors tracking-wide`}
+                          className={`bg-theme-hover border ${isWrong ? 'border-red-500 bg-red-500/10 text-red-100' : 'border-theme-subtle'} hover:border-theme-accent text-[15px] sm:text-sm text-theme-primary py-4 sm:py-3 px-4 text-center transition-colors tracking-wide`}
                         >
                           {opt}
                         </button>
@@ -497,7 +497,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                       <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
                       <button 
                         onClick={() => setShowAnswer(true)}
-                        className="text-[#c5a059] opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
+                        className="text-theme-accent opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
                       >
                         Quên (Xem đáp án)
                       </button>
@@ -510,7 +510,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 onClick={() => setShowAnswer(true)}
-                className="w-full bg-[#1a1a1a] border border-[#c5a059] hover:bg-[#c5a059] hover:text-black py-5 uppercase tracking-[0.2em] text-[#c5a059] text-[11px] transition-colors"
+                className="w-full bg-theme-hover border border-theme-accent hover:bg-theme-accent hover:text-theme-inverted py-5 uppercase tracking-[0.2em] text-theme-accent text-[11px] transition-colors"
               >
                 Xem đáp án
               </motion.button>
@@ -523,7 +523,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
             >
               <button 
                 onClick={handleFreeStudyForgot}
-                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-red-900/30 hover:border-red-500 group transition-all"
+                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-red-900/30 hover:border-red-500 group transition-all"
               >
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Cần ôn lại</span>
                 <span className="text-xs sm:text-sm text-red-500 font-serif italic">Quên</span>
@@ -531,7 +531,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
               {!(inputError && exerciseType !== 'flip') && (
                 <button 
                   onClick={handleFreeStudyRemember}
-                  className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
+                  className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-subtle hover:border-green-500 group transition-all"
                 >
                   <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Hoàn thành</span>
                   <span className="text-xs sm:text-sm text-green-500 font-serif italic">Đã nhớ</span>
@@ -546,28 +546,28 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
             >
               <button 
                 onClick={() => handleGrade('forgot')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-red-900/30 hover:border-red-500 group transition-all"
+                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-red-900/30 hover:border-red-500 group transition-all"
               >
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Chưa Nhớ</span>
                 <span className="text-xs sm:text-sm text-red-500 font-serif italic">Lặp lại</span>
               </button>
               <button 
                 onClick={() => handleGrade('hard')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-orange-400 group transition-all"
+                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-subtle hover:border-orange-400 group transition-all"
               >
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-orange-400 mb-1">Mơ Hồ</span>
                 <span className="text-xs sm:text-sm text-orange-400 font-serif italic">Khó</span>
               </button>
               <button 
                 onClick={() => handleGrade('good')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#2a2a2a] hover:border-green-500 group transition-all"
+                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-subtle hover:border-green-500 group transition-all"
               >
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Đã Nhớ</span>
                 <span className="text-xs sm:text-sm text-green-500 font-serif italic">Tốt</span>
               </button>
               <button 
                 onClick={() => handleGrade('easy')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-[#1a1a1a] border border-[#c5a059]/20 hover:border-[#c5a059] group transition-all"
+                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-accent/20 hover:border-theme-accent group transition-all"
               >
                 <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-blue-400 mb-1">Rất Dễ</span>
                 <span className="text-xs sm:text-sm text-blue-400 font-serif italic">Dễ</span>
