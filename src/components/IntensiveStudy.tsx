@@ -1,10 +1,31 @@
-import React, { useState, Fragment } from 'react';
-import Fuse from 'fuse.js';
-import { IntensiveWord, IntensiveExample, WordCategory, KanjiCard } from '../types';
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Eye, EyeOff, GripVertical } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { renderExampleHighlight as baseRenderExampleHighlight } from '../utils/highlight';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import React, { useState, Fragment } from "react";
+import Fuse from "fuse.js";
+import {
+  IntensiveWord,
+  IntensiveExample,
+  WordCategory,
+  KanjiCard,
+} from "../types";
+import {
+  PlusCircle,
+  Search,
+  Trash2,
+  ArrowLeft,
+  Plus,
+  Edit2,
+  Eye,
+  EyeOff,
+  GripVertical,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
+import { formatCreatedAt } from "../lib/dateUtils";
 
 interface IntensiveStudyProps {
   deck: IntensiveWord[];
@@ -15,40 +36,56 @@ interface IntensiveStudyProps {
 }
 
 const CATEGORIES: WordCategory[] = [
-  'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III',
-  'Tính từ đuôi-i', 'Tính từ đuôi-na', 'Ngữ pháp', 'Khác'
+  "Danh từ",
+  "Động từ nhóm I",
+  "Động từ nhóm II",
+  "Động từ nhóm III",
+  "Tính từ đuôi-i",
+  "Tính từ đuôi-na",
+  "Ngữ pháp",
+  "Khác",
 ];
 
-export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord, onUpdateWord }: IntensiveStudyProps) {
-  const [viewState, setViewState] = useState<'list' | 'add' | 'study'>('list');
+export default function IntensiveStudy({
+  deck,
+  mainDeck,
+  onAddWord,
+  onRemoveWord,
+  onUpdateWord,
+}: IntensiveStudyProps) {
+  const [viewState, setViewState] = useState<"list" | "add" | "study">("list");
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Add Form State
   const [newWordData, setNewWordData] = useState({
-    word: '',
-    reading: '',
-    romaji: '',
-    category: 'Danh từ' as WordCategory,
-    explanation: ''
+    word: "",
+    reading: "",
+    romaji: "",
+    category: "Danh từ" as WordCategory,
+    explanation: "",
   });
 
-  const selectedWord = deck.find(w => w.id === selectedWordId);
+  const selectedWord = deck.find((w) => w.id === selectedWordId);
 
-  const fuse = React.useMemo(() => new Fuse(deck, {
-    keys: [
-      'word',
-      'reading',
-      'examples.sentence',
-      'examples.translation',
-      'examples.reading'
-    ],
-    threshold: 0.4,
-    ignoreLocation: true
-  }), [deck]);
+  const fuse = React.useMemo(
+    () =>
+      new Fuse(deck, {
+        keys: [
+          "word",
+          "reading",
+          "examples.sentence",
+          "examples.translation",
+          "examples.reading",
+        ],
+        threshold: 0.4,
+        ignoreLocation: true,
+      }),
+    [deck],
+  );
 
-  const filteredDeck = searchQuery.trim() 
-    ? fuse.search(searchQuery).map(result => result.item)
+  const filteredDeck = searchQuery.trim()
+    ? fuse.search(searchQuery).map((result) => result.item)
     : deck;
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -63,12 +100,18 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
       category: newWordData.category,
       explanation: newWordData.explanation.trim(),
       examples: [],
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     onAddWord(newWord);
-    setViewState('list');
-    setNewWordData({ word: '', reading: '', romaji: '', category: 'Danh từ', explanation: '' });
+    setViewState("list");
+    setNewWordData({
+      word: "",
+      reading: "",
+      romaji: "",
+      category: "Danh từ",
+      explanation: "",
+    });
   };
 
   const renderExampleHighlight = (example: string, targetWord: string) => {
@@ -79,50 +122,69 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
     );
   };
 
-  if (viewState === 'add') {
+  if (viewState === "add") {
     return (
       <div className="max-w-3xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
-        <button 
-          onClick={() => setViewState('list')}
+        <button
+          onClick={() => setViewState("list")}
           className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium tracking-wider uppercase">Quay lại</span>
+          <span className="text-sm font-medium tracking-wider uppercase">
+            Quay lại
+          </span>
         </button>
 
         <div className="bg-theme-hover p-6 sm:p-8 rounded-lg border border-theme-subtle shadow-xl">
-          <h2 className="text-xl font-serif text-theme-accent mb-6 tracking-widest text-center sm:text-left">THÊM TỪ VỰNG CHUYÊN SÂU</h2>
-          
+          <h2 className="text-xl font-serif text-theme-accent mb-6 tracking-widest text-center sm:text-left">
+            THÊM TỪ VỰNG CHUYÊN SÂU
+          </h2>
+
           <form onSubmit={handleAddSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col sm:flex-row gap-5">
               <div className="flex-1 space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Từ vựng (Kanji) *</label>
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Từ vựng (Kanji) *
+                </label>
                 <input
                   required
                   type="text"
                   value={newWordData.word}
-                  onChange={e => setNewWordData({...newWordData, word: e.target.value})}
+                  onChange={(e) =>
+                    setNewWordData({ ...newWordData, word: e.target.value })
+                  }
                   className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
                   placeholder="e.g. 情報"
                 />
               </div>
               <div className="flex-1 flex flex-col sm:flex-row gap-5">
                 <div className="flex-1 space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Cách đọc (Hiragana)</label>
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Cách đọc (Hiragana)
+                  </label>
                   <input
                     type="text"
                     value={newWordData.reading}
-                    onChange={e => setNewWordData({...newWordData, reading: e.target.value})}
+                    onChange={(e) =>
+                      setNewWordData({
+                        ...newWordData,
+                        reading: e.target.value,
+                      })
+                    }
                     className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                     placeholder="e.g. じょうほう"
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Phiên âm Romaji
+                  </label>
                   <input
                     type="text"
                     value={newWordData.romaji}
-                    onChange={e => setNewWordData({...newWordData, romaji: e.target.value})}
+                    onChange={(e) =>
+                      setNewWordData({ ...newWordData, romaji: e.target.value })
+                    }
                     className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                     placeholder="e.g. jōhō"
                   />
@@ -131,25 +193,46 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Tính chất</label>
+              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                Tính chất
+              </label>
               <select
                 value={newWordData.category}
-                onChange={e => setNewWordData({...newWordData, category: e.target.value as WordCategory})}
+                onChange={(e) =>
+                  setNewWordData({
+                    ...newWordData,
+                    category: e.target.value as WordCategory,
+                  })
+                }
                 className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent appearance-none"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4d4d4' opacity='0.6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.2em' }}
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4d4d4' opacity='0.6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 1rem center",
+                  backgroundSize: "1.2em",
+                }}
               >
-                {CATEGORIES.map(c => (
-                  <option key={c} value={c}>{c}</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Giải thích</label>
+              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                Giải thích
+              </label>
               <textarea
                 rows={3}
                 value={newWordData.explanation}
-                onChange={e => setNewWordData({...newWordData, explanation: e.target.value})}
+                onChange={(e) =>
+                  setNewWordData({
+                    ...newWordData,
+                    explanation: e.target.value,
+                  })
+                }
                 className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                 placeholder="e.g. Đây là từ ít xuất hiện, thường dùng trong ngữ cảnh..."
               />
@@ -168,11 +251,11 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
     );
   }
 
-  if (viewState === 'study' && selectedWord) {
+  if (viewState === "study" && selectedWord) {
     return (
-      <StudyView 
-        word={selectedWord} 
-        onBack={() => setViewState('list')} 
+      <StudyView
+        word={selectedWord}
+        onBack={() => setViewState("list")}
         onUpdateWord={onUpdateWord}
         renderHighlight={renderExampleHighlight}
       />
@@ -182,10 +265,12 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h2 className="text-2xl font-serif text-theme-primary tracking-wider">ÔN CHUYÊN TỪ VỰNG</h2>
+        <h2 className="text-2xl font-serif text-theme-primary tracking-wider">
+          ÔN CHUYÊN TỪ VỰNG
+        </h2>
         <div className="flex gap-3">
           <button
-            onClick={() => setViewState('add')}
+            onClick={() => setViewState("add")}
             className="bg-theme-hover hover:bg-theme-active text-theme-accent border border-theme-subtle px-4 py-2 rounded flex items-center gap-2 transition-all font-medium uppercase tracking-wider text-xs sm:text-sm"
           >
             <PlusCircle className="w-4 h-4" />
@@ -201,7 +286,7 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
             type="text"
             placeholder="Tìm kiếm chuyên đề, câu ví dụ..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-theme-panel border border-theme-subtle rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-theme-accent transition-colors"
           />
         </div>
@@ -209,12 +294,14 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
 
       {deck.length === 0 ? (
         <div className="text-center py-20 bg-theme-panel border border-theme-subtle rounded-lg mt-8">
-          <p className="text-theme-primary/60 font-medium mb-4">Bạn chưa tạo chuyên đề từ vựng nào.</p>
+          <p className="text-theme-primary/60 font-medium mb-4">
+            Bạn chưa tạo chuyên đề từ vựng nào.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <AnimatePresence>
-            {filteredDeck.map(word => (
+            {filteredDeck.map((word) => (
               <motion.div
                 key={word.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -223,14 +310,16 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
                 className="bg-theme-hover border border-theme-subtle rounded p-6 hover:border-theme-accent/50 transition-all cursor-pointer flex flex-col items-center sm:items-start text-center sm:text-left relative group"
                 onClick={() => {
                   setSelectedWordId(word.id);
-                  setViewState('study');
+                  setViewState("study");
                 }}
               >
                 <button
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")) {
-                      onRemoveWord(word.id); 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (
+                      window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
+                    ) {
+                      onRemoveWord(word.id);
                     }
                   }}
                   className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel"
@@ -238,22 +327,45 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <div className="text-4xl font-serif text-theme-primary mb-2">{word.word}</div>
-                {word.reading && <div className="text-theme-accent opacity-90 font-medium mb-1">{word.reading}</div>}
-                <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3">{word.category}</div>
+                <div className="text-4xl font-serif text-theme-primary mb-2">
+                  {word.word}
+                </div>
+                {word.reading && (
+                  <div className="text-theme-accent opacity-90 font-medium mb-1">
+                    {word.reading}
+                  </div>
+                )}
+                <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3">
+                  {word.category}
+                </div>
                 <div className="text-xs text-theme-primary/60 line-clamp-2 italic">
                   {word.explanation || "Không có giải thích"}
                 </div>
                 <div className="mt-4 pt-3 border-t border-theme-subtle w-full flex flex-col gap-2 text-xs text-theme-primary/40">
                   <div className="flex justify-between items-center w-full">
                     <span>{word.examples.length} câu ví dụ</span>
+                    {formatCreatedAt(word.createdAt) && (
+                      <span className="flex items-center gap-1">
+                        <span>{formatCreatedAt(word.createdAt)?.dateStr}</span>
+                        <span className="bg-theme-accent/10 text-theme-accent px-1.5 py-0.5 rounded text-[10px] font-medium border border-theme-accent/20">
+                          {formatCreatedAt(word.createdAt)?.daysStr}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex justify-end items-center w-full mt-1">
                     <span className="text-theme-accent">Học ngay &rarr;</span>
                   </div>
                   {word.examples.length > 0 && (
-                    <div className="w-full bg-theme-panel h-1.5 rounded-full overflow-hidden flex" title={`${word.examples.filter(ex => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length} / ${word.examples.length} câu đã nhớ`}>
-                      <div 
+                    <div
+                      className="w-full bg-theme-panel h-1.5 rounded-full overflow-hidden flex"
+                      title={`${word.examples.filter((ex) => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length} / ${word.examples.length} câu đã nhớ`}
+                    >
+                      <div
                         className="bg-green-500 h-full transition-all duration-500"
-                        style={{ width: `${(word.examples.filter(ex => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length / word.examples.length) * 100}%` }}
+                        style={{
+                          width: `${(word.examples.filter((ex) => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length / word.examples.length) * 100}%`,
+                        }}
                       />
                     </div>
                   )}
@@ -267,59 +379,65 @@ export default function IntensiveStudy({ deck, mainDeck, onAddWord, onRemoveWord
   );
 }
 
-function StudyView({ word, onBack, onUpdateWord, renderHighlight }: { 
-  word: IntensiveWord, 
-  onBack: () => void,
-  onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void,
-  renderHighlight: (text: string, kanji: string) => React.ReactNode
+function StudyView({
+  word,
+  onBack,
+  onUpdateWord,
+  renderHighlight,
+}: {
+  word: IntensiveWord;
+  onBack: () => void;
+  onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
+  renderHighlight: (text: string, kanji: string) => React.ReactNode;
 }) {
-
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
-  const [newSentence, setNewSentence] = useState('');
-  const [newReading, setNewReading] = useState('');
-  const [newRomaji, setNewRomaji] = useState('');
-  const [newTranslation, setNewTranslation] = useState('');
+  const [newSentence, setNewSentence] = useState("");
+  const [newReading, setNewReading] = useState("");
+  const [newRomaji, setNewRomaji] = useState("");
+  const [newTranslation, setNewTranslation] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
     word: word.word,
     reading: word.reading,
-    romaji: word.romaji || '',
+    romaji: word.romaji || "",
     category: word.category as WordCategory,
-    explanation: word.explanation
+    explanation: word.explanation,
   });
 
   const [hiddenMeaningIds, setHiddenMeaningIds] = useState<string[]>([]);
-  const isAllHidden = word.examples.length > 0 && hiddenMeaningIds.length === word.examples.length;
-  
+  const isAllHidden =
+    word.examples.length > 0 &&
+    hiddenMeaningIds.length === word.examples.length;
+
   const toggleAllMeanings = () => {
     if (isAllHidden) {
       setHiddenMeaningIds([]);
     } else {
-      setHiddenMeaningIds(word.examples.map(ex => ex.id));
+      setHiddenMeaningIds(word.examples.map((ex) => ex.id));
     }
   };
 
   const toggleMeaning = (id: string) => {
-    setHiddenMeaningIds(prev => 
-      prev.includes(id) ? prev.filter(hid => hid !== id) : [...prev, id]
+    setHiddenMeaningIds((prev) =>
+      prev.includes(id) ? prev.filter((hid) => hid !== id) : [...prev, id],
     );
   };
 
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleData, setEditExampleData] = useState({
-    sentence: '',
-    reading: '',
-    romaji: '',
-    translation: ''
+    sentence: "",
+    reading: "",
+    romaji: "",
+    translation: "",
   });
 
   const handleStartEditExample = (ex: IntensiveExample) => {
     setEditingExampleId(ex.id);
     setEditExampleData({
       sentence: ex.sentence,
-      reading: ex.reading || '',
-      romaji: ex.romaji || '',
-      translation: ex.translation || ''
+      reading: ex.reading || "",
+      romaji: ex.romaji || "",
+      translation: ex.translation || "",
     });
   };
 
@@ -331,9 +449,11 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     e.preventDefault();
     if (!editExampleData.sentence.trim() || !editingExampleId) return;
 
-    const isDuplicate = word.examples.some(ex => 
-      ex.id !== editingExampleId && 
-      ex.sentence.trim().toLowerCase() === editExampleData.sentence.trim().toLowerCase()
+    const isDuplicate = word.examples.some(
+      (ex) =>
+        ex.id !== editingExampleId &&
+        ex.sentence.trim().toLowerCase() ===
+          editExampleData.sentence.trim().toLowerCase(),
     );
 
     if (isDuplicate) {
@@ -341,14 +461,14 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
       return;
     }
 
-    const updatedExamples = word.examples.map(ex => {
+    const updatedExamples = word.examples.map((ex) => {
       if (ex.id === editingExampleId) {
         return {
           ...ex,
           sentence: editExampleData.sentence.trim(),
           reading: editExampleData.reading.trim(),
           romaji: editExampleData.romaji.trim(),
-          translation: editExampleData.translation.trim()
+          translation: editExampleData.translation.trim(),
         };
       }
       return ex;
@@ -366,7 +486,7 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
       reading: editWordData.reading.trim(),
       romaji: editWordData.romaji.trim(),
       category: editWordData.category,
-      explanation: editWordData.explanation.trim()
+      explanation: editWordData.explanation.trim(),
     });
     setIsEditing(false);
   };
@@ -375,8 +495,9 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
     e.preventDefault();
     if (!newSentence.trim()) return;
 
-    const isDuplicate = word.examples.some(ex => 
-      ex.sentence.trim().toLowerCase() === newSentence.trim().toLowerCase()
+    const isDuplicate = word.examples.some(
+      (ex) =>
+        ex.sentence.trim().toLowerCase() === newSentence.trim().toLowerCase(),
     );
 
     if (isDuplicate) {
@@ -389,36 +510,36 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
       sentence: newSentence.trim(),
       reading: newReading.trim(),
       romaji: newRomaji.trim(),
-      translation: newTranslation.trim()
+      translation: newTranslation.trim(),
     };
 
     onUpdateWord(word.id, {
-      examples: [newExample, ...word.examples]
+      examples: [newExample, ...word.examples],
     });
 
-    setNewSentence('');
-    setNewReading('');
-    setNewRomaji('');
-    setNewTranslation('');
+    setNewSentence("");
+    setNewReading("");
+    setNewRomaji("");
+    setNewTranslation("");
     setIsAddingExample(false);
   };
 
   const handleRemoveExample = (exId: string) => {
     onUpdateWord(word.id, {
-      examples: word.examples.filter(e => e.id !== exId)
+      examples: word.examples.filter((e) => e.id !== exId),
     });
   };
 
-
-
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 w-full flex flex-col gap-8 pb-32">
-      <button 
+      <button
         onClick={onBack}
         className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span className="text-sm font-medium tracking-wider uppercase">Về danh sách chuyên đề</span>
+        <span className="text-sm font-medium tracking-wider uppercase">
+          Về danh sách chuyên đề
+        </span>
       </button>
 
       {/* Header Info */}
@@ -430,35 +551,55 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
 
         {isEditing ? (
           <div className="relative z-10 w-full">
-            <h4 className="text-theme-accent uppercase tracking-wider text-sm font-medium mb-4">Chỉnh sửa chuyên đề</h4>
+            <h4 className="text-theme-accent uppercase tracking-wider text-sm font-medium mb-4">
+              Chỉnh sửa chuyên đề
+            </h4>
             <form onSubmit={handleEditSubmit} className="flex flex-col gap-5">
               <div className="flex flex-col sm:flex-row gap-5">
                 <div className="flex-1 space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Từ vựng (Kanji) *</label>
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Từ vựng (Kanji) *
+                  </label>
                   <input
                     required
                     type="text"
                     value={editWordData.word}
-                    onChange={e => setEditWordData({...editWordData, word: e.target.value})}
+                    onChange={(e) =>
+                      setEditWordData({ ...editWordData, word: e.target.value })
+                    }
                     className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
                   />
                 </div>
                 <div className="flex-1 flex flex-col sm:flex-row gap-5">
                   <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Cách đọc (Hiragana)</label>
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                      Cách đọc (Hiragana)
+                    </label>
                     <input
                       type="text"
                       value={editWordData.reading}
-                      onChange={e => setEditWordData({...editWordData, reading: e.target.value})}
+                      onChange={(e) =>
+                        setEditWordData({
+                          ...editWordData,
+                          reading: e.target.value,
+                        })
+                      }
                       className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                     />
                   </div>
                   <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                      Phiên âm Romaji
+                    </label>
                     <input
                       type="text"
                       value={editWordData.romaji}
-                      onChange={e => setEditWordData({...editWordData, romaji: e.target.value})}
+                      onChange={(e) =>
+                        setEditWordData({
+                          ...editWordData,
+                          romaji: e.target.value,
+                        })
+                      }
                       className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                     />
                   </div>
@@ -466,25 +607,46 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Tính chất</label>
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Tính chất
+                </label>
                 <select
                   value={editWordData.category}
-                  onChange={e => setEditWordData({...editWordData, category: e.target.value as WordCategory})}
+                  onChange={(e) =>
+                    setEditWordData({
+                      ...editWordData,
+                      category: e.target.value as WordCategory,
+                    })
+                  }
                   className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent appearance-none"
-                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4d4d4' opacity='0.6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1.2em' }}
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4d4d4' opacity='0.6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 1rem center",
+                    backgroundSize: "1.2em",
+                  }}
                 >
-                  {CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Giải thích</label>
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Giải thích
+                </label>
                 <textarea
                   rows={3}
                   value={editWordData.explanation}
-                  onChange={e => setEditWordData({...editWordData, explanation: e.target.value})}
+                  onChange={(e) =>
+                    setEditWordData({
+                      ...editWordData,
+                      explanation: e.target.value,
+                    })
+                  }
                   className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                 />
               </div>
@@ -501,7 +663,11 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                   type="button"
                   onClick={() => {
                     setEditWordData({
-                      word: word.word, reading: word.reading, romaji: word.romaji || '', category: word.category as WordCategory, explanation: word.explanation
+                      word: word.word,
+                      reading: word.reading,
+                      romaji: word.romaji || "",
+                      category: word.category as WordCategory,
+                      explanation: word.explanation,
                     });
                     setIsEditing(false);
                   }}
@@ -525,14 +691,24 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
 
             {/* Main Visual */}
             <div className="w-32 h-32 shrink-0 bg-theme-base-alt flex items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0">
-               <span className="text-5xl font-serif text-theme-primary">{word.word}</span>
+              <span className="text-5xl font-serif text-theme-primary">
+                {word.word}
+              </span>
             </div>
 
             <div className="flex-1 flex flex-col justify-center text-center sm:text-left h-full pr-8">
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-2">
-                <span className="text-2xl text-theme-accent font-medium">{word.reading}</span>
-                {word.romaji && <span className="text-lg text-theme-primary/60">{word.romaji}</span>}
-                <span className="bg-theme-hover text-theme-primary/60 px-2 py-1 rounded text-[10px] uppercase border border-theme-subtle tracking-wider">{word.category}</span>
+                <span className="text-2xl text-theme-accent font-medium">
+                  {word.reading}
+                </span>
+                {word.romaji && (
+                  <span className="text-lg text-theme-primary/60">
+                    {word.romaji}
+                  </span>
+                )}
+                <span className="bg-theme-hover text-theme-primary/60 px-2 py-1 rounded text-[10px] uppercase border border-theme-subtle tracking-wider">
+                  {word.category}
+                </span>
               </div>
               {word.explanation && (
                 <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar">
@@ -549,14 +725,16 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
       {/* Examples List */}
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-theme-subtle pb-4">
-          <h3 className="text-lg font-serif text-theme-primary tracking-widest uppercase">Các Câu Ví Dụ ({word.examples.length})</h3>
+          <h3 className="text-lg font-serif text-theme-primary tracking-widest uppercase">
+            Các Câu Ví Dụ ({word.examples.length})
+          </h3>
           <div className="flex items-center gap-6">
             {word.examples.length > 0 && (
               <button
-                 onClick={toggleAllMeanings}
-                 className="text-theme-primary/60 hover:text-theme-primary flex items-center gap-1 text-sm uppercase tracking-wider font-medium transition-colors"
+                onClick={toggleAllMeanings}
+                className="text-theme-primary/60 hover:text-theme-primary flex items-center gap-1 text-sm uppercase tracking-wider font-medium transition-colors"
               >
-                 {isAllHidden ? "Hiện tất cả" : "Ẩn tất cả"}
+                {isAllHidden ? "Hiện tất cả" : "Ẩn tất cả"}
               </button>
             )}
             {!isAddingExample && (
@@ -572,79 +750,89 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
         </div>
 
         {isAddingExample && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-theme-base-alt border border-theme-accent/30 p-6 rounded-lg relative shadow-xl mb-4"
           >
-             <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">Thêm Câu Ví Dụ Mới</h4>
-             <form onSubmit={handleAddExample} className="space-y-4">
-               <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ (nên có chứa từ "{word.word}") *</label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={newSentence}
-                    onChange={e => setNewSentence(e.target.value)}
-                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
-                    placeholder="e.g. この情報は大切です。"
-                  />
-               </div>
-               <div className="flex flex-col sm:flex-row gap-4">
-                 <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Hiragana</label>
-                    <input
-                      type="text"
-                      value={newReading}
-                      onChange={e => setNewReading(e.target.value)}
-                      className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                      placeholder="e.g. この じょうほう は たいせつ です"
-                    />
-                 </div>
-                 <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
-                    <input
-                      type="text"
-                      value={newRomaji}
-                      onChange={e => setNewRomaji(e.target.value)}
-                      className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                      placeholder="e.g. Kono jōhō wa taisetsu desu."
-                    />
-                 </div>
-               </div>
-               <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Bản dịch</label>
+            <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">
+              Thêm Câu Ví Dụ Mới
+            </h4>
+            <form onSubmit={handleAddExample} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Câu ví dụ (nên có chứa từ "{word.word}") *
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  value={newSentence}
+                  onChange={(e) => setNewSentence(e.target.value)}
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
+                  placeholder="e.g. この情報は大切です。"
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Phiên âm Hiragana
+                  </label>
                   <input
                     type="text"
-                    value={newTranslation}
-                    onChange={e => setNewTranslation(e.target.value)}
+                    value={newReading}
+                    onChange={(e) => setNewReading(e.target.value)}
                     className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                    placeholder="e.g. Thông tin này quan trọng."
+                    placeholder="e.g. この じょうほう は たいせつ です"
                   />
-               </div>
-               <div className="flex items-center gap-3 pt-2">
-                 <button
-                    type="submit"
-                    disabled={!newSentence.trim()}
-                    className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Phiên âm Romaji
+                  </label>
+                  <input
+                    type="text"
+                    value={newRomaji}
+                    onChange={(e) => setNewRomaji(e.target.value)}
+                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                    placeholder="e.g. Kono jōhō wa taisetsu desu."
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Bản dịch
+                </label>
+                <input
+                  type="text"
+                  value={newTranslation}
+                  onChange={(e) => setNewTranslation(e.target.value)}
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  placeholder="e.g. Thông tin này quan trọng."
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={!newSentence.trim()}
+                  className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
+                >
+                  Lưu Ví Dụ
+                </button>
+                {word.examples.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingExample(false)}
+                    className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-sm transition-colors"
                   >
-                    Lưu Ví Dụ
+                    Hủy
                   </button>
-                  {word.examples.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingExample(false)}
-                      className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-sm transition-colors"
-                    >
-                      Hủy
-                    </button>
-                  )}
-               </div>
-             </form>
+                )}
+              </div>
+            </form>
           </motion.div>
         )}
 
-        <DragDropContext 
+        <DragDropContext
           onDragEnd={(result: DropResult) => {
             if (!result.destination) return;
             const newExamples = Array.from(word.examples);
@@ -655,110 +843,162 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
         >
           <Droppable droppableId="examples">
             {(provided) => (
-              <div 
-                {...provided.droppableProps} 
-                ref={provided.innerRef}
-              >
+              <div {...provided.droppableProps} ref={provided.innerRef}>
                 {word.examples.map((ex, index) => (
                   // @ts-ignore
-                  <Draggable key={ex.id} draggableId={ex.id} index={index} isDragDisabled={editingExampleId === ex.id}>
+                  <Draggable
+                    key={ex.id}
+                    draggableId={ex.id}
+                    index={index}
+                    isDragDisabled={editingExampleId === ex.id}
+                  >
                     {(provided, snapshot) => (
-                      <div 
+                      <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative rounded-lg border ${snapshot.isDragging ? 'border-theme-accent shadow-2xl z-50' : 'border-theme-subtle'} bg-theme-panel group mb-4`}
+                        className={`relative rounded-lg border ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
-                        <div className={`bg-theme-hover p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? 'pl-14' : ''}`}>
-                           {/* Drag Handle */}
-                           {editingExampleId !== ex.id && (
-                             <div 
-                               {...provided.dragHandleProps}
-                               className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-theme-primary/20 hover:text-theme-accent transition-colors z-20 border-r border-theme-subtle"
-                             >
-                               <GripVertical className="w-5 h-5" />
-                             </div>
-                           )}
+                        <div
+                          className={`bg-theme-hover p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? "pl-14" : ""}`}
+                        >
+                          {/* Drag Handle */}
+                          {editingExampleId !== ex.id && (
+                            <div
+                              {...provided.dragHandleProps}
+                              className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-theme-primary/20 hover:text-theme-accent transition-colors z-20 border-r border-theme-subtle"
+                            >
+                              <GripVertical className="w-5 h-5" />
+                            </div>
+                          )}
 
-                       {editingExampleId === ex.id ? (
-                         <form onSubmit={handleEditExampleSubmit} className="space-y-4">
-                           <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">Chỉnh sửa câu ví dụ</h4>
-                           <div className="space-y-2">
-                              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ *</label>
-                              <textarea
-                                required
-                                rows={2}
-                                value={editExampleData.sentence}
-                                onChange={e => setEditExampleData({...editExampleData, sentence: e.target.value})}
-                                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
-                              />
-                           </div>
-                           <div className="flex flex-col sm:flex-row gap-4">
-                             <div className="flex-1 space-y-2">
-                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Hiragana</label>
+                          {editingExampleId === ex.id ? (
+                            <form
+                              onSubmit={handleEditExampleSubmit}
+                              className="space-y-4"
+                            >
+                              <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">
+                                Chỉnh sửa câu ví dụ
+                              </h4>
+                              <div className="space-y-2">
+                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                                  Câu ví dụ *
+                                </label>
+                                <textarea
+                                  required
+                                  rows={2}
+                                  value={editExampleData.sentence}
+                                  onChange={(e) =>
+                                    setEditExampleData({
+                                      ...editExampleData,
+                                      sentence: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
+                                />
+                              </div>
+                              <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1 space-y-2">
+                                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                                    Phiên âm Hiragana
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editExampleData.reading}
+                                    onChange={(e) =>
+                                      setEditExampleData({
+                                        ...editExampleData,
+                                        reading: e.target.value,
+                                      })
+                                    }
+                                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                                  />
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                                    Phiên âm Romaji
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editExampleData.romaji}
+                                    onChange={(e) =>
+                                      setEditExampleData({
+                                        ...editExampleData,
+                                        romaji: e.target.value,
+                                      })
+                                    }
+                                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                                  Bản dịch
+                                </label>
                                 <input
                                   type="text"
-                                  value={editExampleData.reading}
-                                  onChange={e => setEditExampleData({...editExampleData, reading: e.target.value})}
+                                  value={editExampleData.translation}
+                                  onChange={(e) =>
+                                    setEditExampleData({
+                                      ...editExampleData,
+                                      translation: e.target.value,
+                                    })
+                                  }
                                   className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                                 />
-                             </div>
-                             <div className="flex-1 space-y-2">
-                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
-                                <input
-                                  type="text"
-                                  value={editExampleData.romaji}
-                                  onChange={e => setEditExampleData({...editExampleData, romaji: e.target.value})}
-                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                                />
-                             </div>
-                           </div>
-                           <div className="space-y-2">
-                              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Bản dịch</label>
-                              <input
-                                type="text"
-                                value={editExampleData.translation}
-                                onChange={e => setEditExampleData({...editExampleData, translation: e.target.value})}
-                                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                              />
-                           </div>
-                           <div className="flex items-center gap-3 pt-2">
-                             <button
-                                type="submit"
-                                disabled={!editExampleData.sentence.trim()}
-                                className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
-                              >
-                                Lưu
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleCancelEditExample}
-                                className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-sm transition-colors"
-                              >
-                                Hủy
-                              </button>
-                           </div>
-                         </form>
-                       ) : (
-                         <>
-                           <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
-                             <button
-                               onClick={(e) => { e.stopPropagation(); toggleMeaning(ex.id); }}
-                               className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
-                               title={hiddenMeaningIds.includes(ex.id) ? "Hiện nghĩa" : "Ẩn nghĩa"}
-                             >
-                               {hiddenMeaningIds.includes(ex.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                             </button>
-                             <button
-                                onClick={() => handleStartEditExample(ex)}
-                                 className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
-                                 title="Chỉnh sửa ví dụ"
-                               >
-                                 <Edit2 className="w-4 h-4" />
-                               </button>
-                               <button
+                              </div>
+                              <div className="flex items-center gap-3 pt-2">
+                                <button
+                                  type="submit"
+                                  disabled={!editExampleData.sentence.trim()}
+                                  className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
+                                >
+                                  Lưu
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEditExample}
+                                  className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-sm transition-colors"
+                                >
+                                  Hủy
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <>
+                              <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleMeaning(ex.id);
+                                  }}
+                                  className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                  title={
+                                    hiddenMeaningIds.includes(ex.id)
+                                      ? "Hiện nghĩa"
+                                      : "Ẩn nghĩa"
+                                  }
+                                >
+                                  {hiddenMeaningIds.includes(ex.id) ? (
+                                    <EyeOff className="w-4 h-4" />
+                                  ) : (
+                                    <Eye className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleStartEditExample(ex)}
+                                  className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                  title="Chỉnh sửa ví dụ"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
                                   onClick={() => {
-                                    if (window.confirm("Bạn có chắc chắn muốn xóa ví dụ này?")) {
+                                    if (
+                                      window.confirm(
+                                        "Bạn có chắc chắn muốn xóa ví dụ này?",
+                                      )
+                                    ) {
                                       handleRemoveExample(ex.id);
                                     }
                                   }}
@@ -767,31 +1007,38 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
-                            </div>
-                            <div className="flex gap-4 pr-16 pointer-events-none">
-                              <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">
-                                {index + 1}
                               </div>
-                              <div className="flex-1 pt-1">
-                                {ex.reading && !hiddenMeaningIds.includes(ex.id) && (
-                                  <p className="text-sm text-theme-accent opacity-80 mb-1">{ex.reading}</p>
-                                )}
-                                <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
-                                  {renderHighlight(ex.sentence, word.word)}
-                                </p>
-                                {ex.romaji && !hiddenMeaningIds.includes(ex.id) && (
-                                  <p className="text-sm text-theme-primary/60 mb-1">{ex.romaji}</p>
-                                )}
-                                {ex.translation && !hiddenMeaningIds.includes(ex.id) && (
-                                  <p className="text-sm text-theme-primary/50 italic">
-                                    ({ex.translation})
+                              <div className="flex gap-4 pr-16 pointer-events-none">
+                                <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">
+                                  {index + 1}
+                                </div>
+                                <div className="flex-1 pt-1">
+                                  {ex.reading &&
+                                    !hiddenMeaningIds.includes(ex.id) && (
+                                      <p className="text-sm text-theme-accent opacity-80 mb-1">
+                                        {ex.reading}
+                                      </p>
+                                    )}
+                                  <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
+                                    {renderHighlight(ex.sentence, word.word)}
                                   </p>
-                                )}
+                                  {ex.romaji &&
+                                    !hiddenMeaningIds.includes(ex.id) && (
+                                      <p className="text-sm text-theme-primary/60 mb-1">
+                                        {ex.romaji}
+                                      </p>
+                                    )}
+                                  {ex.translation &&
+                                    !hiddenMeaningIds.includes(ex.id) && (
+                                      <p className="text-sm text-theme-primary/50 italic">
+                                        ({ex.translation})
+                                      </p>
+                                    )}
+                                </div>
                               </div>
-                            </div>
-                          </>
-                        )}
-                     </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
                   </Draggable>
@@ -802,7 +1049,6 @@ function StudyView({ word, onBack, onUpdateWord, renderHighlight }: {
           </Droppable>
         </DragDropContext>
       </div>
-
     </div>
   );
 }
