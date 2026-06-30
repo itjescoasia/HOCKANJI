@@ -44,7 +44,7 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   };
 
   const addExampleField = () => {
-    setExamples([...examples, { sentence: '', reading: '', romaji: '', translation: '' }]);
+    setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }, ...examples]);
   };
 
   const removeExampleField = (index: number) => {

@@ -295,7 +295,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                                   type="button" 
                                   onClick={() => {
                                     const newExamples = editForm.examples ? [...editForm.examples] : [];
-                                    newExamples.push({ id: crypto.randomUUID(), sentence: '', translation: '' });
+                                    newExamples.unshift({ id: crypto.randomUUID(), sentence: '', translation: '' });
                                     setEditForm({...editForm, examples: newExamples});
                                   }}
                                   className="p-1 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors flex items-center gap-1 text-[10px]"

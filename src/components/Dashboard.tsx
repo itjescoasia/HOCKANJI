@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, Fragment } from 'react';
 import { KanjiCard, IntensiveWord } from '../types';
 import { UserStats } from '../hooks/useStudyStats';
 import { getLocalDateString, getVietnamDate } from '../lib/dateUtils';
-import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown, RefreshCw, Search, X } from 'lucide-react';
+import { BookOpen, Brain, Clock, Zap, Target, TrendingUp, TrendingDown, RefreshCw, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 interface DashboardProps {
@@ -23,6 +23,7 @@ interface DashboardProps {
 export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftoverNewCards = 0, stats = {}, onStartReview, onStartFreeStudy, onStartDifficultReview, onStartShortStudy, onStartSentenceReview, onNavigateAdd, onRecordWordOfTheDay }: DashboardProps) {
   const [isChangingWotd, setIsChangingWotd] = useState(false);
   const [wotdSearch, setWotdSearch] = useState('');
+  const [wotdExampleIndex, setWotdExampleIndex] = useState(0);
 
   const isDue = dueCards.length > 0;
 
@@ -162,6 +163,7 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
     if (wordOfTheDay && onRecordWordOfTheDay && !stats[todayStr]?.wotdId) {
       onRecordWordOfTheDay(wordOfTheDay.id);
     }
+    setWotdExampleIndex(0);
   }, [wordOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
 
   const filteredWotdList = useMemo(() => {
@@ -279,19 +281,39 @@ export default function Dashboard({ deck, intensiveDeck = [], dueCards, leftover
                 </div>
                 <p className="text-sm text-theme-primary opacity-90 max-w-2xl mt-2">{wordOfTheDay.meaning}</p>
                 {wordOfTheDay.examples && wordOfTheDay.examples.length > 0 ? (
-                  <div className="mt-4 border-t border-theme-subtle pt-3 flex flex-col gap-4">
-                    {wordOfTheDay.examples.map(ex => (
-                      <div key={ex.id}>
-                        <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
-                          {renderExampleHighlight(ex.sentence, wordOfTheDay.kanji, wordOfTheDay.reading)}
-                        </p>
-                        <div className="flex gap-3 mt-1">
-                          {ex.reading && <span className="text-[10px] text-theme-primary opacity-50 italic">{ex.reading}</span>}
-                          {ex.romaji && <span className="text-[10px] text-theme-primary opacity-50 italic">{ex.romaji}</span>}
-                        </div>
-                        <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">{ex.translation}</p>
+                  <div className="mt-4 border-t border-theme-subtle pt-3">
+                    <div key={wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].id}>
+                      <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
+                        {renderExampleHighlight(wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].sentence, wordOfTheDay.kanji, wordOfTheDay.reading)}
+                      </p>
+                      <div className="flex gap-3 mt-1">
+                        {wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].reading && <span className="text-[10px] text-theme-primary opacity-50 italic">{wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].reading}</span>}
+                        {wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].romaji && <span className="text-[10px] text-theme-primary opacity-50 italic">{wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].romaji}</span>}
                       </div>
-                    ))}
+                      <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">{wordOfTheDay.examples[Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1)].translation}</p>
+                    </div>
+                    
+                    {wordOfTheDay.examples.length > 1 && (
+                      <div className="flex items-center gap-4 mt-4">
+                        <button 
+                          onClick={() => setWotdExampleIndex(prev => prev > 0 ? prev - 1 : wordOfTheDay.examples!.length - 1)}
+                          className="p-1 border border-theme-subtle hover:border-theme-accent text-theme-primary/60 hover:text-theme-primary transition-colors bg-theme-panel rounded"
+                          title="Ví dụ trước"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="text-[10px] font-mono text-theme-primary/40 uppercase tracking-widest">
+                          Ví dụ {Math.min(wotdExampleIndex, wordOfTheDay.examples.length - 1) + 1} / {wordOfTheDay.examples.length}
+                        </span>
+                        <button 
+                          onClick={() => setWotdExampleIndex(prev => prev < wordOfTheDay.examples!.length - 1 ? prev + 1 : 0)}
+                          className="p-1 border border-theme-subtle hover:border-theme-accent text-theme-primary/60 hover:text-theme-primary transition-colors bg-theme-panel rounded"
+                          title="Ví dụ tiếp"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   wordOfTheDay.example && (
