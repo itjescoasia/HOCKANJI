@@ -128,6 +128,8 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             <option value="Danh từ">Danh từ</option>
             <option value="Tính từ i">Tính từ i</option>
             <option value="Tính từ na">Tính từ na</option>
+            <option value="Trạng từ">Trạng từ</option>
+            <option value="Ngữ pháp">Ngữ pháp</option>
             <option value="Khác">Khác</option>
           </select>
         </div>
