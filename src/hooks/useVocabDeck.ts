@@ -90,7 +90,7 @@ export function useVocabDeck() {
     }
   }, [deck, isLoaded]);
 
-  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string, examples?: any[]) => {
+  const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string, examples?: any[], forms?: { id: string, name: string, value: string }[]) => {
     const newCard: KanjiCard = {
       id: crypto.randomUUID(),
       kanji: kanji || '',
@@ -102,6 +102,7 @@ export function useVocabDeck() {
       example: example || '',
       exampleTranslation: exampleTranslation || '',
       examples: examples || [],
+      forms: forms || [],
       wordType: wordType || '',
       freeStudyScore: 0,
       difficultScore: 0,

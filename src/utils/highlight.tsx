@@ -73,6 +73,15 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
       }
     }
 
+    if (!isMatch && card.forms) {
+      for (const form of card.forms) {
+        if (form.value && example.includes(form.value)) {
+          isMatch = true;
+          break;
+        }
+      }
+    }
+
     if (isMatch) {
       if (!uniqueWords.has(wordStr)) {
         uniqueWords.set(wordStr, card);
@@ -107,6 +116,13 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
       if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem)) {
         matchStrs.push(stem);
       }
+    }
+    if (card.forms) {
+      card.forms.forEach(f => {
+        if (f.value && !matchStrs.includes(f.value)) {
+          matchStrs.push(f.value);
+        }
+      });
     }
     // Sort by length descending to match longest possible string first
     matchStrs.sort((a, b) => b.length - a.length);

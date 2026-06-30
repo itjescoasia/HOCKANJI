@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType'>>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>) => void;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
 }
 
@@ -15,7 +15,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
   const [filterType, setFilterType] = useState('all');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (card: KanjiCard) => {
@@ -30,6 +30,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
       example: card.example || '',
       exampleTranslation: card.exampleTranslation || '',
       examples: card.examples ? JSON.parse(JSON.stringify(card.examples)) : [], // Deep copy
+      forms: card.forms ? JSON.parse(JSON.stringify(card.forms)) : [], // Deep copy
       wordType: card.wordType || '',
     });
   };
@@ -45,6 +46,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         translation: ex.translation.trim()
       })) || [];
         
+      const validForms = editForm.forms?.filter(f => f.name.trim() && f.value.trim()).map(f => ({
+        id: f.id || crypto.randomUUID(),
+        name: f.name.trim(),
+        value: f.value.trim()
+      })) || [];
+        
       onUpdate(editingId, {
         kanji: editForm.kanji.trim(),
         reading: editForm.reading?.trim() || '',
@@ -55,6 +62,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
         example: editForm.example?.trim() || '',
         exampleTranslation: editForm.exampleTranslation?.trim() || '',
         examples: validExamples,
+        forms: validForms,
         wordType: editForm.wordType?.trim() || ''
       });
       setEditingId(null);
@@ -287,6 +295,63 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                               placeholder="Giải thích Hán tự"
                               rows={2}
                             />
+                            
+                            {(editForm.wordType?.includes('Động từ')) && (
+                              <div className="pt-2 border-t border-theme-subtle mt-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">Các thể</label>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      const newForms = editForm.forms ? [...editForm.forms] : [];
+                                      newForms.push({ id: crypto.randomUUID(), name: '', value: '' });
+                                      setEditForm({...editForm, forms: newForms});
+                                    }}
+                                    className="p-1 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors flex items-center gap-1 text-[10px]"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>Thêm thể</span>
+                                  </button>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  {editForm.forms?.map((f, index) => (
+                                    <div key={f.id || index} className="relative flex gap-2">
+                                      <input 
+                                        value={f.name} 
+                                        onChange={e => {
+                                          const newForms = [...(editForm.forms || [])];
+                                          newForms[index] = { ...newForms[index], name: e.target.value };
+                                          setEditForm({...editForm, forms: newForms});
+                                        }}
+                                        className="w-1/3 bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent"
+                                        placeholder="Tên thể (ví dụ: Thể て)"
+                                      />
+                                      <input 
+                                        value={f.value} 
+                                        onChange={e => {
+                                          const newForms = [...(editForm.forms || [])];
+                                          newForms[index] = { ...newForms[index], value: e.target.value };
+                                          setEditForm({...editForm, forms: newForms});
+                                        }}
+                                        className="w-2/3 bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent pr-6"
+                                        placeholder="Sau khi chia (ví dụ: 教えて)"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newForms = [...(editForm.forms || [])];
+                                          newForms.splice(index, 1);
+                                          setEditForm({...editForm, forms: newForms});
+                                        }}
+                                        className="absolute top-1/2 -translate-y-1/2 right-1 p-1 text-theme-primary/40 hover:text-red-500"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             
                             <div className="pt-2 border-t border-theme-subtle mt-2">
                               <div className="flex items-center justify-between mb-2">

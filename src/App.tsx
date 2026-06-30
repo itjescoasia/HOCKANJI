@@ -344,8 +344,8 @@ export default function App() {
         )}
         
         {view === 'add' && (
-          <AddVocab onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji) => {
-            await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || []);
+          <AddVocab onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms) => {
+            await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || []);
             alert('Vừa thêm từ vựng mới thành công');
             handleNavigate('list'); // Redirect to list to show success
           }} />

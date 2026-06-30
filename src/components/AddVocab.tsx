@@ -3,7 +3,7 @@ import { KanjiExample } from '../types';
 import { Plus, X } from 'lucide-react';
 
 interface AddVocabProps {
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string, forms?: { id: string, name: string, value: string }[]) => void;
 }
 
 export default function AddVocab({ onAdd }: AddVocabProps) {
@@ -14,6 +14,7 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
   const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
+  const [forms, setForms] = useState<{name: string, value: string}[]>([]);
   const [wordType, setWordType] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -31,8 +32,19 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
       romaji: ex.romaji.trim(),
       translation: ex.translation.trim()
     }));
+
+    const validForms = forms.filter(f => f.name.trim() && f.value.trim()).map(f => ({
+      id: crypto.randomUUID(),
+      name: f.name.trim(),
+      value: f.value.trim()
+    }));
     
-    onAdd(kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), validExamples.length > 0 ? validExamples : undefined, wordType, kanjiExplanation.trim(), romaji.trim());
+    onAdd(
+      kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), 
+      validExamples.length > 0 ? validExamples : undefined, 
+      wordType, kanjiExplanation.trim(), romaji.trim(), 
+      validForms.length > 0 ? validForms : undefined
+    );
     setKanji('');
     setReading('');
     setRomaji('');
@@ -40,6 +52,7 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
     setKanjiExplanation('');
     setMeaning('');
     setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }]);
+    setForms([]);
     setWordType('');
   };
 
@@ -149,6 +162,62 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             placeholder="NGÔN NGỮ"
           />
         </div>
+        
+        {wordType?.includes('Động từ') && (
+          <div className="pt-4 border-t border-theme-subtle">
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">Các thể</label>
+              <button 
+                type="button" 
+                onClick={() => setForms([...forms, { name: '', value: '' }])}
+                className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
+                title="Thêm thể"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-4">
+              {forms.map((f, index) => (
+                <div key={index} className="relative flex gap-4">
+                  <input 
+                    type="text" 
+                    value={f.name}
+                    onChange={e => {
+                      const newForms = [...forms];
+                      newForms[index].name = e.target.value;
+                      setForms(newForms);
+                    }}
+                    className="w-1/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
+                    placeholder="Tên thể (ví dụ: Thể て)"
+                  />
+                  <input 
+                    type="text" 
+                    value={f.value}
+                    onChange={e => {
+                      const newForms = [...forms];
+                      newForms[index].value = e.target.value;
+                      setForms(newForms);
+                    }}
+                    className="w-2/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm pr-10"
+                    placeholder="Sau khi chia (ví dụ: 教えて)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newForms = [...forms];
+                      newForms.splice(index, 1);
+                      setForms(newForms);
+                    }}
+                    className="absolute top-1/2 -translate-y-1/2 right-3 p-1 rounded-full text-theme-primary/50 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="pt-4 border-t border-theme-subtle">
           <div className="flex items-center justify-between mb-4">
             <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">Các ví dụ (Tiếng Nhật - Tiếng Việt)</label>
