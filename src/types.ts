@@ -43,6 +43,8 @@ export interface IntensiveExample {
   viToJaNextReviewDate?: number;
   jaToViInterval?: number;
   viToJaInterval?: number;
+  jaToViFailCount?: number;
+  viToJaFailCount?: number;
 }
 
 export interface IntensiveWord {

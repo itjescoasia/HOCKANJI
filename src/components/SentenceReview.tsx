@@ -106,45 +106,53 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     }
   };
 
-  const handleGrade = (mastered: boolean) => {
+  const handleGrade = (grade: 'forgot' | 'hard' | 'good') => {
     if (onUpdateWord) {
       const word = deck.find((w) => w.id === currentExample.wordId);
       if (word) {
         const updatedExamples = word.examples.map((ex) => {
           if (ex.id === currentExample.id) {
             // Calculate Spaced Repetition values
-            const currentInterval =
-              mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
+            const currentInterval = mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
+            const currentFailCount = mode === "VI_TO_JA" ? (ex.viToJaFailCount || 0) : (ex.jaToViFailCount || 0);
 
             let nextInterval = 0;
-            let nextReviewDate = Date.now(); // default to now if not mastered
+            let nextReviewDate = Date.now();
+            let newFailCount = currentFailCount;
+            let isMastered = false;
 
-            if (mastered) {
-              // Simple SM-2 style intervals
-              nextInterval =
-                !currentInterval || currentInterval === 0
-                  ? 1
-                  : currentInterval === 1
-                    ? 3
-                    : currentInterval === 3
-                      ? 7
-                      : currentInterval * 2;
+            if (grade === 'good') {
+              nextInterval = (!currentInterval || currentInterval === 0) ? 1 : 
+                             (currentInterval === 1 ? 3 : 
+                             (currentInterval === 3 ? 7 : currentInterval * 2));
+              isMastered = true;
+            } else if (grade === 'hard') {
+              nextInterval = 1; // Học lại vào ngày mai
+              newFailCount += 1; // Tăng bộ đếm số lần quên
+              isMastered = false;
+            } else if (grade === 'forgot') {
+              nextInterval = 0; // Học lại ngay
+              isMastered = false;
+            }
 
+            if (nextInterval > 0) {
               nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
             }
 
             return mode === "VI_TO_JA"
               ? {
                   ...ex,
-                  viToJaMastered: mastered,
+                  viToJaMastered: isMastered,
                   viToJaInterval: nextInterval,
                   viToJaNextReviewDate: nextReviewDate,
+                  viToJaFailCount: newFailCount
                 }
               : {
                   ...ex,
-                  jaToViMastered: mastered,
+                  jaToViMastered: isMastered,
                   jaToViInterval: nextInterval,
                   jaToViNextReviewDate: nextReviewDate,
+                  jaToViFailCount: newFailCount
                 };
           }
           return ex;
@@ -157,36 +165,46 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     setExamples((prev) =>
       prev.map((ex, i) => {
         if (i === currentIndex) {
-          // Also update local state SRS properties
-          const currentInterval =
-            mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
+          const currentInterval = mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
+          const currentFailCount = mode === "VI_TO_JA" ? (ex.viToJaFailCount || 0) : (ex.jaToViFailCount || 0);
+
           let nextInterval = 0;
           let nextReviewDate = Date.now();
+          let newFailCount = currentFailCount;
+          let isMastered = false;
 
-          if (mastered) {
-            nextInterval =
-              !currentInterval || currentInterval === 0
-                ? 1
-                : currentInterval === 1
-                  ? 3
-                  : currentInterval === 3
-                    ? 7
-                    : currentInterval * 2;
+          if (grade === 'good') {
+            nextInterval = (!currentInterval || currentInterval === 0) ? 1 : 
+                           (currentInterval === 1 ? 3 : 
+                           (currentInterval === 3 ? 7 : currentInterval * 2));
+            isMastered = true;
+          } else if (grade === 'hard') {
+            nextInterval = 1;
+            newFailCount += 1;
+            isMastered = false;
+          } else if (grade === 'forgot') {
+            nextInterval = 0;
+            isMastered = false;
+          }
+
+          if (nextInterval > 0) {
             nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
           }
 
           return mode === "VI_TO_JA"
             ? {
                 ...ex,
-                viToJaMastered: mastered,
+                viToJaMastered: isMastered,
                 viToJaInterval: nextInterval,
                 viToJaNextReviewDate: nextReviewDate,
+                viToJaFailCount: newFailCount
               }
             : {
                 ...ex,
-                jaToViMastered: mastered,
+                jaToViMastered: isMastered,
                 jaToViInterval: nextInterval,
                 jaToViNextReviewDate: nextReviewDate,
+                jaToViFailCount: newFailCount
               };
         }
         return ex;
@@ -339,18 +357,27 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           </button>
 
           {showAnswer ? (
-            <div className="flex-1 flex gap-4 max-w-[400px]">
+            <div className="flex-1 grid grid-cols-3 gap-2 sm:gap-4 max-w-[500px]">
               <button
-                onClick={() => handleGrade(false)}
-                className="flex-1 border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                onClick={() => handleGrade('forgot')}
+                className="border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
               >
-                {mode === "VI_TO_JA" ? "Chưa nói được" : "Chưa nhớ"}
+                <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Quên sạch" : "Quên sạch"}</span>
+                <span className="text-xs">Lại từ đầu</span>
               </button>
               <button
-                onClick={() => handleGrade(true)}
-                className="flex-1 border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px]"
+                onClick={() => handleGrade('hard')}
+                className="border border-orange-500/50 text-orange-500 bg-theme-panel hover:bg-orange-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
               >
-                {mode === "VI_TO_JA" ? "Nói được" : "Đã nhớ"}
+                <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Đã học" : "Đã học"}</span>
+                <span className="text-xs">{mode === "VI_TO_JA" ? "Chưa nói được" : "Chưa nhớ"}</span>
+              </button>
+              <button
+                onClick={() => handleGrade('good')}
+                className="border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
+              >
+                <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Trôi chảy" : "Ghi nhớ"}</span>
+                <span className="text-xs">{mode === "VI_TO_JA" ? "Nói được" : "Đã nhớ"}</span>
               </button>
             </div>
           ) : (
