@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
 import { renderExampleHighlight } from "../utils/highlight";
 
@@ -28,6 +28,14 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    sentence: "",
+    reading: "",
+    romaji: "",
+    translation: "",
+  });
 
   useEffect(() => {
     if (isInitialized) return;
@@ -218,6 +226,64 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     setShowAnswer(true);
   };
 
+  const handleStartEdit = () => {
+    const currentExample = examples[currentIndex];
+    setEditData({
+      sentence: currentExample.sentence,
+      reading: currentExample.reading || "",
+      romaji: currentExample.romaji || "",
+      translation: currentExample.translation || "",
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editData.sentence.trim()) return;
+
+    const currentExample = examples[currentIndex];
+
+    if (onUpdateWord) {
+      const word = deck.find((w) => w.id === currentExample.wordId);
+      if (word) {
+        const updatedExamples = word.examples.map((ex) => {
+          if (ex.id === currentExample.id) {
+            return {
+              ...ex,
+              sentence: editData.sentence.trim(),
+              reading: editData.reading.trim(),
+              romaji: editData.romaji.trim(),
+              translation: editData.translation.trim(),
+            };
+          }
+          return ex;
+        });
+        onUpdateWord(word.id, { examples: updatedExamples });
+      }
+    }
+
+    setExamples((prev) =>
+      prev.map((ex, i) => {
+        if (i === currentIndex) {
+          return {
+            ...ex,
+            sentence: editData.sentence.trim(),
+            reading: editData.reading.trim(),
+            romaji: editData.romaji.trim(),
+            translation: editData.translation.trim(),
+          };
+        }
+        return ex;
+      }),
+    );
+
+    setIsEditing(false);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between p-4 border-b border-theme-subtle">
@@ -263,147 +329,189 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 {mode === "JA_TO_VI" ? "NHẬT" : "VIỆT"}
               </span>
 
-              <div className="mb-8 mt-4">
-                <p
-                  className={`font-serif leading-relaxed ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
+              {!isEditing && (
+                <button
+                  onClick={handleStartEdit}
+                  className="absolute top-4 right-4 text-theme-primary/40 hover:text-theme-accent transition-colors p-2"
+                  title="Sửa ví dụ"
                 >
-                  {mode === "JA_TO_VI"
-                    ? renderExampleHighlight(
-                        currentExample.sentence,
-                        currentExample.word,
-                        mainDeck,
-                      )
-                    : questionText}
-                </p>
-                {mode === "JA_TO_VI" && currentExample.reading && (
-                  <p className="text-theme-accent opacity-80 mt-4 text-sm">
-                    {currentExample.reading}
-                  </p>
-                )}
-              </div>
+                  <Pen className="w-4 h-4" />
+                </button>
+              )}
 
-              <div
-                className={`w-full transition-all duration-300 ${showAnswer ? "opacity-100 mt-4 border-t border-theme-subtle pt-8" : "opacity-0 h-0 overflow-hidden"}`}
-              >
-                <span className="text-xs font-mono text-theme-accent/30 mb-4 block uppercase">
-                  {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
-                </span>
-                <p
-                  className={`font-serif leading-relaxed ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
-                >
-                  {mode === "VI_TO_JA"
-                    ? renderExampleHighlight(
-                        currentExample.sentence,
-                        currentExample.word,
-                        mainDeck,
-                      )
-                    : answerText}
-                </p>
-                {mode === "VI_TO_JA" && currentExample.reading && (
-                  <p className="text-theme-primary/60 mt-4 text-sm">
-                    {currentExample.reading}
-                  </p>
-                )}
-                {currentExample.romaji && (
-                  <p className="text-theme-primary/40 mt-2 text-xs">
-                    {currentExample.romaji}
-                  </p>
-                )}
-                <div className="mt-6 pt-6 border-t border-theme-subtle/50 text-xs text-theme-primary/40 flex gap-2 items-center justify-center">
-                  <span>Từ vựng gốc:</span>
-                  <strong className="text-theme-primary/70 font-serif text-sm">
-                    {currentExample.word}
-                  </strong>
-                  {(() => {
-                    const isMastered =
-                      mode === "VI_TO_JA"
-                        ? currentExample.viToJaMastered
-                        : currentExample.jaToViMastered;
-                    const finalIsMastered =
-                      isMastered !== undefined
-                        ? isMastered
-                        : currentExample.mastered;
+              {isEditing ? (
+                <form onSubmit={handleSaveEdit} className="w-full text-left space-y-4 mt-8">
+                  <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">Chỉnh sửa câu ví dụ</h4>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ (Nhật) *</label>
+                    <textarea required rows={2} value={editData.sentence} onChange={(e) => setEditData({ ...editData, sentence: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif resize-none" placeholder="Nhập câu tiếng Nhật..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Cách đọc (Hiragana)</label>
+                      <input type="text" value={editData.reading} onChange={(e) => setEditData({ ...editData, reading: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent" placeholder="VD: わたし..." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Romaji</label>
+                      <input type="text" value={editData.romaji} onChange={(e) => setEditData({ ...editData, romaji: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent font-mono" placeholder="VD: watashi..." />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
+                    <textarea rows={2} value={editData.translation} onChange={(e) => setEditData({ ...editData, translation: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent resize-none" placeholder="Nhập nghĩa tiếng Việt..." />
+                  </div>
+                  <div className="flex gap-2 pt-4">
+                    <button type="button" onClick={handleCancelEdit} className="flex-1 px-4 py-3 text-xs tracking-widest uppercase font-bold border border-theme-subtle text-theme-primary/60 hover:bg-theme-subtle/50 transition-colors">Hủy</button>
+                    <button type="submit" className="flex-1 px-4 py-3 text-xs tracking-widest uppercase font-bold bg-theme-accent text-theme-inverted hover:bg-theme-accent-hover transition-colors">Lưu thay đổi</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="mb-8 mt-4">
+                    <p
+                      className={`font-serif leading-relaxed ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
+                    >
+                      {mode === "JA_TO_VI"
+                        ? renderExampleHighlight(
+                            currentExample.sentence,
+                            currentExample.word,
+                            mainDeck,
+                          )
+                        : questionText}
+                    </p>
+                    {mode === "JA_TO_VI" && currentExample.reading && (
+                      <p className="text-theme-accent opacity-80 mt-4 text-sm">
+                        {currentExample.reading}
+                      </p>
+                    )}
+                  </div>
 
-                    if (finalIsMastered !== undefined) {
-                      return (
-                        <span
-                          className={`ml-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${finalIsMastered ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}
-                        >
-                          {finalIsMastered
-                            ? mode === "VI_TO_JA"
-                              ? "Nói được"
-                              : "Đã nhớ"
-                            : mode === "VI_TO_JA"
-                              ? "Chưa nói được"
-                              : "Chưa nhớ"}
-                        </span>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-              </div>
+                  <div
+                    className={`w-full transition-all duration-300 ${showAnswer ? "opacity-100 mt-4 border-t border-theme-subtle pt-8" : "opacity-0 h-0 overflow-hidden"}`}
+                  >
+                    <span className="text-xs font-mono text-theme-accent/30 mb-4 block uppercase">
+                      {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
+                    </span>
+                    <p
+                      className={`font-serif leading-relaxed ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
+                    >
+                      {mode === "VI_TO_JA"
+                        ? renderExampleHighlight(
+                            currentExample.sentence,
+                            currentExample.word,
+                            mainDeck,
+                          )
+                        : answerText}
+                    </p>
+                    {mode === "VI_TO_JA" && currentExample.reading && (
+                      <p className="text-theme-primary/60 mt-4 text-sm">
+                        {currentExample.reading}
+                      </p>
+                    )}
+                    {currentExample.romaji && (
+                      <p className="text-theme-primary/40 mt-2 text-xs">
+                        {currentExample.romaji}
+                      </p>
+                    )}
+                    <div className="mt-6 pt-6 border-t border-theme-subtle/50 text-xs text-theme-primary/40 flex gap-2 items-center justify-center">
+                      <span>Từ vựng gốc:</span>
+                      <strong className="text-theme-primary/70 font-serif text-sm">
+                        {currentExample.word}
+                      </strong>
+                      {(() => {
+                        const isMastered =
+                          mode === "VI_TO_JA"
+                            ? currentExample.viToJaMastered
+                            : currentExample.jaToViMastered;
+                        const finalIsMastered =
+                          isMastered !== undefined
+                            ? isMastered
+                            : currentExample.mastered;
+
+                        if (finalIsMastered !== undefined) {
+                          return (
+                            <span
+                              className={`ml-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${finalIsMastered ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}
+                            >
+                              {finalIsMastered
+                                ? mode === "VI_TO_JA"
+                                  ? "Nói được"
+                                  : "Đã nhớ"
+                                : mode === "VI_TO_JA"
+                                  ? "Chưa nói được"
+                                  : "Chưa nhớ"}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>
 
-        <div className="mt-12 flex items-center justify-center gap-4 w-full max-w-2xl">
-          <button
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-            className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent disabled:opacity-30 transition-colors bg-theme-panel"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          {showAnswer ? (
-            <div className="flex-1 grid grid-cols-3 gap-2 sm:gap-4 max-w-[500px]">
-              <button
-                onClick={() => handleGrade('forgot')}
-                className="border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
-              >
-                <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Quên sạch" : "Quên sạch"}</span>
-                <span className="text-xs">Lại từ đầu</span>
-              </button>
-              <button
-                onClick={() => handleGrade('hard')}
-                className="border border-orange-500/50 text-orange-500 bg-theme-panel hover:bg-orange-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
-              >
-                <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Đã học" : "Đã học"}</span>
-                <span className="text-xs">{mode === "VI_TO_JA" ? "Chưa nói được" : "Chưa nhớ"}</span>
-              </button>
-              <button
-                onClick={() => handleGrade('good')}
-                className="border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
-              >
-                <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Trôi chảy" : "Ghi nhớ"}</span>
-                <span className="text-xs">{mode === "VI_TO_JA" ? "Nói được" : "Đã nhớ"}</span>
-              </button>
-            </div>
-          ) : (
+        {!isEditing && (
+          <div className="mt-12 flex items-center justify-center gap-4 w-full max-w-2xl">
             <button
-              onClick={showAnswer ? handleNext : handleReveal}
-              className="flex-1 max-w-[200px] border border-theme-accent text-theme-inverted bg-theme-accent hover:bg-theme-accent-hover font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-2"
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+              className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent disabled:opacity-30 transition-colors bg-theme-panel"
             >
-              {showAnswer ? (
-                <>
-                  Tiếp theo <ArrowRight className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  <Eye className="w-4 h-4" /> Xem đáp án
-                </>
-              )}
+              <ArrowLeft className="w-5 h-5" />
             </button>
-          )}
 
-          <button
-            onClick={handleNext}
-            className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel"
-          >
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </div>
+            {showAnswer ? (
+              <div className="flex-1 grid grid-cols-3 gap-2 sm:gap-4 max-w-[500px]">
+                <button
+                  onClick={() => handleGrade('forgot')}
+                  className="border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
+                >
+                  <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Quên sạch" : "Quên sạch"}</span>
+                  <span className="text-xs">Lại từ đầu</span>
+                </button>
+                <button
+                  onClick={() => handleGrade('hard')}
+                  className="border border-orange-500/50 text-orange-500 bg-theme-panel hover:bg-orange-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
+                >
+                  <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Đã học" : "Đã học"}</span>
+                  <span className="text-xs">{mode === "VI_TO_JA" ? "Chưa nói được" : "Chưa nhớ"}</span>
+                </button>
+                <button
+                  onClick={() => handleGrade('good')}
+                  className="border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
+                >
+                  <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Trôi chảy" : "Ghi nhớ"}</span>
+                  <span className="text-xs">{mode === "VI_TO_JA" ? "Nói được" : "Đã nhớ"}</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={showAnswer ? handleNext : handleReveal}
+                className="flex-1 max-w-[200px] border border-theme-accent text-theme-inverted bg-theme-accent hover:bg-theme-accent-hover font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-2"
+              >
+                {showAnswer ? (
+                  <>
+                    Tiếp theo <ArrowRight className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" /> Xem đáp án
+                  </>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={handleNext}
+              className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
