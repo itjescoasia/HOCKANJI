@@ -1,7 +1,8 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
-import { X, Trash2, Volume2 } from 'lucide-react';
+import { X, Trash2, Volume2, Edit3 } from 'lucide-react';
+import ReviewEditForm from './ReviewEditForm';
 
 interface ReviewSessionProps {
   dueCards: KanjiCard[];
@@ -9,15 +10,19 @@ interface ReviewSessionProps {
   onFreeStudyReview?: (id: string, isRemember: boolean) => void;
   onClose: () => void;
   onRemoveCard: (id: string) => void;
+  onUpdateCard?: (id: string, data: Partial<KanjiCard>) => void;
   isFreeStudy?: boolean;
   isDifficultReview?: boolean;
 }
 
-export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
+export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, onUpdateCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [successCounts, setSuccessCounts] = useState<Record<string, number>>({});
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<KanjiCard>>({});
 
   const [readingInput, setReadingInput] = useState('');
   const [inputError, setInputError] = useState(false);
@@ -287,6 +292,19 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   const progressPercent = totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0;
   const currentCardProgress = successCounts[currentCard?.id] || 0;
 
+  const startEdit = () => {
+    setEditForm(currentCard);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (onUpdateCard && currentCard) {
+      onUpdateCard(currentCard.id, editForm);
+      setReviewQueue(prev => prev.map(c => c.id === currentCard.id ? { ...c, ...editForm } : c));
+    }
+    setIsEditing(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-theme-base-alt flex flex-col items-center justify-center z-50 p-4 font-sans text-theme-primary">
       {isFreeStudy && (
@@ -311,7 +329,27 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         <X className="w-8 h-8 font-light" strokeWidth={1} />
       </button>
 
+      {!isEditing && (
+        <button 
+          onClick={startEdit}
+          className="absolute top-6 right-20 p-2 text-theme-primary opacity-50 hover:opacity-100 transition-opacity flex items-center gap-2"
+          title="Sửa từ vựng"
+        >
+          <span className="hidden sm:inline text-sm">Sửa</span>
+          <Edit3 className="w-6 h-6 font-light" strokeWidth={1.5} />
+        </button>
+      )}
+
       <div className="w-full max-w-2xl flex flex-col items-center">
+        {isEditing ? (
+          <ReviewEditForm 
+            editForm={editForm}
+            setEditForm={setEditForm}
+            onSave={handleSaveEdit}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <>
         <div className="mb-6 w-full flex justify-between items-center opacity-50">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-[0.2em] text-theme-accent">Phiên học hiện tại</span>
@@ -396,7 +434,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                       <div className="flex justify-start flex-1">
                         <p className="text-xl sm:text-3xl font-serif text-theme-accent uppercase tracking-widest">{currentCard.sinoVietnamese}</p>
                       </div>
-                    </>
+                      </>
                   )}
                 </div>
 
@@ -598,6 +636,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
             </motion.div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

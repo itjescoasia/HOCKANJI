@@ -394,6 +394,7 @@ export default function App() {
           onRemoveCard={removeCard}
           isFreeStudy={isFreeStudyMode || isDifficultReviewMode}
           isDifficultReview={isDifficultReviewMode}
+          onUpdateCard={updateCard}
         />
       )}
     </div>
