@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Fuse from "fuse.js";
 import { formatCreatedAt } from "../lib/dateUtils";
@@ -233,6 +233,7 @@ function ConversationDetail({
   const [newHira, setNewHira] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
   const [newVietnamese, setNewVietnamese] = useState("");
+  const [newExplanation, setNewExplanation] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -240,6 +241,9 @@ function ConversationDetail({
   const [editHira, setEditHira] = useState("");
   const [editRomaji, setEditRomaji] = useState("");
   const [editVietnamese, setEditVietnamese] = useState("");
+  const [editExplanation, setEditExplanation] = useState("");
+
+  const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
 
   const handleAddDialogue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,6 +255,7 @@ function ConversationDetail({
       hiragana: newHira.trim(),
       romaji: newRomaji.trim(),
       vietnamese: newVietnamese.trim(),
+      explanation: newExplanation.trim(),
     };
 
     onUpdate(conversation.id, {
@@ -261,6 +266,7 @@ function ConversationDetail({
     setNewHira("");
     setNewRomaji("");
     setNewVietnamese("");
+    setNewExplanation("");
     setIsAdding(true); // keep it open
   };
 
@@ -277,6 +283,7 @@ function ConversationDetail({
     setEditHira(dialogue.hiragana || "");
     setEditRomaji(dialogue.romaji || "");
     setEditVietnamese(dialogue.vietnamese || "");
+    setEditExplanation(dialogue.explanation || "");
   };
 
   const handleUpdateDialogue = (e: React.FormEvent) => {
@@ -291,7 +298,8 @@ function ConversationDetail({
               japanese: editJp.trim(),
               hiragana: editHira.trim(),
               romaji: editRomaji.trim(),
-              vietnamese: editVietnamese.trim()
+              vietnamese: editVietnamese.trim(),
+              explanation: editExplanation.trim(),
             }
           : d
       )
@@ -349,6 +357,10 @@ function ConversationDetail({
                     <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
                     <input type="text" value={editVietnamese} onChange={(e) => setEditVietnamese(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Giải thích chi tiết</label>
+                    <textarea value={editExplanation} onChange={(e) => setEditExplanation(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none" placeholder="Giải thích chi tiết ngữ pháp, từ vựng..." />
+                  </div>
                   <div className="flex gap-3 pt-2">
                     <button type="submit" disabled={!editJp.trim()} className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1 flex items-center justify-center gap-2">
                       <Check className="w-4 h-4" /> Lưu
@@ -365,47 +377,79 @@ function ConversationDetail({
           return (
             <div
               key={dialogue.id}
-              className="p-4 bg-theme-panel border border-theme-subtle flex gap-4 group"
+              className="p-4 bg-theme-panel border border-theme-subtle flex gap-4 group flex-col"
             >
-              <div className="shrink-0 text-theme-primary/30 font-serif text-xl mt-1">
-                {String(index + 1).padStart(2, "0")}
-              </div>
-              <div className="flex-1 space-y-1">
-                <p className="text-lg text-theme-primary font-serif">
-                  {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
-                </p>
-                {dialogue.hiragana && (
-                  <p className="text-sm text-theme-primary/80">
-                    {dialogue.hiragana}
+              <div className="flex gap-4">
+                <div className="shrink-0 text-theme-primary/30 font-serif text-xl mt-1">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-lg text-theme-primary font-serif">
+                    {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
                   </p>
-                )}
-                {dialogue.romaji && (
-                  <p className="text-xs text-theme-primary/50 font-mono">
-                    {dialogue.romaji}
-                  </p>
-                )}
-                {dialogue.vietnamese && (
-                  <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2">
-                    {dialogue.vietnamese}
-                  </p>
-                )}
+                  {dialogue.hiragana && (
+                    <p className="text-sm text-theme-primary/80">
+                      {dialogue.hiragana}
+                    </p>
+                  )}
+                  {dialogue.romaji && (
+                    <p className="text-xs text-theme-primary/50 font-mono">
+                      {dialogue.romaji}
+                    </p>
+                  )}
+                  {dialogue.vietnamese && (
+                    <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2">
+                      {dialogue.vietnamese}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start">
+                  <button
+                    onClick={() => startEditing(dialogue)}
+                    className="p-2 text-theme-primary/40 hover:text-theme-accent transition-all"
+                    title="Sửa câu"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  {dialogue.explanation && (
+                    <button
+                      onClick={() => setExpandedExplanationId(expandedExplanationId === dialogue.id ? null : dialogue.id)}
+                      className={`p-2 transition-all ${expandedExplanationId === dialogue.id ? 'text-theme-accent' : 'text-theme-primary/40 hover:text-theme-accent'}`}
+                      title="Giải thích chi tiết"
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleRemoveDialogue(dialogue.id)}
+                    className="p-2 text-theme-primary/40 hover:text-red-500 transition-all"
+                    title="Xóa câu"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start">
-                <button
-                  onClick={() => startEditing(dialogue)}
-                  className="p-2 text-theme-primary/40 hover:text-theme-accent transition-all"
-                  title="Sửa câu"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleRemoveDialogue(dialogue.id)}
-                  className="p-2 text-theme-primary/40 hover:text-red-500 transition-all"
-                  title="Xóa câu"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              
+              {/* Detailed Explanation Section */}
+              <AnimatePresence>
+                {expandedExplanationId === dialogue.id && dialogue.explanation && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-4 pt-4 border-t border-theme-subtle ml-8">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent mb-2">
+                        Giải thích chi tiết
+                      </h4>
+                      <p className="text-sm text-theme-primary/80 whitespace-pre-wrap leading-relaxed">
+                        {dialogue.explanation}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}
@@ -463,6 +507,17 @@ function ConversationDetail({
                 value={newVietnamese}
                 onChange={(e) => setNewVietnamese(e.target.value)}
                 className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">
+                Giải thích chi tiết
+              </label>
+              <textarea
+                value={newExplanation}
+                onChange={(e) => setNewExplanation(e.target.value)}
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none"
+                placeholder="Giải thích chi tiết ngữ pháp, từ vựng..."
               />
             </div>
             <div className="flex gap-3 pt-2">
