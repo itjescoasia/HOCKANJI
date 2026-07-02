@@ -226,6 +226,7 @@ function ConversationDetail({
   const [newJp, setNewJp] = useState("");
   const [newHira, setNewHira] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
+  const [newVietnamese, setNewVietnamese] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddDialogue = (e: React.FormEvent) => {
@@ -237,6 +238,7 @@ function ConversationDetail({
       japanese: newJp.trim(),
       hiragana: newHira.trim(),
       romaji: newRomaji.trim(),
+      vietnamese: newVietnamese.trim(),
     };
 
     onUpdate(conversation.id, {
@@ -246,6 +248,7 @@ function ConversationDetail({
     setNewJp("");
     setNewHira("");
     setNewRomaji("");
+    setNewVietnamese("");
     setIsAdding(true); // keep it open
   };
 
@@ -302,6 +305,11 @@ function ConversationDetail({
                   {dialogue.romaji}
                 </p>
               )}
+              {dialogue.vietnamese && (
+                <p className="text-sm text-theme-primary/70 mt-1 italic">
+                  {dialogue.vietnamese}
+                </p>
+              )}
             </div>
             <button
               onClick={() => handleRemoveDialogue(dialogue.id)}
@@ -352,6 +360,17 @@ function ConversationDetail({
               type="text"
               value={newRomaji}
               onChange={(e) => setNewRomaji(e.target.value)}
+              className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">
+              Nghĩa tiếng Việt
+            </label>
+            <input
+              type="text"
+              value={newVietnamese}
+              onChange={(e) => setNewVietnamese(e.target.value)}
               className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
             />
           </div>

@@ -66,6 +66,7 @@ export interface DialogueSentence {
   japanese: string;
   hiragana: string;
   romaji: string;
+  vietnamese: string;
 }
 
 export interface Conversation {
