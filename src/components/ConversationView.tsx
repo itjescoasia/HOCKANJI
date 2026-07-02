@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
 import Fuse from "fuse.js";
 import { formatCreatedAt } from "../lib/dateUtils";
 import { renderExampleHighlight } from "../utils/highlight";
@@ -244,6 +250,8 @@ function ConversationDetail({
   const [editExplanation, setEditExplanation] = useState("");
 
   const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deleteEnabled, setDeleteEnabled] = useState(false);
 
   const handleAddDialogue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,10 +279,10 @@ function ConversationDetail({
   };
 
   const handleRemoveDialogue = (id: string) => {
-    if (!confirm("Bạn có muốn xóa câu này không?")) return;
     onUpdate(conversation.id, {
       dialogues: conversation.dialogues.filter((d) => d.id !== id),
     });
+    setConfirmingDeleteId(null);
   };
 
   const startEditing = (dialogue: DialogueSentence) => {
@@ -307,6 +315,17 @@ function ConversationDetail({
     setEditingId(null);
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const newDialogues = Array.from(conversation.dialogues);
+    const [reorderedItem] = newDialogues.splice(result.source.index, 1);
+    newDialogues.splice(result.destination.index, 0, reorderedItem);
+    
+    onUpdate(conversation.id, {
+      dialogues: newDialogues,
+    });
+  };
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 w-full">
       <button
@@ -320,9 +339,25 @@ function ConversationDetail({
       </button>
 
       <div className="bg-theme-panel border-b-2 border-theme-accent p-8 mb-6">
-        <h1 className="text-2xl font-serif text-theme-primary mb-2">
-          {conversation.title}
-        </h1>
+        <div className="flex justify-between items-start mb-2">
+          <h1 className="text-2xl font-serif text-theme-primary">
+            {conversation.title}
+          </h1>
+          <button
+            onClick={() => {
+              setDeleteEnabled(!deleteEnabled);
+              setConfirmingDeleteId(null);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border ${
+              deleteEnabled 
+                ? "bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20 hover:border-red-500" 
+                : "bg-theme-base text-theme-primary/40 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/40"
+            }`}
+          >
+            {deleteEnabled ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+            {deleteEnabled ? "Tắt xóa" : "Kích hoạt xóa"}
+          </button>
+        </div>
         {conversation.description && (
           <p className="text-theme-primary/70 text-sm italic">
             {conversation.description}
@@ -330,136 +365,187 @@ function ConversationDetail({
         )}
       </div>
 
-      <div className="space-y-4 mb-8">
-        {conversation.dialogues.map((dialogue, index) => {
-          if (editingId === dialogue.id) {
-            return (
-              <div key={dialogue.id} className="p-6 bg-theme-panel border border-theme-accent">
-                <form onSubmit={handleUpdateDialogue} className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                     <span className="text-theme-accent text-xs font-bold uppercase tracking-widest">Sửa câu {index + 1}</span>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Tiếng Nhật *</label>
-                    <input required type="text" value={editJp} onChange={(e) => setEditJp(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Hiragana</label>
-                      <input type="text" value={editHira} onChange={(e) => setEditHira(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
-                      <input type="text" value={editRomaji} onChange={(e) => setEditRomaji(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
-                    <input type="text" value={editVietnamese} onChange={(e) => setEditVietnamese(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Giải thích chi tiết</label>
-                    <textarea value={editExplanation} onChange={(e) => setEditExplanation(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none" placeholder="Giải thích chi tiết ngữ pháp, từ vựng..." />
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <button type="submit" disabled={!editJp.trim()} className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1 flex items-center justify-center gap-2">
-                      <Check className="w-4 h-4" /> Lưu
-                    </button>
-                    <button type="button" onClick={() => setEditingId(null)} className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-xs transition-colors flex-1 border border-theme-subtle hover:border-theme-primary/30 flex items-center justify-center gap-2">
-                      <X className="w-4 h-4" /> Hủy
-                    </button>
-                  </div>
-                </form>
-              </div>
-            );
-          }
-          
-          return (
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="conversation-dialogues">
+          {(provided) => (
             <div
-              key={dialogue.id}
-              className="p-4 bg-theme-panel border border-theme-subtle flex gap-4 group flex-col"
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="space-y-4 mb-8"
             >
-              <div className="flex gap-4">
-                <div className="shrink-0 text-theme-primary/30 font-serif text-xl mt-1">
-                  {String(index + 1).padStart(2, "0")}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-lg text-theme-primary font-serif">
-                    {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
-                  </p>
-                  {dialogue.hiragana && (
-                    <p className="text-sm text-theme-primary/80">
-                      {dialogue.hiragana}
-                    </p>
-                  )}
-                  {dialogue.romaji && (
-                    <p className="text-xs text-theme-primary/50 font-mono">
-                      {dialogue.romaji}
-                    </p>
-                  )}
-                  {dialogue.vietnamese && (
-                    <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2">
-                      {dialogue.vietnamese}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start">
-                  <button
-                    onClick={() => startEditing(dialogue)}
-                    className="p-2 text-theme-primary/40 hover:text-theme-accent transition-all"
-                    title="Sửa câu"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  {dialogue.explanation && (
-                    <button
-                      onClick={() => setExpandedExplanationId(expandedExplanationId === dialogue.id ? null : dialogue.id)}
-                      className={`p-2 transition-all ${expandedExplanationId === dialogue.id ? 'text-theme-accent' : 'text-theme-primary/40 hover:text-theme-accent'}`}
-                      title="Giải thích chi tiết"
+              {conversation.dialogues.map((dialogue, index) => (
+                <Draggable
+                  // @ts-ignore
+                  key={dialogue.id}
+                  draggableId={dialogue.id}
+                  index={index}
+                  isDragDisabled={editingId === dialogue.id || deleteEnabled}
+                >
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      style={provided.draggableProps.style}
+                      className={`relative rounded-lg border ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
                     >
-                      <Info className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleRemoveDialogue(dialogue.id)}
-                    className="p-2 text-theme-primary/40 hover:text-red-500 transition-all"
-                    title="Xóa câu"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Detailed Explanation Section */}
-              <AnimatePresence>
-                {expandedExplanationId === dialogue.id && dialogue.explanation && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-4 ml-14 p-5 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative">
-                      <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Lightbulb className="w-12 h-12 text-theme-accent" />
-                      </div>
-                      <div className="flex items-center gap-2 mb-3 relative z-10">
-                        <Lightbulb className="w-4 h-4 text-theme-accent" />
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent">
-                          Góc học tập
-                        </h4>
-                      </div>
-                      <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                        {dialogue.explanation}
+                      <div className={`p-4 relative z-10 w-full min-h-full ${editingId !== dialogue.id ? "pl-14" : ""}`}>
+                        {editingId !== dialogue.id && !deleteEnabled && (
+                          <div
+                            {...provided.dragHandleProps}
+                            className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-theme-primary/20 hover:text-theme-accent transition-colors z-20 border-r border-theme-subtle"
+                          >
+                            <GripVertical className="w-5 h-5" />
+                          </div>
+                        )}
+                        
+                        {editingId === dialogue.id ? (
+                          <form onSubmit={handleUpdateDialogue} className="space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                               <span className="text-theme-accent text-xs font-bold uppercase tracking-widest">Sửa câu {index + 1}</span>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Tiếng Nhật *</label>
+                              <input required type="text" value={editJp} onChange={(e) => setEditJp(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Hiragana</label>
+                                <input type="text" value={editHira} onChange={(e) => setEditHira(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
+                                <input type="text" value={editRomaji} onChange={(e) => setEditRomaji(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
+                              <input type="text" value={editVietnamese} onChange={(e) => setEditVietnamese(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Giải thích chi tiết</label>
+                              <textarea value={editExplanation} onChange={(e) => setEditExplanation(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none" placeholder="Giải thích chi tiết ngữ pháp, từ vựng..." />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                              <button type="submit" disabled={!editJp.trim()} className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1 flex items-center justify-center gap-2">
+                                <Check className="w-4 h-4" /> Lưu
+                              </button>
+                              <button type="button" onClick={() => setEditingId(null)} className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-xs transition-colors flex-1 border border-theme-subtle hover:border-theme-primary/30 flex items-center justify-center gap-2">
+                                <X className="w-4 h-4" /> Hủy
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div className="flex gap-4 flex-col">
+                            <div className="flex gap-4">
+                              <div className="shrink-0 text-theme-primary/30 font-serif text-xl mt-1">
+                                {String(index + 1).padStart(2, "0")}
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <p className="text-lg text-theme-primary font-serif">
+                                  {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
+                                </p>
+                                {dialogue.hiragana && (
+                                  <p className="text-sm text-theme-primary/80">
+                                    {dialogue.hiragana}
+                                  </p>
+                                )}
+                                {dialogue.romaji && (
+                                  <p className="text-xs text-theme-primary/50 font-mono">
+                                    {dialogue.romaji}
+                                  </p>
+                                )}
+                                {dialogue.vietnamese && (
+                                  <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2">
+                                    {dialogue.vietnamese}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start relative z-20">
+                                <button
+                                  onClick={() => startEditing(dialogue)}
+                                  className="p-2 text-theme-primary/40 hover:text-theme-accent transition-all"
+                                  title="Sửa câu"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                {dialogue.explanation && (
+                                  <button
+                                    onClick={() => setExpandedExplanationId(expandedExplanationId === dialogue.id ? null : dialogue.id)}
+                                    className={`p-2 transition-all ${expandedExplanationId === dialogue.id ? 'text-theme-accent' : 'text-theme-primary/40 hover:text-theme-accent'}`}
+                                    title="Giải thích chi tiết"
+                                  >
+                                    <Info className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {deleteEnabled && (
+                                  confirmingDeleteId === dialogue.id ? (
+                                    <div className="flex flex-col gap-2 bg-red-500/10 p-1 rounded">
+                                      <button
+                                        onClick={() => handleRemoveDialogue(dialogue.id)}
+                                        className="p-1.5 text-red-500 hover:text-red-400 bg-red-500/20 rounded transition-all"
+                                        title="Xác nhận xóa"
+                                      >
+                                        <Check className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmingDeleteId(null)}
+                                        className="p-1.5 text-theme-primary/60 hover:text-theme-primary bg-theme-primary/10 rounded transition-all"
+                                        title="Hủy"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setConfirmingDeleteId(dialogue.id)}
+                                      className="p-2 text-theme-primary/40 hover:text-red-500 transition-all"
+                                      title="Xóa câu"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Detailed Explanation Section */}
+                            <AnimatePresence>
+                              {expandedExplanationId === dialogue.id && dialogue.explanation && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="mt-4 p-5 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                      <Lightbulb className="w-12 h-12 text-theme-accent" />
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-3 relative z-10">
+                                      <Lightbulb className="w-4 h-4 text-theme-accent" />
+                                      <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent">
+                                        Góc học tập
+                                      </h4>
+                                    </div>
+                                    <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
+                                      {dialogue.explanation}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
             </div>
-          );
-        })}
-      </div>
+          )}
+        </Droppable>
+      </DragDropContext>
 
       {isAdding && (
         <div className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">

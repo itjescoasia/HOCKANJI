@@ -842,8 +842,8 @@ function StudyView({
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef}>
                 {word.examples.map((ex, index) => (
-                  // @ts-ignore
                   <Draggable
+                    // @ts-ignore
                     key={ex.id}
                     draggableId={ex.id}
                     index={index}
