@@ -9,12 +9,14 @@ import AddVocab from './components/AddVocab';
 import VocabList from './components/VocabList';
 import ReviewSession from './components/ReviewSession';
 import IntensiveStudy from './components/IntensiveStudy';
+import ConversationView from './components/ConversationView';
 import ShortStudySession from './components/ShortStudySession';
 import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
-import { BookMarked, Home, PlusCircle, LogOut, Lightbulb, Sun, Moon } from 'lucide-react';
+import { BookMarked, Home, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { useConversations } from './hooks/useConversations';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -66,6 +68,7 @@ export default function App() {
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
   const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord } = useIntensiveVocab();
+  const { conversations, addConversation, removeConversation, updateConversation } = useConversations();
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
   const [view, setView] = useState<any>('dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
@@ -275,6 +278,7 @@ export default function App() {
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
     { id: 'intensive_vocab', label: 'Chuyên đề', icon: Lightbulb },
+    { id: 'conversation', label: 'Hội thoại', icon: MessageSquare },
     { id: 'add', label: 'Thêm thẻ', icon: PlusCircle },
   ] as const;
 
@@ -392,6 +396,15 @@ export default function App() {
               onUpdateWord={updateIntensiveWord}
             />
           </div>
+        )}
+
+        {view === 'conversation' && (
+          <ConversationView
+            conversations={conversations}
+            onAddConversation={addConversation}
+            onRemoveConversation={removeConversation}
+            onUpdateConversation={updateConversation}
+          />
         )}
       </main>
 

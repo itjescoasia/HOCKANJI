@@ -61,4 +61,19 @@ export interface IntensiveWord {
 
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
 
-export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review';
+export interface DialogueSentence {
+  id: string;
+  japanese: string;
+  hiragana: string;
+  romaji: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  description: string;
+  dialogues: DialogueSentence[];
+  createdAt: number;
+}
+
+export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation';
