@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Fuse from "fuse.js";
 import { formatCreatedAt } from "../lib/dateUtils";
@@ -439,13 +439,19 @@ function ConversationDetail({
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-4 pt-4 border-t border-theme-subtle ml-8">
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent mb-2">
-                        Giải thích chi tiết
-                      </h4>
-                      <p className="text-sm text-theme-primary/80 whitespace-pre-wrap leading-relaxed">
+                    <div className="mt-4 ml-14 p-5 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative">
+                      <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Lightbulb className="w-12 h-12 text-theme-accent" />
+                      </div>
+                      <div className="flex items-center gap-2 mb-3 relative z-10">
+                        <Lightbulb className="w-4 h-4 text-theme-accent" />
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent">
+                          Góc học tập
+                        </h4>
+                      </div>
+                      <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
                         {dialogue.explanation}
-                      </p>
+                      </div>
                     </div>
                   </motion.div>
                 )}
