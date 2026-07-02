@@ -1026,25 +1026,7 @@ function StudyView({
                             </form>
                           ) : (
                             <>
-                              <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleMeaning(ex.id);
-                                  }}
-                                  className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
-                                  title={
-                                    hiddenMeaningIds.includes(ex.id)
-                                      ? "Hiện nghĩa"
-                                      : "Ẩn nghĩa"
-                                  }
-                                >
-                                  {hiddenMeaningIds.includes(ex.id) ? (
-                                    <EyeOff className="w-4 h-4" />
-                                  ) : (
-                                    <Eye className="w-4 h-4" />
-                                  )}
-                                </button>
+                              <div className="absolute top-2 right-2 flex gap-1 z-10">
                                 {ex.specialNote && (
                                   <button
                                     onClick={(e) => {
@@ -1061,40 +1043,60 @@ function StudyView({
                                     <Lightbulb className="w-4 h-4" />
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => handleStartEditExample(ex)}
-                                  className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
-                                  title="Chỉnh sửa ví dụ"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                {deleteEnabled && (
-                                  confirmingDeleteId === ex.id ? (
-                                    <div className="flex flex-col sm:flex-row gap-1 bg-red-500/10 p-1 rounded border border-red-500/20">
+                                <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleMeaning(ex.id);
+                                    }}
+                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                    title={
+                                      hiddenMeaningIds.includes(ex.id)
+                                        ? "Hiện nghĩa"
+                                        : "Ẩn nghĩa"
+                                    }
+                                  >
+                                    {hiddenMeaningIds.includes(ex.id) ? (
+                                      <EyeOff className="w-4 h-4" />
+                                    ) : (
+                                      <Eye className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => handleStartEditExample(ex)}
+                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                    title="Chỉnh sửa ví dụ"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  {deleteEnabled && (
+                                    confirmingDeleteId === ex.id ? (
+                                      <div className="flex flex-col sm:flex-row gap-1 bg-red-500/10 p-1 rounded border border-red-500/20">
+                                        <button
+                                          onClick={() => handleRemoveExample(ex.id)}
+                                          className="p-1 text-red-500 hover:text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded transition-all"
+                                          title="Xác nhận xóa"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => setConfirmingDeleteId(null)}
+                                          className="px-2 text-[10px] uppercase font-bold text-theme-primary/60 hover:text-theme-primary transition-colors"
+                                        >
+                                          Hủy
+                                        </button>
+                                      </div>
+                                    ) : (
                                       <button
-                                        onClick={() => handleRemoveExample(ex.id)}
-                                        className="p-1 text-red-500 hover:text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded transition-all"
-                                        title="Xác nhận xóa"
+                                        onClick={() => setConfirmingDeleteId(ex.id)}
+                                        className="p-2 text-theme-primary/40 hover:text-red-500 rounded hover:bg-red-500/10 transition-colors"
+                                        title="Xoá ví dụ"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </button>
-                                      <button
-                                        onClick={() => setConfirmingDeleteId(null)}
-                                        className="px-2 text-[10px] uppercase font-bold text-theme-primary/60 hover:text-theme-primary transition-colors"
-                                      >
-                                        Hủy
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      onClick={() => setConfirmingDeleteId(ex.id)}
-                                      className="p-2 text-theme-primary/40 hover:text-red-500 rounded hover:bg-red-500/10 transition-colors"
-                                      title="Xoá ví dụ"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  )
-                                )}
+                                    )
+                                  )}
+                                </div>
                               </div>
                               <div className="flex gap-4 pr-16 pointer-events-none">
                                 <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">

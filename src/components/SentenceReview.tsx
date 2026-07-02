@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
 import { renderExampleHighlight } from "../utils/highlight";
 
@@ -423,6 +423,22 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                       <p className="text-theme-primary/40 mt-2 text-xs">
                         {currentExample.romaji}
                       </p>
+                    )}
+                    {currentExample.specialNote && (
+                      <div className="mt-6 mx-auto max-w-lg p-5 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative text-left w-full">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                          <Lightbulb className="w-12 h-12 text-theme-accent" />
+                        </div>
+                        <div className="flex items-center gap-2 mb-3 relative z-10">
+                          <Lightbulb className="w-4 h-4 text-theme-accent" />
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent">
+                            Lưu ý đặc biệt
+                          </h4>
+                        </div>
+                        <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
+                          {currentExample.specialNote}
+                        </div>
+                      </div>
                     )}
                     <div className="mt-6 pt-6 border-t border-theme-subtle/50 text-xs text-theme-primary/40 flex gap-2 items-center justify-center">
                       <span>Từ vựng gốc:</span>
