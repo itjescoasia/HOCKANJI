@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { KanjiExample } from '../types';
-import { Plus, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { KanjiExample, KanjiCard } from '../types';
+import { Plus, X, AlertTriangle } from 'lucide-react';
 
 interface AddVocabProps {
+  deck?: KanjiCard[];
+  onNavigateToWord?: (kanji: string) => void;
   onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string, forms?: { id: string, name: string, value: string }[]) => void;
 }
 
-export default function AddVocab({ onAdd }: AddVocabProps) {
+export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVocabProps) {
   const [kanji, setKanji] = useState('');
   const [reading, setReading] = useState('');
   const [romaji, setRomaji] = useState('');
@@ -16,11 +18,26 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
   const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
   const [forms, setForms] = useState<{name: string, value: string}[]>([]);
   const [wordType, setWordType] = useState('');
+  
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
+
+  useEffect(() => {
+    if (kanji.trim() && deck.some(card => card.kanji.trim().toLowerCase() === kanji.trim().toLowerCase())) {
+      setDuplicateWarning(true);
+    } else {
+      setDuplicateWarning(false);
+    }
+  }, [kanji, deck]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) {
       alert("Vui lòng điền đầy đủ Kanji (Từ vựng) và Ý nghĩa!");
+      return;
+    }
+    
+    if (deck.some(card => card.kanji.trim().toLowerCase() === kanji.trim().toLowerCase())) {
+      alert("Từ này đã tồn tại trong Kho từ vựng! Không thể thêm từ trùng lặp.");
       return;
     }
     
@@ -90,9 +107,24 @@ export default function AddVocab({ onAdd }: AddVocabProps) {
             required
             value={kanji}
             onChange={e => setKanji(e.target.value)}
-            className="w-full px-5 py-4 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-2xl font-serif text-center"
+            className={`w-full px-5 py-4 bg-theme-base border ${duplicateWarning ? 'border-red-500' : 'border-theme-subtle'} focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-2xl font-serif text-center`}
             placeholder="語"
           />
+          {duplicateWarning && (
+            <div className="mt-3 flex items-center justify-between p-3 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-sm">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Từ này đã có trong Kho từ vựng!</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateToWord && onNavigateToWord(kanji.trim())}
+                className="px-3 py-1 bg-red-500 text-white rounded text-xs font-bold hover:bg-red-600 transition-colors"
+              >
+                Xem lại
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Cách đọc (Kunyomi / Onyomi)</label>

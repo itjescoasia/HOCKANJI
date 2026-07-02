@@ -140,55 +140,54 @@ export default function IntensiveStudy({
             THÊM TỪ VỰNG CHUYÊN SÂU
           </h2>
 
-          <form onSubmit={handleAddSubmit} className="flex flex-col gap-5">
+          <form onSubmit={handleAddSubmit} className="flex flex-col gap-6">
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                Từ khóa / Kanji *
+              </label>
+              <input
+                required
+                type="text"
+                value={newWordData.word}
+                onChange={(e) =>
+                  setNewWordData({ ...newWordData, word: e.target.value })
+                }
+                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-inverted shadow-inner"
+                placeholder="Ví dụ: 情報, 食べる, Ngữ pháp ~て..."
+              />
+            </div>
+            
             <div className="flex flex-col sm:flex-row gap-5">
               <div className="flex-1 space-y-2">
                 <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                  Từ vựng (Kanji) *
+                  Cách đọc (Hiragana)
                 </label>
                 <input
-                  required
                   type="text"
-                  value={newWordData.word}
+                  value={newWordData.reading}
                   onChange={(e) =>
-                    setNewWordData({ ...newWordData, word: e.target.value })
+                    setNewWordData({
+                      ...newWordData,
+                      reading: e.target.value,
+                    })
                   }
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
-                  placeholder="e.g. 情報"
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  placeholder="e.g. じょうほう"
                 />
               </div>
-              <div className="flex-1 flex flex-col sm:flex-row gap-5">
-                <div className="flex-1 space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                    Cách đọc (Hiragana)
-                  </label>
-                  <input
-                    type="text"
-                    value={newWordData.reading}
-                    onChange={(e) =>
-                      setNewWordData({
-                        ...newWordData,
-                        reading: e.target.value,
-                      })
-                    }
-                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                    placeholder="e.g. じょうほう"
-                  />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                    Phiên âm Romaji
-                  </label>
-                  <input
-                    type="text"
-                    value={newWordData.romaji}
-                    onChange={(e) =>
-                      setNewWordData({ ...newWordData, romaji: e.target.value })
-                    }
-                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                    placeholder="e.g. jōhō"
-                  />
-                </div>
+              <div className="flex-1 space-y-2">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Phiên âm Romaji
+                </label>
+                <input
+                  type="text"
+                  value={newWordData.romaji}
+                  onChange={(e) =>
+                    setNewWordData({ ...newWordData, romaji: e.target.value })
+                  }
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  placeholder="e.g. jōhō"
+                />
               </div>
             </div>
 
@@ -554,55 +553,53 @@ function StudyView({
             <h4 className="text-theme-accent uppercase tracking-wider text-sm font-medium mb-4">
               Chỉnh sửa chuyên đề
             </h4>
-            <form onSubmit={handleEditSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleEditSubmit} className="flex flex-col gap-6">
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Từ khóa / Kanji *
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={editWordData.word}
+                  onChange={(e) =>
+                    setEditWordData({ ...editWordData, word: e.target.value })
+                  }
+                  className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-inverted shadow-inner"
+                />
+              </div>
               <div className="flex flex-col sm:flex-row gap-5">
                 <div className="flex-1 space-y-2">
                   <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                    Từ vựng (Kanji) *
+                    Cách đọc (Hiragana)
                   </label>
                   <input
-                    required
                     type="text"
-                    value={editWordData.word}
+                    value={editWordData.reading}
                     onChange={(e) =>
-                      setEditWordData({ ...editWordData, word: e.target.value })
+                      setEditWordData({
+                        ...editWordData,
+                        reading: e.target.value,
+                      })
                     }
-                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
+                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
                   />
                 </div>
-                <div className="flex-1 flex flex-col sm:flex-row gap-5">
-                  <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                      Cách đọc (Hiragana)
-                    </label>
-                    <input
-                      type="text"
-                      value={editWordData.reading}
-                      onChange={(e) =>
-                        setEditWordData({
-                          ...editWordData,
-                          reading: e.target.value,
-                        })
-                      }
-                      className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                      Phiên âm Romaji
-                    </label>
-                    <input
-                      type="text"
-                      value={editWordData.romaji}
-                      onChange={(e) =>
-                        setEditWordData({
-                          ...editWordData,
-                          romaji: e.target.value,
-                        })
-                      }
-                      className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
-                    />
-                  </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Phiên âm Romaji
+                  </label>
+                  <input
+                    type="text"
+                    value={editWordData.romaji}
+                    onChange={(e) =>
+                      setEditWordData({
+                        ...editWordData,
+                        romaji: e.target.value,
+                      })
+                    }
+                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  />
                 </div>
               </div>
 

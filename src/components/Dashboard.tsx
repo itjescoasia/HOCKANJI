@@ -159,19 +159,19 @@ export default function Dashboard({
   };
 
   // Tiến độ ôn tập hôm nay
-  const studiedToday = todayStats.reviewed || 0;
+  const studiedToday = Number(todayStats.reviewed) || 0;
   const todayGoal = studiedToday + dueCards.length;
   const todayProgressRate =
     todayGoal > 0 ? Math.round((studiedToday / todayGoal) * 100) : 100;
 
-  const reviewedDiff = todayStats.reviewed - yesterdayStats.reviewed;
+  const reviewedDiff = (Number(todayStats.reviewed) || 0) - (Number(yesterdayStats.reviewed) || 0);
   const correctRateToday =
     todayStats.reviewed > 0
-      ? Math.round((todayStats.correct / todayStats.reviewed) * 100)
+      ? Math.round(((todayStats.correct || 0) / todayStats.reviewed) * 100)
       : 0;
   const correctRateYesterday =
     yesterdayStats.reviewed > 0
-      ? Math.round((yesterdayStats.correct / yesterdayStats.reviewed) * 100)
+      ? Math.round(((yesterdayStats.correct || 0) / yesterdayStats.reviewed) * 100)
       : 0;
   const errorRateDiff = 100 - correctRateToday - (100 - correctRateYesterday); // negative means fewer errors today
 
@@ -188,10 +188,10 @@ export default function Dashboard({
     };
     return {
       date: d.toLocaleDateString("vi-VN", { weekday: "short" }),
-      reviewed: s.reviewed,
-      correct: s.correct,
-      newLearned: s.newLearned || 0,
-      freeStudyTimeMinutes: Math.ceil((s.freeStudyTime || 0) / 60),
+      reviewed: Number(s.reviewed) || 0,
+      correct: Number(s.correct) || 0,
+      newLearned: Number(s.newLearned) || 0,
+      freeStudyTimeMinutes: Math.ceil((Number(s.freeStudyTime) || 0) / 60),
     };
   });
 
@@ -527,7 +527,7 @@ export default function Dashboard({
           </div>
           <div className="flex items-end gap-3 mt-1">
             <span className="text-3xl font-serif text-theme-primary">
-              {todayStats.reviewed}
+              {Number(todayStats.reviewed) || 0}
             </span>
             {reviewedDiff !== 0 && (
               <span
@@ -553,10 +553,10 @@ export default function Dashboard({
           </div>
           <div className="flex items-end gap-3 mt-1">
             <span className="text-3xl font-serif text-theme-primary">
-              {todayStats.correct}
+              {Number(todayStats.correct) || 0}
             </span>
             <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">
-              / {todayStats.reviewed}
+              / {Number(todayStats.reviewed) || 0}
             </span>
           </div>
         </div>

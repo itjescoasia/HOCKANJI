@@ -72,6 +72,7 @@ export default function App() {
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
   const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);
   const [sentenceReviewMode, setSentenceReviewMode] = useState<'JA_TO_VI' | 'VI_TO_JA'>('JA_TO_VI');
+  const [listSearchQuery, setListSearchQuery] = useState('');
   const lastActivityRef = useRef(Date.now());
   const activeSecondsRef = useRef(0);
 
@@ -226,6 +227,9 @@ export default function App() {
       setIsDifficultReviewMode(false);
     }
     setView(newView);
+    if (newView !== 'list') {
+      setListSearchQuery('');
+    }
   };
 
   const handleCloseReview = () => {
@@ -340,15 +344,22 @@ export default function App() {
         )}
         
         {view === 'list' && (
-          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} />
+          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} />
         )}
         
         {view === 'add' && (
-          <AddVocab onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms) => {
-            await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || []);
-            alert('Vừa thêm từ vựng mới thành công');
-            handleNavigate('list'); // Redirect to list to show success
-          }} />
+          <AddVocab 
+            deck={deck}
+            onNavigateToWord={(kanji) => {
+              setListSearchQuery(kanji);
+              setView('list');
+            }}
+            onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms) => {
+              await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || []);
+              alert('Vừa thêm từ vựng mới thành công');
+              handleNavigate('list'); // Redirect to list to show success
+            }} 
+          />
         )}
 
         {view === 'intensive_vocab' && (

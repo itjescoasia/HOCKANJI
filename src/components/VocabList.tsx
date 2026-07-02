@@ -8,10 +8,11 @@ interface VocabListProps {
   onRemove: (id: string) => void;
   onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>) => void;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
+  initialSearchQuery?: string;
 }
 
-export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabListProps) {
-  const [search, setSearch] = useState('');
+export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '' }: VocabListProps) {
+  const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -544,14 +545,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport }: VocabL
                                 style={{ width: `${Math.min(100, (card.interval / 30) * 100)}%` }}
                               />
                             </div>
-                            <span className="text-[10px] font-serif text-theme-accent opacity-80">{card.interval} Ngày</span>
+                            <span className="text-[10px] font-serif text-theme-accent opacity-80">{Number(card.interval) || 0} Ngày</span>
                           </div>
                           <div className="flex items-center gap-2 text-[10px] tracking-widest uppercase">
                             <span className={isDue ? "text-red-500 font-medium" : "text-theme-primary opacity-50"}>
                               {isDue ? 'Cần Ôn Ngay' : `Sau ${Math.ceil((card.nextReviewDate - Date.now()) / (1000 * 60 * 60 * 24))} ngày`}
                             </span>
                             <span className="text-theme-inverted">|</span>
-                            <span className="text-theme-primary opacity-40 italic font-serif">Độ khó: {card.easeFactor.toFixed(1)}</span>
+                            <span className="text-theme-primary opacity-40 italic font-serif">Độ khó: {(Number(card.easeFactor) || 2.5).toFixed(1)}</span>
                           </div>
                         </div>
                       </td>
