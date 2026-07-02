@@ -17,6 +17,8 @@ import {
   EyeOff,
   GripVertical,
   Lightbulb,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
@@ -431,6 +433,8 @@ function StudyView({
     );
   };
 
+  const [deleteEnabled, setDeleteEnabled] = useState(false);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleData, setEditExampleData] = useState({
     sentence: "",
@@ -741,12 +745,28 @@ function StudyView({
           </h3>
           <div className="flex items-center gap-6">
             {word.examples.length > 0 && (
-              <button
-                onClick={toggleAllMeanings}
-                className="text-theme-primary/60 hover:text-theme-primary flex items-center gap-1 text-sm uppercase tracking-wider font-medium transition-colors"
-              >
-                {isAllHidden ? "Hiện tất cả" : "Ẩn tất cả"}
-              </button>
+              <>
+                <button
+                  onClick={toggleAllMeanings}
+                  className="text-theme-primary/60 hover:text-theme-primary flex items-center gap-1 text-[10px] sm:text-sm uppercase tracking-wider font-medium transition-colors"
+                >
+                  {isAllHidden ? "Hiện tất cả" : "Ẩn tất cả"}
+                </button>
+                <button
+                  onClick={() => {
+                    setDeleteEnabled(!deleteEnabled);
+                    setConfirmingDeleteId(null);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded ${
+                    deleteEnabled 
+                      ? "bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20 hover:border-red-500" 
+                      : "bg-theme-base text-theme-primary/40 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/40"
+                  }`}
+                >
+                  {deleteEnabled ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                  {deleteEnabled ? "Tắt xóa" : "Kích hoạt xóa"}
+                </button>
+              </>
             )}
             {!isAddingExample && (
               <button
@@ -1031,10 +1051,10 @@ function StudyView({
                                       e.stopPropagation();
                                       toggleNote(ex.id);
                                     }}
-                                    className={`p-2 transition-all rounded hover:bg-theme-panel ${
+                                    className={`p-2 transition-all rounded shadow-sm ${
                                       expandedNoteIds.includes(ex.id)
-                                        ? "text-theme-accent"
-                                        : "text-theme-primary/40 hover:text-theme-accent"
+                                        ? "bg-theme-accent text-theme-base"
+                                        : "bg-theme-accent/10 text-theme-accent border border-theme-accent/20 hover:bg-theme-accent/20 hover:border-theme-accent/40"
                                     }`}
                                     title="Lưu ý đặc biệt"
                                   >
@@ -1048,21 +1068,33 @@ function StudyView({
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        "Bạn có chắc chắn muốn xóa ví dụ này?",
-                                      )
-                                    ) {
-                                      handleRemoveExample(ex.id);
-                                    }
-                                  }}
-                                  className="p-2 text-theme-primary/20 hover:text-red-500 rounded hover:bg-theme-panel"
-                                  title="Xoá ví dụ"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {deleteEnabled && (
+                                  confirmingDeleteId === ex.id ? (
+                                    <div className="flex flex-col sm:flex-row gap-1 bg-red-500/10 p-1 rounded border border-red-500/20">
+                                      <button
+                                        onClick={() => handleRemoveExample(ex.id)}
+                                        className="p-1 text-red-500 hover:text-red-400 bg-red-500/20 hover:bg-red-500/30 rounded transition-all"
+                                        title="Xác nhận xóa"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmingDeleteId(null)}
+                                        className="px-2 text-[10px] uppercase font-bold text-theme-primary/60 hover:text-theme-primary transition-colors"
+                                      >
+                                        Hủy
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setConfirmingDeleteId(ex.id)}
+                                      className="p-2 text-theme-primary/40 hover:text-red-500 rounded hover:bg-red-500/10 transition-colors"
+                                      title="Xoá ví dụ"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )
+                                )}
                               </div>
                               <div className="flex gap-4 pr-16 pointer-events-none">
                                 <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">
