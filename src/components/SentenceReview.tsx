@@ -71,6 +71,17 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       [dueExamples[i], dueExamples[j]] = [dueExamples[j], dueExamples[i]];
     }
 
+    // Sort by priority to ensure new and forgotten sentences appear first
+    dueExamples.sort((a, b) => {
+      const getPriority = (ex: ExampleWithWord) => {
+        const interval = mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
+        if (interval === undefined || interval === null) return 0; // Chưa học (New)
+        if (interval === 0) return 1; // Quên (Forgot)
+        return 2; // Đến hạn ôn (Due)
+      };
+      return getPriority(a) - getPriority(b);
+    });
+
     setExamples(dueExamples);
     setIsInitialized(true);
   }, [deck, mode, isInitialized]);
