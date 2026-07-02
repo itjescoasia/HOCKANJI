@@ -90,7 +90,7 @@ export default function ConversationView({
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-xl transition-colors placeholder:text-theme-inverted"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-xl transition-colors placeholder:text-theme-primary/40"
                 placeholder="Ví dụ: Hội thoại mua sắm..."
               />
             </div>
@@ -101,7 +101,7 @@ export default function ConversationView({
               <textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted h-24 resize-none"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40 h-24 resize-none"
                 placeholder="Mô tả nội dung hoặc bối cảnh..."
               />
             </div>
@@ -436,25 +436,25 @@ function ConversationDetail({
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Tiếng Nhật *</label>
-                                <input required type="text" value={editJp} onChange={(e) => setEditJp(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                                <input required type="text" value={editJp} onChange={(e) => setEditJp(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Hiragana</label>
-                                  <input type="text" value={editHira} onChange={(e) => setEditHira(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                                  <input type="text" value={editHira} onChange={(e) => setEditHira(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
                                 </div>
                                 <div className="space-y-2">
                                   <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Romaji</label>
-                                  <input type="text" value={editRomaji} onChange={(e) => setEditRomaji(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                                  <input type="text" value={editRomaji} onChange={(e) => setEditRomaji(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
                                 </div>
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
-                                <input type="text" value={editVietnamese} onChange={(e) => setEditVietnamese(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors" />
+                                <input type="text" value={editVietnamese} onChange={(e) => setEditVietnamese(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
                               </div>
                               <div className="space-y-2">
                                 <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Giải thích chi tiết</label>
-                                <textarea value={editExplanation} onChange={(e) => setEditExplanation(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none" placeholder="Giải thích chi tiết ngữ pháp, từ vựng..." />
+                                <textarea value={editExplanation} onChange={(e) => setEditExplanation(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none" placeholder="Giải thích chi tiết ngữ pháp, từ vựng..." />
                               </div>
                               <div className="flex gap-3 pt-2">
                                 <button type="submit" disabled={!editJp.trim()} className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1 flex items-center justify-center gap-2">
@@ -669,7 +669,7 @@ function ConversationDetail({
                 type="text"
                 value={newJp}
                 onChange={(e) => setNewJp(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors"
               />
             </div>
             <div className="space-y-2">
@@ -680,7 +680,7 @@ function ConversationDetail({
                 type="text"
                 value={newHira}
                 onChange={(e) => setNewHira(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors"
               />
             </div>
             <div className="space-y-2">
@@ -691,7 +691,7 @@ function ConversationDetail({
                 type="text"
                 value={newRomaji}
                 onChange={(e) => setNewRomaji(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors"
               />
             </div>
             <div className="space-y-2">
@@ -702,7 +702,7 @@ function ConversationDetail({
                 type="text"
                 value={newVietnamese}
                 onChange={(e) => setNewVietnamese(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors"
               />
             </div>
             <div className="space-y-2">
@@ -712,7 +712,7 @@ function ConversationDetail({
               <textarea
                 value={newExplanation}
                 onChange={(e) => setNewExplanation(e.target.value)}
-                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none"
+                className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none"
                 placeholder="Giải thích chi tiết ngữ pháp, từ vựng..."
               />
             </div>

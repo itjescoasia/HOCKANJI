@@ -36,6 +36,7 @@ export interface IntensiveExample {
   reading?: string;
   romaji?: string;
   translation: string;
+  specialNote?: string;
   mastered?: boolean; // legacy
   jaToViMastered?: boolean;
   viToJaMastered?: boolean;

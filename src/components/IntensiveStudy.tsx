@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   GripVertical,
+  Lightbulb,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
@@ -152,7 +153,7 @@ export default function IntensiveStudy({
                 onChange={(e) =>
                   setNewWordData({ ...newWordData, word: e.target.value })
                 }
-                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-inverted shadow-inner"
+                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-primary/40 shadow-inner"
                 placeholder="Ví dụ: 情報, 食べる, Ngữ pháp ~て..."
               />
             </div>
@@ -171,7 +172,7 @@ export default function IntensiveStudy({
                       reading: e.target.value,
                     })
                   }
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                   placeholder="e.g. じょうほう"
                 />
               </div>
@@ -185,7 +186,7 @@ export default function IntensiveStudy({
                   onChange={(e) =>
                     setNewWordData({ ...newWordData, romaji: e.target.value })
                   }
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                   placeholder="e.g. jōhō"
                 />
               </div>
@@ -232,7 +233,7 @@ export default function IntensiveStudy({
                     explanation: e.target.value,
                   })
                 }
-                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                 placeholder="e.g. Đây là từ ít xuất hiện, thường dùng trong ngữ cảnh..."
               />
             </div>
@@ -394,6 +395,7 @@ function StudyView({
   const [newReading, setNewReading] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
   const [newTranslation, setNewTranslation] = useState("");
+  const [newSpecialNote, setNewSpecialNote] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
     word: word.word,
@@ -404,6 +406,7 @@ function StudyView({
   });
 
   const [hiddenMeaningIds, setHiddenMeaningIds] = useState<string[]>([]);
+  const [expandedNoteIds, setExpandedNoteIds] = useState<string[]>([]);
   const isAllHidden =
     word.examples.length > 0 &&
     hiddenMeaningIds.length === word.examples.length;
@@ -422,12 +425,19 @@ function StudyView({
     );
   };
 
+  const toggleNote = (id: string) => {
+    setExpandedNoteIds((prev) =>
+      prev.includes(id) ? prev.filter((nid) => nid !== id) : [...prev, id],
+    );
+  };
+
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleData, setEditExampleData] = useState({
     sentence: "",
     reading: "",
     romaji: "",
     translation: "",
+    specialNote: "",
   });
 
   const handleStartEditExample = (ex: IntensiveExample) => {
@@ -437,6 +447,7 @@ function StudyView({
       reading: ex.reading || "",
       romaji: ex.romaji || "",
       translation: ex.translation || "",
+      specialNote: ex.specialNote || "",
     });
   };
 
@@ -468,6 +479,7 @@ function StudyView({
           reading: editExampleData.reading.trim(),
           romaji: editExampleData.romaji.trim(),
           translation: editExampleData.translation.trim(),
+          specialNote: editExampleData.specialNote.trim(),
         };
       }
       return ex;
@@ -510,6 +522,7 @@ function StudyView({
       reading: newReading.trim(),
       romaji: newRomaji.trim(),
       translation: newTranslation.trim(),
+      specialNote: newSpecialNote.trim(),
     };
 
     onUpdateWord(word.id, {
@@ -520,6 +533,7 @@ function StudyView({
     setNewReading("");
     setNewRomaji("");
     setNewTranslation("");
+    setNewSpecialNote("");
     setIsAddingExample(false);
   };
 
@@ -565,7 +579,7 @@ function StudyView({
                   onChange={(e) =>
                     setEditWordData({ ...editWordData, word: e.target.value })
                   }
-                  className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-inverted shadow-inner"
+                  className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-primary/40 shadow-inner"
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-5">
@@ -582,7 +596,7 @@ function StudyView({
                         reading: e.target.value,
                       })
                     }
-                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                   />
                 </div>
                 <div className="flex-1 space-y-2">
@@ -598,7 +612,7 @@ function StudyView({
                         romaji: e.target.value,
                       })
                     }
-                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                    className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                   />
                 </div>
               </div>
@@ -644,7 +658,7 @@ function StudyView({
                       explanation: e.target.value,
                     })
                   }
-                  className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  className="w-full bg-theme-hover border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                 />
               </div>
 
@@ -765,7 +779,7 @@ function StudyView({
                   rows={2}
                   value={newSentence}
                   onChange={(e) => setNewSentence(e.target.value)}
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-primary/40"
                   placeholder="e.g. この情報は大切です。"
                 />
               </div>
@@ -778,7 +792,7 @@ function StudyView({
                     type="text"
                     value={newReading}
                     onChange={(e) => setNewReading(e.target.value)}
-                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                     placeholder="e.g. この じょうほう は たいせつ です"
                   />
                 </div>
@@ -790,7 +804,7 @@ function StudyView({
                     type="text"
                     value={newRomaji}
                     onChange={(e) => setNewRomaji(e.target.value)}
-                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                     placeholder="e.g. Kono jōhō wa taisetsu desu."
                   />
                 </div>
@@ -803,8 +817,20 @@ function StudyView({
                   type="text"
                   value={newTranslation}
                   onChange={(e) => setNewTranslation(e.target.value)}
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                   placeholder="e.g. Thông tin này quan trọng."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Lưu ý đặc biệt
+                </label>
+                <textarea
+                  rows={2}
+                  value={newSpecialNote}
+                  onChange={(e) => setNewSpecialNote(e.target.value)}
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
+                  placeholder="Ghi chú lại kiến thức quan trọng của câu ví dụ này..."
                 />
               </div>
               <div className="flex items-center gap-3 pt-2">
@@ -891,7 +917,7 @@ function StudyView({
                                       sentence: e.target.value,
                                     })
                                   }
-                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-inverted"
+                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-primary/40"
                                 />
                               </div>
                               <div className="flex flex-col sm:flex-row gap-4">
@@ -908,7 +934,7 @@ function StudyView({
                                         reading: e.target.value,
                                       })
                                     }
-                                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                                   />
                                 </div>
                                 <div className="flex-1 space-y-2">
@@ -924,7 +950,7 @@ function StudyView({
                                         romaji: e.target.value,
                                       })
                                     }
-                                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                                    className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
                                   />
                                 </div>
                               </div>
@@ -941,7 +967,24 @@ function StudyView({
                                       translation: e.target.value,
                                     })
                                   }
-                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-inverted"
+                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                                  Lưu ý đặc biệt
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={editExampleData.specialNote}
+                                  onChange={(e) =>
+                                    setEditExampleData({
+                                      ...editExampleData,
+                                      specialNote: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
+                                  placeholder="Ghi chú lại kiến thức quan trọng của câu ví dụ này..."
                                 />
                               </div>
                               <div className="flex items-center gap-3 pt-2">
@@ -982,6 +1025,22 @@ function StudyView({
                                     <Eye className="w-4 h-4" />
                                   )}
                                 </button>
+                                {ex.specialNote && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleNote(ex.id);
+                                    }}
+                                    className={`p-2 transition-all rounded hover:bg-theme-panel ${
+                                      expandedNoteIds.includes(ex.id)
+                                        ? "text-theme-accent"
+                                        : "text-theme-primary/40 hover:text-theme-accent"
+                                    }`}
+                                    title="Lưu ý đặc biệt"
+                                  >
+                                    <Lightbulb className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => handleStartEditExample(ex)}
                                   className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
@@ -1027,10 +1086,36 @@ function StudyView({
                                     )}
                                   {ex.translation &&
                                     !hiddenMeaningIds.includes(ex.id) && (
-                                      <p className="text-sm text-theme-primary/50 italic">
+                                      <p className="text-sm text-theme-primary/50 italic mb-2">
                                         ({ex.translation})
                                       </p>
                                     )}
+                                  
+                                  <AnimatePresence>
+                                    {expandedNoteIds.includes(ex.id) && ex.specialNote && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden pointer-events-auto"
+                                      >
+                                        <div className="mt-4 p-5 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative">
+                                          <div className="absolute top-0 right-0 p-4 opacity-10">
+                                            <Lightbulb className="w-12 h-12 text-theme-accent" />
+                                          </div>
+                                          <div className="flex items-center gap-2 mb-3 relative z-10">
+                                            <Lightbulb className="w-4 h-4 text-theme-accent" />
+                                            <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent">
+                                              Lưu ý đặc biệt
+                                            </h4>
+                                          </div>
+                                          <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
+                                            {ex.specialNote}
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
                                 </div>
                               </div>
                             </>
