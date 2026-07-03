@@ -257,7 +257,9 @@ function ConversationDetail({
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopyAllJapanese = () => {
-    const textToCopy = conversation.dialogues.map((d) => d.japanese).join("\n");
+    const textToCopy = conversation.dialogues
+      .map((d, index) => `${index + 1}. ${d.japanese}`)
+      .join("\n");
     navigator.clipboard.writeText(textToCopy).then(() => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
