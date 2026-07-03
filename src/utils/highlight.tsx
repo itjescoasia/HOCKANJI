@@ -132,7 +132,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
     const int = card.interval || 0;
     if (rep === 0 && int === 0) {
       status = 'new';
-    } else if (rep === 0 || int <= 1) {
+    } else if (rep === 0 || int === 0) {
       status = 'bad';
     }
 

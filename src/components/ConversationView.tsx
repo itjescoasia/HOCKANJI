@@ -18,6 +18,7 @@ interface ConversationViewProps {
   onRemoveConversation: (id: string) => void;
   onUpdateConversation: (id: string, updates: Partial<Conversation>) => void;
   onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
+  onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
   mainDeck: KanjiCard[];
 }
 
@@ -27,6 +28,7 @@ export default function ConversationView({
   onRemoveConversation,
   onUpdateConversation,
   onUpdateCard,
+  onReviewCard,
   mainDeck,
 }: ConversationViewProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "detail">("list");
@@ -130,6 +132,7 @@ export default function ConversationView({
         }}
         onUpdate={(id, updates) => onUpdateConversation(id, updates)}
         onUpdateCard={onUpdateCard}
+        onReviewCard={onReviewCard}
         mainDeck={mainDeck}
       />
     );
@@ -232,12 +235,14 @@ function ConversationDetail({
   onBack,
   onUpdate,
   onUpdateCard,
+  onReviewCard,
   mainDeck,
 }: {
   conversation: Conversation;
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
   onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
+  onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
   mainDeck: KanjiCard[];
 }) {
   const [newJp, setNewJp] = useState("");
@@ -628,7 +633,7 @@ function ConversationDetail({
         </DragDropContext>
       ) : viewMode === "review_vocab" ? (
         <div className="mb-8">
-          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} onUpdateCard={onUpdateCard} />
+          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} onUpdateCard={onUpdateCard} onReviewCard={onReviewCard} />
         </div>
       ) : (
         <div className="mb-8">
@@ -842,12 +847,14 @@ function ConversationVocabReview({
   conversation,
   mainDeck,
   onUpdate,
-  onUpdateCard
+  onUpdateCard,
+  onReviewCard
 }: {
   conversation: Conversation;
   mainDeck: KanjiCard[];
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
   onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
+  onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
 }) {
   const [vocab, setVocab] = useState<KanjiCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -877,7 +884,13 @@ function ConversationVocabReview({
     scores[currentCard.id] = (scores[currentCard.id] || 0) + change;
     onUpdate(conversation.id, { vocabScores: scores });
 
-    if (onUpdateCard) {
+    if (onReviewCard) {
+      if (change > 0) {
+        onReviewCard(currentCard.id, 'good');
+      } else {
+        onReviewCard(currentCard.id, 'forgot');
+      }
+    } else if (onUpdateCard) {
       if (change > 0) {
         // "Nhớ" - set interval to 2, repetition to 1 (makes status 'good' - green)
         onUpdateCard(currentCard.id, {
