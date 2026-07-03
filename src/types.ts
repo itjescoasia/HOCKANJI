@@ -77,6 +77,7 @@ export interface Conversation {
   description: string;
   dialogues: DialogueSentence[];
   createdAt: number;
+  vocabScores?: Record<string, number>;
 }
 
 export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation';

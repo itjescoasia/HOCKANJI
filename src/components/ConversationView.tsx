@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -252,7 +252,7 @@ function ConversationDetail({
   const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deleteEnabled, setDeleteEnabled] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "slideshow">("list");
+  const [viewMode, setViewMode] = useState<"list" | "slideshow" | "review_vocab">("list");
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -391,6 +391,17 @@ function ConversationDetail({
                 title="Chế độ trình chiếu"
               >
                 <Presentation className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("review_vocab")}
+                className={`p-1.5 transition-colors flex items-center gap-1 font-bold tracking-widest uppercase text-[10px] ${
+                  viewMode === "review_vocab"
+                    ? "bg-theme-accent text-theme-inverted"
+                    : "text-theme-primary/40 hover:text-theme-primary hover:bg-theme-hover"
+                }`}
+                title="Ôn tập từ vựng"
+              >
+                <Brain className="w-4 h-4" />
               </button>
             </div>
             {viewMode === "list" && (
@@ -600,6 +611,10 @@ function ConversationDetail({
             )}
           </Droppable>
         </DragDropContext>
+      ) : viewMode === "review_vocab" ? (
+        <div className="mb-8">
+          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} />
+        </div>
       ) : (
         <div className="mb-8">
           {conversation.dialogues.length > 0 ? (
@@ -768,6 +783,215 @@ function ConversationDetail({
           Thêm câu
         </button>
       )}
+    </div>
+  );
+}
+
+function getVocabForConversation(conversation: Conversation, mainDeck: KanjiCard[]): KanjiCard[] {
+  const uniqueWords = new Map<string, KanjiCard>();
+  const combinedText = conversation.dialogues.map(d => d.japanese).join(" ");
+  
+  mainDeck.forEach(card => {
+    const wordStr = card.kanji || card.reading;
+    if (!wordStr || wordStr.length === 0) return;
+    
+    let isMatch = combinedText.includes(wordStr);
+    
+    if (!isMatch && card.kanji) {
+      const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
+      if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem) && combinedText.includes(stem)) {
+        isMatch = true;
+      }
+    }
+
+    if (!isMatch && card.forms) {
+      for (const form of card.forms) {
+        if (form.value && combinedText.includes(form.value)) {
+          isMatch = true;
+          break;
+        }
+      }
+    }
+
+    if (isMatch) {
+      if (!uniqueWords.has(wordStr)) {
+        uniqueWords.set(wordStr, card);
+      }
+    }
+  });
+
+  return Array.from(uniqueWords.values());
+}
+
+function ConversationVocabReview({
+  conversation,
+  mainDeck,
+  onUpdate
+}: {
+  conversation: Conversation;
+  mainDeck: KanjiCard[];
+  onUpdate: (id: string, updates: Partial<Conversation>) => void;
+}) {
+  const [vocab, setVocab] = useState<KanjiCard[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  useEffect(() => {
+    let extracted = getVocabForConversation(conversation, mainDeck);
+    
+    const scores = conversation.vocabScores || {};
+    
+    extracted = extracted.sort(() => Math.random() - 0.5);
+    extracted = extracted.sort((a, b) => {
+      const scoreA = scores[a.id] || 0;
+      const scoreB = scores[b.id] || 0;
+      return scoreA - scoreB;
+    });
+    
+    setVocab(extracted);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  }, [conversation.id, mainDeck]);
+
+  const handleScore = (change: number) => {
+    const currentCard = vocab[currentIndex];
+    const scores = { ...(conversation.vocabScores || {}) };
+    scores[currentCard.id] = (scores[currentCard.id] || 0) + change;
+    onUpdate(conversation.id, { vocabScores: scores });
+    
+    if (currentIndex < vocab.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsFlipped(false);
+    } else {
+      setCurrentIndex(vocab.length);
+    }
+  };
+
+  if (vocab.length === 0) {
+    return (
+      <div className="text-center text-theme-primary/50 py-12 border border-theme-subtle border-dashed bg-theme-panel">
+        Không có từ vựng nào trong hội thoại này được tìm thấy.
+      </div>
+    );
+  }
+
+  if (currentIndex >= vocab.length) {
+    return (
+      <div className="text-center py-20 bg-theme-panel border border-theme-subtle">
+        <h3 className="text-2xl font-serif text-theme-accent mb-4">Hoàn thành phiên ôn tập!</h3>
+        <button
+          onClick={() => {
+            let extracted = [...vocab];
+            const scores = conversation.vocabScores || {};
+            extracted = extracted.sort(() => Math.random() - 0.5);
+            extracted = extracted.sort((a, b) => {
+              const scoreA = scores[a.id] || 0;
+              const scoreB = scores[b.id] || 0;
+              return scoreA - scoreB;
+            });
+            setVocab(extracted);
+            setCurrentIndex(0);
+            setIsFlipped(false);
+          }}
+          className="bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-3 px-8 uppercase tracking-widest text-xs transition-colors"
+        >
+          Học lại
+        </button>
+      </div>
+    );
+  }
+
+  const currentCard = vocab[currentIndex];
+
+  return (
+    <div className="max-w-2xl mx-auto w-full flex flex-col items-center pb-12">
+      <div className="text-theme-primary/40 text-[10px] uppercase tracking-widest mb-4">
+        Từ vựng {currentIndex + 1} / {vocab.length}
+      </div>
+      
+      <div 
+        className="w-full aspect-[4/3] sm:aspect-[16/9] mb-8 cursor-pointer"
+        style={{ perspective: "1000px" }}
+        onClick={() => setIsFlipped(!isFlipped)}
+      >
+        <motion.div
+          className="w-full h-full relative"
+          style={{ transformStyle: "preserve-3d" }}
+          animate={{ rotateY: isFlipped ? 180 : 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        >
+          {/* Front */}
+          <div 
+            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex items-center justify-center p-8 shadow-xl"
+            style={{ backfaceVisibility: "hidden" }}
+          >
+            <h2 className="text-5xl md:text-7xl font-serif text-theme-primary text-center leading-tight">
+              {currentCard.kanji || currentCard.reading}
+            </h2>
+          </div>
+
+          {/* Back */}
+          <div 
+            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-8 shadow-xl text-center"
+            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          >
+             <div className="text-3xl md:text-4xl text-theme-primary font-serif mb-4">
+                {currentCard.reading}
+             </div>
+             {currentCard.romaji && (
+                <div className="text-lg md:text-xl text-theme-primary/50 font-mono mb-4 tracking-widest uppercase">
+                  {currentCard.romaji}
+                </div>
+             )}
+             <div className="text-xl md:text-2xl text-theme-primary/90">
+                {currentCard.meaning}
+             </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="h-16 w-full max-w-sm">
+        <AnimatePresence mode="wait">
+          {isFlipped ? (
+            <motion.div 
+              key="buttons"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex gap-4 w-full h-full"
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleScore(-1);
+                }}
+                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-4 px-6 uppercase tracking-widest text-sm transition-colors rounded-sm"
+              >
+                Quên
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleScore(1);
+                }}
+                className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 font-bold py-4 px-6 uppercase tracking-widest text-sm transition-colors rounded-sm"
+              >
+                Nhớ
+              </button>
+            </motion.div>
+          ) : (
+             <motion.div 
+               key="hint"
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="text-theme-primary/40 text-xs uppercase tracking-widest text-center h-full flex items-center justify-center"
+             >
+               Chạm vào thẻ để lật
+             </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
