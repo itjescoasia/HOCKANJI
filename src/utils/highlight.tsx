@@ -87,8 +87,8 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
         uniqueWords.set(wordStr, card);
       } else {
         const existing = uniqueWords.get(wordStr)!;
-        const eScore = existing.interval + existing.repetition;
-        const cScore = card.interval + card.repetition;
+        const eScore = (existing.interval || 0) + (existing.repetition || 0);
+        const cScore = (card.interval || 0) + (card.repetition || 0);
         if (cScore > eScore) {
           uniqueWords.set(wordStr, card);
         }
@@ -128,9 +128,11 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
     matchStrs.sort((a, b) => b.length - a.length);
     
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
-    if (card.repetition === 0 && card.interval === 0) {
+    const rep = card.repetition || 0;
+    const int = card.interval || 0;
+    if (rep === 0 && int === 0) {
       status = 'new';
-    } else if (card.repetition === 0 || card.interval <= 1) {
+    } else if (rep === 0 || int <= 1) {
       status = 'bad';
     }
 

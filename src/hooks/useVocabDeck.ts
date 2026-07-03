@@ -262,7 +262,7 @@ export function useVocabDeck() {
     return { added: cardsToAdd.length, updated: cardsToUpdate.length };
   };
 
-  const updateCard = async (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'freeStudyScore' | 'difficultScore'>>) => {
+  const updateCard = async (id: string, updates: Partial<KanjiCard>) => {
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });

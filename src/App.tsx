@@ -404,6 +404,7 @@ export default function App() {
             onAddConversation={addConversation}
             onRemoveConversation={removeConversation}
             onUpdateConversation={updateConversation}
+            onUpdateCard={updateCard}
             mainDeck={deck}
           />
         )}

@@ -17,6 +17,7 @@ interface ConversationViewProps {
   onAddConversation: (conversation: Conversation) => void;
   onRemoveConversation: (id: string) => void;
   onUpdateConversation: (id: string, updates: Partial<Conversation>) => void;
+  onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
   mainDeck: KanjiCard[];
 }
 
@@ -25,6 +26,7 @@ export default function ConversationView({
   onAddConversation,
   onRemoveConversation,
   onUpdateConversation,
+  onUpdateCard,
   mainDeck,
 }: ConversationViewProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "detail">("list");
@@ -127,6 +129,7 @@ export default function ConversationView({
           setSelectedConvId(null);
         }}
         onUpdate={(id, updates) => onUpdateConversation(id, updates)}
+        onUpdateCard={onUpdateCard}
         mainDeck={mainDeck}
       />
     );
@@ -228,11 +231,13 @@ function ConversationDetail({
   conversation,
   onBack,
   onUpdate,
+  onUpdateCard,
   mainDeck,
 }: {
   conversation: Conversation;
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
+  onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
   mainDeck: KanjiCard[];
 }) {
   const [newJp, setNewJp] = useState("");
@@ -351,82 +356,92 @@ function ConversationDetail({
         </span>
       </button>
 
-      <div className="bg-theme-panel border-b-2 border-theme-accent p-8 mb-6">
-        <div className="flex justify-between items-start mb-2">
-          <h1 className="text-2xl font-serif text-theme-primary">
-            {conversation.title}
-          </h1>
-          <div className="flex gap-2">
+      <div className="bg-theme-panel border-b border-theme-subtle p-4 md:p-6 mb-6">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-serif text-theme-primary mb-1">
+              {conversation.title}
+            </h1>
+            {conversation.description && (
+              <p className="text-theme-primary/60 text-xs md:text-sm italic">
+                {conversation.description}
+              </p>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex bg-theme-base border border-theme-subtle rounded p-0.5 gap-0.5 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setViewMode("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-sm font-bold tracking-widest uppercase text-[10px] shrink-0 ${
+                  viewMode === "list"
+                    ? "bg-theme-accent text-theme-inverted"
+                    : "text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover"
+                }`}
+                title="Chế độ danh sách"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Danh sách</span>
+              </button>
+              <button
+                onClick={() => setViewMode("slideshow")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-sm font-bold tracking-widest uppercase text-[10px] shrink-0 ${
+                  viewMode === "slideshow"
+                    ? "bg-theme-accent text-theme-inverted"
+                    : "text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover"
+                }`}
+                title="Chế độ trình chiếu"
+              >
+                <Presentation className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Trình chiếu</span>
+              </button>
+              <button
+                onClick={() => setViewMode("review_vocab")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-sm font-bold tracking-widest uppercase text-[10px] shrink-0 ${
+                  viewMode === "review_vocab"
+                    ? "bg-theme-accent text-theme-inverted"
+                    : "text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover"
+                }`}
+                title="Ôn tập từ vựng"
+              >
+                <Brain className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Học từ</span>
+              </button>
+            </div>
+
+            <div className="flex-1" />
+
             <button
               onClick={handleCopyAllJapanese}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded shrink-0 ${
                 isCopied
                   ? "bg-theme-accent/10 text-theme-accent border-theme-accent/30"
-                  : "bg-theme-base text-theme-primary/40 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/40"
+                  : "bg-theme-base text-theme-primary/60 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/60"
               }`}
               title="Copy toàn bộ tiếng Nhật"
             >
               {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {isCopied ? "Đã copy" : "Copy toàn bộ"}
+              <span className="hidden sm:inline">{isCopied ? "Đã copy" : "Copy"}</span>
             </button>
-            <div className="flex bg-theme-base border border-theme-subtle rounded-sm overflow-hidden">
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 transition-colors ${
-                  viewMode === "list"
-                    ? "bg-theme-accent text-theme-inverted"
-                    : "text-theme-primary/40 hover:text-theme-primary hover:bg-theme-hover"
-                }`}
-                title="Chế độ danh sách"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("slideshow")}
-                className={`p-1.5 transition-colors ${
-                  viewMode === "slideshow"
-                    ? "bg-theme-accent text-theme-inverted"
-                    : "text-theme-primary/40 hover:text-theme-primary hover:bg-theme-hover"
-                }`}
-                title="Chế độ trình chiếu"
-              >
-                <Presentation className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("review_vocab")}
-                className={`p-1.5 transition-colors flex items-center gap-1 font-bold tracking-widest uppercase text-[10px] ${
-                  viewMode === "review_vocab"
-                    ? "bg-theme-accent text-theme-inverted"
-                    : "text-theme-primary/40 hover:text-theme-primary hover:bg-theme-hover"
-                }`}
-                title="Ôn tập từ vựng"
-              >
-                <Brain className="w-4 h-4" />
-              </button>
-            </div>
+
             {viewMode === "list" && (
               <button
                 onClick={() => {
                   setDeleteEnabled(!deleteEnabled);
                   setConfirmingDeleteId(null);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded shrink-0 ${
                   deleteEnabled 
                     ? "bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20 hover:border-red-500" 
-                    : "bg-theme-base text-theme-primary/40 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/40"
+                    : "bg-theme-base text-theme-primary/60 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/60"
                 }`}
               >
                 {deleteEnabled ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                {deleteEnabled ? "Tắt xóa" : "Kích hoạt xóa"}
+                <span className="hidden sm:inline">{deleteEnabled ? "Tắt sửa" : "Sửa"}</span>
               </button>
             )}
           </div>
         </div>
-        {conversation.description && (
-          <p className="text-theme-primary/70 text-sm italic">
-            {conversation.description}
-          </p>
-        )}
       </div>
 
       {viewMode === "list" ? (
@@ -613,7 +628,7 @@ function ConversationDetail({
         </DragDropContext>
       ) : viewMode === "review_vocab" ? (
         <div className="mb-8">
-          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} />
+          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} onUpdateCard={onUpdateCard} />
         </div>
       ) : (
         <div className="mb-8">
@@ -826,11 +841,13 @@ function getVocabForConversation(conversation: Conversation, mainDeck: KanjiCard
 function ConversationVocabReview({
   conversation,
   mainDeck,
-  onUpdate
+  onUpdate,
+  onUpdateCard
 }: {
   conversation: Conversation;
   mainDeck: KanjiCard[];
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
+  onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
 }) {
   const [vocab, setVocab] = useState<KanjiCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -851,13 +868,30 @@ function ConversationVocabReview({
     setVocab(extracted);
     setCurrentIndex(0);
     setIsFlipped(false);
-  }, [conversation.id, mainDeck]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation.id]);
 
   const handleScore = (change: number) => {
     const currentCard = vocab[currentIndex];
     const scores = { ...(conversation.vocabScores || {}) };
     scores[currentCard.id] = (scores[currentCard.id] || 0) + change;
     onUpdate(conversation.id, { vocabScores: scores });
+
+    if (onUpdateCard) {
+      if (change > 0) {
+        // "Nhớ" - set interval to 2, repetition to 1 (makes status 'good' - green)
+        onUpdateCard(currentCard.id, {
+          interval: Math.max(currentCard.interval || 0, 2),
+          repetition: Math.max(currentCard.repetition || 0, 1)
+        });
+      } else {
+        // "Quên" - set interval to 0, repetition to 0 (makes status 'bad' - red)
+        onUpdateCard(currentCard.id, {
+          interval: 0,
+          repetition: 0
+        });
+      }
+    }
     
     if (currentIndex < vocab.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -877,8 +911,8 @@ function ConversationVocabReview({
 
   if (currentIndex >= vocab.length) {
     return (
-      <div className="text-center py-20 bg-theme-panel border border-theme-subtle">
-        <h3 className="text-2xl font-serif text-theme-accent mb-4">Hoàn thành phiên ôn tập!</h3>
+      <div className="text-center py-20 bg-theme-panel border border-theme-subtle shadow-sm rounded-xl">
+        <h3 className="text-2xl font-serif text-theme-accent mb-4 tracking-wide">Hoàn thành phiên ôn tập!</h3>
         <button
           onClick={() => {
             let extracted = [...vocab];
@@ -893,7 +927,7 @@ function ConversationVocabReview({
             setCurrentIndex(0);
             setIsFlipped(false);
           }}
-          className="bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-3 px-8 uppercase tracking-widest text-xs transition-colors"
+          className="bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-3 px-8 uppercase tracking-widest text-xs transition-all rounded shadow-md hover:shadow-lg"
         >
           Học lại
         </button>
@@ -904,13 +938,13 @@ function ConversationVocabReview({
   const currentCard = vocab[currentIndex];
 
   return (
-    <div className="max-w-2xl mx-auto w-full flex flex-col items-center pb-12">
-      <div className="text-theme-primary/40 text-[10px] uppercase tracking-widest mb-4">
+    <div className="max-w-2xl mx-auto w-full flex flex-col items-center pb-12 mt-6">
+      <div className="text-theme-primary/40 text-[11px] uppercase tracking-[0.2em] font-medium mb-6">
         Từ vựng {currentIndex + 1} / {vocab.length}
       </div>
       
       <div 
-        className="w-full aspect-[4/3] sm:aspect-[16/9] mb-8 cursor-pointer"
+        className="w-full aspect-[4/3] sm:aspect-[16/9] mb-10 cursor-pointer"
         style={{ perspective: "1000px" }}
         onClick={() => setIsFlipped(!isFlipped)}
       >
@@ -922,28 +956,28 @@ function ConversationVocabReview({
         >
           {/* Front */}
           <div 
-            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex items-center justify-center p-8 shadow-xl"
+            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex items-center justify-center p-8 shadow-2xl rounded-2xl"
             style={{ backfaceVisibility: "hidden" }}
           >
-            <h2 className="text-5xl md:text-7xl font-serif text-theme-primary text-center leading-tight">
+            <h2 className="text-6xl md:text-8xl font-serif text-theme-primary text-center leading-tight">
               {currentCard.kanji || currentCard.reading}
             </h2>
           </div>
 
           {/* Back */}
           <div 
-            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-8 shadow-xl text-center"
+            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-10 shadow-2xl rounded-2xl text-center"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
           >
-             <div className="text-3xl md:text-4xl text-theme-primary font-serif mb-4">
+             <div className="text-4xl md:text-5xl text-theme-primary font-serif mb-6 text-theme-accent">
                 {currentCard.reading}
              </div>
              {currentCard.romaji && (
-                <div className="text-lg md:text-xl text-theme-primary/50 font-mono mb-4 tracking-widest uppercase">
+                <div className="text-xl md:text-2xl text-theme-primary/50 font-mono mb-6 tracking-[0.2em] uppercase">
                   {currentCard.romaji}
                 </div>
              )}
-             <div className="text-xl md:text-2xl text-theme-primary/90">
+             <div className="text-2xl md:text-3xl text-theme-primary/90 font-medium">
                 {currentCard.meaning}
              </div>
           </div>
@@ -965,7 +999,7 @@ function ConversationVocabReview({
                   e.stopPropagation();
                   handleScore(-1);
                 }}
-                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-4 px-6 uppercase tracking-widest text-sm transition-colors rounded-sm"
+                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-4 px-6 uppercase tracking-widest text-sm transition-all rounded-xl hover:scale-105 active:scale-95 shadow-sm"
               >
                 Quên
               </button>
@@ -974,7 +1008,7 @@ function ConversationVocabReview({
                   e.stopPropagation();
                   handleScore(1);
                 }}
-                className="flex-1 bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 font-bold py-4 px-6 uppercase tracking-widest text-sm transition-colors rounded-sm"
+                className="flex-1 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-4 px-6 uppercase tracking-widest text-sm transition-all rounded-xl hover:scale-105 active:scale-95 shadow-md"
               >
                 Nhớ
               </button>
@@ -985,7 +1019,7 @@ function ConversationVocabReview({
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               className="text-theme-primary/40 text-xs uppercase tracking-widest text-center h-full flex items-center justify-center"
+               className="text-theme-primary/40 text-xs uppercase tracking-widest text-center h-full flex items-center justify-center font-medium"
              >
                Chạm vào thẻ để lật
              </motion.div>
