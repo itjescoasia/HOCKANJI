@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -254,6 +254,15 @@ function ConversationDetail({
   const [deleteEnabled, setDeleteEnabled] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "slideshow">("list");
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyAllJapanese = () => {
+    const textToCopy = conversation.dialogues.map((d) => d.japanese).join("\n");
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
 
   const handleAddDialogue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -346,6 +355,18 @@ function ConversationDetail({
             {conversation.title}
           </h1>
           <div className="flex gap-2">
+            <button
+              onClick={handleCopyAllJapanese}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border ${
+                isCopied
+                  ? "bg-theme-accent/10 text-theme-accent border-theme-accent/30"
+                  : "bg-theme-base text-theme-primary/40 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/40"
+              }`}
+              title="Copy toàn bộ tiếng Nhật"
+            >
+              {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {isCopied ? "Đã copy" : "Copy toàn bộ"}
+            </button>
             <div className="flex bg-theme-base border border-theme-subtle rounded-sm overflow-hidden">
               <button
                 onClick={() => setViewMode("list")}
