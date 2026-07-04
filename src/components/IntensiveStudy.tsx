@@ -314,16 +314,16 @@ export default function IntensiveStudy({
                     }}
                     className="w-full text-left p-4 border-b border-theme-subtle hover:bg-theme-hover transition-colors last:border-0 flex flex-col gap-1"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="font-serif text-lg text-theme-primary">
+                    <div className="flex items-center gap-2 w-full min-w-0">
+                      <span className="font-serif text-lg text-theme-primary truncate">
                         {word.word}
                       </span>
                       {word.reading && (
-                        <span className="text-theme-accent text-sm font-medium">
+                        <span className="text-theme-accent text-sm font-medium truncate">
                           {word.reading}
                         </span>
                       )}
-                      <span className="text-[10px] uppercase tracking-wider text-theme-primary/40 ml-auto">
+                      <span className="text-[10px] uppercase tracking-wider text-theme-primary/40 ml-auto whitespace-nowrap flex-shrink-0">
                         {word.category}
                       </span>
                     </div>
@@ -387,15 +387,15 @@ export default function IntensiveStudy({
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <div className="text-4xl font-serif text-theme-primary mb-2">
+                <div className="text-4xl font-serif text-theme-primary mb-2 w-full break-words">
                   {word.word}
                 </div>
                 {word.reading && (
-                  <div className="text-theme-accent opacity-90 font-medium mb-1">
+                  <div className="text-theme-accent opacity-90 font-medium mb-1 w-full truncate">
                     {word.reading}
                   </div>
                 )}
-                <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3">
+                <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3 w-full truncate">
                   {word.category}
                 </div>
                 <div className="text-xs text-theme-primary/60 line-clamp-2 italic">
@@ -763,8 +763,8 @@ function StudyView({
             </button>
 
             {/* Main Visual */}
-            <div className="w-32 h-32 shrink-0 bg-theme-base-alt flex items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0">
-              <span className="text-5xl font-serif text-theme-primary">
+            <div className="w-32 min-h-[8rem] sm:w-40 sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0">
+              <span className="text-2xl sm:text-4xl font-serif text-theme-primary text-center break-words">
                 {word.word}
               </span>
             </div>
