@@ -88,9 +88,27 @@ export default function IntensiveStudy({
     [deck],
   );
 
-  const filteredDeck = searchQuery.trim()
-    ? fuse.search(searchQuery).map((result) => result.item)
-    : deck;
+  const filteredDeck = React.useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return deck;
+    
+    let results = fuse.search(q).map((result) => result.item);
+    
+    // Support finding stems of Japanese verbs/adjectives
+    const stem = q.replace(/[ぁ-ん]+$/, "");
+    if (stem && stem !== q && /[\u4e00-\u9faf々]/.test(stem)) {
+       const stemResults = fuse.search(stem).map(r => r.item);
+       const existingIds = new Set(results.map(r => r.id));
+       stemResults.forEach(r => {
+          if (!existingIds.has(r.id)) {
+            results.push(r);
+            existingIds.add(r.id);
+          }
+       });
+    }
+    
+    return results;
+  }, [searchQuery, deck, fuse]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
