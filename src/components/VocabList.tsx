@@ -2,6 +2,7 @@ import { KanjiCard, KanjiExample } from '../types';
 import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { renderExampleHighlight } from '../utils/highlight';
 
 interface VocabListProps {
   deck: KanjiCard[];
@@ -511,7 +512,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 max-w-[200px] sm:max-w-md">
                             {card.examples.map(ex => (
                               <div key={ex.id} className="bg-theme-base-alt p-2 rounded-sm border border-theme-subtle">
-                                <div className="text-[11px] text-theme-primary opacity-80 mb-1" title={ex.sentence}>{ex.sentence}</div>
+                                <div className="text-[11px] text-theme-primary opacity-80 mb-1" title={ex.sentence}>
+                                  {renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}
+                                </div>
                                 {(ex.reading || ex.romaji) && (
                                   <div className="flex gap-2 mb-1">
                                     {ex.reading && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.reading}</span>}
@@ -527,7 +530,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           (card.example || card.exampleTranslation) && (
                             <div className="mt-2 space-y-1 border-t border-theme-subtle pt-2 max-w-[200px] sm:max-w-md">
                               {card.example && (
-                                <div className="text-[11px] text-theme-primary opacity-70 truncate" title={card.example}>{card.example}</div>
+                                <div className="text-[11px] text-theme-primary opacity-70 truncate" title={card.example}>
+                                  {renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}
+                                </div>
                               )}
                               {card.exampleTranslation && (
                                 <div className="text-[11px] text-theme-accent opacity-70 truncate italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
