@@ -332,6 +332,11 @@ export default function IntensiveStudy({
                         <span className="block text-theme-primary font-serif">
                           {matchedExample.sentence}
                         </span>
+                        {matchedExample.romaji && (
+                          <span className="block text-xs font-mono text-theme-primary/60">
+                            {matchedExample.romaji}
+                          </span>
+                        )}
                         {matchedExample.translation && (
                           <span className="block text-xs">
                             {matchedExample.translation}
