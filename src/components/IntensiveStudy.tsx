@@ -82,7 +82,7 @@ export default function IntensiveStudy({
           "examples.translation",
           "examples.reading",
         ],
-        threshold: 0.4,
+        threshold: 0.5,
         ignoreLocation: true,
       }),
     [deck],
@@ -93,19 +93,58 @@ export default function IntensiveStudy({
     if (!q) return deck;
     
     let results = fuse.search(q).map((result) => result.item);
+    const existingIds = new Set(results.map(r => r.id));
     
-    // Support finding stems of Japanese verbs/adjectives
+    // Fallback: manually check substring matches to ensure they are always found
+    const lowerQ = q.toLowerCase();
+    deck.forEach(item => {
+        if (!existingIds.has(item.id)) {
+            const isMatch = item.word.toLowerCase().includes(lowerQ) ||
+                            (item.reading && item.reading.toLowerCase().includes(lowerQ)) ||
+                            (item.romaji && item.romaji.toLowerCase().includes(lowerQ)) ||
+                            item.examples.some(ex => 
+                                ex.sentence.toLowerCase().includes(lowerQ) ||
+                                (ex.reading && ex.reading.toLowerCase().includes(lowerQ)) ||
+                                (ex.translation && ex.translation.toLowerCase().includes(lowerQ))
+                            );
+            if (isMatch) {
+                results.push(item);
+                existingIds.add(item.id);
+            }
+        }
+    });
+    
+    // Support finding stems of Japanese verbs/adjectives or pure kanji
     const stem = q.replace(/[ぁ-ん]+$/, "");
-    if (stem && stem !== q && /[\u4e00-\u9faf々]/.test(stem)) {
-       const stemResults = fuse.search(stem).map(r => r.item);
-       const existingIds = new Set(results.map(r => r.id));
-       stemResults.forEach(r => {
+    const kanjiMatch = q.match(/[\u4e00-\u9faf々]+/g);
+    const kanjiOnly = kanjiMatch ? kanjiMatch.join("") : "";
+    
+    const additionalQueries = new Set<string>();
+    if (stem && stem !== q && /[\u4e00-\u9faf々]/.test(stem)) additionalQueries.add(stem);
+    if (kanjiOnly && kanjiOnly !== q) additionalQueries.add(kanjiOnly);
+    
+    additionalQueries.forEach(altQ => {
+       const altResults = fuse.search(altQ).map(r => r.item);
+       altResults.forEach(r => {
           if (!existingIds.has(r.id)) {
             results.push(r);
             existingIds.add(r.id);
           }
        });
-    }
+       
+       // Manually check substring for alt queries too
+       const lowerAltQ = altQ.toLowerCase();
+       deck.forEach(item => {
+           if (!existingIds.has(item.id)) {
+               const isMatch = item.word.toLowerCase().includes(lowerAltQ) ||
+                               (item.reading && item.reading.toLowerCase().includes(lowerAltQ));
+               if (isMatch) {
+                   results.push(item);
+                   existingIds.add(item.id);
+               }
+           }
+       });
+    });
     
     return results;
   }, [searchQuery, deck, fuse]);
