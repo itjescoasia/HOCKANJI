@@ -46,6 +46,7 @@ const CATEGORIES: WordCategory[] = [
   "Tính từ đuôi-i",
   "Tính từ đuôi-na",
   "Ngữ pháp",
+  "Trạng từ (副詞)",
   "Khác",
 ];
 
@@ -291,6 +292,58 @@ export default function IntensiveStudy({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-theme-panel border border-theme-subtle rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-theme-accent transition-colors"
           />
+          {searchQuery.trim() && filteredDeck.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-theme-panel border border-theme-subtle rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+              {filteredDeck.slice(0, 10).map((word) => {
+                const query = searchQuery.toLowerCase();
+                const matchedExample = word.examples.find(
+                  (ex) =>
+                    ex.sentence.toLowerCase().includes(query) ||
+                    (ex.translation &&
+                      ex.translation.toLowerCase().includes(query)) ||
+                    (ex.reading && ex.reading.toLowerCase().includes(query))
+                ) || word.examples[0];
+
+                return (
+                  <button
+                    key={word.id}
+                    onClick={() => {
+                      setSelectedWordId(word.id);
+                      setViewState("study");
+                      setSearchQuery("");
+                    }}
+                    className="w-full text-left p-4 border-b border-theme-subtle hover:bg-theme-hover transition-colors last:border-0 flex flex-col gap-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif text-lg text-theme-primary">
+                        {word.word}
+                      </span>
+                      {word.reading && (
+                        <span className="text-theme-accent text-sm font-medium">
+                          {word.reading}
+                        </span>
+                      )}
+                      <span className="text-[10px] uppercase tracking-wider text-theme-primary/40 ml-auto">
+                        {word.category}
+                      </span>
+                    </div>
+                    {matchedExample && (
+                      <div className="text-sm text-theme-primary/70 mt-2 pl-3 border-l-2 border-theme-accent/50 italic flex flex-col gap-1">
+                        <span className="block text-theme-primary font-serif">
+                          {matchedExample.sentence}
+                        </span>
+                        {matchedExample.translation && (
+                          <span className="block text-xs">
+                            {matchedExample.translation}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

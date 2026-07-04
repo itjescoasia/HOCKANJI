@@ -28,7 +28,7 @@ export interface KanjiCard {
   createdAt: number;
 }
 
-export type WordCategory = 'Danh từ' | 'Động từ nhóm I' | 'Động từ nhóm II' | 'Động từ nhóm III' | 'Tính từ đuôi-i' | 'Tính từ đuôi-na' | 'Ngữ pháp' | 'Khác';
+export type WordCategory = 'Danh từ' | 'Động từ nhóm I' | 'Động từ nhóm II' | 'Động từ nhóm III' | 'Tính từ đuôi-i' | 'Tính từ đuôi-na' | 'Ngữ pháp' | 'Trạng từ (副詞)' | 'Khác';
 
 export interface IntensiveExample {
   id: string;
