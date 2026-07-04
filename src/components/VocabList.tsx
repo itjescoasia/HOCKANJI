@@ -1,5 +1,5 @@
 import { KanjiCard, KanjiExample } from '../types';
-import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus } from 'lucide-react';
+import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { renderExampleHighlight } from '../utils/highlight';
@@ -19,6 +19,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const playAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
 
   const startEdit = (card: KanjiCard) => {
     setEditingId(card.id);
@@ -485,7 +493,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   return (
                     <tr key={card.id} className="hover:bg-theme-hover transition-colors group">
                       <td className="px-8 py-5">
-                        <div className="text-3xl font-serif text-theme-primary">{card.kanji}</div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl font-serif text-theme-primary">{card.kanji}</div>
+                          <button
+                            onClick={(e) => playAudio(e, card.kanji || card.reading)}
+                            className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                            title="Nghe phát âm"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -511,9 +528,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         {card.examples && card.examples.length > 0 ? (
                           <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 max-w-[200px] sm:max-w-md">
                             {card.examples.map(ex => (
-                              <div key={ex.id} className="bg-theme-base-alt p-2 rounded-sm border border-theme-subtle">
-                                <div className="text-[11px] text-theme-primary opacity-80 mb-1" title={ex.sentence}>
-                                  {renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}
+                              <div key={ex.id} className="bg-theme-base-alt p-2 rounded-sm border border-theme-subtle group/ex">
+                                <div className="text-[11px] text-theme-primary opacity-80 mb-1 flex items-start gap-2 justify-between">
+                                  <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
+                                  <button
+                                    onClick={(e) => playAudio(e, ex.sentence)}
+                                    className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
+                                    title="Nghe câu ví dụ"
+                                  >
+                                    <Volume2 className="w-3 h-3" />
+                                  </button>
                                 </div>
                                 {(ex.reading || ex.romaji) && (
                                   <div className="flex gap-2 mb-1">
@@ -528,10 +552,17 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         ) : (
                           /* Legacy single example fallback */
                           (card.example || card.exampleTranslation) && (
-                            <div className="mt-2 space-y-1 border-t border-theme-subtle pt-2 max-w-[200px] sm:max-w-md">
+                            <div className="mt-2 space-y-1 border-t border-theme-subtle pt-2 max-w-[200px] sm:max-w-md group/ex">
                               {card.example && (
-                                <div className="text-[11px] text-theme-primary opacity-70 truncate" title={card.example}>
-                                  {renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}
+                                <div className="text-[11px] text-theme-primary opacity-70 flex items-start justify-between gap-2">
+                                  <span className="truncate" title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
+                                  <button
+                                    onClick={(e) => playAudio(e, card.example!)}
+                                    className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
+                                    title="Nghe câu ví dụ"
+                                  >
+                                    <Volume2 className="w-3 h-3" />
+                                  </button>
                                 </div>
                               )}
                               {card.exampleTranslation && (

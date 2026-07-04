@@ -34,6 +34,7 @@ export default function ConversationView({
   const [viewState, setViewState] = useState<"list" | "add" | "detail">("list");
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
 
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
@@ -149,13 +150,26 @@ export default function ConversationView({
             {conversations.length} chủ đề hội thoại
           </span>
         </div>
-        <button
-          onClick={() => setViewState("add")}
-          className="flex items-center gap-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-2.5 font-bold uppercase tracking-widest text-xs transition-colors shrink-0"
-        >
-          <PlusCircle className="w-4 h-4" />
-          Thêm chủ đề
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsDeleteUnlocked(!isDeleteUnlocked)}
+            className={`flex items-center justify-center p-2.5 transition-colors border ${
+              isDeleteUnlocked 
+                ? "bg-red-500/10 border-red-500/50 text-red-500" 
+                : "bg-theme-panel border-theme-subtle text-theme-primary/40 hover:text-theme-accent hover:border-theme-accent"
+            }`}
+            title={isDeleteUnlocked ? "Khóa chế độ xóa" : "Mở khóa chế độ xóa"}
+          >
+            {isDeleteUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => setViewState("add")}
+            className="flex items-center gap-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-2.5 font-bold uppercase tracking-widest text-xs transition-colors shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Thêm chủ đề
+          </button>
+        </div>
       </div>
 
       <div className="mb-8 relative max-w-xl">
@@ -198,17 +212,22 @@ export default function ConversationView({
                   <h3 className="text-xl font-serif text-theme-primary group-hover:text-theme-accent transition-colors line-clamp-1">
                     {conv.title}
                   </h3>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm("Bạn có chắc chắn muốn xóa chủ đề này?")) {
-                        onRemoveConversation(conv.id);
-                      }
-                    }}
-                    className="p-1.5 text-theme-primary/40 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex gap-1">
+                    {isDeleteUnlocked && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Bạn có chắc chắn muốn xóa chủ đề này?")) {
+                            onRemoveConversation(conv.id);
+                          }
+                        }}
+                        className="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                        title="Xác nhận xóa chủ đề"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {conv.description && (
                   <p className="text-xs text-theme-primary/60 line-clamp-2 mb-4">
