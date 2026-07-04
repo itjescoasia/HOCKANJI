@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -283,6 +283,14 @@ function ConversationDetail({
   const [deleteEnabled, setDeleteEnabled] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "slideshow" | "review_vocab">("list");
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  const playAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopyAllJapanese = () => {
@@ -545,9 +553,18 @@ function ConversationDetail({
                                   {String(index + 1).padStart(2, "0")}
                                 </div>
                                 <div className="flex-1 space-y-1">
-                                  <p className="text-lg text-theme-primary font-serif">
-                                    {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
-                                  </p>
+                                  <div className="flex items-start gap-2">
+                                    <p className="text-lg text-theme-primary font-serif">
+                                      {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
+                                    </p>
+                                    <button
+                                      onClick={(e) => playAudio(e, dialogue.japanese)}
+                                      className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                                      title="Nghe câu hội thoại"
+                                    >
+                                      <Volume2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                   {dialogue.hiragana && (
                                     <p className="text-sm text-theme-primary/80">
                                       {dialogue.hiragana}
