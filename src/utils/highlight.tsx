@@ -56,7 +56,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   );
 };
 
-export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[]) => {
+export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard) => {
   if (!example) return <Fragment>“{example}”</Fragment>;
 
   const uniqueWords = new Map<string, KanjiCard>();
@@ -156,7 +156,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
   // Fallback for the targetWord of this intensive item
   let targetWordCard: KanjiCard | undefined = undefined;
   if (targetWord) {
-     targetWordCard = mainDeck?.find(c => c.kanji === targetWord || c.reading === targetWord);
+     targetWordCard = mainDeck?.find(c => c.kanji === targetWord || c.reading === targetWord) || fallbackTargetCard;
   }
 
   const newTokens: typeof tokens = [];

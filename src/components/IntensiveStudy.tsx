@@ -119,9 +119,18 @@ export default function IntensiveStudy({
   };
 
   const renderExampleHighlight = (example: string, targetWord: string) => {
+    const intensiveCard = deck.find(w => w.word === targetWord || w.reading === targetWord);
+    const fallbackTargetCard = intensiveCard ? {
+      id: intensiveCard.id,
+      kanji: intensiveCard.word,
+      reading: intensiveCard.reading,
+      meaning: intensiveCard.explanation,
+      romaji: intensiveCard.romaji,
+    } : undefined;
+
     return (
       <Fragment>
-        “{baseRenderExampleHighlight(example, targetWord, mainDeck)}”
+        “{baseRenderExampleHighlight(example, targetWord, mainDeck, fallbackTargetCard as any)}”
       </Fragment>
     );
   };
@@ -1156,7 +1165,7 @@ function StudyView({
                                   )}
                                 </div>
                               </div>
-                              <div className="flex gap-4 pr-16 pointer-events-none">
+                              <div className="flex gap-4 pr-16">
                                 <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">
                                   {index + 1}
                                 </div>
