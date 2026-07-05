@@ -19,6 +19,7 @@ import {
   Lightbulb,
   Lock,
   Unlock,
+  Volume2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
@@ -71,6 +72,14 @@ export default function IntensiveStudy({
   });
 
   const selectedWord = deck.find((w) => w.id === selectedWordId);
+
+  const playAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
 
   const fuse = React.useMemo(
     () =>
@@ -829,10 +838,17 @@ function StudyView({
             </button>
 
             {/* Main Visual */}
-            <div className="w-32 min-h-[8rem] sm:w-40 sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0">
+            <div className="w-32 min-h-[8rem] sm:w-40 sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0 relative group/speaker">
               <span className="text-2xl sm:text-4xl font-serif text-theme-primary text-center break-words">
                 {word.word}
               </span>
+              <button
+                onClick={(e) => playAudio(e, word.word || word.reading)}
+                className="absolute -right-2 -bottom-2 p-2 bg-theme-panel text-theme-primary/50 hover:text-theme-accent border border-theme-subtle rounded-full shadow-md transition-all opacity-0 group-hover/speaker:opacity-100"
+                title="Nghe phát âm"
+              >
+                <Volume2 className="w-4 h-4" />
+              </button>
             </div>
 
             <div className="flex-1 flex flex-col justify-center text-center sm:text-left h-full pr-8">

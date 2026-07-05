@@ -16,6 +16,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Volume2,
 } from "lucide-react";
 import {
   PieChart,
@@ -63,6 +64,14 @@ export default function Dashboard({
   const [isChangingWotd, setIsChangingWotd] = useState(false);
   const [wotdSearch, setWotdSearch] = useState("");
   const [wotdExampleIndex, setWotdExampleIndex] = useState(0);
+
+  const playAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
 
   const isDue = dueCards.length > 0;
 
@@ -287,9 +296,18 @@ export default function Dashboard({
                   Từ vựng mỗi ngày
                 </h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-2">
-                  <span className="text-4xl sm:text-5xl font-serif text-theme-primary">
-                    {wordOfTheDay.kanji}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-4xl sm:text-5xl font-serif text-theme-primary">
+                      {wordOfTheDay.kanji}
+                    </span>
+                    <button
+                      onClick={(e) => playAudio(e, wordOfTheDay.kanji || wordOfTheDay.reading)}
+                      className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors"
+                      title="Nghe phát âm"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </button>
+                  </div>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3">
                     {wordOfTheDay.reading && (
                       <span className="text-lg text-theme-primary opacity-80">
@@ -323,18 +341,27 @@ export default function Dashboard({
                         ].id
                       }
                     >
-                      <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
-                        {renderExampleHighlight(
-                          wordOfTheDay.examples[
-                            Math.min(
-                              wotdExampleIndex,
-                              wordOfTheDay.examples.length - 1,
-                            )
-                          ].sentence,
-                          wordOfTheDay.kanji || wordOfTheDay.reading,
-                          deck,
-                        )}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
+                          {renderExampleHighlight(
+                            wordOfTheDay.examples[
+                              Math.min(
+                                wotdExampleIndex,
+                                wordOfTheDay.examples.length - 1,
+                              )
+                            ].sentence,
+                            wordOfTheDay.kanji || wordOfTheDay.reading,
+                            deck,
+                          )}
+                        </p>
+                        <button
+                          onClick={(e) => playAudio(e, wordOfTheDay.examples![Math.min(wotdExampleIndex, wordOfTheDay.examples!.length - 1)].sentence)}
+                          className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-0.5"
+                          title="Nghe câu ví dụ"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
                       <div className="flex gap-3 mt-1">
                         {wordOfTheDay.examples[
                           Math.min(
@@ -425,13 +452,22 @@ export default function Dashboard({
                 ) : (
                   wordOfTheDay.example && (
                     <div className="mt-4 border-t border-theme-subtle pt-3">
-                      <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
-                        {renderExampleHighlight(
-                          wordOfTheDay.example,
-                          wordOfTheDay.kanji || wordOfTheDay.reading,
-                          deck,
-                        )}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
+                          {renderExampleHighlight(
+                            wordOfTheDay.example,
+                            wordOfTheDay.kanji || wordOfTheDay.reading,
+                            deck,
+                          )}
+                        </p>
+                        <button
+                          onClick={(e) => playAudio(e, wordOfTheDay.example!)}
+                          className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-0.5"
+                          title="Nghe câu ví dụ"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
                       {wordOfTheDay.exampleTranslation && (
                         <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">
                           {wordOfTheDay.exampleTranslation}

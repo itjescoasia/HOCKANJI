@@ -1005,21 +1005,53 @@ function ConversationVocabReview({
         >
           {/* Front */}
           <div 
-            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex items-center justify-center p-8 shadow-2xl rounded-2xl"
+            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex flex-col items-center justify-center p-8 shadow-2xl rounded-2xl group"
             style={{ backfaceVisibility: "hidden" }}
           >
-            <h2 className="text-6xl md:text-8xl font-serif text-theme-primary text-center leading-tight">
-              {currentCard.kanji || currentCard.reading}
-            </h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-6xl md:text-8xl font-serif text-theme-primary text-center leading-tight">
+                {currentCard.kanji || currentCard.reading}
+              </h2>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentCard.kanji || currentCard.reading) {
+                    const utterance = new SpeechSynthesisUtterance(currentCard.kanji || currentCard.reading);
+                    utterance.lang = 'ja-JP';
+                    window.speechSynthesis.speak(utterance);
+                  }
+                }}
+                className="p-3 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                title="Nghe phát âm"
+              >
+                <Volume2 className="w-8 h-8" />
+              </button>
+            </div>
           </div>
 
           {/* Back */}
           <div 
-            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-10 shadow-2xl rounded-2xl text-center"
+            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-10 shadow-2xl rounded-2xl text-center group"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
           >
-             <div className="text-4xl md:text-5xl text-theme-primary font-serif mb-6 text-theme-accent">
-                {currentCard.reading}
+             <div className="flex items-center justify-center gap-3 mb-6">
+               <div className="text-4xl md:text-5xl text-theme-primary font-serif text-theme-accent">
+                  {currentCard.reading}
+               </div>
+               <button
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   if (currentCard.reading || currentCard.kanji) {
+                     const utterance = new SpeechSynthesisUtterance(currentCard.reading || currentCard.kanji!);
+                     utterance.lang = 'ja-JP';
+                     window.speechSynthesis.speak(utterance);
+                   }
+                 }}
+                 className="p-2 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                 title="Nghe phát âm"
+               >
+                 <Volume2 className="w-6 h-6" />
+               </button>
              </div>
              {currentCard.romaji && (
                 <div className="text-xl md:text-2xl text-theme-primary/50 font-mono mb-6 tracking-[0.2em] uppercase">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { KanjiCard } from '../types';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ShortStudySessionProps {
@@ -30,6 +30,14 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
   }
 
   const currentWord = queue[currentIndex];
+
+  const playAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleRemember = () => {
     const currentScore = currentWord.difficultScore ?? 0;
@@ -86,8 +94,17 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
             <div className="text-xs text-theme-accent tracking-widest uppercase mb-4 font-bold opacity-80">{currentWord.wordType}</div>
           )}
           
-          <div className="text-6xl md:text-8xl font-serif text-theme-primary mb-6">
-            {currentWord.kanji}
+          <div className="flex items-center justify-center gap-4 mb-6 relative group">
+            <div className="text-6xl md:text-8xl font-serif text-theme-primary">
+              {currentWord.kanji}
+            </div>
+            <button
+              onClick={(e) => playAudio(e, currentWord.kanji || currentWord.reading)}
+              className="absolute -right-12 p-3 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+              title="Nghe phát âm"
+            >
+              <Volume2 className="w-8 h-8" />
+            </button>
           </div>
           
           {isMeaningShown ? (
