@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2 } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -10,7 +10,9 @@ import {
 } from "@hello-pangea/dnd";
 import Fuse from "fuse.js";
 import { formatCreatedAt } from "../lib/dateUtils";
-import { renderExampleHighlight } from "../utils/highlight";
+import { renderExampleHighlight, tokenizeExampleText } from "../utils/highlight";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
 
 interface ConversationViewProps {
   conversations: Conversation[];
@@ -293,6 +295,81 @@ function ConversationDetail({
   };
   const [isCopied, setIsCopied] = useState(false);
 
+  const handleExportWord = async () => {
+    const children: Paragraph[] = [
+      new Paragraph({
+        text: conversation.title,
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+      }),
+      new Paragraph({
+        text: conversation.description || "",
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 },
+      }),
+    ];
+
+    conversation.dialogues.forEach((d, index) => {
+      // 1. Japanese sentence with coloring
+      const tokens = tokenizeExampleText(d.japanese, "", mainDeck);
+      const jpRuns = tokens.map(t => {
+        let color = undefined;
+        if (t.status === 'good') color = "008000"; // Green
+        else if (t.status === 'bad') color = "FF0000"; // Red
+        else if (t.status === 'new') color = "333333";
+        
+        return new TextRun({
+          text: t.text,
+          color: color,
+          bold: t.status !== 'neutral',
+          size: 28, // 14pt
+        });
+      });
+      
+      children.push(new Paragraph({
+        children: [
+          new TextRun({ text: `${index + 1}. `, bold: true, size: 28 }),
+          ...jpRuns
+        ],
+        spacing: { before: 200 }
+      }));
+
+      // 2. Hiragana
+      if (d.hiragana) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: d.hiragana, size: 24 })]
+        }));
+      }
+
+      // 3. Romaji
+      if (d.romaji) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: d.romaji, size: 22, italics: true, color: "666666" })]
+        }));
+      }
+
+      // 4. Vietnamese
+      if (d.vietnamese) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: d.vietnamese, size: 24 })],
+          spacing: { after: 200 }
+        }));
+      } else {
+        children.push(new Paragraph({ spacing: { after: 200 } }));
+      }
+    });
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: children,
+      }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${conversation.title}.docx`);
+  };
+
   const handleCopyAllJapanese = () => {
     const textToCopy = conversation.dialogues
       .map((d, index) => `${index + 1}. ${d.japanese}`)
@@ -442,6 +519,15 @@ function ConversationDetail({
             </div>
 
             <div className="flex-1" />
+
+            <button
+              onClick={handleExportWord}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded shrink-0 bg-theme-base text-theme-primary/60 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/60"
+              title="Xuất ra file Word"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Xuất Word</span>
+            </button>
 
             <button
               onClick={handleCopyAllJapanese}

@@ -56,8 +56,8 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   );
 };
 
-export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard) => {
-  if (!example) return <Fragment>“{example}”</Fragment>;
+export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard) => {
+  if (!example) return [];
 
   const uniqueWords = new Map<string, KanjiCard>();
   mainDeck?.forEach(card => {
@@ -98,7 +98,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
 
   const deckWordsInExample = Array.from(uniqueWords.values());
 
-  const allMatchCandidates: { matchStr: string, card: KanjiCard }[] = [];
+  const allMatchCandidates: { matchStr: string, card: KanjiCard, isStem?: boolean }[] = [];
 
   deckWordsInExample.forEach(card => {
     if (card.kanji) allMatchCandidates.push({ matchStr: card.kanji, card });
@@ -107,7 +107,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
       // Remove trailing hiragana for verbs/adjectives
       const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
       if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem)) {
-        allMatchCandidates.push({ matchStr: stem, card });
+        allMatchCandidates.push({ matchStr: stem, card, isStem: true });
       }
     }
     if (card.forms) {
@@ -127,7 +127,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
     { text: example, status: 'neutral' }
   ];
 
-  uniqueCandidates.forEach(({ matchStr, card }) => {
+  uniqueCandidates.forEach(({ matchStr, card, isStem }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
     const rep = card.repetition || 0;
     const int = card.interval || 0;
@@ -143,11 +143,36 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
         newTokens.push(token);
         return;
       }
-      const parts = token.text.split(matchStr);
-      parts.forEach((part, i) => {
-        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
-        if (i < parts.length - 1) newTokens.push({ text: matchStr, status: status, card: card });
-      });
+      
+      let currentText = token.text;
+      let searchIndex = 0;
+      
+      while (currentText.length > 0) {
+        const idx = currentText.indexOf(matchStr, searchIndex);
+        if (idx === -1) {
+          newTokens.push({ text: currentText, status: 'neutral' });
+          break;
+        }
+        
+        // If it's a stem, check if it's followed by another Kanji
+        if (isStem) {
+          const nextChar = currentText[idx + matchStr.length];
+          if (nextChar && /[\u4e00-\u9faf々]/.test(nextChar)) {
+            // Invalid match, skip and continue searching
+            searchIndex = idx + 1;
+            continue;
+          }
+        }
+        
+        // Valid match found!
+        if (idx > 0) {
+          newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
+        }
+        newTokens.push({ text: matchStr, status, card });
+        
+        currentText = currentText.substring(idx + matchStr.length);
+        searchIndex = 0;
+      }
     });
     tokens = newTokens;
   });
@@ -193,6 +218,13 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
   });
   tokens = newTokens;
 
+  return tokens;
+};
+
+export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard) => {
+  if (!example) return <Fragment>“{example}”</Fragment>;
+  const tokens = tokenizeExampleText(example, targetWord, mainDeck, fallbackTargetCard);
+  
   return (
     <Fragment>
       {tokens.map((t, i) => {
