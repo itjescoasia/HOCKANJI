@@ -96,37 +96,38 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
     }
   });
 
-  const deckWordsInExample = Array.from(uniqueWords.values()).sort((a, b) => {
-    const aStr = a.kanji || a.reading;
-    const bStr = b.kanji || b.reading;
-    return bStr.length - aStr.length;
+  const deckWordsInExample = Array.from(uniqueWords.values());
+
+  const allMatchCandidates: { matchStr: string, card: KanjiCard }[] = [];
+
+  deckWordsInExample.forEach(card => {
+    if (card.kanji) allMatchCandidates.push({ matchStr: card.kanji, card });
+    if (card.reading && card.reading !== card.kanji) allMatchCandidates.push({ matchStr: card.reading, card });
+    if (card.kanji) {
+      // Remove trailing hiragana for verbs/adjectives
+      const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
+      if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem)) {
+        allMatchCandidates.push({ matchStr: stem, card });
+      }
+    }
+    if (card.forms) {
+      card.forms.forEach(f => {
+        if (f.value) {
+          allMatchCandidates.push({ matchStr: f.value, card });
+        }
+      });
+    }
   });
+
+  // Remove duplicates and sort globally by length descending
+  const uniqueCandidates = Array.from(new Map(allMatchCandidates.map(c => [c.matchStr, c])).values());
+  uniqueCandidates.sort((a, b) => b.matchStr.length - a.matchStr.length);
 
   let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard }[] = [
     { text: example, status: 'neutral' }
   ];
 
-  deckWordsInExample.forEach(card => {
-    const matchStrs: string[] = [];
-    if (card.kanji) matchStrs.push(card.kanji);
-    if (card.reading && card.reading !== card.kanji) matchStrs.push(card.reading);
-    if (card.kanji) {
-      // Remove trailing hiragana for verbs/adjectives
-      const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
-      if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem)) {
-        matchStrs.push(stem);
-      }
-    }
-    if (card.forms) {
-      card.forms.forEach(f => {
-        if (f.value && !matchStrs.includes(f.value)) {
-          matchStrs.push(f.value);
-        }
-      });
-    }
-    // Sort by length descending to match longest possible string first
-    matchStrs.sort((a, b) => b.length - a.length);
-    
+  uniqueCandidates.forEach(({ matchStr, card }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
     const rep = card.repetition || 0;
     const int = card.interval || 0;
@@ -136,21 +137,19 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
       status = 'bad';
     }
 
-    matchStrs.forEach(wordStr => {
-      const newTokens: typeof tokens = [];
-      tokens.forEach(token => {
-        if (token.status !== 'neutral') {
-          newTokens.push(token);
-          return;
-        }
-        const parts = token.text.split(wordStr);
-        parts.forEach((part, i) => {
-          if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
-          if (i < parts.length - 1) newTokens.push({ text: wordStr, status: status, card: card });
-        });
+    const newTokens: typeof tokens = [];
+    tokens.forEach(token => {
+      if (token.status !== 'neutral') {
+        newTokens.push(token);
+        return;
+      }
+      const parts = token.text.split(matchStr);
+      parts.forEach((part, i) => {
+        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
+        if (i < parts.length - 1) newTokens.push({ text: matchStr, status: status, card: card });
       });
-      tokens = newTokens;
     });
+    tokens = newTokens;
   });
 
   // Fallback for the targetWord of this intensive item

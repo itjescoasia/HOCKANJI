@@ -1053,12 +1053,17 @@ function ConversationVocabReview({
                  <Volume2 className="w-6 h-6" />
                </button>
              </div>
+             {currentCard.sinoVietnamese && (
+                <div className="text-lg md:text-xl text-theme-accent/80 font-serif mb-2 uppercase tracking-widest">
+                  {currentCard.sinoVietnamese}
+                </div>
+             )}
              {currentCard.romaji && (
                 <div className="text-xl md:text-2xl text-theme-primary/50 font-mono mb-6 tracking-[0.2em] uppercase">
                   {currentCard.romaji}
                 </div>
              )}
-             <div className="text-2xl md:text-3xl text-theme-primary/90 font-medium">
+             <div className="text-2xl md:text-3xl text-theme-primary/90 font-medium mt-2">
                 {currentCard.meaning}
              </div>
           </div>
