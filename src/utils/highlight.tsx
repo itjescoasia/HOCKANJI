@@ -1,5 +1,6 @@
 import React, { Fragment, useState, useRef, useEffect } from 'react';
 import { KanjiCard } from '../types';
+import { Volume2 } from 'lucide-react';
 
 const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard }> = ({ text, status, card }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +19,14 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  const playAudio = (e: React.MouseEvent, textToSpeak: string) => {
+    e.stopPropagation();
+    if (!textToSpeak || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
 
   let colorClass = "text-theme-accent";
   if (status === 'good') colorClass = "text-green-500";
@@ -42,9 +51,18 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
       </span>
       {isOpen && (
         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[250px] bg-theme-panel border border-theme-subtle rounded shadow-lg p-3 z-50 flex flex-col gap-1 text-left font-sans text-base whitespace-normal">
-          <span className="flex items-end justify-between gap-3">
-            <strong className="text-xl font-serif text-theme-primary leading-none">{card.kanji || card.reading}</strong>
-            {card.sinoVietnamese && <span className="text-[10px] text-theme-accent uppercase tracking-wider mb-0.5">{card.sinoVietnamese}</span>}
+          <span className="flex items-start justify-between gap-3">
+            <span className="flex items-center gap-2">
+              <strong className="text-xl font-serif text-theme-primary leading-none">{card.kanji || card.reading}</strong>
+              <button 
+                onClick={(e) => playAudio(e, card.kanji || card.reading)}
+                className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0"
+                title="Nghe phát âm"
+              >
+                <Volume2 className="w-4 h-4" />
+              </button>
+            </span>
+            {card.sinoVietnamese && <span className="text-[10px] text-theme-accent uppercase tracking-wider mb-0.5 whitespace-nowrap">{card.sinoVietnamese}</span>}
           </span>
           {card.reading && card.kanji && (
             <span className="text-sm text-theme-primary/70">{card.reading} {card.romaji ? `(${card.romaji})` : ''}</span>

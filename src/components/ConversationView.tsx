@@ -315,8 +315,7 @@ function ConversationDetail({
       const jpRuns = tokens.map(t => {
         let color = undefined;
         if (t.status === 'good') color = "008000"; // Green
-        else if (t.status === 'bad') color = "FF0000"; // Red
-        else if (t.status === 'new') color = "333333";
+        else if (t.status === 'bad' || t.status === 'new') color = "FF0000"; // Red
         
         return new TextRun({
           text: t.text,
