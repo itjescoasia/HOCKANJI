@@ -55,7 +55,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
             <span className="flex items-center gap-2">
               <strong className="text-xl font-serif text-theme-primary leading-none">{card.kanji || card.reading}</strong>
               <button 
-                onClick={(e) => playAudio(e, card.kanji || card.reading)}
+                onClick={(e) => playAudio(e, text)}
                 className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0"
                 title="Nghe phát âm"
               >
