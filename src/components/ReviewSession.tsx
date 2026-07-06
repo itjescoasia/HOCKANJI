@@ -39,61 +39,33 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     setInputError(false);
     setWrongMcqOption(null);
 
-    if ((isFreeStudy || isDifficultReview) && currentCard) {
-      const isWordWithKanji = currentCard.kanji && currentCard.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
-      const types: ('typing_reading' | 'mcq_meaning' | 'mcq_reading')[] = [];
+    if (isFreeStudy && currentCard) {
+      const correctAnswer = currentCard.meaning || '';
+      const allOptions = Array.from(new Set(dueCards.map(c => c.meaning).filter(Boolean))) as string[];
       
-      if (isWordWithKanji) {
-        if (!isDifficultReview) {
-          types.push('typing_reading');
-        }
-        types.push('mcq_reading');
-      }
-      if (currentCard.meaning) {
-        types.push('mcq_meaning');
-      }
-
-      if (types.length === 0) {
+      if (allOptions.length < 2) {
         setExerciseType('flip');
-        return;
-      }
-
-      const randomType = types[Math.floor(Math.random() * types.length)];
-      
-      if (randomType === 'mcq_meaning' || randomType === 'mcq_reading') {
-        const field = randomType === 'mcq_meaning' ? 'meaning' : 'reading';
-        const correctAnswer = currentCard[field] || '';
-        const allOptions = Array.from(new Set(dueCards.map(c => c[field]).filter(Boolean))) as string[];
-        
-        if (allOptions.length < 2) {
-           if (isWordWithKanji && !isDifficultReview) {
-             setExerciseType('typing_reading');
-           } else {
-             setExerciseType('flip');
-           }
-        } else {
-          setExerciseType(randomType);
-          const wrongOptions = allOptions.filter(o => o.trim().toLowerCase() !== correctAnswer.trim().toLowerCase());
-          
-          // Fisher-Yates shuffle wrongOptions
-          for (let i = wrongOptions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [wrongOptions[i], wrongOptions[j]] = [wrongOptions[j], wrongOptions[i]];
-          }
-          
-          const shuffledWrong = wrongOptions.slice(0, 3);
-          const finalOptions = [correctAnswer, ...shuffledWrong];
-          
-          // Fisher-Yates shuffle finalOptions
-          for (let i = finalOptions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [finalOptions[i], finalOptions[j]] = [finalOptions[j], finalOptions[i]];
-          }
-          
-          setMcqOptions(finalOptions);
-        }
       } else {
-        setExerciseType('typing_reading');
+        setExerciseType('mcq_meaning');
+        const wrongOptions = allOptions.filter(o => o.trim().toLowerCase() !== correctAnswer.trim().toLowerCase());
+        
+        // Fisher-Yates shuffle wrongOptions
+        for (let i = wrongOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [wrongOptions[i], wrongOptions[j]] = [wrongOptions[j], wrongOptions[i]];
+        }
+        
+        // Take up to 9 wrong options for 10 total
+        const shuffledWrong = wrongOptions.slice(0, 9);
+        const finalOptions = [correctAnswer, ...shuffledWrong];
+        
+        // Fisher-Yates shuffle finalOptions
+        for (let i = finalOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [finalOptions[i], finalOptions[j]] = [finalOptions[j], finalOptions[i]];
+        }
+        
+        setMcqOptions(finalOptions);
       }
     } else {
       setExerciseType('flip');
@@ -524,12 +496,6 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   {inputError && (
                     <div className="w-full flex justify-between items-center px-2 py-1">
                       <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
-                      <button 
-                        onClick={() => setShowAnswer(true)}
-                        className="text-theme-accent opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
-                      >
-                        Quên (Xem đáp án)
-                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -556,12 +522,6 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   {inputError && (
                     <div className="w-full flex justify-between items-center px-2 py-1">
                       <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
-                      <button 
-                        onClick={() => setShowAnswer(true)}
-                        className="text-theme-accent opacity-80 hover:opacity-100 text-[10px] uppercase tracking-widest hover:underline"
-                      >
-                        Quên (Xem đáp án)
-                      </button>
                     </div>
                   )}
                 </motion.div>

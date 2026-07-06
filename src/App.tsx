@@ -274,6 +274,13 @@ export default function App() {
     }
 
     return shuffled.sort((a, b) => {
+      // Ưu tiên từ vựng "màu đỏ" (chưa thuộc, interval <= 1 hoặc nextReviewDate <= hiện tại)
+      const isRedA = a.interval <= 1 || a.repetition === 0 ? 1 : 0;
+      const isRedB = b.interval <= 1 || b.repetition === 0 ? 1 : 0;
+      if (isRedA !== isRedB) {
+        return isRedB - isRedA; // 1 (Red) lên trước 0
+      }
+
       const scoreA = a.freeStudyScore || 0;
       const scoreB = b.freeStudyScore || 0;
       return scoreA - scoreB; // Lower score (most forgotten) comes first
