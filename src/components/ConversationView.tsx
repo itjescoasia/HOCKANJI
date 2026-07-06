@@ -986,14 +986,26 @@ function ConversationVocabReview({
     
     const scores = conversation.vocabScores || {};
     
-    extracted = extracted.sort(() => Math.random() - 0.5);
-    extracted = extracted.sort((a, b) => {
+    const shuffled = [...extracted];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    const sorted = shuffled.sort((a, b) => {
+      const isRedA = a.interval <= 1 || a.repetition === 0;
+      const isRedB = b.interval <= 1 || b.repetition === 0;
+      
       const scoreA = scores[a.id] || 0;
       const scoreB = scores[b.id] || 0;
-      return scoreA - scoreB;
+      
+      const isUnrememberedA = isRedA || scoreA < 0 ? 1 : 0;
+      const isUnrememberedB = isRedB || scoreB < 0 ? 1 : 0;
+      
+      return isUnrememberedB - isUnrememberedA;
     });
     
-    setVocab(extracted);
+    setVocab(sorted);
     setCurrentIndex(0);
     setIsFlipped(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps

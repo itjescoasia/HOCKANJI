@@ -179,8 +179,20 @@ export default function App() {
   };
 
   const handleStartShortStudy = () => {
-    // 5 từ hay quên nhất (difficultScore thấp nhất)
-    const sorted = [...deck].sort((a, b) => (a.difficultScore ?? 0) - (b.difficultScore ?? 0));
+    // Randomize and prioritize unremembered words
+    const shuffled = [...deck];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const sorted = shuffled.sort((a, b) => {
+      const isRedA = a.interval <= 1 || a.repetition === 0 ? 1 : 0;
+      const isRedB = b.interval <= 1 || b.repetition === 0 ? 1 : 0;
+      if (isRedA !== isRedB) {
+        return isRedB - isRedA;
+      }
+      return (a.difficultScore ?? 0) - (b.difficultScore ?? 0);
+    });
     const top5 = sorted.slice(0, 5);
     setShortStudyQueue(top5);
     setView('short_study');
@@ -246,24 +258,21 @@ export default function App() {
   };
 
   const getDifficultStudyDeck = () => {
-    return [...deck]
-      .sort((a, b) => {
-        const scoreA = a.difficultScore || 0;
-        const scoreB = b.difficultScore || 0;
-        
-        // Gom nhóm những từ có độ khó gần giống nhau (cùng mức độ hay quên, mỗi mức cách nhau 2 điểm)
-        const groupA = Math.floor(scoreA / 2);
-        const groupB = Math.floor(scoreB / 2);
-
-        if (groupA !== groupB) {
-          return groupA - groupB;
-        }
-        
-        // Nếu ở cùng mức độ khó, sắp xếp theo Kanji để các từ đồng dạng đứng gần nhau
-        const kanjiA = a.kanji || a.reading;
-        const kanjiB = b.kanji || b.reading;
-        return kanjiA.localeCompare(kanjiB, 'ja');
-      });
+    const shuffled = [...deck];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.sort((a, b) => {
+      const isRedA = a.interval <= 1 || a.repetition === 0 ? 1 : 0;
+      const isRedB = b.interval <= 1 || b.repetition === 0 ? 1 : 0;
+      if (isRedA !== isRedB) {
+        return isRedB - isRedA;
+      }
+      const scoreA = a.difficultScore || 0;
+      const scoreB = b.difficultScore || 0;
+      return scoreA - scoreB;
+    });
   };
 
   const getFreeStudyDeck = () => {
