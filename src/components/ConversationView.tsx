@@ -393,7 +393,7 @@ function ConversationDetail({
     };
 
     onUpdate(conversation.id, {
-      dialogues: [...conversation.dialogues, newDialogue],
+      dialogues: [newDialogue, ...conversation.dialogues],
     });
 
     setNewJp("");

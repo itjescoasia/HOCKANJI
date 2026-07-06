@@ -197,60 +197,71 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           />
         </div>
         
-        {wordType?.includes('Động từ') && (
-          <div className="pt-4 border-t border-theme-subtle">
-            <div className="flex items-center justify-between mb-4">
-              <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">Các thể</label>
-              <button 
-                type="button" 
-                onClick={() => setForms([...forms, { name: '', value: '' }])}
-                className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
-                title="Thêm thể"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+        {(() => {
+          const isVerbs = wordType?.includes('Động từ');
+          const isAdjectivesOrNoun = wordType === 'Danh từ' || wordType === 'Tính từ i' || wordType === 'Tính từ na';
+          const isFormsEnabled = isVerbs || isAdjectivesOrNoun;
+          const formsLabel = isVerbs ? 'Các thể' : 'Các thì';
+          const formsNamePlaceholder = isVerbs ? 'Tên thể (ví dụ: Thể て)' : 'Tên thì (ví dụ: Quá khứ)';
+          const formsValuePlaceholder = isVerbs ? 'Sau khi chia (ví dụ: 教えて)' : 'Sau khi chia (ví dụ: だった)';
+
+          if (!isFormsEnabled) return null;
+
+          return (
+            <div className="pt-4 border-t border-theme-subtle">
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">{formsLabel}</label>
+                <button 
+                  type="button" 
+                  onClick={() => setForms([...forms, { name: '', value: '' }])}
+                  className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
+                  title="Thêm thể"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-4">
+                {forms.map((f, index) => (
+                  <div key={index} className="relative flex gap-4">
+                    <input 
+                      type="text" 
+                      value={f.name}
+                      onChange={e => {
+                        const newForms = [...forms];
+                        newForms[index].name = e.target.value;
+                        setForms(newForms);
+                      }}
+                      className="w-1/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
+                      placeholder={formsNamePlaceholder}
+                    />
+                    <input 
+                      type="text" 
+                      value={f.value}
+                      onChange={e => {
+                        const newForms = [...forms];
+                        newForms[index].value = e.target.value;
+                        setForms(newForms);
+                      }}
+                      className="w-2/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm pr-10"
+                      placeholder={formsValuePlaceholder}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newForms = [...forms];
+                        newForms.splice(index, 1);
+                        setForms(newForms);
+                      }}
+                      className="absolute top-1/2 -translate-y-1/2 right-3 p-1 rounded-full text-theme-primary/50 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-col gap-4">
-              {forms.map((f, index) => (
-                <div key={index} className="relative flex gap-4">
-                  <input 
-                    type="text" 
-                    value={f.name}
-                    onChange={e => {
-                      const newForms = [...forms];
-                      newForms[index].name = e.target.value;
-                      setForms(newForms);
-                    }}
-                    className="w-1/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
-                    placeholder="Tên thể (ví dụ: Thể て)"
-                  />
-                  <input 
-                    type="text" 
-                    value={f.value}
-                    onChange={e => {
-                      const newForms = [...forms];
-                      newForms[index].value = e.target.value;
-                      setForms(newForms);
-                    }}
-                    className="w-2/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm pr-10"
-                    placeholder="Sau khi chia (ví dụ: 教えて)"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newForms = [...forms];
-                      newForms.splice(index, 1);
-                      setForms(newForms);
-                    }}
-                    className="absolute top-1/2 -translate-y-1/2 right-3 p-1 rounded-full text-theme-primary/50 hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         <div className="pt-4 border-t border-theme-subtle">
           <div className="flex items-center justify-between mb-4">

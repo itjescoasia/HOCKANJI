@@ -316,10 +316,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               rows={2}
                             />
                             
-                            {(editForm.wordType?.includes('Động từ')) && (
+                            {(() => {
+                              const isVerbs = editForm.wordType?.includes('Động từ');
+                              const isAdjectivesOrNoun = editForm.wordType === 'Danh từ' || editForm.wordType === 'Tính từ i' || editForm.wordType === 'Tính từ na';
+                              const isFormsEnabled = isVerbs || isAdjectivesOrNoun;
+                              const formsLabel = isVerbs ? 'Các thể' : 'Các thì';
+                              const formsNamePlaceholder = isVerbs ? 'Tên thể (ví dụ: Thể て)' : 'Tên thì (ví dụ: Quá khứ)';
+                              const formsValuePlaceholder = isVerbs ? 'Sau khi chia (ví dụ: 教えて)' : 'Sau khi chia (ví dụ: だった)';
+
+                              if (!isFormsEnabled) return null;
+
+                              return (
                               <div className="pt-2 border-t border-theme-subtle mt-2">
                                 <div className="flex items-center justify-between mb-2">
-                                  <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">Các thể</label>
+                                  <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">{formsLabel}</label>
                                   <button 
                                     type="button" 
                                     onClick={() => {
@@ -344,7 +354,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                           setEditForm({...editForm, forms: newForms});
                                         }}
                                         className="w-1/3 bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent"
-                                        placeholder="Tên thể (ví dụ: Thể て)"
+                                        placeholder={formsNamePlaceholder}
                                       />
                                       <input 
                                         value={f.value} 
@@ -354,7 +364,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                           setEditForm({...editForm, forms: newForms});
                                         }}
                                         className="w-2/3 bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent pr-6"
-                                        placeholder="Sau khi chia (ví dụ: 教えて)"
+                                        placeholder={formsValuePlaceholder}
                                       />
                                       <button
                                         type="button"
@@ -371,7 +381,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                   ))}
                                 </div>
                               </div>
-                            )}
+                              );
+                            })()}
                             
                             <div className="pt-2 border-t border-theme-subtle mt-2">
                               <div className="flex items-center justify-between mb-2">
