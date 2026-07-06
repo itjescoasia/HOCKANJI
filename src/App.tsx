@@ -70,7 +70,13 @@ export default function App() {
   const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord } = useIntensiveVocab();
   const { conversations, addConversation, removeConversation, updateConversation } = useConversations();
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
-  const [view, setView] = useState<any>('dashboard');
+  const [view, setView] = useState<any>(() => {
+    return localStorage.getItem('currentView') || 'dashboard';
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('currentView', view);
+  }, [view]);
   const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
   const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);

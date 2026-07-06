@@ -85,9 +85,17 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const filteredDeck = deck.filter(c => {
-    const matchesSearch = c.kanji.toLowerCase().includes(search.toLowerCase()) || 
-                          c.meaning.toLowerCase().includes(search.toLowerCase()) ||
-                          c.reading.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.trim().toLowerCase();
+    if (!searchLower) return filterType === 'all' || c.wordType === filterType;
+
+    const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';
+    
+    const matchesSearch = c.kanji.toLowerCase().includes(searchLower) || 
+                          c.meaning.toLowerCase().includes(searchLower) ||
+                          c.reading.toLowerCase().includes(searchLower) ||
+                          (c.forms && c.forms.some(f => f.value.toLowerCase().includes(searchLower))) ||
+                          (stem && stem.length > 0 && searchLower.includes(stem.toLowerCase()));
+                          
     const matchesFilter = filterType === 'all' || c.wordType === filterType;
     return matchesSearch && matchesFilter;
   });
