@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IntensiveWord } from '../types';
 import { db, auth } from '../lib/firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 
 enum OperationType {
   CREATE = 'create',
@@ -57,7 +57,14 @@ export function useIntensiveVocab() {
           snapshot.forEach((docSnap) => {
             loadedDeck.push(docSnap.data() as IntensiveWord);
           });
-          setIntensiveDeck(loadedDeck.sort((a,b) => b.createdAt - a.createdAt));
+          setIntensiveDeck(loadedDeck.sort((a,b) => {
+            if (a.order !== undefined && b.order !== undefined) {
+              return a.order - b.order;
+            }
+            if (a.order !== undefined) return -1;
+            if (b.order !== undefined) return 1;
+            return b.createdAt - a.createdAt;
+          }));
           setIsLoaded(true);
         }, (error) => {
           setIsLoaded(true);
@@ -125,5 +132,22 @@ export function useIntensiveVocab() {
     }
   };
 
-  return { intensiveDeck, addWord, removeWord, updateWord, isLoaded };
+  const reorderWords = async (reorderedWords: IntensiveWord[]) => {
+    if (auth.currentUser) {
+      try {
+        const batch = writeBatch(db);
+        reorderedWords.forEach((word) => {
+          const ref = doc(db, 'users', auth.currentUser!.uid, 'intensiveVocab', word.id);
+          batch.set(ref, { order: word.order }, { merge: true });
+        });
+        await batch.commit();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `users/${auth.currentUser.uid}/intensiveVocab (batch)`);
+      }
+    } else {
+      setIntensiveDeck(reorderedWords);
+    }
+  };
+
+  return { intensiveDeck, addWord, removeWord, updateWord, reorderWords, isLoaded };
 }

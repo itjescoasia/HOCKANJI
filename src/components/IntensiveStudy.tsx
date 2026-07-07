@@ -29,6 +29,23 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { formatCreatedAt } from "../lib/dateUtils";
 
 interface IntensiveStudyProps {
@@ -37,6 +54,7 @@ interface IntensiveStudyProps {
   onAddWord: (word: IntensiveWord) => void;
   onRemoveWord: (id: string) => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
+  onReorderDeck?: (deck: IntensiveWord[]) => void;
 }
 
 const CATEGORIES: WordCategory[] = [
@@ -51,12 +69,124 @@ const CATEGORIES: WordCategory[] = [
   "Khác",
 ];
 
+function SortableWordItem({
+  word,
+  searchQuery,
+  onRemoveWord,
+  onSelectWord,
+}: {
+  word: IntensiveWord;
+  searchQuery: string;
+  onRemoveWord: (id: string) => void;
+  onSelectWord: (id: string) => void;
+}) {
+  const isDragDisabled = !!searchQuery.trim();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: word.id,
+    disabled: isDragDisabled
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || 'transform 250ms ease',
+    zIndex: isDragging ? 50 : "auto",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-theme-hover border ${isDragging ? 'border-theme-accent shadow-2xl scale-[1.02]' : 'border-theme-subtle'} rounded p-6 hover:border-theme-accent/50 transition-colors cursor-pointer flex flex-col items-center sm:items-start text-center sm:text-left relative group aspect-square sm:aspect-auto`}
+      onClick={() => onSelectWord(word.id)}
+    >
+      <div 
+        {...attributes}
+        {...listeners}
+        className={`absolute top-2 left-2 p-2 text-theme-primary/20 hover:text-theme-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-grab active:cursor-grabbing z-20 ${isDragDisabled ? 'hidden' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+        title="Kéo thả để sắp xếp"
+      >
+        <GripVertical className="w-5 h-5" />
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (
+            window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
+          ) {
+            onRemoveWord(word.id);
+          }
+        }}
+        className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel z-20"
+        title="Xoá chuyên đề"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+      
+      <div className="flex-1 w-full flex flex-col pt-4 sm:pt-6">
+        <div className="text-3xl font-serif text-theme-primary mb-2 w-full break-words">
+          {word.word}
+        </div>
+        {word.reading && (
+          <div className="text-theme-accent opacity-90 font-medium mb-1 w-full truncate">
+            {word.reading}
+          </div>
+        )}
+        <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3 w-full truncate">
+          {word.category}
+        </div>
+        <div className="text-sm text-theme-primary/60 line-clamp-2 italic mb-4">
+          {word.explanation || "Không có giải thích"}
+        </div>
+        
+        <div className="mt-auto w-full pt-3 border-t border-theme-subtle flex flex-col gap-2 text-xs text-theme-primary/40">
+          <div className="flex justify-between items-center w-full">
+            <span>{word.examples.length} câu ví dụ</span>
+            {formatCreatedAt(word.createdAt) && (
+              <span className="flex items-center gap-1">
+                <span>{formatCreatedAt(word.createdAt)?.dateStr}</span>
+                <span className="bg-theme-accent/10 text-theme-accent px-1.5 py-0.5 rounded text-[10px] font-medium border border-theme-accent/20">
+                  {formatCreatedAt(word.createdAt)?.daysStr}
+                </span>
+              </span>
+            )}
+          </div>
+          <div className="flex justify-end items-center w-full mt-1">
+            <span className="text-theme-accent text-sm font-medium">Học ngay &rarr;</span>
+          </div>
+          {word.examples.length > 0 && (
+            <div
+              className="w-full bg-theme-panel h-1.5 rounded-full overflow-hidden flex"
+              title={`${word.examples.filter((ex) => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length} / ${word.examples.length} câu đã nhớ`}
+            >
+              <div
+                className="bg-green-500 h-full transition-all duration-500"
+                style={{
+                  width: `${(word.examples.filter((ex) => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length / word.examples.length) * 100}%`,
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function IntensiveStudy({
   deck,
   mainDeck,
   onAddWord,
   onRemoveWord,
   onUpdateWord,
+  onReorderDeck,
 }: IntensiveStudyProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "study">("list");
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
@@ -158,6 +288,38 @@ export default function IntensiveStudy({
     
     return results;
   }, [searchQuery, deck, fuse]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      if (!onReorderDeck) return;
+      if (searchQuery.trim()) return;
+
+      const oldIndex = deck.findIndex((item) => item.id === active.id);
+      const newIndex = deck.findIndex((item) => item.id === over.id);
+
+      const newDeck = arrayMove(deck, oldIndex, newIndex);
+
+      const updatedDeck = newDeck.map((word, index) => ({
+        ...word,
+        order: index,
+      }));
+
+      onReorderDeck(updatedDeck);
+    }
+  };
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,81 +602,28 @@ export default function IntensiveStudy({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <AnimatePresence>
-            {filteredDeck.map((word) => (
-              <motion.div
-                key={word.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-theme-hover border border-theme-subtle rounded p-6 hover:border-theme-accent/50 transition-all cursor-pointer flex flex-col items-center sm:items-start text-center sm:text-left relative group"
-                onClick={() => {
-                  setSelectedWordId(word.id);
-                  setViewState("study");
-                }}
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (
-                      window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
-                    ) {
-                      onRemoveWord(word.id);
-                    }
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <SortableContext items={filteredDeck.map(w => w.id)} strategy={rectSortingStrategy}>
+              {filteredDeck.map((word) => (
+                <SortableWordItem
+                  key={word.id}
+                  word={word}
+                  searchQuery={searchQuery}
+                  onRemoveWord={onRemoveWord}
+                  onSelectWord={(id) => {
+                    setSelectedWordId(id);
+                    setViewState("study");
                   }}
-                  className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel"
-                  title="Xoá chuyên đề"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <div className="text-4xl font-serif text-theme-primary mb-2 w-full break-words">
-                  {word.word}
-                </div>
-                {word.reading && (
-                  <div className="text-theme-accent opacity-90 font-medium mb-1 w-full truncate">
-                    {word.reading}
-                  </div>
-                )}
-                <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3 w-full truncate">
-                  {word.category}
-                </div>
-                <div className="text-xs text-theme-primary/60 line-clamp-2 italic">
-                  {word.explanation || "Không có giải thích"}
-                </div>
-                <div className="mt-4 pt-3 border-t border-theme-subtle w-full flex flex-col gap-2 text-xs text-theme-primary/40">
-                  <div className="flex justify-between items-center w-full">
-                    <span>{word.examples.length} câu ví dụ</span>
-                    {formatCreatedAt(word.createdAt) && (
-                      <span className="flex items-center gap-1">
-                        <span>{formatCreatedAt(word.createdAt)?.dateStr}</span>
-                        <span className="bg-theme-accent/10 text-theme-accent px-1.5 py-0.5 rounded text-[10px] font-medium border border-theme-accent/20">
-                          {formatCreatedAt(word.createdAt)?.daysStr}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex justify-end items-center w-full mt-1">
-                    <span className="text-theme-accent">Học ngay &rarr;</span>
-                  </div>
-                  {word.examples.length > 0 && (
-                    <div
-                      className="w-full bg-theme-panel h-1.5 rounded-full overflow-hidden flex"
-                      title={`${word.examples.filter((ex) => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length} / ${word.examples.length} câu đã nhớ`}
-                    >
-                      <div
-                        className="bg-green-500 h-full transition-all duration-500"
-                        style={{
-                          width: `${(word.examples.filter((ex) => ex.jaToViMastered || ex.viToJaMastered || ex.mastered).length / word.examples.length) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+                />
+              ))}
+            </SortableContext>
+          </div>
+        </DndContext>
       )}
     </div>
   );
@@ -1073,7 +1182,7 @@ function StudyView({
                         id={`example-${ex.id}`}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative rounded-lg border transition-all duration-300 ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
+                        className={`relative rounded-lg border transition-colors ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
                         <div

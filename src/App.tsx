@@ -71,7 +71,7 @@ export default function App() {
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
-  const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord } = useIntensiveVocab();
+  const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord, reorderWords: reorderIntensiveWords } = useIntensiveVocab();
   const { conversations, addConversation, removeConversation, updateConversation } = useConversations();
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
   const [view, setView] = useState<any>(() => {
@@ -403,6 +403,7 @@ export default function App() {
             onAddWord={addIntensiveWord}
             onRemoveWord={removeIntensiveWord}
             onUpdateWord={updateIntensiveWord}
+            onReorderDeck={reorderIntensiveWords}
           />
         )}
         

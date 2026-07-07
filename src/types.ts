@@ -58,6 +58,7 @@ export interface IntensiveWord {
   examples: IntensiveExample[];
   createdAt: number;
   reviewScore?: number;
+  order?: number;
 }
 
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
