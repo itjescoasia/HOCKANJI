@@ -1328,6 +1328,13 @@ function StudyView({
                                 )}
                                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                                   <button
+                                    onClick={(e) => playAudio(e, ex.sentence)}
+                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                    title="Phát âm thanh"
+                                  >
+                                    <Volume2 className="w-4 h-4" />
+                                  </button>
+                                  <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       toggleMeaning(ex.id);
