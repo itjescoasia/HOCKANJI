@@ -143,6 +143,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     const matchesSearch = c.kanji.toLowerCase().includes(searchLower) || 
                           c.meaning.toLowerCase().includes(searchLower) ||
                           c.reading.toLowerCase().includes(searchLower) ||
+                          (c.romaji && c.romaji.toLowerCase().includes(searchLower)) ||
                           (c.forms && c.forms.some(f => f.value.toLowerCase().includes(searchLower))) ||
                           (stem && stem.length > 0 && searchLower.includes(stem.toLowerCase()));
                           
@@ -263,7 +264,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             </div>
             <input
               type="text"
-              placeholder="Tìm kiếm Kanji, nghĩa..."
+              placeholder="Tìm kiếm Kanji, nghĩa, romaji..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-11 pr-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:border-theme-accent transition-colors rounded-none placeholder:opacity-30 text-sm"
