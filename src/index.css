@@ -68,6 +68,29 @@
   --accent-light: #c49551;
 }
 
+.theme-sepia {
+  /* Warm Sepia Mode */
+  --bg-base: #f4ecd8;
+  --bg-base-alt: #eee4cc;
+  --bg-panel: #f8f3e5;
+  --bg-hover: #e6dac3;
+  --bg-active: #dccba8;
+  --bg-active-alt: #cdb992;
+  
+  --border-subtle: #e0d0b0;
+  --border-strong: #cdb992;
+  
+  --text-primary: #5c4b37;
+  --text-muted: #8a7862;
+  --text-accent-dark: #8c5620;
+  --text-inverted: #f8f3e5;
+  --text-japanese: #4a3620;
+  
+  --accent: #a66a2b;
+  --accent-hover: #8c5620;
+  --accent-light: #c28243;
+}
+
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
