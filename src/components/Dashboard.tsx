@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Fragment } from "react";
+import React, { useState, useMemo, useEffect, Fragment } from "react";
 import { KanjiCard, IntensiveWord } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
 import { getLocalDateString, getVietnamDate } from "../lib/dateUtils";

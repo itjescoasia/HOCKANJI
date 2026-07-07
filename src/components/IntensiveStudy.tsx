@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from "react";
+import React, { useState, Fragment, useEffect } from "react";
 import Fuse from "fuse.js";
 import {
   IntensiveWord,
@@ -61,6 +61,7 @@ export default function IntensiveStudy({
   const [viewState, setViewState] = useState<"list" | "add" | "study">("list");
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [targetExampleId, setTargetExampleId] = useState<string | null>(null);
 
   // Add Form State
   const [newWordData, setNewWordData] = useState({
@@ -333,7 +334,11 @@ export default function IntensiveStudy({
     return (
       <StudyView
         word={selectedWord}
-        onBack={() => setViewState("list")}
+        targetExampleId={targetExampleId}
+        onBack={() => {
+          setViewState("list");
+          setTargetExampleId(null);
+        }}
         onUpdateWord={onUpdateWord}
         renderHighlight={renderExampleHighlight}
       />
@@ -384,6 +389,7 @@ export default function IntensiveStudy({
                     key={word.id}
                     onClick={() => {
                       setSelectedWordId(word.id);
+                      setTargetExampleId(matchedExample?.id || null);
                       setViewState("study");
                       setSearchQuery("");
                     }}
@@ -516,11 +522,13 @@ export default function IntensiveStudy({
 
 function StudyView({
   word,
+  targetExampleId,
   onBack,
   onUpdateWord,
   renderHighlight,
 }: {
   word: IntensiveWord;
+  targetExampleId?: string | null;
   onBack: () => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
   renderHighlight: (text: string, kanji: string) => React.ReactNode;
@@ -540,11 +548,36 @@ function StudyView({
     explanation: word.explanation,
   });
 
+  useEffect(() => {
+    if (targetExampleId) {
+      // Small delay to ensure rendering is complete
+      setTimeout(() => {
+        const el = document.getElementById(`example-${targetExampleId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Highlight it temporarily
+          el.classList.add('ring-2', 'ring-theme-accent');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-theme-accent');
+          }, 2000);
+        }
+      }, 100);
+    }
+  }, [targetExampleId]);
+
   const [hiddenMeaningIds, setHiddenMeaningIds] = useState<string[]>([]);
   const [expandedNoteIds, setExpandedNoteIds] = useState<string[]>([]);
   const isAllHidden =
     word.examples.length > 0 &&
     hiddenMeaningIds.length === word.examples.length;
+
+  const playAudio = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    if (!text || !('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };
 
   const toggleAllMeanings = () => {
     if (isAllHidden) {
@@ -1037,9 +1070,10 @@ function StudyView({
                   >
                     {(provided, snapshot) => (
                       <div
+                        id={`example-${ex.id}`}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative rounded-lg border ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
+                        className={`relative rounded-lg border transition-all duration-300 ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
                         <div
