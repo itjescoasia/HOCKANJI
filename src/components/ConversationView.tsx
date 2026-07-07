@@ -393,7 +393,7 @@ function ConversationDetail({
     };
 
     onUpdate(conversation.id, {
-      dialogues: [newDialogue, ...conversation.dialogues],
+      dialogues: [...conversation.dialogues, newDialogue],
     });
 
     setNewJp("");
@@ -915,14 +915,16 @@ function ConversationDetail({
         </div>
       )}
 
-      {!isAdding && (
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 text-theme-accent hover:text-theme-accent-hover uppercase tracking-widest text-xs font-bold transition-colors py-4 w-full justify-center border border-dashed border-theme-accent/50 hover:border-theme-accent bg-theme-accent/5"
-        >
-          <Plus className="w-4 h-4" />
-          Thêm câu
-        </button>
+      {!isAdding && viewMode === "list" && (
+        <div className="sticky bottom-8 z-10 w-full mt-4 flex justify-center pointer-events-none">
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 text-theme-inverted bg-theme-accent hover:bg-theme-accent-light uppercase tracking-widest text-xs font-bold transition-all py-3 px-8 justify-center rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] pointer-events-auto hover:scale-105"
+          >
+            <Plus className="w-4 h-4" />
+            Thêm câu mới
+          </button>
+        </div>
       )}
     </div>
   );

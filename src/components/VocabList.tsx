@@ -293,7 +293,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 <tr className="bg-theme-hover border-b border-theme-subtle">
                   <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Kanji</th>
                   <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Cách đọc / Nghĩa</th>
-                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Tiến trình (SRS)</th>
+                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal hidden xl:table-cell">Tiến trình (SRS)</th>
                   <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal text-right">Quản lý</th>
                 </tr>
               </thead>
@@ -534,7 +534,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-4 text-center text-theme-primary opacity-50 text-xs italic font-serif align-middle">
+                        <td className="px-4 py-4 text-center text-theme-primary opacity-50 text-xs italic font-serif align-middle hidden xl:table-cell">
                           Đang chỉnh sửa
                         </td>
                         <td className="px-4 py-4 text-right align-middle">
@@ -622,7 +622,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           )
                         )}
                       </td>
-                      <td className="px-8 py-5">
+                      <td className="px-8 py-5 hidden xl:table-cell">
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-3">
                             <div className="w-20 h-1 bg-theme-active overflow-hidden border border-theme-base">
