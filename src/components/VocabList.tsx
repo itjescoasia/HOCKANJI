@@ -12,6 +12,56 @@ interface VocabListProps {
   initialSearchQuery?: string;
 }
 
+function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string) => void }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!card.examples || card.examples.length === 0) return null;
+
+  const ex = card.examples[currentIndex];
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => (prev > 0 ? prev - 1 : card.examples!.length - 1));
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => (prev < card.examples!.length - 1 ? prev + 1 : 0));
+  };
+
+  return (
+    <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 max-w-[200px] sm:max-w-md">
+      <div className="bg-theme-base-alt p-2 rounded-sm border border-theme-subtle group/ex relative">
+        <div className="text-[11px] text-theme-primary opacity-80 mb-1 flex items-start gap-2 justify-between">
+          <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
+          <button
+            onClick={(e) => playAudio(e, ex.sentence)}
+            className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
+            title="Nghe câu ví dụ"
+          >
+            <Volume2 className="w-3 h-3" />
+          </button>
+        </div>
+        {(ex.reading || ex.romaji) && (
+          <div className="flex gap-2 mb-1">
+            {ex.reading && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.reading}</span>}
+            {ex.romaji && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.romaji}</span>}
+          </div>
+        )}
+        <div className="text-[10px] text-theme-accent opacity-70 italic" title={ex.translation}>{ex.translation}</div>
+      </div>
+      
+      {card.examples.length > 1 && (
+        <div className="flex justify-between items-center text-[10px] text-theme-primary/50 mt-1">
+          <button onClick={handlePrev} className="px-2 py-0.5 hover:bg-theme-hover hover:text-theme-primary rounded transition-colors">&larr; Trước</button>
+          <span>{currentIndex + 1} / {card.examples.length}</span>
+          <button onClick={handleNext} className="px-2 py-0.5 hover:bg-theme-hover hover:text-theme-primary rounded transition-colors">Tiếp &rarr;</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '' }: VocabListProps) {
   const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
@@ -545,29 +595,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         
                         {/* Display multiple examples if present */}
                         {card.examples && card.examples.length > 0 ? (
-                          <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 max-w-[200px] sm:max-w-md">
-                            {card.examples.map(ex => (
-                              <div key={ex.id} className="bg-theme-base-alt p-2 rounded-sm border border-theme-subtle group/ex">
-                                <div className="text-[11px] text-theme-primary opacity-80 mb-1 flex items-start gap-2 justify-between">
-                                  <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
-                                  <button
-                                    onClick={(e) => playAudio(e, ex.sentence)}
-                                    className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
-                                    title="Nghe câu ví dụ"
-                                  >
-                                    <Volume2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                                {(ex.reading || ex.romaji) && (
-                                  <div className="flex gap-2 mb-1">
-                                    {ex.reading && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.reading}</span>}
-                                    {ex.romaji && <span className="text-[10px] text-theme-primary opacity-60 italic">{ex.romaji}</span>}
-                                  </div>
-                                )}
-                                <div className="text-[10px] text-theme-accent opacity-70 italic" title={ex.translation}>{ex.translation}</div>
-                              </div>
-                            ))}
-                          </div>
+                          <VocabCardExamples card={card} deck={deck} playAudio={playAudio} />
                         ) : (
                           /* Legacy single example fallback */
                           (card.example || card.exampleTranslation) && (
