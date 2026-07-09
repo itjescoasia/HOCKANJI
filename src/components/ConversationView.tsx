@@ -21,6 +21,7 @@ interface ConversationViewProps {
   onUpdateConversation: (id: string, updates: Partial<Conversation>) => void;
   onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
   onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
+  onRecordReview?: (isCorrect: boolean) => void;
   mainDeck: KanjiCard[];
 }
 
@@ -31,6 +32,7 @@ export default function ConversationView({
   onUpdateConversation,
   onUpdateCard,
   onReviewCard,
+  onRecordReview,
   mainDeck,
 }: ConversationViewProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "detail">("list");
@@ -136,6 +138,7 @@ export default function ConversationView({
         onUpdate={(id, updates) => onUpdateConversation(id, updates)}
         onUpdateCard={onUpdateCard}
         onReviewCard={onReviewCard}
+        onRecordReview={onRecordReview}
         mainDeck={mainDeck}
       />
     );
@@ -257,6 +260,7 @@ function ConversationDetail({
   onUpdate,
   onUpdateCard,
   onReviewCard,
+  onRecordReview,
   mainDeck,
 }: {
   conversation: Conversation;
@@ -264,6 +268,7 @@ function ConversationDetail({
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
   onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
   onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
+  onRecordReview?: (isCorrect: boolean) => void;
   mainDeck: KanjiCard[];
 }) {
   const [newJp, setNewJp] = useState("");
@@ -640,7 +645,7 @@ function ConversationDetail({
                                 <div className="flex-1 space-y-1">
                                   <div className="flex items-start gap-2">
                                     <p className="text-lg text-theme-primary font-serif">
-                                      {renderExampleHighlight(dialogue.japanese, "", mainDeck)}
+                                      {renderExampleHighlight(dialogue.japanese, "", mainDeck, undefined, conversation.vocabScores)}
                                     </p>
                                     <button
                                       onClick={(e) => playAudio(e, dialogue.japanese)}
@@ -754,7 +759,7 @@ function ConversationDetail({
         </DragDropContext>
       ) : viewMode === "review_vocab" ? (
         <div className="mb-8">
-          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} onUpdateCard={onUpdateCard} onReviewCard={onReviewCard} />
+          <ConversationVocabReview conversation={conversation} mainDeck={mainDeck} onUpdate={onUpdate} onRecordReview={onRecordReview} />
         </div>
       ) : (
         <div className="mb-8">
@@ -765,7 +770,7 @@ function ConversationDetail({
               </div>
               <div className="space-y-6 max-w-2xl mx-auto w-full text-center mt-6">
                 <p className="text-3xl md:text-4xl text-theme-primary font-serif leading-relaxed">
-                  {renderExampleHighlight(conversation.dialogues[currentSlideIndex].japanese, "", mainDeck)}
+                  {renderExampleHighlight(conversation.dialogues[currentSlideIndex].japanese, "", mainDeck, undefined, conversation.vocabScores)}
                 </p>
                 {conversation.dialogues[currentSlideIndex].hiragana && (
                   <p className="text-xl text-theme-primary/80">
@@ -970,14 +975,12 @@ function ConversationVocabReview({
   conversation,
   mainDeck,
   onUpdate,
-  onUpdateCard,
-  onReviewCard
+  onRecordReview
 }: {
   conversation: Conversation;
   mainDeck: KanjiCard[];
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
-  onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
-  onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
+  onRecordReview?: (isCorrect: boolean) => void;
 }) {
   const [vocab, setVocab] = useState<KanjiCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -1019,26 +1022,8 @@ function ConversationVocabReview({
     scores[currentCard.id] = (scores[currentCard.id] || 0) + change;
     onUpdate(conversation.id, { vocabScores: scores });
 
-    if (onReviewCard) {
-      if (change > 0) {
-        onReviewCard(currentCard.id, 'good');
-      } else {
-        onReviewCard(currentCard.id, 'forgot');
-      }
-    } else if (onUpdateCard) {
-      if (change > 0) {
-        // "Nhớ" - set interval to 2, repetition to 1 (makes status 'good' - green)
-        onUpdateCard(currentCard.id, {
-          interval: Math.max(currentCard.interval || 0, 2),
-          repetition: Math.max(currentCard.repetition || 0, 1)
-        });
-      } else {
-        // "Quên" - set interval to 0, repetition to 0 (makes status 'bad' - red)
-        onUpdateCard(currentCard.id, {
-          interval: 0,
-          repetition: 0
-        });
-      }
+    if (onRecordReview) {
+      onRecordReview(change > 0);
     }
     
     if (currentIndex < vocab.length - 1) {

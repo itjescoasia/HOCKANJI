@@ -250,9 +250,9 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
   return tokens;
 };
 
-export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard) => {
+export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {
   if (!example) return <Fragment>“{example}”</Fragment>;
-  const tokens = tokenizeExampleText(example, targetWord, mainDeck, fallbackTargetCard);
+  const tokens = tokenizeExampleText(example, targetWord, mainDeck, fallbackTargetCard, vocabScores);
   
   return (
     <Fragment>

@@ -21,7 +21,8 @@ import {
   Unlock,
   Volume2,
   CopyPlus,
-  CheckCircle
+  CheckCircle,
+  Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
@@ -77,6 +78,7 @@ function SortableWordItem({
   onRemoveWord,
   onSelectWord,
 }: {
+  key?: React.Key;
   word: IntensiveWord;
   searchQuery: string;
   onRemoveWord: (id: string) => void;

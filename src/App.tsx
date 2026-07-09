@@ -435,8 +435,7 @@ export default function App() {
             onAddConversation={addConversation}
             onRemoveConversation={removeConversation}
             onUpdateConversation={updateConversation}
-            onUpdateCard={updateCard}
-            onReviewCard={handleReviewCard}
+            onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             mainDeck={deck}
           />
         )}
