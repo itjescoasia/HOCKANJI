@@ -19,7 +19,9 @@ import {
   Lightbulb,
   Lock,
   Unlock,
-  Volume2
+  Volume2,
+  CopyPlus,
+  CheckCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
@@ -492,11 +494,24 @@ export default function IntensiveStudy({
     );
   }
 
+  const handleCopyExample = (example: IntensiveExample, targetWordId: string) => {
+    const targetWord = deck.find(w => w.id === targetWordId);
+    if (!targetWord) return;
+    
+    // Copy the example with a new id
+    const copiedExample = { ...example, id: crypto.randomUUID() };
+    onUpdateWord(targetWordId, {
+      examples: [...targetWord.examples, copiedExample]
+    });
+  };
+
   if (viewState === "study" && selectedWord) {
     return (
       <StudyView
+        deck={deck}
         word={selectedWord}
         targetExampleId={targetExampleId}
+        onCopyExample={handleCopyExample}
         onBack={() => {
           setViewState("list");
           setTargetExampleId(null);
@@ -630,19 +645,27 @@ export default function IntensiveStudy({
 }
 
 function StudyView({
+  deck,
   word,
   targetExampleId,
+  onCopyExample,
   onBack,
   onUpdateWord,
   renderHighlight,
 }: {
+  deck: IntensiveWord[];
   word: IntensiveWord;
   targetExampleId?: string | null;
+  onCopyExample: (example: IntensiveExample, targetWordId: string) => void;
   onBack: () => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
   renderHighlight: (text: string, kanji: string) => React.ReactNode;
 }) {
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
+  const [copyingExample, setCopyingExample] = useState<IntensiveExample | null>(null);
+  const [showCopySuccess, setShowCopySuccess] = useState(false);
+  const [duplicateWarningId, setDuplicateWarningId] = useState<string | null>(null);
+  const [highlightedExampleId, setHighlightedExampleId] = useState<string | null>(null);
   const [newSentence, setNewSentence] = useState("");
   const [newReading, setNewReading] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
@@ -738,15 +761,15 @@ function StudyView({
     e.preventDefault();
     if (!editExampleData.sentence.trim() || !editingExampleId) return;
 
-    const isDuplicate = word.examples.some(
+    const existingExample = word.examples.find(
       (ex) =>
         ex.id !== editingExampleId &&
         ex.sentence.trim().toLowerCase() ===
           editExampleData.sentence.trim().toLowerCase(),
     );
 
-    if (isDuplicate) {
-      window.alert("Câu ví dụ này đã tồn tại trong chuyên đề!");
+    if (existingExample) {
+      setDuplicateWarningId(existingExample.id);
       return;
     }
 
@@ -785,13 +808,13 @@ function StudyView({
     e.preventDefault();
     if (!newSentence.trim()) return;
 
-    const isDuplicate = word.examples.some(
+    const existingExample = word.examples.find(
       (ex) =>
         ex.sentence.trim().toLowerCase() === newSentence.trim().toLowerCase(),
     );
 
-    if (isDuplicate) {
-      window.alert("Câu ví dụ này đã tồn tại trong chuyên đề!");
+    if (existingExample) {
+      setDuplicateWarningId(existingExample.id);
       return;
     }
 
@@ -1071,6 +1094,28 @@ function StudyView({
             <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">
               Thêm Câu Ví Dụ Mới
             </h4>
+            {duplicateWarningId && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-lg flex items-start gap-3 mb-4">
+                <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm mb-1">Câu ví dụ này đã tồn tại!</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById(`example-${duplicateWarningId}`);
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        setHighlightedExampleId(duplicateWarningId);
+                        setTimeout(() => setHighlightedExampleId(null), 3000);
+                      }
+                    }}
+                    className="text-xs underline hover:text-red-400 transition-colors"
+                  >
+                    Nhấn vào đây để xem câu hiện có
+                  </button>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleAddExample} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
@@ -1080,7 +1125,10 @@ function StudyView({
                   required
                   rows={2}
                   value={newSentence}
-                  onChange={(e) => setNewSentence(e.target.value)}
+                  onChange={(e) => {
+                    setNewSentence(e.target.value);
+                    setDuplicateWarningId(null);
+                  }}
                   className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-primary/40"
                   placeholder="e.g. この情報は大切です。"
                 />
@@ -1182,7 +1230,7 @@ function StudyView({
                         id={`example-${ex.id}`}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative rounded-lg border transition-colors ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
+                        className={`relative rounded-lg border transition-all duration-500 ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
                         <div
@@ -1206,6 +1254,28 @@ function StudyView({
                               <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">
                                 Chỉnh sửa câu ví dụ
                               </h4>
+                              {duplicateWarningId && (
+                                <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-lg flex items-start gap-3 mb-4">
+                                  <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="font-medium text-sm mb-1">Câu ví dụ này đã tồn tại!</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const el = document.getElementById(`example-${duplicateWarningId}`);
+                                        if (el) {
+                                          el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                          setHighlightedExampleId(duplicateWarningId);
+                                          setTimeout(() => setHighlightedExampleId(null), 3000);
+                                        }
+                                      }}
+                                      className="text-xs underline hover:text-red-400 transition-colors"
+                                    >
+                                      Nhấn vào đây để xem câu hiện có
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                               <div className="space-y-2">
                                 <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
                                   Câu ví dụ *
@@ -1214,12 +1284,13 @@ function StudyView({
                                   required
                                   rows={2}
                                   value={editExampleData.sentence}
-                                  onChange={(e) =>
+                                  onChange={(e) => {
                                     setEditExampleData({
                                       ...editExampleData,
                                       sentence: e.target.value,
-                                    })
-                                  }
+                                    });
+                                    setDuplicateWarningId(null);
+                                  }}
                                   className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-primary/40"
                                 />
                               </div>
@@ -1333,6 +1404,16 @@ function StudyView({
                                     title="Phát âm thanh"
                                   >
                                     <Volume2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCopyingExample(ex);
+                                    }}
+                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                    title="Sao chép sang chuyên đề khác"
+                                  >
+                                    <CopyPlus className="w-4 h-4" />
                                   </button>
                                   <button
                                     onClick={(e) => {
@@ -1455,6 +1536,74 @@ function StudyView({
           </Droppable>
         </DragDropContext>
       </div>
+
+      {copyingExample && (
+        <div className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl w-full max-w-md shadow-2xl p-6 relative">
+            <h3 className="text-xl font-serif text-theme-primary mb-4">
+              Sao chép câu ví dụ
+            </h3>
+            <p className="text-theme-primary/60 text-sm mb-6">
+              Chọn chuyên đề bạn muốn sao chép câu ví dụ này tới:
+            </p>
+            
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2 mb-6">
+              {deck.filter(w => w.id !== word.id).length === 0 ? (
+                <div className="text-center text-theme-primary/40 text-sm py-4 italic">
+                  Không có chuyên đề nào khác.
+                </div>
+              ) : (
+                deck.filter(w => w.id !== word.id).map(w => (
+                  <button
+                    key={w.id}
+                    onClick={() => {
+                      onCopyExample(copyingExample, w.id);
+                      setCopyingExample(null);
+                      setShowCopySuccess(true);
+                      setTimeout(() => setShowCopySuccess(false), 2000);
+                    }}
+                    className="w-full text-left p-4 rounded-lg bg-theme-hover hover:bg-theme-active border border-theme-subtle hover:border-theme-accent/50 transition-all group flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-theme-primary font-serif text-lg">
+                        {w.word}
+                      </div>
+                      <div className="text-theme-primary/40 text-xs">
+                        {w.category}
+                      </div>
+                    </div>
+                    <ArrowLeft className="w-4 h-4 text-theme-accent opacity-0 group-hover:opacity-100 transition-opacity transform rotate-180" />
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setCopyingExample(null)}
+                className="px-4 py-2 text-sm uppercase tracking-widest text-theme-primary/60 hover:text-theme-primary transition-colors"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showCopySuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 bg-theme-accent text-theme-base px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 pointer-events-none"
+          >
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Đã copy thành công</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

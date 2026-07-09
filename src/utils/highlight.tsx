@@ -74,7 +74,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   );
 };
 
-export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard) => {
+export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {
   if (!example) return [];
 
   const uniqueWords = new Map<string, KanjiCard>();
@@ -147,12 +147,23 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
 
   uniqueCandidates.forEach(({ matchStr, card, isStem }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
-    const rep = card.repetition || 0;
-    const int = card.interval || 0;
-    if (rep === 0 && int === 0) {
-      status = 'new';
-    } else if (rep === 0 || int === 0) {
-      status = 'bad';
+    if (vocabScores && vocabScores[card.id] !== undefined) {
+      const score = vocabScores[card.id];
+      if (score < 0) {
+        status = 'bad';
+      } else if (score > 0) {
+        status = 'good';
+      } else {
+        status = 'new';
+      }
+    } else {
+      const rep = card.repetition || 0;
+      const int = card.interval || 0;
+      if (rep === 0 && int === 0) {
+        status = 'new';
+      } else if (rep === 0 || int === 0) {
+        status = 'bad';
+      }
     }
 
     const newTokens: typeof tokens = [];

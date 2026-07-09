@@ -436,7 +436,7 @@ export default function App() {
             onRemoveConversation={removeConversation}
             onUpdateConversation={updateConversation}
             onUpdateCard={updateCard}
-            onReviewCard={reviewCard}
+            onReviewCard={handleReviewCard}
             mainDeck={deck}
           />
         )}
