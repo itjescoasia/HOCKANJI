@@ -17,7 +17,7 @@ export interface KanjiCard {
   example?: string;
   exampleTranslation?: string;
   examples?: KanjiExample[];
-  forms?: { id: string; name: string; value: string; }[];
+  forms?: { id: string; name: string; value: string; reading?: string; romaji?: string; }[];
   wordType?: string;
   freeStudyScore?: number;
   difficultScore?: number;

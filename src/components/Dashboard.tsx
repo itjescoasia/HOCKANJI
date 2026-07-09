@@ -304,34 +304,6 @@ export default function Dashboard({
                 <p className="text-base text-theme-primary/80 mt-3 leading-relaxed">
                   <HighlightVietnamese text={sentenceOfTheDay.example.translation || ""} />
                 </p></></HighlightProvider>
-
-                <div className="mt-6 border-t border-theme-subtle pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-serif text-theme-primary">
-                      {sentenceOfTheDay.word.word}
-                    </span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3">
-                    {sentenceOfTheDay.word.reading && (
-                      <span className="text-sm text-theme-primary opacity-80">
-                        {sentenceOfTheDay.word.reading}
-                      </span>
-                    )}
-                    {sentenceOfTheDay.word.romaji && (
-                      <span className="text-xs text-theme-primary opacity-60 font-serif italic">
-                        {sentenceOfTheDay.word.romaji}
-                      </span>
-                    )}
-                  </div>
-                  {sentenceOfTheDay.word.category && (
-                    <span className="text-[10px] uppercase border border-theme-accent/40 text-theme-accent px-2 py-0.5 rounded opacity-80 self-start sm:self-auto mt-1 sm:mt-0">
-                      {sentenceOfTheDay.word.category}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-theme-primary opacity-90 max-w-2xl mt-2">
-                  {sentenceOfTheDay.word.explanation}
-                </p>
               </div>
             </div>
           </div>

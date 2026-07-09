@@ -5,7 +5,7 @@ import { Plus, X, AlertTriangle } from 'lucide-react';
 interface AddVocabProps {
   deck?: KanjiCard[];
   onNavigateToWord?: (kanji: string) => void;
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string, forms?: { id: string, name: string, value: string }[]) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string, forms?: { id: string, name: string, value: string, reading?: string, romaji?: string }[]) => void;
 }
 
 export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVocabProps) {
@@ -16,7 +16,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
   const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
-  const [forms, setForms] = useState<{name: string, value: string}[]>([]);
+  const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string}[]>([]);
   const [wordType, setWordType] = useState('');
   
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -28,6 +28,30 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       setDuplicateWarning(false);
     }
   }, [kanji, deck]);
+
+  
+  const handleWordTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newWordType = e.target.value;
+    setWordType(newWordType);
+    if (newWordType.includes('Động từ')) {
+      if (forms.length === 0) {
+        setForms([
+          { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '' },
+          { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '' },
+          { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '' },
+          { name: 'Thể て', value: '', reading: '', romaji: '' },
+          { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '' },
+          { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '' },
+          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '' },
+          { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '' },
+          { name: 'Thể khả năng', value: '', reading: '', romaji: '' },
+          { name: 'Thể sai khiến', value: '', reading: '', romaji: '' },
+          { name: 'Thể bị động', value: '', reading: '', romaji: '' },
+          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '' }
+        ]);
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +76,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
 
     const validForms = forms.filter(f => f.name.trim() && f.value.trim()).map(f => ({
       id: crypto.randomUUID(),
-      name: f.name.trim(),
+      name: f.name.trim(), reading: f.reading?.trim(), romaji: f.romaji?.trim(),
       value: f.value.trim()
     }));
     
@@ -150,7 +174,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Từ loại</label>
           <select
             value={wordType}
-            onChange={e => setWordType(e.target.value)}
+            onChange={handleWordTypeChange}
             className="w-full px-5 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-center"
           >
             <option value="">-- Chọn từ loại --</option>
@@ -222,29 +246,55 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
               </div>
               <div className="flex flex-col gap-4">
                 {forms.map((f, index) => (
-                  <div key={index} className="relative flex gap-4">
-                    <input 
-                      type="text" 
-                      value={f.name}
-                      onChange={e => {
-                        const newForms = [...forms];
-                        newForms[index].name = e.target.value;
-                        setForms(newForms);
-                      }}
-                      className="w-1/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
-                      placeholder={formsNamePlaceholder}
-                    />
-                    <input 
-                      type="text" 
-                      value={f.value}
-                      onChange={e => {
-                        const newForms = [...forms];
-                        newForms[index].value = e.target.value;
-                        setForms(newForms);
-                      }}
-                      className="w-2/3 px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm pr-10"
-                      placeholder={formsValuePlaceholder}
-                    />
+                  <div key={index} className="relative flex flex-col sm:flex-row gap-2 sm:gap-4 p-4 border border-theme-subtle/50 rounded-lg bg-theme-panel/30">
+                    <div className="flex-1 space-y-2">
+                      <input 
+                        type="text" 
+                        value={f.name}
+                        onChange={e => {
+                          const newForms = [...forms];
+                          newForms[index].name = e.target.value;
+                          setForms(newForms);
+                        }}
+                        className="w-full px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-bold"
+                        placeholder={formsNamePlaceholder}
+                      />
+                      <input 
+                        type="text" 
+                        value={f.value}
+                        onChange={e => {
+                          const newForms = [...forms];
+                          newForms[index].value = e.target.value;
+                          setForms(newForms);
+                        }}
+                        className="w-full px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
+                        placeholder={formsValuePlaceholder}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <input 
+                        type="text" 
+                        value={f.reading || ''}
+                        onChange={e => {
+                          const newForms = [...forms];
+                          newForms[index].reading = e.target.value;
+                          setForms(newForms);
+                        }}
+                        className="w-full px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
+                        placeholder="Phát âm (Hiragana)"
+                      />
+                      <input 
+                        type="text" 
+                        value={f.romaji || ''}
+                        onChange={e => {
+                          const newForms = [...forms];
+                          newForms[index].romaji = e.target.value;
+                          setForms(newForms);
+                        }}
+                        className="w-full px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
+                        placeholder="Phát âm (Romaji)"
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -252,7 +302,8 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
                         newForms.splice(index, 1);
                         setForms(newForms);
                       }}
-                      className="absolute top-1/2 -translate-y-1/2 right-3 p-1 rounded-full text-theme-primary/50 hover:text-red-500 transition-colors"
+                      className="absolute top-2 right-2 p-1 rounded-full bg-theme-panel text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      title="Xóa thể"
                     >
                       <X className="w-4 h-4" />
                     </button>

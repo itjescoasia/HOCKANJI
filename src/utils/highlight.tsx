@@ -1,14 +1,14 @@
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 export const HighlightContext = React.createContext<{
-  hoveredCard: { card: KanjiCard, index: number } | null;
-  setHoveredCard: (info: { card: KanjiCard, index: number } | null) => void;
+  hoveredCard: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string } } | null;
+  setHoveredCard: (info: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string } } | null) => void;
 }>({
   hoveredCard: null,
   setHoveredCard: () => {},
 });
 
 export const HighlightProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [hoveredCard, setHoveredCard] = useState<{ card: KanjiCard, index: number } | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<{ card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string } } | null>(null);
   return (
     <HighlightContext.Provider value={{ hoveredCard, setHoveredCard }}>
       {children}
@@ -21,7 +21,18 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
   if (!hoveredCard || !text) return <Fragment>{text}</Fragment>;
 
   const { card, index } = hoveredCard;
+  
   let target = type === 'hiragana' ? card.reading : card.romaji;
+  
+  // If we matched a specific form, and that form has reading/romaji, use it!
+  if (hoveredCard.matchedForm) {
+    if (type === 'hiragana' && hoveredCard.matchedForm.reading) {
+      target = hoveredCard.matchedForm.reading;
+    } else if (type === 'romaji' && hoveredCard.matchedForm.romaji) {
+      target = hoveredCard.matchedForm.romaji;
+    }
+  }
+
   
   if (!target) {
     return <Fragment>{text}</Fragment>;
@@ -70,7 +81,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 import { KanjiCard } from '../types';
 import { Volume2 } from 'lucide-react';
 
-const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number }> = ({ text, status, card, occurrenceIndex = 0 }) => {
+const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }> = ({ text, status, card, occurrenceIndex = 0, matchedForm }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
   const { setHoveredCard } = useContext(HighlightContext);
@@ -107,7 +118,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   }
 
   return (
-    <span className="relative inline-block" ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex })}>
+    <span className="relative inline-block" ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}>
       <span 
         className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current`}
         onClick={(e) => {
@@ -225,7 +236,7 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
 
   const deckWordsInExample = Array.from(uniqueWords.values());
 
-  const allMatchCandidates: { matchStr: string, card: KanjiCard, isStem?: boolean }[] = [];
+  const allMatchCandidates: { matchStr: string, card: KanjiCard, isStem?: boolean, matchedForm?: any }[] = [];
 
   deckWordsInExample.forEach(card => {
     if (card.kanji) allMatchCandidates.push({ matchStr: card.kanji, card });
@@ -240,7 +251,7 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
     if (card.forms) {
       card.forms.forEach(f => {
         if (f.value) {
-          allMatchCandidates.push({ matchStr: f.value, card });
+          allMatchCandidates.push({ matchStr: f.value, card, matchedForm: f });
         }
       });
     }
@@ -250,11 +261,11 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
   const uniqueCandidates = Array.from(new Map(allMatchCandidates.map(c => [c.matchStr, c])).values());
   uniqueCandidates.sort((a, b) => b.matchStr.length - a.matchStr.length);
 
-  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number }[] = [
+  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }[] = [
     { text: example, status: 'neutral' }
   ];
 
-  uniqueCandidates.forEach(({ matchStr, card, isStem }) => {
+  uniqueCandidates.forEach(({ matchStr, card, isStem, matchedForm }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
     if (vocabScores && vocabScores[card.id] !== undefined) {
       const score = vocabScores[card.id];
@@ -306,7 +317,7 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
         if (idx > 0) {
           newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
         }
-        newTokens.push({ text: matchStr, status, card });
+        newTokens.push({ text: matchStr, status, card, matchedForm });
         
         currentText = currentText.substring(idx + matchStr.length);
         searchIndex = 0;
@@ -377,7 +388,7 @@ export const renderExampleHighlight = (example: string, targetWord: string, main
     <Fragment>
       {tokens.map((t, i) => {
         if (t.status === 'neutral') return <Fragment key={i}>{t.text}</Fragment>;
-        return <InteractiveWord key={i} text={t.text} status={t.status} card={t.card} occurrenceIndex={t.occurrenceIndex} />;
+        return <InteractiveWord key={i} text={t.text} status={t.status} card={t.card} occurrenceIndex={t.occurrenceIndex} matchedForm={t.matchedForm} />;
       })}
     </Fragment>
   );
