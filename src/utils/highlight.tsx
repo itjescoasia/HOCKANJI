@@ -1,10 +1,54 @@
-import React, { Fragment, useState, useRef, useEffect } from 'react';
+import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
+export const HighlightContext = React.createContext<{
+  hoveredCard: KanjiCard | null;
+  setHoveredCard: (card: KanjiCard | null) => void;
+}>({
+  hoveredCard: null,
+  setHoveredCard: () => {},
+});
+
+export const HighlightProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [hoveredCard, setHoveredCard] = useState<KanjiCard | null>(null);
+  return (
+    <HighlightContext.Provider value={{ hoveredCard, setHoveredCard }}>
+      {children}
+    </HighlightContext.Provider>
+  );
+};
+
+export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'romaji' }> = ({ text, type }) => {
+  const { hoveredCard } = React.useContext(HighlightContext);
+
+  if (!hoveredCard || !text) return <Fragment>{text}</Fragment>;
+
+  const target = type === 'hiragana' ? hoveredCard.reading : hoveredCard.romaji;
+  
+  if (!target || !text.toLowerCase().includes(target.toLowerCase())) {
+    return <Fragment>{text}</Fragment>;
+  }
+
+  const regex = new RegExp(`(${target})`, 'i');
+  const parts = text.split(regex);
+
+  return (
+    <Fragment>
+      {parts.map((part, i) => {
+        if (part.toLowerCase() === target.toLowerCase()) {
+          return <span key={i} className="bg-theme-accent/20 text-theme-accent font-bold px-1 rounded transition-colors">{part}</span>;
+        }
+        return <Fragment key={i}>{part}</Fragment>;
+      })}
+    </Fragment>
+  );
+};
+
 import { KanjiCard } from '../types';
 import { Volume2 } from 'lucide-react';
 
 const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard }> = ({ text, status, card }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
+  const { setHoveredCard } = useContext(HighlightContext);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,7 +82,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   }
 
   return (
-    <span className="relative inline-block" ref={containerRef}>
+    <span className="relative inline-block" ref={containerRef} onMouseEnter={() => card && setHoveredCard(card)} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard(card)}>
       <span 
         className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current`}
         onClick={(e) => {

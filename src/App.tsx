@@ -1,3 +1,4 @@
+import { HighlightProvider } from "./utils/highlight";
 import { useState, useEffect, useRef } from 'react';
 import { ViewState } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
@@ -359,7 +360,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <HighlightProvider><main className="flex-1 flex flex-col">
         {view === 'dashboard' && (
           <Dashboard 
             deck={deck} 
@@ -439,7 +440,7 @@ export default function App() {
             mainDeck={deck}
           />
         )}
-      </main>
+      </main></HighlightProvider>
 
       {/* Review Overlay */}
       {view === 'review' && (

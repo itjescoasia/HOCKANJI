@@ -2,7 +2,7 @@ import React, { useMemo, useEffect, Fragment } from "react";
 import { KanjiCard, IntensiveWord, IntensiveExample } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
 import { getLocalDateString, getVietnamDate } from "../lib/dateUtils";
-import { renderExampleHighlight } from "../utils/highlight";
+import { renderExampleHighlight, RelatedHighlight } from "../utils/highlight";
 import {
   BookOpen,
   Brain,
@@ -291,12 +291,12 @@ export default function Dashboard({
                 <div className="flex gap-3 mt-2">
                   {sentenceOfTheDay.example.reading && (
                     <span className="text-sm text-theme-primary opacity-70 italic">
-                      {sentenceOfTheDay.example.reading}
+                      <RelatedHighlight text={sentenceOfTheDay.example.reading} type="hiragana" />
                     </span>
                   )}
                   {sentenceOfTheDay.example.romaji && (
                     <span className="text-sm text-theme-primary opacity-50 font-serif italic">
-                      {sentenceOfTheDay.example.romaji}
+                      <RelatedHighlight text={sentenceOfTheDay.example.romaji} type="romaji" />
                     </span>
                   )}
                 </div>

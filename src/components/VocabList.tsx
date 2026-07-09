@@ -2,7 +2,7 @@ import { KanjiCard, KanjiExample } from '../types';
 import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { renderExampleHighlight } from '../utils/highlight';
+import { renderExampleHighlight, RelatedHighlight } from '../utils/highlight';
 
 interface VocabListProps {
   deck: KanjiCard[];
@@ -44,8 +44,8 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
         </div>
         {(ex.reading || ex.romaji) && (
           <div className="flex gap-2 mb-1.5 mt-1">
-            {ex.reading && <span className="text-xs text-theme-primary opacity-60 italic">{ex.reading}</span>}
-            {ex.romaji && <span className="text-xs text-theme-primary opacity-60 italic">{ex.romaji}</span>}
+            {ex.reading && <span className="text-xs text-theme-primary opacity-60 italic"><RelatedHighlight text={ex.reading} type="hiragana" /></span>}
+            {ex.romaji && <span className="text-xs text-theme-primary opacity-60 italic"><RelatedHighlight text={ex.romaji} type="romaji" /></span>}
           </div>
         )}
         <div className="text-xs sm:text-sm text-theme-accent opacity-80 italic" title={ex.translation}>{ex.translation}</div>

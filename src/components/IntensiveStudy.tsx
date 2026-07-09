@@ -25,7 +25,7 @@ import {
   Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { renderExampleHighlight as baseRenderExampleHighlight } from "../utils/highlight";
+import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight } from "../utils/highlight";
 import {
   DragDropContext,
   Droppable,
@@ -1479,7 +1479,7 @@ function StudyView({
                                   {ex.reading &&
                                     !hiddenMeaningIds.includes(ex.id) && (
                                       <p className="text-sm text-theme-accent opacity-80 mb-1">
-                                        {ex.reading}
+                                        <RelatedHighlight text={ex.reading} type="hiragana" />
                                       </p>
                                     )}
                                   <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
@@ -1488,7 +1488,7 @@ function StudyView({
                                   {ex.romaji &&
                                     !hiddenMeaningIds.includes(ex.id) && (
                                       <p className="text-sm text-theme-primary/60 mb-1">
-                                        {ex.romaji}
+                                        <RelatedHighlight text={ex.romaji} type="romaji" />
                                       </p>
                                     )}
                                   {ex.translation &&

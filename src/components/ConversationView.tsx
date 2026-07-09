@@ -10,7 +10,7 @@ import {
 } from "@hello-pangea/dnd";
 import Fuse from "fuse.js";
 import { formatCreatedAt, getVietnamDate } from "../lib/dateUtils";
-import { renderExampleHighlight, tokenizeExampleText } from "../utils/highlight";
+import { renderExampleHighlight, tokenizeExampleText, RelatedHighlight } from "../utils/highlight";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 
@@ -659,12 +659,12 @@ function ConversationDetail({
                                   </div>
                                   {dialogue.hiragana && (
                                     <p className="text-sm text-theme-primary/80">
-                                      {dialogue.hiragana}
+                                      <RelatedHighlight text={dialogue.hiragana} type="hiragana" />
                                     </p>
                                   )}
                                   {dialogue.romaji && (
                                     <p className="text-xs text-theme-primary/50 font-mono">
-                                      {dialogue.romaji}
+                                      <RelatedHighlight text={dialogue.romaji} type="romaji" />
                                     </p>
                                   )}
                                   {dialogue.vietnamese && (
@@ -776,12 +776,12 @@ function ConversationDetail({
                 </p>
                 {conversation.dialogues[currentSlideIndex].hiragana && (
                   <p className="text-xl text-theme-primary/80">
-                    {conversation.dialogues[currentSlideIndex].hiragana}
+                    <RelatedHighlight text={conversation.dialogues[currentSlideIndex].hiragana} type="hiragana" />
                   </p>
                 )}
                 {conversation.dialogues[currentSlideIndex].romaji && (
                   <p className="text-lg text-theme-primary/50 font-mono tracking-wider">
-                    {conversation.dialogues[currentSlideIndex].romaji}
+                    <RelatedHighlight text={conversation.dialogues[currentSlideIndex].romaji} type="romaji" />
                   </p>
                 )}
                 {conversation.dialogues[currentSlideIndex].vietnamese && (

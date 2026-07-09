@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
-import { renderExampleHighlight } from "../utils/highlight";
+import { renderExampleHighlight, RelatedHighlight } from "../utils/highlight";
 
 interface SentenceReviewProps {
   deck: IntensiveWord[];
@@ -392,7 +392,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                     </p>
                     {mode === "JA_TO_VI" && currentExample.reading && (
                       <p className="text-theme-accent opacity-80 mt-4 text-sm">
-                        {currentExample.reading}
+                        <RelatedHighlight text=<RelatedHighlight text={currentExample.reading} type="hiragana" /> type="hiragana" />
                       </p>
                     )}
                   </div>
@@ -421,7 +421,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                     )}
                     {currentExample.romaji && (
                       <p className="text-theme-primary/40 mt-2 text-xs">
-                        {currentExample.romaji}
+                        <RelatedHighlight text={currentExample.romaji} type="romaji" />
                       </p>
                     )}
                     {currentExample.specialNote && (
