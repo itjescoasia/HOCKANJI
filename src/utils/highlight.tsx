@@ -18,24 +18,45 @@ export const HighlightProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'romaji' }> = ({ text, type }) => {
   const { hoveredCard } = React.useContext(HighlightContext);
-
   if (!hoveredCard || !text) return <Fragment>{text}</Fragment>;
 
   const { card, index } = hoveredCard;
-  const target = type === 'hiragana' ? card.reading : card.romaji;
+  let target = type === 'hiragana' ? card.reading : card.romaji;
   
-  if (!target || !text.toLowerCase().includes(target.toLowerCase())) {
+  if (!target) {
     return <Fragment>{text}</Fragment>;
   }
+  
+  target = target.trim();
+  let matchStr = target;
+  let lowerText = text.toLowerCase();
+  
+  if (!lowerText.includes(matchStr.toLowerCase())) {
+    // Try prefix matching for conjugated verbs/adjectives
+    let found = false;
+    for (let i = matchStr.length - 1; i >= Math.max(1, Math.floor(matchStr.length / 2)); i--) {
+      const prefix = matchStr.substring(0, i);
+      if (lowerText.includes(prefix.toLowerCase())) {
+        matchStr = prefix;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return <Fragment>{text}</Fragment>;
+    }
+  }
 
-  const regex = new RegExp(`(${target})`, 'gi');
+  // To prevent regex errors with special characters
+  const safeMatchStr = matchStr.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${safeMatchStr})`, 'gi');
   const parts = text.split(regex);
-
   let matchCount = 0;
+
   return (
     <Fragment>
       {parts.map((part, i) => {
-        if (part.toLowerCase() === target.toLowerCase()) {
+        if (part.toLowerCase() === matchStr.toLowerCase()) {
           const isCurrentMatch = matchCount === index;
           matchCount++;
           return <span key={i} className={`px-1 rounded transition-all duration-200 ${isCurrentMatch ? 'bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative' : 'bg-theme-accent/20 text-theme-accent font-bold'}`}>{part}</span>;
@@ -119,6 +140,46 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
         </span>
       )}
     </span>
+  );
+};
+
+
+export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
+  const { hoveredCard } = React.useContext(HighlightContext);
+  if (!hoveredCard || !text) return <Fragment>{text}</Fragment>;
+
+  const card = hoveredCard.card;
+  if (!card || !card.meaning) return <Fragment>{text}</Fragment>;
+
+  const meanings = card.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
+  
+  let bestMatch = { index: -1, length: 0, str: '' };
+  const lowerText = text.toLowerCase();
+
+  meanings.forEach(m => {
+    const lowerM = m.toLowerCase();
+    const idx = lowerText.indexOf(lowerM);
+    if (idx !== -1 && m.length > bestMatch.length) {
+      bestMatch = { index: idx, length: m.length, str: text.substring(idx, idx + m.length) };
+    }
+  });
+
+  if (bestMatch.index === -1) {
+      return <Fragment>{text}</Fragment>;
+  }
+
+  const before = text.substring(0, bestMatch.index);
+  const match = bestMatch.str;
+  const after = text.substring(bestMatch.index + bestMatch.length);
+
+  return (
+    <Fragment>
+      {before}
+      <span className="bg-theme-accent text-white font-bold px-1 rounded scale-110 shadow-sm inline-block z-10 relative transition-all duration-200">
+        {match}
+      </span>
+      {after}
+    </Fragment>
   );
 };
 

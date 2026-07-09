@@ -25,7 +25,7 @@ import {
   Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight } from "../utils/highlight";
+import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 import {
   DragDropContext,
   Droppable,
@@ -1475,7 +1475,7 @@ function StudyView({
                                 <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">
                                   {index + 1}
                                 </div>
-                                <div className="flex-1 pt-1">
+                                <HighlightProvider><div className="flex-1 pt-1">
                                   {ex.reading &&
                                     !hiddenMeaningIds.includes(ex.id) && (
                                       <p className="text-sm text-theme-accent opacity-80 mb-1">
@@ -1494,7 +1494,7 @@ function StudyView({
                                   {ex.translation &&
                                     !hiddenMeaningIds.includes(ex.id) && (
                                       <p className="text-sm text-theme-primary/50 italic mb-2">
-                                        ({ex.translation})
+                                        (<HighlightVietnamese text={ex.translation || ""} />)
                                       </p>
                                     )}
                                   
@@ -1523,7 +1523,7 @@ function StudyView({
                                       </motion.div>
                                     )}
                                   </AnimatePresence>
-                                </div>
+                                </div></HighlightProvider>
                               </div>
                             </>
                           )}

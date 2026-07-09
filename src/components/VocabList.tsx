@@ -2,7 +2,7 @@ import { KanjiCard, KanjiExample } from '../types';
 import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { renderExampleHighlight, RelatedHighlight } from '../utils/highlight';
+import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 
 interface VocabListProps {
   deck: KanjiCard[];
@@ -31,7 +31,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
 
   return (
     <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 w-full sm:min-w-[300px] lg:min-w-[500px]">
-      <div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
+      <HighlightProvider><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
         <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
           <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
           <button
@@ -48,8 +48,8 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
             {ex.romaji && <span className="text-xs text-theme-primary opacity-60 italic"><RelatedHighlight text={ex.romaji} type="romaji" /></span>}
           </div>
         )}
-        <div className="text-xs sm:text-sm text-theme-accent opacity-80 italic" title={ex.translation}>{ex.translation}</div>
-      </div>
+        <div className="text-xs sm:text-sm text-theme-accent opacity-80 italic" title={ex.translation}><HighlightVietnamese text={ex.translation || ""} /></div>
+      </div></HighlightProvider>
       
       {card.examples.length > 1 && (
         <div className="flex justify-between items-center text-xs text-theme-primary/50 mt-1">
@@ -601,7 +601,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           /* Legacy single example fallback */
                           (card.example || card.exampleTranslation) && (
                             <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 w-full sm:min-w-[300px] lg:min-w-[500px]">
-                              <div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
+                              <HighlightProvider><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
                                 {card.example && (
                                   <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
                                     <span title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
@@ -615,9 +615,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                   </div>
                                 )}
                                 {card.exampleTranslation && (
-                                  <div className="text-xs sm:text-sm text-theme-accent opacity-80 italic" title={card.exampleTranslation}>{card.exampleTranslation}</div>
+                                  <div className="text-xs sm:text-sm text-theme-accent opacity-80 italic" title={card.exampleTranslation}><HighlightVietnamese text={card.exampleTranslation || ""} /></div>
                                 )}
-                              </div>
+                              </div></HighlightProvider>
                             </div>
                           )
                         )}

@@ -2,7 +2,7 @@ import React, { useMemo, useEffect, Fragment } from "react";
 import { KanjiCard, IntensiveWord, IntensiveExample } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
 import { getLocalDateString, getVietnamDate } from "../lib/dateUtils";
-import { renderExampleHighlight, RelatedHighlight } from "../utils/highlight";
+import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 import {
   BookOpen,
   Brain,
@@ -271,6 +271,7 @@ export default function Dashboard({
                   Mỗi ngày 1 câu
                 </h2>
                 
+                <HighlightProvider><>
                 <div className="flex items-start gap-2 mt-4">
                   <p className="text-xl sm:text-2xl text-theme-primary leading-relaxed font-serif">
                     {renderExampleHighlight(
@@ -301,8 +302,8 @@ export default function Dashboard({
                   )}
                 </div>
                 <p className="text-base text-theme-primary/80 mt-3 leading-relaxed">
-                  {sentenceOfTheDay.example.translation}
-                </p>
+                  <HighlightVietnamese text={sentenceOfTheDay.example.translation || ""} />
+                </p></></HighlightProvider>
 
                 <div className="mt-6 border-t border-theme-subtle pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                   <div className="flex items-center gap-2">

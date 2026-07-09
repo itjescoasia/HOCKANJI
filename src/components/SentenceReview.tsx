@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
-import { renderExampleHighlight, RelatedHighlight } from "../utils/highlight";
+import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 
 interface SentenceReviewProps {
   deck: IntensiveWord[];
@@ -377,7 +377,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   </div>
                 </form>
               ) : (
-                <>
+                <HighlightProvider>
                   <div className="mb-8 mt-4">
                     <p
                       className={`font-serif leading-relaxed ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
@@ -388,11 +388,11 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                             currentExample.word,
                             mainDeck,
                           )
-                        : questionText}
+                        : <HighlightVietnamese text={questionText} />}
                     </p>
                     {mode === "JA_TO_VI" && currentExample.reading && (
                       <p className="text-theme-accent opacity-80 mt-4 text-sm">
-                        <RelatedHighlight text=<RelatedHighlight text={currentExample.reading} type="hiragana" /> type="hiragana" />
+                        <RelatedHighlight text={currentExample.reading} type="hiragana" />
                       </p>
                     )}
                   </div>
@@ -412,11 +412,11 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                             currentExample.word,
                             mainDeck,
                           )
-                        : answerText}
+                        : <HighlightVietnamese text={answerText} />}
                     </p>
                     {mode === "VI_TO_JA" && currentExample.reading && (
                       <p className="text-theme-primary/60 mt-4 text-sm">
-                        {currentExample.reading}
+                        <RelatedHighlight text={currentExample.reading} type="hiragana" />
                       </p>
                     )}
                     {currentExample.romaji && (
@@ -474,7 +474,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                       })()}
                     </div>
                   </div>
-                </>
+                </HighlightProvider>
               )}
             </div>
           </motion.div>

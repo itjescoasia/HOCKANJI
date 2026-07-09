@@ -10,7 +10,7 @@ import {
 } from "@hello-pangea/dnd";
 import Fuse from "fuse.js";
 import { formatCreatedAt, getVietnamDate } from "../lib/dateUtils";
-import { renderExampleHighlight, tokenizeExampleText, RelatedHighlight } from "../utils/highlight";
+import { renderExampleHighlight, tokenizeExampleText, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 
@@ -644,7 +644,7 @@ function ConversationDetail({
                                 <div className="shrink-0 text-theme-primary/30 font-serif text-xl mt-1">
                                   {String(index + 1).padStart(2, "0")}
                                 </div>
-                                <div className="flex-1 space-y-1">
+                                <HighlightProvider><div className="flex-1 space-y-1">
                                   <div className="flex items-start gap-2">
                                     <p className="text-lg text-theme-primary font-serif">
                                       {renderExampleHighlight(dialogue.japanese, "", mainDeck, undefined, conversation.vocabScores)}
@@ -669,10 +669,10 @@ function ConversationDetail({
                                   )}
                                   {dialogue.vietnamese && (
                                     <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2">
-                                      {dialogue.vietnamese}
+                                      <HighlightVietnamese text={dialogue.vietnamese || ""} />
                                     </p>
                                   )}
-                                </div>
+                                </div></HighlightProvider>
                                 <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start relative z-20">
                                   <button
                                     onClick={() => startEditing(dialogue)}
@@ -770,7 +770,7 @@ function ConversationDetail({
               <div className="absolute top-4 left-4 text-theme-primary/30 font-serif text-xl">
                 {String(currentSlideIndex + 1).padStart(2, "0")} / {String(conversation.dialogues.length).padStart(2, "0")}
               </div>
-              <div className="space-y-6 max-w-2xl mx-auto w-full text-center mt-6">
+              <HighlightProvider><div className="space-y-6 max-w-2xl mx-auto w-full text-center mt-6">
                 <p className="text-3xl md:text-4xl text-theme-primary font-serif leading-relaxed">
                   {renderExampleHighlight(conversation.dialogues[currentSlideIndex].japanese, "", mainDeck, undefined, conversation.vocabScores)}
                 </p>
@@ -786,10 +786,10 @@ function ConversationDetail({
                 )}
                 {conversation.dialogues[currentSlideIndex].vietnamese && (
                   <p className="text-xl text-theme-primary/70 italic mt-4">
-                    {conversation.dialogues[currentSlideIndex].vietnamese}
+                    <HighlightVietnamese text={conversation.dialogues[currentSlideIndex].vietnamese || ""} />
                   </p>
                 )}
-              </div>
+              </div></HighlightProvider>
               
               {conversation.dialogues[currentSlideIndex].explanation && (
                 <div className="mt-12 max-w-2xl mx-auto w-full">
