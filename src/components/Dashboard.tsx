@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, Fragment } from "react";
-import { KanjiCard, IntensiveWord } from "../types";
+import React, { useMemo, useEffect, Fragment } from "react";
+import { KanjiCard, IntensiveWord, IntensiveExample } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
 import { getLocalDateString, getVietnamDate } from "../lib/dateUtils";
 import { renderExampleHighlight } from "../utils/highlight";
@@ -61,9 +61,6 @@ export default function Dashboard({
   onNavigateAdd,
   onRecordWordOfTheDay,
 }: DashboardProps) {
-  const [isChangingWotd, setIsChangingWotd] = useState(false);
-  const [wotdSearch, setWotdSearch] = useState("");
-  const [wotdExampleIndex, setWotdExampleIndex] = useState(0);
 
   const playAudio = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
@@ -204,67 +201,45 @@ export default function Dashboard({
     };
   });
 
-  // Calculate Word of the Day
+  // Calculate Sentence of the Day
   const todayForSeed = getVietnamDate();
   const seed =
     todayForSeed.getFullYear() * 10000 +
     (todayForSeed.getMonth() + 1) * 100 +
     todayForSeed.getDate();
 
-  const wordOfTheDay = useMemo(() => {
-    const syncedWotdId = stats[todayStr]?.wotdId;
+  const sentenceOfTheDay = useMemo(() => {
+    let allExamples: { word: IntensiveWord, example: IntensiveExample }[] = [];
+    intensiveDeck.forEach(word => {
+      word.examples.forEach(ex => {
+        allExamples.push({ word, example: ex });
+      });
+    });
 
+    if (allExamples.length === 0) return null;
+
+    const syncedWotdId = stats[todayStr]?.wotdId;
     if (syncedWotdId) {
-      const cachedWord = deck.find((c) => c.id === syncedWotdId);
-      if (cachedWord) {
-        return cachedWord;
+      const cached = allExamples.find((c) => c.example.id === syncedWotdId);
+      if (cached) {
+        return cached;
       }
     }
 
-    const difficultWords = [...deck]
-      .filter((c) => (c.difficultScore || 0) < 0)
-      .sort((a, b) => (a.difficultScore || 0) - (b.difficultScore || 0))
-      .slice(0, 30);
-
-    let newWord = null;
-    if (difficultWords.length > 0) {
-      newWord = difficultWords[seed % difficultWords.length];
-    } else if (deck.length > 0) {
-      // Fallback to random word if there are no difficult words yet
-      newWord = deck[seed % deck.length];
-    }
-
-    return newWord;
-  }, [deck, seed, stats, todayStr]);
+    const unmastered = allExamples.filter(item => item.example.viToJaMastered === false);
+    
+    let selectedList = unmastered.length > 0 ? unmastered : allExamples;
+    
+    return selectedList[seed % selectedList.length];
+  }, [intensiveDeck, seed, stats, todayStr]);
 
   // Sync back to stats if WOTD changes and we have a function
   useEffect(() => {
-    if (wordOfTheDay && onRecordWordOfTheDay && !stats[todayStr]?.wotdId) {
-      onRecordWordOfTheDay(wordOfTheDay.id);
+    if (sentenceOfTheDay && onRecordWordOfTheDay && !stats[todayStr]?.wotdId) {
+      onRecordWordOfTheDay(sentenceOfTheDay.example.id);
     }
-    setWotdExampleIndex(0);
-  }, [wordOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
+  }, [sentenceOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
 
-  const filteredWotdList = useMemo(() => {
-    if (!wotdSearch.trim()) return deck.slice(0, 5); // Default show some words
-    const lowerSearch = wotdSearch.toLowerCase();
-    return deck
-      .filter(
-        (c) =>
-          c.kanji.toLowerCase().includes(lowerSearch) ||
-          c.reading.toLowerCase().includes(lowerSearch) ||
-          c.meaning.toLowerCase().includes(lowerSearch),
-      )
-      .slice(0, 10);
-  }, [deck, wotdSearch]);
-
-  const handleSelectNewWotd = (id: string) => {
-    if (onRecordWordOfTheDay) {
-      onRecordWordOfTheDay(id);
-    }
-    setIsChangingWotd(false);
-    setWotdSearch("");
-  };
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
@@ -280,279 +255,87 @@ export default function Dashboard({
         </p>
       </div>
 
-      {/* Word of the Day */}
-      {wordOfTheDay && (
+            {/* Sentence of the Day */}
+      {sentenceOfTheDay && (
         <div className="bg-theme-panel border border-theme-accent p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none hidden sm:block">
             <span className="text-8xl font-serif whitespace-nowrap max-w-full overflow-hidden text-ellipsis block">
-              {wordOfTheDay.kanji}
+              {sentenceOfTheDay.word.word}
             </span>
           </div>
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex justify-between items-start">
-              <div>
+              <div className="w-full">
                 <h2 className="text-[10px] uppercase tracking-widest text-theme-accent mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-theme-accent rounded-full inline-block"></span>
-                  Từ vựng mỗi ngày
+                  Mỗi ngày 1 câu
                 </h2>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-4xl sm:text-5xl font-serif text-theme-primary">
-                      {wordOfTheDay.kanji}
+                
+                <div className="flex items-start gap-2 mt-4">
+                  <p className="text-xl sm:text-2xl text-theme-primary leading-relaxed font-serif">
+                    {renderExampleHighlight(
+                      sentenceOfTheDay.example.sentence,
+                      sentenceOfTheDay.word.word,
+                      deck,
+                    )}
+                  </p>
+                  <button
+                    onClick={(e) => playAudio(e, sentenceOfTheDay.example.sentence)}
+                    className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-1"
+                    title="Nghe câu"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="flex gap-3 mt-2">
+                  {sentenceOfTheDay.example.reading && (
+                    <span className="text-sm text-theme-primary opacity-70 italic">
+                      {sentenceOfTheDay.example.reading}
                     </span>
-                    <button
-                      onClick={(e) => playAudio(e, wordOfTheDay.kanji || wordOfTheDay.reading)}
-                      className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors"
-                      title="Nghe phát âm"
-                    >
-                      <Volume2 className="w-5 h-5" />
-                    </button>
+                  )}
+                  {sentenceOfTheDay.example.romaji && (
+                    <span className="text-sm text-theme-primary opacity-50 font-serif italic">
+                      {sentenceOfTheDay.example.romaji}
+                    </span>
+                  )}
+                </div>
+                <p className="text-base text-theme-primary/80 mt-3 leading-relaxed">
+                  {sentenceOfTheDay.example.translation}
+                </p>
+
+                <div className="mt-6 border-t border-theme-subtle pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-serif text-theme-primary">
+                      {sentenceOfTheDay.word.word}
+                    </span>
                   </div>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3">
-                    {wordOfTheDay.reading && (
-                      <span className="text-lg text-theme-primary opacity-80">
-                        {wordOfTheDay.reading}
+                    {sentenceOfTheDay.word.reading && (
+                      <span className="text-sm text-theme-primary opacity-80">
+                        {sentenceOfTheDay.word.reading}
                       </span>
                     )}
-                    {wordOfTheDay.romaji && (
-                      <span className="text-sm text-theme-primary opacity-60 font-serif italic">
-                        {wordOfTheDay.romaji}
+                    {sentenceOfTheDay.word.romaji && (
+                      <span className="text-xs text-theme-primary opacity-60 font-serif italic">
+                        {sentenceOfTheDay.word.romaji}
                       </span>
                     )}
                   </div>
-                  {wordOfTheDay.wordType && (
-                    <span className="text-[10px] uppercase border border-theme-accent/40 text-theme-accent px-2 py-0.5 rounded opacity-80 self-start sm:self-auto mt-2 sm:mt-0">
-                      {wordOfTheDay.wordType}
+                  {sentenceOfTheDay.word.category && (
+                    <span className="text-[10px] uppercase border border-theme-accent/40 text-theme-accent px-2 py-0.5 rounded opacity-80 self-start sm:self-auto mt-1 sm:mt-0">
+                      {sentenceOfTheDay.word.category}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-theme-primary opacity-90 max-w-2xl mt-2">
-                  {wordOfTheDay.meaning}
+                <p className="text-xs text-theme-primary opacity-90 max-w-2xl mt-2">
+                  {sentenceOfTheDay.word.explanation}
                 </p>
-                {wordOfTheDay.examples && wordOfTheDay.examples.length > 0 ? (
-                  <div className="mt-4 border-t border-theme-subtle pt-3">
-                    <div
-                      key={
-                        wordOfTheDay.examples[
-                          Math.min(
-                            wotdExampleIndex,
-                            wordOfTheDay.examples.length - 1,
-                          )
-                        ].id
-                      }
-                    >
-                      <div className="flex items-start gap-2">
-                        <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
-                          {renderExampleHighlight(
-                            wordOfTheDay.examples[
-                              Math.min(
-                                wotdExampleIndex,
-                                wordOfTheDay.examples.length - 1,
-                              )
-                            ].sentence,
-                            wordOfTheDay.kanji || wordOfTheDay.reading,
-                            deck,
-                          )}
-                        </p>
-                        <button
-                          onClick={(e) => playAudio(e, wordOfTheDay.examples![Math.min(wotdExampleIndex, wordOfTheDay.examples!.length - 1)].sentence)}
-                          className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-0.5"
-                          title="Nghe câu ví dụ"
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex gap-3 mt-1">
-                        {wordOfTheDay.examples[
-                          Math.min(
-                            wotdExampleIndex,
-                            wordOfTheDay.examples.length - 1,
-                          )
-                        ].reading && (
-                          <span className="text-[10px] text-theme-primary opacity-50 italic">
-                            {
-                              wordOfTheDay.examples[
-                                Math.min(
-                                  wotdExampleIndex,
-                                  wordOfTheDay.examples.length - 1,
-                                )
-                              ].reading
-                            }
-                          </span>
-                        )}
-                        {wordOfTheDay.examples[
-                          Math.min(
-                            wotdExampleIndex,
-                            wordOfTheDay.examples.length - 1,
-                          )
-                        ].romaji && (
-                          <span className="text-[10px] text-theme-primary opacity-50 italic">
-                            {
-                              wordOfTheDay.examples[
-                                Math.min(
-                                  wotdExampleIndex,
-                                  wordOfTheDay.examples.length - 1,
-                                )
-                              ].romaji
-                            }
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">
-                        {
-                          wordOfTheDay.examples[
-                            Math.min(
-                              wotdExampleIndex,
-                              wordOfTheDay.examples.length - 1,
-                            )
-                          ].translation
-                        }
-                      </p>
-                    </div>
-
-                    {wordOfTheDay.examples.length > 1 && (
-                      <div className="flex items-center gap-4 mt-4">
-                        <button
-                          onClick={() =>
-                            setWotdExampleIndex((prev) =>
-                              prev > 0
-                                ? prev - 1
-                                : wordOfTheDay.examples!.length - 1,
-                            )
-                          }
-                          className="p-1 border border-theme-subtle hover:border-theme-accent text-theme-primary/60 hover:text-theme-primary transition-colors bg-theme-panel rounded"
-                          title="Ví dụ trước"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <span className="text-[10px] font-mono text-theme-primary/40 uppercase tracking-widest">
-                          Ví dụ{" "}
-                          {Math.min(
-                            wotdExampleIndex,
-                            wordOfTheDay.examples.length - 1,
-                          ) + 1}{" "}
-                          / {wordOfTheDay.examples.length}
-                        </span>
-                        <button
-                          onClick={() =>
-                            setWotdExampleIndex((prev) =>
-                              prev < wordOfTheDay.examples!.length - 1
-                                ? prev + 1
-                                : 0,
-                            )
-                          }
-                          className="p-1 border border-theme-subtle hover:border-theme-accent text-theme-primary/60 hover:text-theme-primary transition-colors bg-theme-panel rounded"
-                          title="Ví dụ tiếp"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  wordOfTheDay.example && (
-                    <div className="mt-4 border-t border-theme-subtle pt-3">
-                      <div className="flex items-start gap-2">
-                        <p className="text-base sm:text-lg text-theme-primary opacity-90 leading-relaxed font-serif">
-                          {renderExampleHighlight(
-                            wordOfTheDay.example,
-                            wordOfTheDay.kanji || wordOfTheDay.reading,
-                            deck,
-                          )}
-                        </p>
-                        <button
-                          onClick={(e) => playAudio(e, wordOfTheDay.example!)}
-                          className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-0.5"
-                          title="Nghe câu ví dụ"
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      {wordOfTheDay.exampleTranslation && (
-                        <p className="text-xs text-theme-primary opacity-50 mt-1 uppercase tracking-wider">
-                          {wordOfTheDay.exampleTranslation}
-                        </p>
-                      )}
-                    </div>
-                  )
-                )}
               </div>
-              <button
-                onClick={() => setIsChangingWotd(!isChangingWotd)}
-                className="text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors p-2"
-                title="Thay đổi từ vựng mỗi ngày"
-              >
-                {isChangingWotd ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <RefreshCw className="w-5 h-5" />
-                )}
-              </button>
             </div>
-
-            {isChangingWotd && (
-              <div className="mt-4 border-t border-theme-subtle pt-4 animate-in fade-in slide-in-from-top-2">
-                <div className="relative mb-4">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-theme-primary/50" />
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm từ vựng..."
-                    value={wotdSearch}
-                    onChange={(e) => setWotdSearch(e.target.value)}
-                    className="w-full bg-theme-hover border border-theme-subtle rounded text-sm text-theme-primary px-9 py-2 focus:outline-none focus:border-theme-accent/50 transition-colors placeholder:text-theme-primary/30"
-                  />
-                </div>
-                <div
-                  className="flex flex-col gap-2 max-h-60 overflow-y-auto"
-                  style={{
-                    scrollbarWidth: "thin",
-                    scrollbarColor: "var(--border-subtle) transparent",
-                  }}
-                >
-                  {filteredWotdList.map((card) => (
-                    <button
-                      key={card.id}
-                      onClick={() => handleSelectNewWotd(card.id)}
-                      className={`text-left px-4 py-3 rounded border transition-all ${card.id === wordOfTheDay.id ? "bg-theme-accent/10 border-theme-accent" : "bg-theme-hover border-theme-subtle hover:border-theme-accent/50"}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl font-serif text-theme-primary">
-                          {card.kanji}
-                        </span>
-                        {card.reading && (
-                          <span className="text-sm text-theme-primary opacity-70">
-                            {card.reading}
-                          </span>
-                        )}
-                        {card.romaji && (
-                          <span className="text-xs text-theme-primary opacity-50 font-serif italic">
-                            {card.romaji}
-                          </span>
-                        )}
-                        {card.id === wordOfTheDay.id && (
-                          <span className="text-[10px] text-theme-accent ml-auto">
-                            Đang chọn
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-theme-primary opacity-60 mt-1 line-clamp-1">
-                        {card.meaning}
-                      </p>
-                    </button>
-                  ))}
-                  {filteredWotdList.length === 0 && (
-                    <div className="text-center text-sm text-theme-primary/50 py-4">
-                      Không tìm thấy từ vựng
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
-
-
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col relative overflow-hidden">

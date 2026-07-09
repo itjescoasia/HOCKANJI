@@ -9,7 +9,7 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import Fuse from "fuse.js";
-import { formatCreatedAt } from "../lib/dateUtils";
+import { formatCreatedAt, getVietnamDate } from "../lib/dateUtils";
 import { renderExampleHighlight, tokenizeExampleText } from "../utils/highlight";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
@@ -371,7 +371,9 @@ function ConversationDetail({
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${conversation.title}.docx`);
+    const now = getVietnamDate();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+    saveAs(blob, `${conversation.title}_${dateStr}.docx`);
   };
 
   const handleCopyAllJapanese = () => {
