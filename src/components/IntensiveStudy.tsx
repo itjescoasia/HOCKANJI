@@ -1503,6 +1503,13 @@ function StudyView({
                                     )}
                                   <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
                                     {renderHighlight(ex.sentence, word.word)}
+                                    <button
+                                      onClick={(e) => playAudio(e, ex.sentence)}
+                                      className="inline-flex items-center justify-center p-2 ml-3 text-theme-primary/40 hover:text-theme-accent transition-colors align-middle rounded-full hover:bg-theme-accent/10"
+                                      title="Nghe câu ví dụ"
+                                    >
+                                      <Volume2 className="w-5 h-5" />
+                                    </button>
                                   </p>
                                   {ex.romaji &&
                                     !hiddenMeaningIds.includes(ex.id) && (

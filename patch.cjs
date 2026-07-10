@@ -51,7 +51,7 @@ const replacement = `{currentCard.examples && currentCard.examples.length > 0 ? 
                           </p>
                           <button
                             onClick={(e) => handleSpeak(e, ex.sentence)}
-                            className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 mt-1"
+                            className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-1"
                             title="Nghe câu ví dụ"
                           >
                             <Volume2 className="w-5 h-5" />
@@ -82,7 +82,7 @@ const replacement = `{currentCard.examples && currentCard.examples.length > 0 ? 
                             </p>
                             <button
                               onClick={(e) => handleSpeak(e, currentCard.example!)}
-                              className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 mt-1"
+                              className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-1"
                               title="Nghe câu ví dụ"
                             >
                               <Volume2 className="w-5 h-5" />
