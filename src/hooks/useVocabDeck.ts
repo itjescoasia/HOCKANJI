@@ -4,6 +4,21 @@ import { calculateNextReview } from '../lib/sm2';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 import { getEndOfTodayTimestamp } from '../lib/dateUtils';
+const removeUndefined = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined);
+  } else if (obj !== null && typeof obj === "object") {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        newObj[key] = removeUndefined(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+};
+
 
 export function useVocabDeck() {
   const [deck, setDeck] = useState<KanjiCard[]>([]);
@@ -115,7 +130,7 @@ export function useVocabDeck() {
 
     if (auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', newCard.id), newCard);
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', newCard.id), removeUndefined(newCard));
       } catch (err) {
         console.error("Error adding card:", err);
       }
@@ -152,7 +167,7 @@ export function useVocabDeck() {
 
     if (auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', updatedCard.id), updatedCard);
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', updatedCard.id), removeUndefined(updatedCard));
       } catch (err) {
         console.error("Error updating card:", err);
       }
@@ -238,7 +253,7 @@ export function useVocabDeck() {
                 const chunk = allOps.slice(i, i + 400);
                 for (const card of chunk) {
                     const cardRef = doc(db, 'users', auth.currentUser!.uid, 'kanjiDeck', card.id);
-                    batch.set(cardRef, card, { merge: true });
+                    batch.set(cardRef, removeUndefined(card), { merge: true });
                 }
                 await batch.commit();
             }
@@ -265,7 +280,8 @@ export function useVocabDeck() {
   const updateCard = async (id: string, updates: Partial<KanjiCard>) => {
     if (auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), updates, { merge: true });
+        const cleanedUpdates = removeUndefined(updates);
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), cleanedUpdates, { merge: true });
       } catch (err) {
         console.error("Error updating card:", err);
       }

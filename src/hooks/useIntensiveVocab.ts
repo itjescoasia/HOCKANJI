@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { IntensiveWord } from '../types';
-import { db, auth } from '../lib/firebase';
+import { db, auth, removeUndefined } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 
 enum OperationType {
@@ -97,7 +97,7 @@ export function useIntensiveVocab() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${word.id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', word.id), word);
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', word.id), removeUndefined(word));
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, path);
       }
@@ -123,7 +123,7 @@ export function useIntensiveVocab() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id), updates, { merge: true });
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id), removeUndefined(updates), { merge: true });
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, path);
       }

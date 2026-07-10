@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db, auth } from "../lib/firebase";
+import { db, auth, removeUndefined } from "../lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getLocalDateString } from "../lib/dateUtils";
 
@@ -108,7 +108,7 @@ export function useStudyStats() {
           newLearned: newTodayStats.newLearned,
           remembered: newTodayStats.remembered,
         };
-        setDoc(statsRef, { [today]: firestorePayload }, { merge: true }).catch(
+        setDoc(statsRef, { [today]: removeUndefined(firestorePayload) }, { merge: true }).catch(
           (err) => console.error("Error saving stats:", err),
         );
       } else {
@@ -153,7 +153,7 @@ export function useStudyStats() {
         const firestorePayload = {
           freeStudyTime: newTodayStats.freeStudyTime,
         };
-        setDoc(statsRef, { [today]: firestorePayload }, { merge: true }).catch(
+        setDoc(statsRef, { [today]: removeUndefined(firestorePayload) }, { merge: true }).catch(
           (err) => console.error("Error saving stats:", err),
         );
       } else {
@@ -204,7 +204,7 @@ export function useStudyStats() {
           wotdId: newTodayStats.wotdId,
           wotdUpdatedAt: newTodayStats.wotdUpdatedAt,
         };
-        setDoc(statsRef, { [today]: firestorePayload }, { merge: true }).catch(
+        setDoc(statsRef, { [today]: removeUndefined(firestorePayload) }, { merge: true }).catch(
           (err) => {
             console.error("Error saving stats:", err);
           },

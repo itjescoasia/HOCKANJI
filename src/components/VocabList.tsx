@@ -108,7 +108,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         
       const validForms = editForm.forms?.filter(f => f.name.trim() && f.value.trim()).map(f => ({
         id: f.id || crypto.randomUUID(),
-        name: f.name.trim(), reading: f.reading?.trim(), romaji: f.romaji?.trim(),
+        name: f.name.trim(), reading: f.reading?.trim() || "", romaji: f.romaji?.trim() || "",
         value: f.value.trim()
       })) || [];
         

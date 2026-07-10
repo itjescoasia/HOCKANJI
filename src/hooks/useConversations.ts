@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Conversation, DialogueSentence } from '../types';
-import { db, auth } from '../lib/firebase';
+import { db, auth, removeUndefined } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
 
 enum OperationType {
@@ -90,7 +90,7 @@ export function useConversations() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${conversation.id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', conversation.id), conversation);
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', conversation.id), removeUndefined(conversation));
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, path);
       }
@@ -116,7 +116,7 @@ export function useConversations() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', id), updates, { merge: true });
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', id), removeUndefined(updates), { merge: true });
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, path);
       }
