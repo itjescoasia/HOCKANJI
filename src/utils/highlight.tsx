@@ -167,6 +167,7 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
   let bestMatch = { index: -1, length: 0, str: '' };
   const lowerText = text.toLowerCase();
 
+  // 1. Exact match for each meaning segment
   meanings.forEach(m => {
     const lowerM = m.toLowerCase();
     const idx = lowerText.indexOf(lowerM);
@@ -174,6 +175,55 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
       bestMatch = { index: idx, length: m.length, str: text.substring(idx, idx + m.length) };
     }
   });
+
+  // 2. Partial / word-sequence matching if no exact match is found
+  if (bestMatch.index === -1) {
+    meanings.forEach(m => {
+      let lowerM = m.toLowerCase();
+      // Remove common Vietnamese prefix words that might prevent a match
+      const prefixes = ['sự ', 'niềm ', 'cái ', 'con ', 'việc ', 'làm ', 'người '];
+      prefixes.forEach(p => {
+        if (lowerM.startsWith(p)) lowerM = lowerM.substring(p.length);
+      });
+      
+      const words = lowerM.split(/[\s\.\,\!\?]+/).filter(w => w.length > 0);
+      
+      // Try combinations of words from longest to shortest
+      for (let numWords = words.length; numWords >= 1; numWords--) {
+        for (let start = 0; start <= words.length - numWords; start++) {
+          const phrase = words.slice(start, start + numWords).join(' ');
+          
+          // Skip very short single words
+          if (phrase.length < 3 && numWords === 1) continue; 
+          
+          // Skip common stop words if it's a single word
+          const ignoreWords = [
+            'một', 'những', 'các', 'để', 'và', 'của', 'là', 'có', 'không', 
+            'sự', 'niềm', 'việc', 'làm', 'cái', 'trong', 'trên', 'dưới', 
+            'với', 'cho', 'vào', 'ra', 'ở', 'tại', 'thì', 'mà', 'như', 
+            'đã', 'đang', 'sẽ', 'bị', 'được', 'người', 'nhà', 'khi'
+          ];
+          if (numWords === 1 && ignoreWords.includes(phrase)) continue;
+
+          const safePhrase = phrase.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
+          // Use Unicode letters and digits for word boundaries
+          const regex = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${safePhrase})(?:[^\\p{L}\\p{N}]|$)`, 'giu');
+          
+          const matches = [...text.matchAll(regex)];
+          for (const match of matches) {
+            if (match.index !== undefined) {
+              const matchedStr = match[1];
+              // text.indexOf is used to get the exact original casing
+              const exactIdx = text.indexOf(matchedStr, match.index);
+              if (exactIdx !== -1 && matchedStr.length > bestMatch.length) {
+                bestMatch = { index: exactIdx, length: matchedStr.length, str: text.substring(exactIdx, exactIdx + matchedStr.length) };
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 
   if (bestMatch.index === -1) {
       return <Fragment>{text}</Fragment>;

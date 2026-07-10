@@ -184,6 +184,25 @@ function SortableWordItem({
   );
 }
 
+const SearchHighlight = ({ text, query }: { text: string, query: string }) => {
+  if (!query.trim() || !text) return <Fragment>{text}</Fragment>;
+  
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <Fragment>
+      {parts.map((part, i) => 
+        part.toLowerCase() === query.toLowerCase() ? (
+          <span key={i} className="bg-theme-accent/20 text-theme-accent px-0.5 rounded font-medium">{part}</span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </Fragment>
+  );
+};
+
 export default function IntensiveStudy({
   deck,
   mainDeck,
@@ -576,11 +595,11 @@ export default function IntensiveStudy({
                   >
                     <div className="flex items-center gap-2 w-full min-w-0">
                       <span className="font-serif text-lg text-theme-primary truncate">
-                        {word.word}
+                        <SearchHighlight text={word.word} query={searchQuery} />
                       </span>
                       {word.reading && (
                         <span className="text-theme-accent text-sm font-medium truncate">
-                          {word.reading}
+                          <SearchHighlight text={word.reading} query={searchQuery} />
                         </span>
                       )}
                       <span className="text-[10px] uppercase tracking-wider text-theme-primary/40 ml-auto whitespace-nowrap flex-shrink-0">
@@ -590,16 +609,16 @@ export default function IntensiveStudy({
                     {matchedExample && (
                       <div className="text-sm text-theme-primary/70 mt-2 pl-3 border-l-2 border-theme-accent/50 italic flex flex-col gap-1">
                         <span className="block text-theme-primary font-serif">
-                          {matchedExample.sentence}
+                          <SearchHighlight text={matchedExample.sentence} query={searchQuery} />
                         </span>
                         {matchedExample.romaji && (
                           <span className="block text-xs font-mono text-theme-primary/60">
-                            {matchedExample.romaji}
+                            <SearchHighlight text={matchedExample.romaji} query={searchQuery} />
                           </span>
                         )}
                         {matchedExample.translation && (
                           <span className="block text-xs">
-                            {matchedExample.translation}
+                            <SearchHighlight text={matchedExample.translation} query={searchQuery} />
                           </span>
                         )}
                       </div>
