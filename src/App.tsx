@@ -312,15 +312,15 @@ export default function App() {
     <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex flex-col">
       {/* Header / Nav */}
       <header className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
-            <div className="w-10 h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent">
-              <span className="text-white font-serif text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
+        <div className="max-w-5xl mx-auto px-2 sm:px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent shrink-0">
+              <span className="text-white font-serif text-xl sm:text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
             </div>
-            <h1 className="text-xl font-serif tracking-widest text-theme-accent" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
+            <h1 className="text-lg sm:text-xl font-serif tracking-widest text-theme-accent hidden md:block" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
           </div>
           
-          <nav className="flex items-center gap-2 sm:gap-4">
+          <nav className="flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar">
             <button
               onClick={() => {
                 if (theme === 'dark') setTheme('light');

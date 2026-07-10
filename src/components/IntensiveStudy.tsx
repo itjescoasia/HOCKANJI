@@ -389,7 +389,7 @@ export default function IntensiveStudy({
 
   if (viewState === "add") {
     return (
-      <div className="max-w-3xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
+      <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
         <button
           onClick={() => setViewState("list")}
           className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit"
@@ -544,7 +544,7 @@ export default function IntensiveStudy({
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-2xl font-serif text-theme-primary tracking-wider">
           ÔN CHUYÊN TỪ VỰNG
@@ -568,10 +568,10 @@ export default function IntensiveStudy({
             placeholder="Tìm kiếm chuyên đề, câu ví dụ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-theme-panel border border-theme-subtle rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-theme-accent transition-colors"
+            className="w-full bg-theme-panel border border-theme-subtle rounded pl-10 pr-4 py-3 text-base sm:text-sm focus:outline-none focus:border-theme-accent transition-colors"
           />
           {searchQuery.trim() && filteredDeck.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-theme-panel border border-theme-subtle rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-theme-panel border border-theme-subtle rounded-lg shadow-xl z-50 max-h-[60vh] overflow-y-auto">
               {filteredDeck.slice(0, 10).map((word) => {
                 const query = searchQuery.toLowerCase();
                 const matchedExample = word.examples.find(
@@ -591,10 +591,10 @@ export default function IntensiveStudy({
                       setViewState("study");
                       setSearchQuery("");
                     }}
-                    className="w-full text-left p-4 border-b border-theme-subtle hover:bg-theme-hover transition-colors last:border-0 flex flex-col gap-1"
+                    className="w-full text-left p-3 sm:p-4 border-b border-theme-subtle hover:bg-theme-hover transition-colors last:border-0 flex flex-col gap-1"
                   >
                     <div className="flex items-center gap-2 w-full min-w-0">
-                      <span className="font-serif text-lg text-theme-primary truncate">
+                      <span className="font-serif text-base sm:text-lg text-theme-primary truncate">
                         <SearchHighlight text={word.word} query={searchQuery} />
                       </span>
                       {word.reading && (
@@ -867,7 +867,7 @@ function StudyView({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 w-full flex flex-col gap-8 pb-32">
+    <div className="max-w-4xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-8 pb-32">
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit"

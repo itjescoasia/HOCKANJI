@@ -422,7 +422,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   </div>
                 )}
                 {currentCard.examples && currentCard.examples.length > 0 ? (
-                  <div className="mt-6 flex flex-col items-stretch gap-4 w-full max-w-2xl mx-auto px-4 sm:px-0">
+                  <div className="mt-6 flex flex-col items-stretch gap-4 w-full max-w-2xl mx-auto px-2 sm:px-0">
                     {currentCard.examples.map((ex, index) => (
                       <div key={ex.id} className="w-full flex flex-col items-start gap-2 bg-theme-base-alt p-4 sm:p-5 border border-theme-subtle rounded-lg text-left shadow-sm">
                         <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">
@@ -444,7 +444,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                   </div>
                 ) : (
                   (currentCard.example || currentCard.exampleTranslation) && (
-                    <div className="mt-6 flex flex-col items-stretch gap-4 w-full max-w-2xl mx-auto px-4 sm:px-0">
+                    <div className="mt-6 flex flex-col items-stretch gap-4 w-full max-w-2xl mx-auto px-2 sm:px-0">
                       <div className="w-full flex flex-col items-start gap-2 bg-theme-base-alt p-4 sm:p-5 border border-theme-subtle rounded-lg text-left shadow-sm">
                         {currentCard.example && (
                           <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">

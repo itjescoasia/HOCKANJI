@@ -16,7 +16,7 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
 
   if (queue.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto py-20 px-4 w-full flex flex-col items-center justify-center min-h-[60vh] text-center">
+      <div className="max-w-3xl mx-auto py-10 sm:py-20 px-2 sm:px-4 w-full flex flex-col items-center justify-center min-h-[60vh] text-center">
         <h2 className="text-3xl font-serif text-theme-accent mb-4">Hoàn thành học ngắn!</h2>
         <p className="text-theme-primary/60 mb-8">Bạn đã nhớ được tất cả các từ trong danh sách học ngắn.</p>
         <button
@@ -68,7 +68,7 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 w-full flex flex-col items-center justify-center min-h-[60vh]">
+    <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col items-center justify-center min-h-[60vh]">
       <div className="w-full flex justify-between items-center mb-8">
         <button 
           onClick={onExit}

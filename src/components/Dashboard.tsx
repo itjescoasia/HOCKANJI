@@ -242,7 +242,7 @@ export default function Dashboard({
 
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 w-full flex flex-col gap-6">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
       <div className="mb-2 text-center sm:text-left">
         <h1
           className="text-3xl sm:text-4xl font-serif text-theme-accent tracking-widest mb-3 uppercase"

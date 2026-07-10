@@ -296,7 +296,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full">
+    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-2 sm:px-4">
       <div className="flex items-center justify-between p-4 border-b border-theme-subtle">
         <div className="flex items-center gap-4">
           <button

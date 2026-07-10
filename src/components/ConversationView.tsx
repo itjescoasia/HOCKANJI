@@ -77,7 +77,7 @@ export default function ConversationView({
 
   if (viewState === "add") {
     return (
-      <div className="max-w-3xl mx-auto py-8 px-4 w-full">
+      <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full">
         <button
           onClick={() => setViewState("list")}
           className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors mb-6 uppercase tracking-widest text-xs font-medium"
@@ -145,7 +145,7 @@ export default function ConversationView({
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 w-full">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-serif text-theme-accent mb-2 tracking-widest uppercase">
@@ -460,7 +460,7 @@ function ConversationDetail({
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 w-full">
+    <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full">
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit mb-6"

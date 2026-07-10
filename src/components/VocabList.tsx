@@ -217,7 +217,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 w-full">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-serif text-theme-accent mb-2 tracking-widest uppercase">Kho từ vựng</h2>

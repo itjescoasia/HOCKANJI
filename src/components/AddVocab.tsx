@@ -117,7 +117,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   };
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-4">
+    <div className="max-w-xl mx-auto py-4 sm:py-8 px-2 sm:px-4">
       <div className="mb-8 text-center">
         <h2 className="text-2xl font-serif text-theme-accent mb-2 tracking-widest uppercase">Thêm từ mới</h2>
         <p className="text-[10px] uppercase tracking-[0.2em] opacity-50">Bổ sung Kanji vào danh sách học của bạn</p>
