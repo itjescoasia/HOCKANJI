@@ -380,7 +380,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 <HighlightProvider>
                   <div className="mb-8 mt-4">
                     <p
-                      className={`font-serif leading-relaxed ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
+                      className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
                     >
                       {mode === "JA_TO_VI"
                         ? renderExampleHighlight(
@@ -404,7 +404,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                       {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
                     </span>
                     <p
-                      className={`font-serif leading-relaxed ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
+                      className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
                     >
                       {mode === "VI_TO_JA"
                         ? renderExampleHighlight(

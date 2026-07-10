@@ -235,7 +235,7 @@ export default function ConversationView({
                   </div>
                 </div>
                 {conv.description && (
-                  <p className="text-xs text-theme-primary/60 line-clamp-2 mb-4">
+                  <p className="text-xs text-theme-primary/60 line-clamp-2 mb-4 whitespace-pre-wrap break-words">
                     {conv.description}
                   </p>
                 )}
@@ -288,9 +288,18 @@ function ConversationDetail({
   const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deleteEnabled, setDeleteEnabled] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isEditingMetadata, setIsEditingMetadata] = useState(false);
+  const [editTitle, setEditTitle] = useState(conversation.title);
+  const [editDescription, setEditDescription] = useState(conversation.description || "");
   const [viewMode, setViewMode] = useState<"list" | "slideshow" | "review_vocab">("list");
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
+  const handleSaveMetadata = () => {
+    if (!editTitle.trim()) return;
+    onUpdate(conversation.id, { title: editTitle, description: editDescription });
+    setIsEditingMetadata(false);
+  };
   const playAudio = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     if (!text || !('speechSynthesis' in window)) return;
@@ -473,15 +482,73 @@ function ConversationDetail({
 
       <div className="bg-theme-panel border-b border-theme-subtle p-4 md:p-6 mb-6">
         <div className="flex flex-col gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-serif text-theme-primary mb-1">
-              {conversation.title}
-            </h1>
-            {conversation.description && (
-              <p className="text-theme-primary/60 text-xs md:text-sm italic">
-                {conversation.description}
-              </p>
-            )}
+          <div className="flex justify-between items-start">
+            <div className="flex-1 mr-4">
+              {isEditingMetadata ? (
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-theme-base border border-theme-subtle px-3 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent text-xl md:text-2xl font-serif"
+                    placeholder="Tiêu đề hội thoại"
+                  />
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full bg-theme-base border border-theme-subtle px-3 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent text-sm resize-none"
+                    placeholder="Mô tả..."
+                    rows={2}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveMetadata}
+                      className="px-4 py-2 bg-theme-accent text-theme-inverted text-xs uppercase tracking-widest font-bold rounded-sm hover:bg-theme-accent-hover transition-colors"
+                    >
+                      Lưu
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingMetadata(false);
+                        setEditTitle(conversation.title);
+                        setEditDescription(conversation.description || "");
+                      }}
+                      className="px-4 py-2 border border-theme-subtle text-theme-primary/60 text-xs uppercase tracking-widest font-bold rounded-sm hover:bg-theme-hover transition-colors"
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="group relative">
+                  <h1 className="text-xl md:text-2xl font-serif text-theme-primary mb-1">
+                    {conversation.title}
+                  </h1>
+                  {conversation.description && (
+                    <div className="mt-1">
+                      <p className={`text-theme-primary/60 text-xs md:text-sm italic whitespace-pre-wrap ${!isDescriptionExpanded ? "line-clamp-2" : ""}`}>
+                        {conversation.description}
+                      </p>
+                      {(conversation.description.length > 100 || conversation.description.split('\n').length > 2) && (
+                        <button 
+                          onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                          className="text-[10px] uppercase tracking-widest text-theme-accent opacity-80 hover:opacity-100 transition-opacity mt-2 font-bold"
+                        >
+                          {isDescriptionExpanded ? "Thu gọn" : "Xem thêm"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setIsEditingMetadata(true)}
+                    className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-theme-primary/40 hover:text-theme-accent"
+                    title="Chỉnh sửa thông tin hội thoại"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-2">

@@ -607,7 +607,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             <span className="text-[10px] text-theme-accent uppercase tracking-widest border border-theme-accent/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
                           )}
                         </div>
-                        <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-normal w-full sm:min-w-[300px] lg:min-w-[500px]">{card.meaning}</div>
+                        <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-pre-wrap w-full sm:min-w-[300px] lg:min-w-[500px]">{card.meaning}</div>
                         {card.kanjiExplanation && (
                           <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 whitespace-pre-wrap leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px]">
                             {card.kanjiExplanation}

@@ -273,7 +273,7 @@ export default function Dashboard({
                 
                 <HighlightProvider><>
                 <div className="flex items-start gap-2 mt-4">
-                  <p className="text-xl sm:text-2xl text-theme-primary leading-relaxed font-serif">
+                  <p className="text-xl sm:text-2xl text-theme-primary leading-relaxed font-serif whitespace-pre-wrap">
                     {renderExampleHighlight(
                       sentenceOfTheDay.example.sentence,
                       sentenceOfTheDay.word.word,

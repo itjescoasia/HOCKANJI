@@ -435,7 +435,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                           </div>
                         )}
                         {ex.translation && (
-                          <p className="text-sm sm:text-base text-theme-accent opacity-90 leading-relaxed font-light mt-1 border-t border-theme-subtle/50 pt-3 w-full">
+                          <p className="text-sm sm:text-base text-theme-accent opacity-90 leading-relaxed font-light mt-1 whitespace-pre-wrap border-t border-theme-subtle/50 pt-3 w-full">
                             {ex.translation}
                           </p>
                         )}
@@ -452,7 +452,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                           </p>
                         )}
                         {currentCard.exampleTranslation && (
-                          <p className="text-sm sm:text-base text-theme-accent opacity-90 leading-relaxed font-light mt-1 border-t border-theme-subtle/50 pt-3 w-full">
+                          <p className="text-sm sm:text-base text-theme-accent opacity-90 leading-relaxed font-light mt-1 whitespace-pre-wrap border-t border-theme-subtle/50 pt-3 w-full">
                             {currentCard.exampleTranslation}
                           </p>
                         )}
