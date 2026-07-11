@@ -143,6 +143,11 @@ function SortableWordItem({
             {word.reading}
           </div>
         )}
+        {word.romaji && (
+          <div className="text-theme-primary/60 font-medium mb-1 w-full truncate text-sm">
+            {word.romaji}
+          </div>
+        )}
         <div className="text-[11px] uppercase tracking-wider text-theme-primary/40 mb-3 w-full truncate">
           {word.category}
         </div>
@@ -600,6 +605,11 @@ export default function IntensiveStudy({
                       {word.reading && (
                         <span className="text-theme-accent text-sm font-medium truncate">
                           <SearchHighlight text={word.reading} query={searchQuery} />
+                        </span>
+                      )}
+                      {word.romaji && (
+                        <span className="text-theme-primary/60 text-xs font-medium truncate">
+                          <SearchHighlight text={word.romaji} query={searchQuery} />
                         </span>
                       )}
                       <span className="text-[10px] uppercase tracking-wider text-theme-primary/40 ml-auto whitespace-nowrap flex-shrink-0">
