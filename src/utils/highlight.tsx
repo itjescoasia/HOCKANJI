@@ -1,14 +1,14 @@
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 export const HighlightContext = React.createContext<{
-  hoveredCard: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string } } | null;
-  setHoveredCard: (info: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string } } | null) => void;
+  hoveredCard: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null;
+  setHoveredCard: (info: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null) => void;
 }>({
   hoveredCard: null,
   setHoveredCard: () => {},
 });
 
 export const HighlightProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [hoveredCard, setHoveredCard] = useState<{ card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string } } | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<{ card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null>(null);
   return (
     <HighlightContext.Provider value={{ hoveredCard, setHoveredCard }}>
       {children}
@@ -162,7 +162,11 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
   const card = hoveredCard.card;
   if (!card || !card.meaning) return <Fragment>{text}</Fragment>;
 
-  const meanings = card.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
+  let meanings = card.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
+  
+  if (hoveredCard.matchedForm && hoveredCard.matchedForm.meaning) {
+    meanings = hoveredCard.matchedForm.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
+  }
   
   let bestMatch = { index: -1, length: 0, str: '' };
   const lowerText = text.toLowerCase();
