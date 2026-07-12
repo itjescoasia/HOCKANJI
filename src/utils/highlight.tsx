@@ -39,10 +39,10 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
   let index = 0;
   
   if (type === 'hiragana') {
-    target = hoveredCard.card.reading;
+    target = (hoveredCard.matchedForm && hoveredCard.matchedForm.reading) ? hoveredCard.matchedForm.reading : hoveredCard.card.reading;
     index = hoveredCard.occurrenceIndex?.reading || 0;
   } else {
-    target = hoveredCard.card.romaji;
+    target = (hoveredCard.matchedForm && hoveredCard.matchedForm.romaji) ? hoveredCard.matchedForm.romaji : hoveredCard.card.romaji;
     index = hoveredCard.occurrenceIndex?.romaji || 0;
   }
 
@@ -57,7 +57,8 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
   if (!lowerText.includes(matchStr.toLowerCase())) {
     // Try prefix matching for conjugated verbs/adjectives
     let found = false;
-    for (let i = matchStr.length - 1; i >= Math.max(1, Math.floor(matchStr.length / 2)); i--) {
+    const minPrefixLength = type === 'hiragana' ? 2 : 3;
+    for (let i = matchStr.length - 1; i >= Math.max(minPrefixLength, Math.floor(matchStr.length / 2)); i--) {
       const prefix = matchStr.substring(0, i);
       if (lowerText.includes(prefix.toLowerCase())) {
         if (type === 'hiragana') {
@@ -358,8 +359,8 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
   deckWordsInExample.forEach(card => {
     if (card.kanji) allMatchCandidates.push({ matchStr: card.kanji, card });
     if (card.reading && card.reading !== card.kanji) allMatchCandidates.push({ matchStr: card.reading, card });
-    if (card.kanji) {
-      // Remove trailing hiragana for verbs/adjectives
+    if (card.kanji && (!card.forms || card.forms.length === 0)) {
+      // Remove trailing hiragana for verbs/adjectives if no forms are provided
       const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
       if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem)) {
         allMatchCandidates.push({ matchStr: stem, card, isStem: true });
@@ -400,6 +401,60 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
   if (currentExample.length > 0) {
     tokens.push({ text: currentExample, status: 'neutral' });
   }
+
+  // Fallback for the targetWord of this intensive item
+  let targetWordCard: KanjiCard | undefined = undefined;
+  if (targetWord) {
+     targetWordCard = mainDeck?.find(c => c.kanji === targetWord || c.reading === targetWord) || fallbackTargetCard;
+  }
+
+  const newTokens: typeof tokens = [];
+  tokens.forEach(token => {
+    if (token.status !== 'neutral' || !targetWord) {
+      newTokens.push(token);
+      return;
+    }
+    
+    let targetToHighlight = targetWord;
+    
+    if (!token.text.includes(targetWord)) {
+       // Try removing trailing okurigana
+       const stem = targetWord.replace(/[ぁ-ん]+$/, '');
+       if (stem && stem !== targetWord && /[\u4e00-\u9faf々]/.test(stem) && token.text.includes(stem)) {
+           targetToHighlight = stem;
+       } else {
+           const kanjiChars = targetWord.match(/[\u4e00-\u9faf]+/g);
+           if (kanjiChars && kanjiChars.length > 0) {
+               const justKanji = kanjiChars.join('');
+               targetToHighlight = token.text.includes(justKanji) ? justKanji : kanjiChars[0];
+           }
+       }
+    }
+
+    if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
+      const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${safeStem}[ぁ-ん]*)`, 'g');
+      const parts = token.text.split(regex);
+      parts.forEach((part) => {
+        if (part.length > 0) {
+          if (part.startsWith(targetToHighlight)) {
+            newTokens.push({ text: part, status: 'target', card: targetWordCard });
+          } else {
+            newTokens.push({ text: part, status: 'neutral' });
+          }
+        }
+      });
+    } else if (token.text.includes(targetToHighlight)) {
+      const parts = token.text.split(targetToHighlight);
+      parts.forEach((part, i) => {
+        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
+        if (i < parts.length - 1) newTokens.push({ text: targetToHighlight, status: 'target', card: targetWordCard });
+      });
+    } else {
+      newTokens.push(token);
+    }
+  });
+  tokens = newTokens;
 
   uniqueCandidates.forEach(({ matchStr, card, isStem, matchedForm }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
@@ -455,13 +510,8 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
         }
         
         let actualMatchStr = matchStr;
-        if (isStem) {
-           let j = idx + matchStr.length;
-           while (j < currentText.length && /[ぁ-ん]/.test(currentText[j])) {
-               actualMatchStr += currentText[j];
-               j++;
-           }
-        }
+        // Removed greedy trailing hiragana consumption to prevent over-highlighting (e.g. 分かりにくいです)
+        
         
         newTokens.push({ text: actualMatchStr, status, card, matchedForm });
         
@@ -472,59 +522,7 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
     tokens = newTokens;
   });
 
-  // Fallback for the targetWord of this intensive item
-  let targetWordCard: KanjiCard | undefined = undefined;
-  if (targetWord) {
-     targetWordCard = mainDeck?.find(c => c.kanji === targetWord || c.reading === targetWord) || fallbackTargetCard;
-  }
-
-  const newTokens: typeof tokens = [];
-  tokens.forEach(token => {
-    if (token.status !== 'neutral' || !targetWord) {
-      newTokens.push(token);
-      return;
-    }
-    
-    let targetToHighlight = targetWord;
-    
-    if (!token.text.includes(targetWord)) {
-       // Try removing trailing okurigana
-       const stem = targetWord.replace(/[ぁ-ん]+$/, '');
-       if (stem && stem !== targetWord && /[\u4e00-\u9faf々]/.test(stem) && token.text.includes(stem)) {
-           targetToHighlight = stem;
-       } else {
-           const kanjiChars = targetWord.match(/[\u4e00-\u9faf]+/g);
-           if (kanjiChars && kanjiChars.length > 0) {
-               const justKanji = kanjiChars.join('');
-               targetToHighlight = token.text.includes(justKanji) ? justKanji : kanjiChars[0];
-           }
-       }
-    }
-
-    if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
-      const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${safeStem}[ぁ-ん]*)`, 'g');
-      const parts = token.text.split(regex);
-      parts.forEach((part) => {
-        if (part.length > 0) {
-          if (part.startsWith(targetToHighlight)) {
-            newTokens.push({ text: part, status: 'target', card: targetWordCard });
-          } else {
-            newTokens.push({ text: part, status: 'neutral' });
-          }
-        }
-      });
-    } else if (token.text.includes(targetToHighlight)) {
-      const parts = token.text.split(targetToHighlight);
-      parts.forEach((part, i) => {
-        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
-        if (i < parts.length - 1) newTokens.push({ text: targetToHighlight, status: 'target', card: targetWordCard });
-      });
-    } else {
-      newTokens.push(token);
-    }
-  });
-  tokens = newTokens;
+  
 
   const cardCounts = new Map<string, number>();
   tokens.forEach(token => {
