@@ -11,6 +11,7 @@ import {
 import Fuse from "fuse.js";
 import { formatCreatedAt, getVietnamDate } from "../lib/dateUtils";
 import { renderExampleHighlight, tokenizeExampleText, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+import { normalizeSentence } from "../utils/stringUtils";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 
@@ -278,12 +279,41 @@ function ConversationDetail({
   const [newExplanation, setNewExplanation] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
+  const [duplicateWarningId, setDuplicateWarningId] = useState<string | null>(null);
+  const [highlightedExampleId, setHighlightedExampleId] = useState<string | null>(null);
+  
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (newJp.trim()) {
+      const existing = conversation.dialogues.find(
+        (d) => normalizeSentence(d.japanese) === normalizeSentence(newJp)
+      );
+      setDuplicateWarningId(existing ? existing.id : null);
+    } else {
+      setDuplicateWarningId(null);
+    }
+  }, [newJp, conversation.dialogues]);
+
+
   const [editJp, setEditJp] = useState("");
   const [editHira, setEditHira] = useState("");
   const [editRomaji, setEditRomaji] = useState("");
   const [editVietnamese, setEditVietnamese] = useState("");
   const [editExplanation, setEditExplanation] = useState("");
+
+  useEffect(() => {
+    if (editingId && editJp.trim()) {
+      const existing = conversation.dialogues.find(
+        (d) => d.id !== editingId && normalizeSentence(d.japanese) === normalizeSentence(editJp)
+      );
+      setDuplicateWarningId(existing ? existing.id : null);
+    } else {
+      if (!newJp.trim()) {
+        setDuplicateWarningId(null);
+      }
+    }
+  }, [editJp, editingId, conversation.dialogues, newJp]);
 
   const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
@@ -399,6 +429,15 @@ function ConversationDetail({
     e.preventDefault();
     if (!newJp.trim()) return;
 
+    const existingDialogue = conversation.dialogues.find(
+      (d) => normalizeSentence(d.japanese) === normalizeSentence(newJp)
+    );
+
+    if (existingDialogue) {
+      setDuplicateWarningId(existingDialogue.id);
+      return;
+    }
+
     const newDialogue: DialogueSentence = {
       id: crypto.randomUUID(),
       japanese: newJp.trim(),
@@ -439,6 +478,15 @@ function ConversationDetail({
   const handleUpdateDialogue = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editJp.trim() || !editingId) return;
+
+    const existingDialogue = conversation.dialogues.find(
+      (d) => d.id !== editingId && normalizeSentence(d.japanese) === normalizeSentence(editJp)
+    );
+
+    if (existingDialogue) {
+      setDuplicateWarningId(existingDialogue.id);
+      return;
+    }
 
     onUpdate(conversation.id, {
       dialogues: conversation.dialogues.map(d => 
@@ -674,6 +722,28 @@ function ConversationDetail({
                               <div className="flex items-center gap-2 mb-2">
                                  <span className="text-theme-accent text-xs font-bold uppercase tracking-widest">Sửa câu {index + 1}</span>
                               </div>
+                              {duplicateWarningId && (
+                                <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-lg flex items-start gap-3 mb-4">
+                                  <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="font-medium text-sm mb-1">Câu thoại này đã tồn tại!</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const el = document.getElementById(`dialogue-${duplicateWarningId}`);
+                                        if (el) {
+                                          el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                          setHighlightedExampleId(duplicateWarningId);
+                                          setTimeout(() => setHighlightedExampleId(null), 3000);
+                                        }
+                                      }}
+                                      className="text-xs underline hover:text-red-400 transition-colors"
+                                    >
+                                      Nhấn vào đây để xem câu hiện có
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                               <div className="space-y-2">
                                 <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Tiếng Nhật *</label>
                                 <input required type="text" value={editJp} onChange={(e) => setEditJp(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
@@ -913,6 +983,28 @@ function ConversationDetail({
             <h4 className="text-theme-accent uppercase tracking-wider text-xs font-medium mb-4">
               Thêm câu hội thoại
             </h4>
+            {duplicateWarningId && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-lg flex items-start gap-3 mb-4">
+                <Info className="w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm mb-1">Câu thoại này đã tồn tại!</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById(`dialogue-${duplicateWarningId}`);
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        setHighlightedExampleId(duplicateWarningId);
+                        setTimeout(() => setHighlightedExampleId(null), 3000);
+                      }
+                    }}
+                    className="text-xs underline hover:text-red-400 transition-colors"
+                  >
+                    Nhấn vào đây để xem câu hiện có
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">
                 Tiếng Nhật *

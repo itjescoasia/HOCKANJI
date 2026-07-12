@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+import { normalizeSentence } from "../utils/stringUtils";
 import {
   DragDropContext,
   Droppable,
@@ -711,6 +712,20 @@ function StudyView({
     explanation: word.explanation,
   });
 
+  // Real-time duplicate detection for adding
+  useEffect(() => {
+    if (newSentence.trim()) {
+      const existing = word.examples.find(
+        (ex) => normalizeSentence(ex.sentence) === normalizeSentence(newSentence)
+      );
+      setDuplicateWarningId(existing ? existing.id : null);
+    } else {
+      setDuplicateWarningId(null);
+    }
+  }, [newSentence, word.examples]);
+
+
+
   useEffect(() => {
     if (targetExampleId) {
       // Small delay to ensure rendering is complete
@@ -773,6 +788,20 @@ function StudyView({
     specialNote: "",
   });
 
+  // Real-time duplicate detection for editing
+  useEffect(() => {
+    if (editingExampleId && editExampleData && editExampleData.sentence.trim()) {
+      const existing = word.examples.find(
+        (ex) => ex.id !== editingExampleId && normalizeSentence(ex.sentence) === normalizeSentence(editExampleData.sentence)
+      );
+      setDuplicateWarningId(existing ? existing.id : null);
+    } else {
+      if (!newSentence.trim()) {
+        setDuplicateWarningId(null);
+      }
+    }
+  }, [editExampleData?.sentence, editingExampleId, word.examples, newSentence]);
+
   const handleStartEditExample = (ex: IntensiveExample) => {
     setEditingExampleId(ex.id);
     setEditExampleData({
@@ -795,8 +824,7 @@ function StudyView({
     const existingExample = word.examples.find(
       (ex) =>
         ex.id !== editingExampleId &&
-        ex.sentence.trim().toLowerCase() ===
-          editExampleData.sentence.trim().toLowerCase(),
+        normalizeSentence(ex.sentence) === normalizeSentence(editExampleData.sentence),
     );
 
     if (existingExample) {
@@ -841,7 +869,7 @@ function StudyView({
 
     const existingExample = word.examples.find(
       (ex) =>
-        ex.sentence.trim().toLowerCase() === newSentence.trim().toLowerCase(),
+        normalizeSentence(ex.sentence) === normalizeSentence(newSentence),
     );
 
     if (existingExample) {
