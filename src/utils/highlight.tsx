@@ -18,29 +18,41 @@ export const HighlightProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'romaji' }> = ({ text, type }) => {
   const { hoveredCard } = React.useContext(HighlightContext);
-  if (!hoveredCard || !text) return <Fragment>{text}</Fragment>;
-
-  const { card, index } = hoveredCard;
-  
-  let target = type === 'hiragana' ? card.reading : card.romaji;
-  
-  // If we matched a specific form, and that form has reading/romaji, use it!
-  if (hoveredCard.matchedForm) {
-    if (type === 'hiragana' && hoveredCard.matchedForm.reading) {
-      target = hoveredCard.matchedForm.reading;
-    } else if (type === 'romaji' && hoveredCard.matchedForm.romaji) {
-      target = hoveredCard.matchedForm.romaji;
-    }
+  if (!hoveredCard || !text) {
+      const clean = text.replace(/\*/g, '');
+      return <Fragment>{clean}</Fragment>;
   }
 
+  let cleanText = text;
+  let manualMatch = { index: -1, length: 0, str: '' };
+  const firstStar = text.indexOf('*');
+  if (firstStar !== -1) {
+      const secondStar = text.indexOf('*', firstStar + 1);
+      if (secondStar !== -1) {
+          const matchedPhrase = text.substring(firstStar + 1, secondStar);
+          cleanText = text.substring(0, firstStar) + matchedPhrase + text.substring(secondStar + 1);
+          manualMatch = { index: firstStar, length: matchedPhrase.length, str: matchedPhrase };
+      }
+  }
+
+  let target = '';
+  let index = 0;
   
+  if (type === 'hiragana') {
+    target = hoveredCard.card.reading;
+    index = hoveredCard.occurrenceIndex?.reading || 0;
+  } else {
+    target = hoveredCard.card.romaji;
+    index = hoveredCard.occurrenceIndex?.romaji || 0;
+  }
+
   if (!target) {
-    return <Fragment>{text}</Fragment>;
+    return <Fragment>{cleanText}</Fragment>;
   }
   
   target = target.trim();
   let matchStr = target;
-  let lowerText = text.toLowerCase();
+  let lowerText = cleanText.toLowerCase();
   
   if (!lowerText.includes(matchStr.toLowerCase())) {
     // Try prefix matching for conjugated verbs/adjectives
@@ -48,20 +60,52 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
     for (let i = matchStr.length - 1; i >= Math.max(1, Math.floor(matchStr.length / 2)); i--) {
       const prefix = matchStr.substring(0, i);
       if (lowerText.includes(prefix.toLowerCase())) {
+        if (type === 'hiragana') {
+            const regex = new RegExp(`(${prefix}[ぁ-ん]*)`, 'i');
+            const match = cleanText.match(regex);
+            if (match) {
+                matchStr = match[1];
+                found = true;
+                break;
+            }
+        } else if (type === 'romaji') {
+            const regex = new RegExp(`(?:^|[^a-z])(${prefix}[a-z]*)`, 'i');
+            const match = cleanText.match(regex);
+            if (match) {
+                matchStr = match[1];
+                found = true;
+                break;
+            }
+        }
         matchStr = prefix;
         found = true;
         break;
       }
     }
-    if (!found) {
-      return <Fragment>{text}</Fragment>;
+    if (!found && manualMatch.index === -1) {
+      return <Fragment>{cleanText}</Fragment>;
     }
+  }
+
+  if (manualMatch.index !== -1) {
+      const before = cleanText.substring(0, manualMatch.index);
+      const match = manualMatch.str;
+      const after = cleanText.substring(manualMatch.index + manualMatch.length);
+      return (
+        <Fragment>
+          {before}
+          <span className="px-1 rounded transition-all duration-200 bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative">
+            {match}
+          </span>
+          {after}
+        </Fragment>
+      );
   }
 
   // To prevent regex errors with special characters
   const safeMatchStr = matchStr.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`(${safeMatchStr})`, 'gi');
-  const parts = text.split(regex);
+  const parts = cleanText.split(regex);
   let matchCount = 0;
 
   return (
@@ -157,7 +201,25 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
 
 export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
   const { hoveredCard } = React.useContext(HighlightContext);
-  if (!hoveredCard || !text) return <Fragment>{text}</Fragment>;
+  if (!hoveredCard || !text) {
+      // If there are manual asterisks but no hover, we could just render without them,
+      // but typically without hover we don't highlight. Let's just strip asterisks if no hover.
+      const clean = text.replace(/\*/g, '');
+      return <Fragment>{clean}</Fragment>;
+  }
+
+  // Check for manual *highlights* in Vietnamese text first
+  let cleanText = text;
+  let manualMatch = { index: -1, length: 0, str: '' };
+  const firstStar = text.indexOf('*');
+  if (firstStar !== -1) {
+      const secondStar = text.indexOf('*', firstStar + 1);
+      if (secondStar !== -1) {
+          const matchedPhrase = text.substring(firstStar + 1, secondStar);
+          cleanText = text.substring(0, firstStar) + matchedPhrase + text.substring(secondStar + 1);
+          manualMatch = { index: firstStar, length: matchedPhrase.length, str: matchedPhrase };
+      }
+  }
 
   const card = hoveredCard.card;
   if (!card || !card.meaning) return <Fragment>{text}</Fragment>;
@@ -168,20 +230,22 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
     meanings = hoveredCard.matchedForm.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
   }
   
-  let bestMatch = { index: -1, length: 0, str: '' };
-  const lowerText = text.toLowerCase();
+  let bestMatch = manualMatch;
+  const lowerText = cleanText.toLowerCase();
 
   // 1. Exact match for each meaning segment
-  meanings.forEach(m => {
-    const lowerM = m.toLowerCase();
-    const idx = lowerText.indexOf(lowerM);
-    if (idx !== -1 && m.length > bestMatch.length) {
-      bestMatch = { index: idx, length: m.length, str: text.substring(idx, idx + m.length) };
-    }
-  });
+  if (manualMatch.index === -1) {
+    meanings.forEach(m => {
+      const lowerM = m.toLowerCase();
+      const idx = lowerText.indexOf(lowerM);
+      if (idx !== -1 && m.length > bestMatch.length) {
+        bestMatch = { index: idx, length: m.length, str: cleanText.substring(idx, idx + m.length) };
+      }
+    });
+  }
 
   // 2. Partial / word-sequence matching if no exact match is found
-  if (bestMatch.index === -1) {
+  if (bestMatch.index === -1 && manualMatch.index === -1) {
     meanings.forEach(m => {
       let lowerM = m.toLowerCase();
       // Remove common Vietnamese prefix words that might prevent a match
@@ -213,14 +277,13 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
           // Use Unicode letters and digits for word boundaries
           const regex = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${safePhrase})(?:[^\\p{L}\\p{N}]|$)`, 'giu');
           
-          const matches = [...text.matchAll(regex)];
+          const matches = [...cleanText.matchAll(regex)];
           for (const match of matches) {
             if (match.index !== undefined) {
               const matchedStr = match[1];
-              // text.indexOf is used to get the exact original casing
-              const exactIdx = text.indexOf(matchedStr, match.index);
+              const exactIdx = cleanText.indexOf(matchedStr, match.index);
               if (exactIdx !== -1 && matchedStr.length > bestMatch.length) {
-                bestMatch = { index: exactIdx, length: matchedStr.length, str: text.substring(exactIdx, exactIdx + matchedStr.length) };
+                bestMatch = { index: exactIdx, length: matchedStr.length, str: cleanText.substring(exactIdx, exactIdx + matchedStr.length) };
               }
             }
           }
@@ -230,12 +293,12 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
   }
 
   if (bestMatch.index === -1) {
-      return <Fragment>{text}</Fragment>;
+      return <Fragment>{cleanText}</Fragment>;
   }
 
-  const before = text.substring(0, bestMatch.index);
+  const before = cleanText.substring(0, bestMatch.index);
   const match = bestMatch.str;
-  const after = text.substring(bestMatch.index + bestMatch.length);
+  const after = cleanText.substring(bestMatch.index + bestMatch.length);
 
   return (
     <Fragment>
@@ -315,9 +378,28 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
   const uniqueCandidates = Array.from(new Map(allMatchCandidates.map(c => [c.matchStr, c])).values());
   uniqueCandidates.sort((a, b) => b.matchStr.length - a.matchStr.length);
 
-  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }[] = [
-    { text: example, status: 'neutral' }
-  ];
+  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }[] = [];
+  
+  // Parse manual *highlights* first
+  let currentExample = example;
+  let nextAsterisk = currentExample.indexOf('*');
+  while (nextAsterisk !== -1) {
+    const endAsterisk = currentExample.indexOf('*', nextAsterisk + 1);
+    if (endAsterisk !== -1) {
+      if (nextAsterisk > 0) {
+        tokens.push({ text: currentExample.substring(0, nextAsterisk), status: 'neutral' });
+      }
+      const markedText = currentExample.substring(nextAsterisk + 1, endAsterisk);
+      tokens.push({ text: markedText, status: 'target', card: fallbackTargetCard });
+      currentExample = currentExample.substring(endAsterisk + 1);
+      nextAsterisk = currentExample.indexOf('*');
+    } else {
+      break;
+    }
+  }
+  if (currentExample.length > 0) {
+    tokens.push({ text: currentExample, status: 'neutral' });
+  }
 
   uniqueCandidates.forEach(({ matchStr, card, isStem, matchedForm }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
@@ -371,9 +453,19 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
         if (idx > 0) {
           newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
         }
-        newTokens.push({ text: matchStr, status, card, matchedForm });
         
-        currentText = currentText.substring(idx + matchStr.length);
+        let actualMatchStr = matchStr;
+        if (isStem) {
+           let j = idx + matchStr.length;
+           while (j < currentText.length && /[ぁ-ん]/.test(currentText[j])) {
+               actualMatchStr += currentText[j];
+               j++;
+           }
+        }
+        
+        newTokens.push({ text: actualMatchStr, status, card, matchedForm });
+        
+        currentText = currentText.substring(idx + actualMatchStr.length);
         searchIndex = 0;
       }
     });
@@ -409,7 +501,20 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
        }
     }
 
-    if (token.text.includes(targetToHighlight)) {
+    if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
+      const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${safeStem}[ぁ-ん]*)`, 'g');
+      const parts = token.text.split(regex);
+      parts.forEach((part) => {
+        if (part.length > 0) {
+          if (part.startsWith(targetToHighlight)) {
+            newTokens.push({ text: part, status: 'target', card: targetWordCard });
+          } else {
+            newTokens.push({ text: part, status: 'neutral' });
+          }
+        }
+      });
+    } else if (token.text.includes(targetToHighlight)) {
       const parts = token.text.split(targetToHighlight);
       parts.forEach((part, i) => {
         if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
