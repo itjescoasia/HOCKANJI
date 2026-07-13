@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { KanjiExample, KanjiCard } from '../types';
 import { Plus, X, AlertTriangle } from 'lucide-react';
+import { toRomaji } from 'wanakana';
 
 interface AddVocabProps {
   deck?: KanjiCard[];
@@ -47,13 +48,34 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
          const updatedForms = [...forms];
          const ojadForms = result.forms;
          
+         const baseMeaning = meaning.trim();
+         const getFormMeaning = (formName: string, base: string) => {
+            if (!base) return '';
+            const lowerBase = base.toLowerCase();
+            if (formName.includes('thể た')) return `đã ${lowerBase}`;
+            if (formName.includes('thể ない')) return `không ${lowerBase}`;
+            if (formName.includes('thể ば')) return `nếu ${lowerBase}`;
+            if (formName.includes('sai khiến')) return `bắt / cho phép ${lowerBase}`;
+            if (formName.includes('bị động') && !formName.includes('sai khiến')) return `bị / được ${lowerBase}`;
+            if (formName.includes('mệnh lệnh')) return `hãy ${lowerBase} (ra lệnh)`;
+            if (formName.includes('khả năng')) return `có thể ${lowerBase}`;
+            if (formName.includes('thể よう')) return `hãy cùng / định ${lowerBase}`;
+            if (formName.includes('thể て')) return `${lowerBase} rồi...`;
+            return '';
+         };
+         
          ojadForms.forEach((f: any) => {
+            const romajiValue = f.reading ? toRomaji(f.reading) : '';
+            const formMeaning = getFormMeaning(f.name, baseMeaning);
+            
             const existingIdx = updatedForms.findIndex(uf => uf.name === f.name);
             if (existingIdx !== -1) {
                 updatedForms[existingIdx].value = f.value;
                 updatedForms[existingIdx].reading = f.reading;
+                updatedForms[existingIdx].romaji = romajiValue;
+                updatedForms[existingIdx].meaning = formMeaning;
             } else {
-                updatedForms.push({ name: f.name, value: f.value, reading: f.reading, romaji: '' });
+                updatedForms.push({ name: f.name, value: f.value, reading: f.reading, romaji: romajiValue, meaning: formMeaning });
             }
          });
          
