@@ -1,16 +1,28 @@
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 export const HighlightContext = React.createContext<{
   hoveredCard: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null;
-  setHoveredCard: (info: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null) => void;
+  setHoveredCard: (info: { card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null, force?: boolean) => void;
+  isLocked: boolean;
+  setLocked: (locked: boolean) => void;
+  onEditCard?: (card: KanjiCard) => void;
 }>({
   hoveredCard: null,
   setHoveredCard: () => {},
+  isLocked: false,
+  setLocked: () => {},
 });
 
-export const HighlightProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [hoveredCard, setHoveredCard] = useState<{ card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null>(null);
+export const HighlightProvider: React.FC<{ children: React.ReactNode, onEditCard?: (card: KanjiCard) => void }> = ({ children, onEditCard }) => {
+  const [hoveredCard, setHoveredCardState] = useState<{ card: KanjiCard, index: number, matchedForm?: { id: string, name: string, value: string, reading?: string, romaji?: string, meaning?: string } } | null>(null);
+  const [isLocked, setLocked] = useState(false);
+  
+  const setHoveredCard = (info: any, force = false) => {
+    if (isLocked && !force) return;
+    setHoveredCardState(info);
+  };
+  
   return (
-    <HighlightContext.Provider value={{ hoveredCard, setHoveredCard }}>
+    <HighlightContext.Provider value={{ hoveredCard, setHoveredCard, isLocked, setLocked, onEditCard }}>
       {children}
     </HighlightContext.Provider>
   );
@@ -124,13 +136,30 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Edit2 } from 'lucide-react';
 
 const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }> = ({ text, status, card, occurrenceIndex = 0, matchedForm }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
-  const { setHoveredCard } = useContext(HighlightContext);
+  const { setHoveredCard, onEditCard, isLocked, setLocked } = useContext(HighlightContext);
 
+  useEffect(() => {
+    if (isOpen && card) {
+      setLocked(true);
+      setHoveredCard({ card, index: occurrenceIndex, matchedForm }, true);
+    } else if (!isOpen && card) {
+      // We only unlock if we are the one locking. But how do we know?
+      // Actually, just setLocked(false). 
+      // If another word is clicked, its onClick will fire.
+      // mousedown on outside happens before the other word's onClick.
+      // So setLocked(false) and then the other word's onClick sets isOpen=true and locks.
+      setLocked(false);
+      // We might want to setHoveredCard(null, true) when closed, to clear the lock.
+      // But let's just unlock and let mouse leave handle clearing it if needed, or clear it.
+      setHoveredCard(null, true);
+    }
+  }, [isOpen]);
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -186,6 +215,15 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
               >
                 <Volume2 className="w-4 h-4" />
               </button>
+              {onEditCard && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIsOpen(false); if (onEditCard) onEditCard(card); window.dispatchEvent(new CustomEvent('editCard', { detail: card })); }}
+                  className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 ml-1"
+                  title="Chỉnh sửa từ vựng"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              )}
             </span>
             {card.sinoVietnamese && <span className="text-[10px] text-theme-accent uppercase tracking-wider mb-0.5 whitespace-nowrap">{card.sinoVietnamese}</span>}
           </span>

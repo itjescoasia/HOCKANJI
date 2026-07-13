@@ -86,6 +86,21 @@ export default function App() {
   const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);
   const [sentenceReviewMode, setSentenceReviewMode] = useState<'JA_TO_VI' | 'VI_TO_JA'>('JA_TO_VI');
   const [listSearchQuery, setListSearchQuery] = useState('');
+  const [editCardReq, setEditCardReq] = useState<{id: string, ts: number} | null>(null);
+
+  useEffect(() => {
+    const handleEditEvent = (e: any) => {
+      const card = e.detail;
+      setEditCardReq({ id: card.id, ts: Date.now() });
+      setListSearchQuery(card.kanji || card.reading);
+      setView('list');
+    };
+    window.addEventListener('editCard', handleEditEvent);
+    return () => {
+      window.removeEventListener('editCard', handleEditEvent);
+    };
+  }, []);
+
   const lastActivityRef = useRef(Date.now());
   const activeSecondsRef = useRef(0);
 
@@ -378,7 +393,7 @@ export default function App() {
         )}
         
         {view === 'list' && (
-          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} />
+          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} editCardReq={editCardReq} />
         )}
         
         {view === 'add' && (

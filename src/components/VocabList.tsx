@@ -10,6 +10,8 @@ interface VocabListProps {
   onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>) => void;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
   initialSearchQuery?: string;
+  initialEditId?: string | null;
+  editCardReq?: { id: string, ts: number } | null;
 }
 
 function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string) => void }) {
@@ -62,7 +64,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
   );
 }
 
-export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '' }: VocabListProps) {
+export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null }: VocabListProps) {
   const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
   const [isImporting, setIsImporting] = useState(false);
@@ -94,6 +96,17 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       wordType: card.wordType || '',
     });
   };
+
+  React.useEffect(() => {
+    const targetId = editCardReq?.id || initialEditId;
+    if (targetId) {
+      const card = deck.find(c => c.id === targetId);
+      if (card) {
+        startEdit(card);
+        setSearch(card.kanji || card.reading);
+      }
+    }
+  }, [editCardReq, initialEditId, deck]);
 
   const saveEdit = () => {
     if (editingId && editForm.kanji && editForm.meaning && onUpdate) {
