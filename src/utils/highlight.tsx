@@ -52,10 +52,10 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
   
   if (type === 'hiragana') {
     target = (hoveredCard.matchedForm && hoveredCard.matchedForm.reading) ? hoveredCard.matchedForm.reading : hoveredCard.card.reading;
-    index = hoveredCard.occurrenceIndex?.reading || 0;
+    index = hoveredCard.index || 0;
   } else {
     target = (hoveredCard.matchedForm && hoveredCard.matchedForm.romaji) ? hoveredCard.matchedForm.romaji : hoveredCard.card.romaji;
-    index = hoveredCard.occurrenceIndex?.romaji || 0;
+    index = hoveredCard.index || 0;
   }
 
   if (!target) {
@@ -335,17 +335,23 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
       return <Fragment>{cleanText}</Fragment>;
   }
 
-  const before = cleanText.substring(0, bestMatch.index);
-  const match = bestMatch.str;
-  const after = cleanText.substring(bestMatch.index + bestMatch.length);
+  const matchStr = bestMatch.str;
+  const safeMatchStr = matchStr.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${safeMatchStr})`, 'gi');
+  const parts = cleanText.split(regex);
+  let matchCount = 0;
+  const targetIndex = hoveredCard.index || 0;
 
   return (
     <Fragment>
-      {before}
-      <span className="bg-theme-accent text-white font-bold px-1 rounded scale-110 shadow-sm inline-block z-10 relative transition-all duration-200">
-        {match}
-      </span>
-      {after}
+      {parts.map((part, i) => {
+        if (part.toLowerCase() === matchStr.toLowerCase()) {
+          const isCurrentMatch = matchCount === targetIndex;
+          matchCount++;
+          return <span key={i} className={`px-1 rounded transition-all duration-200 ${isCurrentMatch ? 'bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative' : 'bg-theme-accent/20 text-theme-accent font-bold'}`}>{part}</span>;
+        }
+        return <Fragment key={i}>{part}</Fragment>;
+      })}
     </Fragment>
   );
 };
