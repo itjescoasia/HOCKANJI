@@ -30,6 +30,47 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   }, [kanji, deck]);
 
   
+  const [isFetchingOjad, setIsFetchingOjad] = useState(false);
+
+  const fetchOjadData = async () => {
+    if (!kanji.trim()) {
+      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
+      return;
+    }
+    try {
+      setIsFetchingOjad(true);
+      const res = await fetch(`/api/ojad?word=${encodeURIComponent(kanji.trim())}`);
+      if (!res.ok) throw new Error('Không thể lấy dữ liệu OJAD');
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+         const result = data.results[0];
+         const updatedForms = [...forms];
+         const ojadForms = result.forms;
+         
+         ojadForms.forEach((f: any) => {
+            const existingIdx = updatedForms.findIndex(uf => uf.name === f.name);
+            if (existingIdx !== -1) {
+                updatedForms[existingIdx].value = f.value;
+                updatedForms[existingIdx].reading = f.reading;
+            } else {
+                updatedForms.push({ name: f.name, value: f.value, reading: f.reading, romaji: '' });
+            }
+         });
+         
+         const newWordType = wordType || 'Động từ';
+         setWordType(newWordType);
+         setForms(updatedForms);
+      } else {
+         alert('Không tìm thấy dữ liệu OJAD cho từ này.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối hoặc lấy dữ liệu OJAD.');
+    } finally {
+      setIsFetchingOjad(false);
+    }
+  };
+
   const handleWordTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newWordType = e.target.value;
     setWordType(newWordType);
@@ -234,7 +275,19 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           return (
             <div className="pt-4 border-t border-theme-subtle">
               <div className="flex items-center justify-between mb-4">
-                <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">{formsLabel}</label>
+                <div className="flex items-center gap-3">
+                  <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">{formsLabel}</label>
+                  {isVerbs && (
+                    <button
+                      type="button"
+                      onClick={fetchOjadData}
+                      disabled={isFetchingOjad}
+                      className="text-[10px] bg-[#1a5f7a] text-white px-2 py-1 rounded-sm hover:bg-[#227b9e] transition-colors disabled:opacity-50 tracking-wider uppercase font-bold"
+                    >
+                      {isFetchingOjad ? 'Đang lấy OJAD...' : 'Lấy từ OJAD'}
+                    </button>
+                  )}
+                </div>
                 <button 
                   type="button" 
                   onClick={() => setForms([...forms, { name: '', value: '' }])}

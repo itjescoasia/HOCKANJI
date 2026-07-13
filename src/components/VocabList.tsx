@@ -80,6 +80,49 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     window.speechSynthesis.speak(utterance);
   };
 
+  const [isFetchingOjad, setIsFetchingOjad] = useState(false);
+
+  const fetchOjadData = async () => {
+    if (!editForm.kanji) {
+      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
+      return;
+    }
+    try {
+      setIsFetchingOjad(true);
+      const res = await fetch(`/api/ojad?word=${encodeURIComponent(editForm.kanji)}`);
+      if (!res.ok) throw new Error('Không thể lấy dữ liệu OJAD');
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+         // Lấy kết quả đầu tiên
+         const result = data.results[0];
+         // Preserve existing forms not returned by OJAD if needed, or simply replace
+         const updatedForms = [...(editForm.forms || [])];
+         const ojadForms = result.forms;
+         
+         ojadForms.forEach((f: any) => {
+            const existingIdx = updatedForms.findIndex(uf => uf.name === f.name);
+            if (existingIdx !== -1) {
+                updatedForms[existingIdx].value = f.value;
+                updatedForms[existingIdx].reading = f.reading;
+            } else {
+                updatedForms.push({ id: crypto.randomUUID(), name: f.name, value: f.value, reading: f.reading, romaji: '', meaning: '' });
+            }
+         });
+         
+         // Update wordType if empty
+         const newWordType = editForm.wordType || 'Động từ'; // Fallback to verb if not set
+         setEditForm({...editForm, forms: updatedForms, wordType: newWordType});
+      } else {
+         alert('Không tìm thấy dữ liệu OJAD cho từ này.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối hoặc lấy dữ liệu OJAD.');
+    } finally {
+      setIsFetchingOjad(false);
+    }
+  };
+
   const startEdit = (card: KanjiCard) => {
     setEditingId(card.id);
     setEditForm({
@@ -413,7 +456,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               return (
                               <div className="pt-2 border-t border-theme-subtle mt-2">
                                 <div className="flex items-center justify-between mb-2">
-                                  <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">{formsLabel}</label>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">{formsLabel}</label>
+                                    {isVerbs && (
+                                      <button
+                                        type="button"
+                                        onClick={fetchOjadData}
+                                        disabled={isFetchingOjad}
+                                        className="text-[10px] bg-[#1a5f7a] text-white px-2 py-0.5 rounded-sm hover:bg-[#227b9e] transition-colors disabled:opacity-50"
+                                      >
+                                        {isFetchingOjad ? 'Đang lấy...' : 'Lấy từ OJAD'}
+                                      </button>
+                                    )}
+                                  </div>
                                   <button 
                                     type="button" 
                                     onClick={() => {
