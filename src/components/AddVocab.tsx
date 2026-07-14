@@ -134,6 +134,14 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       if (data.meaning) setMeaning(data.meaning);
       if (data.sinoVietnamese) setSinoVietnamese(data.sinoVietnamese);
       if (data.kanjiExplanation) setKanjiExplanation(data.kanjiExplanation);
+      if (data.examples && Array.isArray(data.examples) && data.examples.length > 0) {
+        setExamples(data.examples.map((ex: any) => ({
+          sentence: ex.sentence || '',
+          reading: ex.reading || '',
+          romaji: ex.romaji || '',
+          translation: ex.translation || ''
+        })));
+      }
       if (data.wordType) {
          setWordType(data.wordType);
          if (data.wordType.includes('Động từ')) {

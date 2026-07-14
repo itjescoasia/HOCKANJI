@@ -32,7 +32,15 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
   "sinoVietnamese": "âm Hán Việt của các chữ Hán (nếu có, ví dụ: THỰC, nếu không để chuỗi rỗng)",
   "meaning": "nghĩa tiếng Việt (ngắn gọn, chính xác)",
   "kanjiExplanation": "Giải thích cấu tạo Kanji hoặc cách nhớ (nếu có, không thì để trống)",
-  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ đuôi-i', 'Tính từ đuôi-na', 'Ngữ pháp', 'Trạng từ (副詞)', 'Khác')"
+  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ đuôi-i', 'Tính từ đuôi-na', 'Ngữ pháp', 'Trạng từ (副詞)', 'Khác')",
+  "examples": [
+    {
+      "sentence": "câu ví dụ tiếng Nhật chứa từ vựng",
+      "reading": "cách đọc hiragana của cả câu ví dụ (cách nhau bởi khoảng trắng hoặc dấu phẩy)",
+      "romaji": "cách đọc romaji của cả câu",
+      "translation": "nghĩa tiếng Việt của câu ví dụ"
+    }
+  ]
 }`;
       
       const response = await ai.models.generateContent({
@@ -47,7 +55,20 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       res.json(JSON.parse(text));
     } catch (error: any) {
       console.error('Error generating vocab:', error);
-      res.status(500).json({ error: error.message || 'Failed to generate vocabulary data' });
+      
+      let errorMsg = error.message || 'Failed to generate vocabulary data';
+      if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
+        errorMsg = 'Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút (503).';
+      } else if (typeof errorMsg === 'string' && errorMsg.startsWith('{')) {
+         try {
+            const parsed = JSON.parse(errorMsg);
+            if (parsed.error && parsed.error.message) {
+               errorMsg = parsed.error.message;
+            }
+         } catch(e) {}
+      }
+      res.status(500).json({ error: errorMsg });
+  
     }
   });
 

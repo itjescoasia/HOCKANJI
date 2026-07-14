@@ -428,6 +428,7 @@ export default function App() {
               queue={shortStudyQueue}
               onExit={() => setView('dashboard')}
               onUpdateCard={updateCard}
+              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             />
           </div>
         )}
@@ -440,6 +441,7 @@ export default function App() {
               mode={sentenceReviewMode}
               onClose={() => setView('dashboard')}
               onUpdateWord={updateIntensiveWord}
+              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             />
           </div>
         )}

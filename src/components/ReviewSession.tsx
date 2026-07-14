@@ -19,7 +19,9 @@ interface ReviewSessionProps {
 export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, onUpdateCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [flippedState, setFlippedState] = useState<Record<number, boolean>>({});
+  const showAnswer = flippedState[currentIndex] || false;
+  const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
   const [successCounts, setSuccessCounts] = useState<Record<string, number>>({});
   
   const [isEditing, setIsEditing] = useState(false);
@@ -100,8 +102,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
   const handleGrade = (grade: ReviewGrade) => {
     onReview(currentCard.id, grade);
-    setShowAnswer(false);
-    setCurrentIndex(prev => prev + 1);
+    setFlippedState(fs => ({ ...fs, [currentIndex + 1]: false })); setCurrentIndex(prev => prev + 1);
   };
 
   const handleFreeStudyRemember = () => {
@@ -120,15 +121,13 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
       });
     }
 
-    setShowAnswer(false);
-    setCurrentIndex(prev => prev + 1);
+    setFlippedState(fs => ({ ...fs, [currentIndex + 1]: false })); setCurrentIndex(prev => prev + 1);
   };
 
   const handleFreeStudyForgot = () => {
     if (onFreeStudyReview) onFreeStudyReview(currentCard.id, false);
     setReviewQueue(prev => [...prev, currentCard]);
-    setShowAnswer(false);
-    setCurrentIndex(prev => prev + 1);
+    setFlippedState(fs => ({ ...fs, [currentIndex + 1]: false })); setCurrentIndex(prev => prev + 1);
   };
 
   const handleCheckReading = () => {
@@ -340,20 +339,24 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         </div>
 
         <div 
-          className={`w-full aspect-[4/3] bg-theme-panel border border-theme-subtle relative shadow-2xl flex flex-col items-center justify-center p-8 mb-10 ${(!showAnswer && isFreeStudy && exerciseType !== 'flip') ? '' : 'cursor-pointer'}`}
+          className={`w-full aspect-[4/3] relative mb-10 ${!(isFreeStudy && exerciseType !== 'flip') ? 'cursor-pointer' : ''}`}
           style={{ perspective: 1000 }}
-          onClick={() => !showAnswer && !(isFreeStudy && exerciseType !== 'flip') && setShowAnswer(true)}
+          onClick={() => {
+            if (!(isFreeStudy && exerciseType !== 'flip')) {
+              setShowAnswer(!showAnswer);
+            }
+          }}
         >
           <motion.div
             className="w-full h-full relative"
-            animate={{ rotateX: showAnswer ? 180 : 0 }}
+            animate={{ rotateY: showAnswer ? 180 : 0 }}
             transition={{ duration: 0.6, type: 'spring', stiffness: 220, damping: 20 }}
             style={{ transformStyle: 'preserve-3d' }}
           >
             {/* Front */}
             <div 
-              className={`absolute inset-0 flex flex-col bg-theme-panel overflow-y-auto p-4 ${showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-              style={{ backfaceVisibility: 'hidden' }}
+              className={`absolute inset-0 flex flex-col bg-theme-panel border border-theme-subtle shadow-2xl overflow-y-auto p-4 sm:p-8 ${showAnswer ? 'pointer-events-none' : ''}`}
+              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
             >
               <div className="flex-1 shrink-0"></div>
               <div className="flex flex-col gap-4 items-center w-full py-4 shrink-0">
@@ -378,8 +381,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
 
             {/* Back */}
             <div 
-              className={`absolute inset-0 flex flex-col bg-theme-panel ${!showAnswer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-              style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
+              className={`absolute inset-0 flex flex-col bg-theme-panel border border-theme-subtle shadow-2xl ${!showAnswer ? 'pointer-events-none' : ''}`}
+              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
             >
               <div className="absolute inset-0 overflow-y-auto flex flex-col p-6 pb-12 sm:p-8">
                 <div className="flex-1 shrink-0"></div>
