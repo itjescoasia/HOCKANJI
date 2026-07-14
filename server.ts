@@ -3,12 +3,53 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  app.post('/api/generate-vocab', async (req, res) => {
+    try {
+      const { word } = req.body;
+      if (!word) {
+        return res.status(400).json({ error: 'Word is required' });
+      }
+
+      if (!process.env.GEMINI_API_KEY) {
+         return res.status(500).json({ error: 'GEMINI_API_KEY is missing. Vui lòng thiết lập API Key trong Settings.' });
+      }
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `Bạn là một chuyên gia ngôn ngữ tiếng Nhật. Hãy phân tích từ vựng/ngữ pháp tiếng Nhật sau đây: "${word}".
+Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đúng cấu trúc sau:
+{
+  "kanji": "từ vựng gốc (chữ Hán nếu có, nếu không thì để hiragana/katakana gốc)",
+  "reading": "cách đọc hiragana (chỉ hiragana, không chứa chữ Hán)",
+  "romaji": "cách đọc romaji tương ứng",
+  "sinoVietnamese": "âm Hán Việt của các chữ Hán (nếu có, ví dụ: THỰC, nếu không để chuỗi rỗng)",
+  "meaning": "nghĩa tiếng Việt (ngắn gọn, chính xác)",
+  "kanjiExplanation": "Giải thích cấu tạo Kanji hoặc cách nhớ (nếu có, không thì để trống)",
+  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ đuôi-i', 'Tính từ đuôi-na', 'Ngữ pháp', 'Trạng từ (副詞)', 'Khác')"
+}`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        }
+      });
+
+      const text = response.text || '';
+      res.json(JSON.parse(text));
+    } catch (error: any) {
+      console.error('Error generating vocab:', error);
+      res.status(500).json({ error: error.message || 'Failed to generate vocabulary data' });
+    }
+  });
 
   // API to fetch verb forms from OJAD
   app.get('/api/ojad', async (req, res) => {

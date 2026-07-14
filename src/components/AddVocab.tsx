@@ -21,6 +21,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [wordType, setWordType] = useState('');
   
   const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   useEffect(() => {
     if (kanji.trim() && deck.some(card => card.kanji.trim().toLowerCase() === kanji.trim().toLowerCase())) {
@@ -33,7 +34,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   
   const [isFetchingOjad, setIsFetchingOjad] = useState(false);
 
-  const fetchOjadData = async () => {
+  const fetchOjadData = async (overrideMeaning?: string) => {
     if (!kanji.trim()) {
       alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
       return;
@@ -45,10 +46,10 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       const data = await res.json();
       if (data.results && data.results.length > 0) {
          const result = data.results[0];
-         const updatedForms = [...forms];
+         let updatedForms = [...forms];
          const ojadForms = result.forms;
          
-         const baseMeaning = meaning.trim();
+         const baseMeaning = (overrideMeaning !== undefined ? overrideMeaning : meaning).trim();
          const getFormMeaning = (formName: string, base: string) => {
             if (!base) return '';
             const lowerBase = base.toLowerCase();
@@ -63,6 +64,24 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
             if (formName.includes('thể て')) return `${lowerBase} rồi...`;
             return '';
          };
+         
+         // Setup standard forms if empty
+         if (updatedForms.length === 0) {
+            updatedForms = [
+              { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '' },
+              { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '' },
+              { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '' },
+              { name: 'Thể て', value: '', reading: '', romaji: '' },
+              { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '' },
+              { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '' },
+              { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '' },
+              { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '' },
+              { name: 'Thể khả năng', value: '', reading: '', romaji: '' },
+              { name: 'Thể bị động', value: '', reading: '', romaji: '' },
+              { name: 'Thể sai khiến', value: '', reading: '', romaji: '' },
+              { name: 'Thể điều kiện (thể ば)', value: '', reading: '', romaji: '' }
+            ];
+         }
          
          ojadForms.forEach((f: any) => {
             const romajiValue = f.reading ? toRomaji(f.reading) : '';
@@ -79,8 +98,6 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
             }
          });
          
-         const newWordType = wordType || 'Động từ';
-         setWordType(newWordType);
          setForms(updatedForms);
       } else {
          alert('Không tìm thấy dữ liệu OJAD cho từ này.');
@@ -90,6 +107,44 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       alert('Lỗi kết nối hoặc lấy dữ liệu OJAD.');
     } finally {
       setIsFetchingOjad(false);
+    }
+  };
+
+  const autoFillAI = async () => {
+    if (!kanji.trim()) {
+      alert('Vui lòng nhập từ tiếng Nhật vào ô Kanji (Từ vựng) trước khi dùng AI tự động điền.');
+      return;
+    }
+    
+    try {
+      setIsGeneratingAI(true);
+      const res = await fetch('/api/generate-vocab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: kanji.trim() })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Lỗi lấy dữ liệu từ AI');
+      }
+
+      if (data.reading) setReading(data.reading);
+      if (data.romaji) setRomaji(data.romaji);
+      if (data.meaning) setMeaning(data.meaning);
+      if (data.sinoVietnamese) setSinoVietnamese(data.sinoVietnamese);
+      if (data.kanjiExplanation) setKanjiExplanation(data.kanjiExplanation);
+      if (data.wordType) {
+         setWordType(data.wordType);
+         if (data.wordType.includes('Động từ')) {
+           fetchOjadData(data.meaning);
+         }
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Có lỗi xảy ra khi dùng AI.');
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -189,14 +244,24 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       <form onSubmit={handleSubmit} className="bg-theme-panel p-8 border border-theme-subtle flex flex-col gap-6">
         <div>
           <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Kanji (Từ vựng) <span className="text-[#8b0000]">*</span></label>
-          <input 
-            type="text" 
-            required
-            value={kanji}
-            onChange={e => setKanji(e.target.value)}
-            className={`w-full px-5 py-4 bg-theme-base border ${duplicateWarning ? 'border-red-500' : 'border-theme-subtle'} focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-2xl font-serif text-center`}
-            placeholder="語"
-          />
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              required
+              value={kanji}
+              onChange={e => setKanji(e.target.value)}
+              className={`flex-1 px-5 py-4 bg-theme-base border ${duplicateWarning ? 'border-red-500' : 'border-theme-subtle'} focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-2xl font-serif text-center`}
+              placeholder="語"
+            />
+            <button
+              type="button"
+              onClick={autoFillAI}
+              disabled={isGeneratingAI || !kanji.trim()}
+              className="px-4 py-4 bg-theme-accent text-theme-base font-bold text-xs tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              {isGeneratingAI ? 'ĐANG TẠO...' : 'AI TỰ ĐỘNG ĐIỀN'}
+            </button>
+          </div>
           {duplicateWarning && (
             <div className="mt-3 flex items-center justify-between p-3 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-sm">
               <div className="flex items-center gap-2">
