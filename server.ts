@@ -29,7 +29,7 @@ async function startServer() {
         const midashi = $(el).find('.midashi_word').text();
         if (!midashi) return; // Not a word row
 
-        const forms: { name: string; reading: string; value?: string }[] = [];
+        const forms: { id: string; name: string; reading: string; value?: string }[] = [];
         
         // Extract all td cells which contain the forms
         const tds = $(el).find('td');

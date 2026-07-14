@@ -46,6 +46,10 @@ export interface IntensiveExample {
   viToJaInterval?: number;
   jaToViFailCount?: number;
   viToJaFailCount?: number;
+  jaToViRepetition?: number;
+  viToJaRepetition?: number;
+  jaToViEaseFactor?: number;
+  viToJaEaseFactor?: number;
 }
 
 export interface IntensiveWord {

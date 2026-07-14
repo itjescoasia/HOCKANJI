@@ -131,27 +131,50 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       if (word) {
         const updatedExamples = word.examples.map((ex) => {
           if (ex.id === currentExample.id) {
-            // Calculate Spaced Repetition values
-            const currentInterval = mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
+            // Calculate Spaced Repetition values using SM-2
+            const currentInterval = mode === "VI_TO_JA" ? (ex.viToJaInterval || 0) : (ex.jaToViInterval || 0);
             const currentFailCount = mode === "VI_TO_JA" ? (ex.viToJaFailCount || 0) : (ex.jaToViFailCount || 0);
+            const currentRepetition = mode === "VI_TO_JA" ? (ex.viToJaRepetition || 0) : (ex.jaToViRepetition || 0);
+            const currentEaseFactor = mode === "VI_TO_JA" ? (ex.viToJaEaseFactor || 2.5) : (ex.jaToViEaseFactor || 2.5);
 
-            let nextInterval = 0;
+            let nextInterval = currentInterval;
+            let nextRepetition = currentRepetition;
+            let nextEaseFactor = currentEaseFactor;
+            let sm2Quality = 0;
+            
+            if (grade === 'forgot') sm2Quality = 1;
+            if (grade === 'hard') sm2Quality = 3;
+            if (grade === 'good') sm2Quality = 4;
+            
+            if (sm2Quality >= 3) {
+              if (nextRepetition === 0) {
+                nextInterval = 1;
+              } else if (nextRepetition === 1) {
+                nextInterval = 6;
+              } else {
+                nextInterval = Math.round(nextInterval * nextEaseFactor);
+              }
+              nextRepetition++;
+            } else {
+              nextRepetition = 0;
+              nextInterval = 1;
+            }
+            
+            if (grade === 'forgot') {
+               nextInterval = 0; // Học lại ngay
+            }
+
+            nextEaseFactor = nextEaseFactor + (0.1 - (5 - sm2Quality) * (0.08 + (5 - sm2Quality) * 0.02));
+            if (nextEaseFactor < 1.3) nextEaseFactor = 1.3;
+
             let nextReviewDate = Date.now();
             let newFailCount = currentFailCount;
             let isMastered = false;
 
             if (grade === 'good') {
-              nextInterval = (!currentInterval || currentInterval === 0) ? 1 : 
-                             (currentInterval === 1 ? 3 : 
-                             (currentInterval === 3 ? 7 : currentInterval * 2));
               isMastered = true;
-            } else if (grade === 'hard') {
-              nextInterval = 1; // Học lại vào ngày mai
-              newFailCount += 1; // Tăng bộ đếm số lần quên
-              isMastered = false;
-            } else if (grade === 'forgot') {
-              nextInterval = 0; // Học lại ngay
-              isMastered = false;
+            } else {
+              newFailCount += 1;
             }
 
             if (nextInterval > 0) {
@@ -164,14 +187,18 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   viToJaMastered: isMastered,
                   viToJaInterval: nextInterval,
                   viToJaNextReviewDate: nextReviewDate,
-                  viToJaFailCount: newFailCount
+                  viToJaFailCount: newFailCount,
+                  viToJaRepetition: nextRepetition,
+                  viToJaEaseFactor: nextEaseFactor
                 }
               : {
                   ...ex,
                   jaToViMastered: isMastered,
                   jaToViInterval: nextInterval,
                   jaToViNextReviewDate: nextReviewDate,
-                  jaToViFailCount: newFailCount
+                  jaToViFailCount: newFailCount,
+                  jaToViRepetition: nextRepetition,
+                  jaToViEaseFactor: nextEaseFactor
                 };
           }
           return ex;
