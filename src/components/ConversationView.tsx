@@ -447,7 +447,7 @@ function ConversationDetail({
       id: crypto.randomUUID(),
       japanese: newJp.trim(),
       hiragana: newHira.trim(),
-      romaji: newRomaji.trim(),
+      romaji: (newRomaji || "").trim(),
       vietnamese: newVietnamese.trim(),
       explanation: newExplanation.trim(),
     };

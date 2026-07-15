@@ -291,7 +291,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editData.sentence.trim()) return;
+    if (!(editData.sentence || "").trim()) return;
 
     const currentExample = examples[currentIndex];
 
@@ -302,10 +302,10 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           if (ex.id === currentExample.id) {
             return {
               ...ex,
-              sentence: editData.sentence.trim(),
-              reading: editData.reading.trim(),
-              romaji: editData.romaji.trim(),
-              translation: editData.translation.trim(),
+              sentence: (editData.sentence || "").trim(),
+              reading: (editData.reading || "").trim(),
+              romaji: (editData.romaji || "").trim(),
+              translation: (editData.translation || "").trim(),
             };
           }
           return ex;
@@ -319,10 +319,10 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         if (i === currentIndex) {
           return {
             ...ex,
-            sentence: editData.sentence.trim(),
-            reading: editData.reading.trim(),
-            romaji: editData.romaji.trim(),
-            translation: editData.translation.trim(),
+            sentence: (editData.sentence || "").trim(),
+            reading: (editData.reading || "").trim(),
+            romaji: (editData.romaji || "").trim(),
+            translation: (editData.translation || "").trim(),
           };
         }
         return ex;

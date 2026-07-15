@@ -715,7 +715,7 @@ function StudyView({
 
   // Real-time duplicate detection for adding
   useEffect(() => {
-    if (newSentence.trim()) {
+    if ((newSentence || "").trim()) {
       const existing = word.examples.find(
         (ex) => normalizeSentence(ex.sentence) === normalizeSentence(newSentence)
       );
@@ -791,13 +791,13 @@ function StudyView({
 
   // Real-time duplicate detection for editing
   useEffect(() => {
-    if (editingExampleId && editExampleData && editExampleData.sentence.trim()) {
+    if (editingExampleId && editExampleData && (editExampleData.sentence || "").trim()) {
       const existing = word.examples.find(
         (ex) => ex.id !== editingExampleId && normalizeSentence(ex.sentence) === normalizeSentence(editExampleData.sentence)
       );
       setDuplicateWarningId(existing ? existing.id : null);
     } else {
-      if (!newSentence.trim()) {
+      if (!(newSentence || "").trim()) {
         setDuplicateWarningId(null);
       }
     }
@@ -820,7 +820,7 @@ function StudyView({
 
   const handleEditExampleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editExampleData.sentence.trim() || !editingExampleId) return;
+    if (!(editExampleData.sentence || "").trim() || !editingExampleId) return;
 
     const existingExample = word.examples.find(
       (ex) =>
@@ -837,11 +837,11 @@ function StudyView({
       if (ex.id === editingExampleId) {
         return {
           ...ex,
-          sentence: editExampleData.sentence.trim(),
-          reading: editExampleData.reading.trim(),
-          romaji: editExampleData.romaji.trim(),
-          translation: editExampleData.translation.trim(),
-          specialNote: editExampleData.specialNote.trim(),
+          sentence: (editExampleData.sentence || "").trim(),
+          reading: (editExampleData.reading || "").trim(),
+          romaji: (editExampleData.romaji || "").trim(),
+          translation: (editExampleData.translation || "").trim(),
+          specialNote: (editExampleData.specialNote || "").trim(),
         };
       }
       return ex;
@@ -866,7 +866,7 @@ function StudyView({
 
   const handleAddExample = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSentence.trim()) return;
+    if (!(newSentence || "").trim()) return;
 
     const existingExample = word.examples.find(
       (ex) =>
@@ -880,11 +880,11 @@ function StudyView({
 
     const newExample: IntensiveExample = {
       id: crypto.randomUUID(),
-      sentence: newSentence.trim(),
-      reading: newReading.trim(),
-      romaji: newRomaji.trim(),
-      translation: newTranslation.trim(),
-      specialNote: newSpecialNote.trim(),
+      sentence: (newSentence || "").trim(),
+      reading: (newReading || "").trim(),
+      romaji: (newRomaji || "").trim(),
+      translation: (newTranslation || "").trim(),
+      specialNote: (newSpecialNote || "").trim(),
     };
 
     onUpdateWord(word.id, {
@@ -1256,7 +1256,7 @@ function StudyView({
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="submit"
-                  disabled={!newSentence.trim()}
+                  disabled={!(newSentence || "").trim()}
                   className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
                 >
                   Lưu Ví Dụ
@@ -1434,7 +1434,7 @@ function StudyView({
                               <div className="flex items-center gap-3 pt-2">
                                 <button
                                   type="submit"
-                                  disabled={!editExampleData.sentence.trim()}
+                                  disabled={!(editExampleData.sentence || "").trim()}
                                   className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
                                 >
                                   Lưu
