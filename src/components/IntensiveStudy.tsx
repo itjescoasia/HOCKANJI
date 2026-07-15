@@ -53,6 +53,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { formatCreatedAt } from "../lib/dateUtils";
 
 interface IntensiveStudyProps {
+  onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
   deck: IntensiveWord[];
   mainDeck?: KanjiCard[];
   onAddWord: (word: IntensiveWord) => void;
@@ -1061,11 +1062,21 @@ function StudyView({
               <Edit2 className="w-5 h-5" />
             </button>
 
+
             {/* Main Visual */}
-            <div className="w-32 min-h-[8rem] sm:w-40 sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0 relative group/speaker">
-              <span className="text-2xl sm:text-4xl font-serif text-theme-primary text-center break-words">
+            <div className="w-32 min-h-[8rem] sm:w-40 sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex flex-col items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0 relative group/speaker">
+              <span className="text-2xl sm:text-4xl font-serif text-theme-primary text-center break-words mb-2">
                 {word.word}
               </span>
+              {onStartTopicReview && word.examples.length > 0 && (
+                <button
+                  onClick={() => onStartTopicReview([word])}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary text-theme-base rounded-md text-xs font-bold uppercase tracking-wider hover:bg-theme-accent transition-colors"
+                >
+                  <Eye className="w-3 h-3" />
+                  <span>Ôn câu</span>
+                </button>
+              )}
               <button
                 onClick={(e) => playAudio(e, word.word || word.reading)}
                 className="absolute -right-2 -bottom-2 p-2 bg-theme-panel text-theme-primary/50 hover:text-theme-accent border border-theme-subtle rounded-full shadow-md transition-all opacity-0 group-hover/speaker:opacity-100"

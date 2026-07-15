@@ -8,6 +8,7 @@ interface SentenceReviewProps {
   deck: IntensiveWord[];
   mainDeck?: KanjiCard[];
   mode: "JA_TO_VI" | "VI_TO_JA";
+  forceAll?: boolean;
   onClose: () => void;
   onUpdateWord?: (id: string, updates: Partial<IntensiveWord>) => void;
   onRecordReview?: (isCorrect: boolean) => void;
@@ -22,6 +23,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   deck,
   mainDeck,
   mode,
+  forceAll,
   onClose,
   onUpdateWord,
   onRecordReview,
@@ -55,7 +57,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     });
 
     const now = Date.now();
-    const dueExamples = allExamples.filter((ex) => {
+    const dueExamples = forceAll ? allExamples : allExamples.filter((ex) => {
       const isMastered =
         mode === "VI_TO_JA"
           ? (ex.viToJaMastered ?? ex.mastered)
@@ -465,6 +467,25 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         </span>
         <HighlightProvider>
           <div className="w-full flex flex-col items-center justify-center min-h-[150px]">
+            {mode === "JA_TO_VI" && (
+              <div className="mb-6 opacity-70">
+                <p className="font-serif text-theme-japanese text-lg sm:text-xl mb-2">
+                  {renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)}
+                </p>
+                {currentExample.reading && (
+                  <p className="text-theme-primary/80 text-sm">
+                    <RelatedHighlight text={currentExample.reading} type="hiragana" />
+                  </p>
+                )}
+              </div>
+            )}
+            {mode === "VI_TO_JA" && (
+              <div className="mb-6 opacity-70">
+                <p className="font-serif text-theme-primary text-lg sm:text-xl mb-2">
+                  {currentExample.translation}
+                </p>
+              </div>
+            )}
             <span className="text-xs font-mono text-theme-accent/30 mb-4 block uppercase">
               {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
             </span>

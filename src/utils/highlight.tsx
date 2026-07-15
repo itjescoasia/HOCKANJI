@@ -356,7 +356,51 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {
+
+const suffixes = [
+  "させられませんでした", "させられません", "させられました", "させられる", "させられた", "させられて", "させられない",
+  "させませんでした", "させません", "させました", "させます", "させる", "させた", "させて", "させない",
+  "られませんでした", "られません", "られました", "られます", "られる", "られた", "られて", "られない",
+  "れませんでした", "れません", "れました", "れます", "れる", "れた", "れて", "れない",
+  "ませんでした", "ません", "ました", "ます", "ましょう",
+  "しまいました", "しましょう", "しません", "しました", "します", "しまう", "しまった", "しまって",
+  "いました", "いません", "います", "いる", "いた", "いて", "いない",
+  "ありました", "ありません", "あります", "ある", "あった", "あって",
+  "おきました", "おきません", "おきます", "おく", "おいた", "おいて", "おかない",
+  "みました", "みません", "みます", "みる", "みた", "みて", "みない",
+  "いきました", "いきません", "いきます", "いく", "いった", "いって", "いかない",
+  "きました", "きません", "きます", "くる", "きた", "きて", "こない",
+  "やすいです", "やすい", "やすかった", "やすく",
+  "にくいです", "にくい", "にくかった", "にくく",
+  "すぎます", "すぎました", "すぎません", "すぎる", "すぎた", "すぎて",
+  "なさい", "なさいました", "なさいません", "なさる", "なさった", "なさって",
+  "たいです", "たい", "たかった", "たく", "たくない", "たくありません", "たくなかった", "たくありませんでした",
+  "たがります", "たがりました", "たがりません", "たがる", "たがった", "たがって",
+  "かもしれない", "かもしれません",
+  "でしょう", "だろう", "でしょうか",
+  "らしいです", "らしい", "らしかった", "らしく",
+  "そうです", "そう", "そうだった", "そうに", "そうな",
+  "みたいです", "みたい", "みたいだった", "みたいに", "みたいな",
+  "ではありません", "じゃありません", "ではない", "じゃない",
+  "です", "でした", "だ", "だった",
+  "から", "ので", "のに", "けれども", "けれど", "けど", "が", "と", "ば", "たら", "なら"
+].sort((a, b) => b.length - a.length);
+
+export function trimAuxiliary(text: string) {
+  let changed = true;
+  let result = text;
+  while (changed) {
+    changed = false;
+    for (const suffix of suffixes) {
+      if (result.endsWith(suffix) && result.length > suffix.length) {
+        result = result.substring(0, result.length - suffix.length);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return result;
+}export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {
   if (!example) return [];
 
   const uniqueWords = new Map<string, KanjiCard>();
@@ -507,9 +551,9 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
           newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
         }
         
-        let actualMatchStr = matchStr;
-        // Removed greedy trailing hiragana consumption to prevent over-highlighting (e.g. 分かりにくいです)
-        
+        let actualMatchStr = trimAuxiliary(matchStr);
+        // Avoid trimming entirely, just in case
+        if (!actualMatchStr) actualMatchStr = matchStr;
         
         newTokens.push({ text: actualMatchStr, status, card, matchedForm });
         
@@ -529,9 +573,10 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
       return;
     }
     
-    let targetToHighlight = targetWord;
+    let targetToHighlight = trimAuxiliary(targetWord);
+    if (!targetToHighlight) targetToHighlight = targetWord;
     
-    if (!token.text.includes(targetWord)) {
+    if (!token.text.includes(targetToHighlight)) {
        // Try removing trailing okurigana
        const stem = targetWord.replace(/[ぁ-ん]+$/, '');
        if (stem && stem !== targetWord && /[\u4e00-\u9faf々]/.test(stem) && token.text.includes(stem)) {
@@ -547,17 +592,24 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
 
     if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
       const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${safeStem})`, 'g');
+      const regex = new RegExp(`(\${safeStem}[ぁ-ん]*)`, 'g');
       const parts = token.text.split(regex);
       parts.forEach((part) => {
         if (part.length > 0) {
           if (part.startsWith(targetToHighlight)) {
-            newTokens.push({ text: part, status: 'target', card: targetWordCard });
+            let trimmed = trimAuxiliary(part);
+            if (!trimmed) trimmed = part;
+            newTokens.push({ text: trimmed, status: 'target', card: targetWordCard });
+            const remainder = part.substring(trimmed.length);
+            if (remainder.length > 0) {
+              newTokens.push({ text: remainder, status: 'neutral' });
+            }
           } else {
             newTokens.push({ text: part, status: 'neutral' });
           }
         }
       });
+
     } else if (token.text.includes(targetToHighlight)) {
       const parts = token.text.split(targetToHighlight);
       parts.forEach((part, i) => {

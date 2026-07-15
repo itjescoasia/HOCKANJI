@@ -85,6 +85,10 @@ export default function App() {
   const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
   const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);
   const [sentenceReviewMode, setSentenceReviewMode] = useState<'JA_TO_VI' | 'VI_TO_JA'>('JA_TO_VI');
+  const [sentenceReviewTargetDeck, setSentenceReviewTargetDeck] = useState<any[] | null>(null);
+  const [sentenceReviewForceAll, setSentenceReviewForceAll] = useState(false);
+  const [isSentenceReviewOpen, setIsSentenceReviewOpen] = useState(false);
+
   const [listSearchQuery, setListSearchQuery] = useState('');
   const [editCardReq, setEditCardReq] = useState<{id: string, ts: number} | null>(null);
 
@@ -217,9 +221,11 @@ export default function App() {
     setView('short_study');
   };
 
-  const handleStartSentenceReview = (mode: 'JA_TO_VI' | 'VI_TO_JA') => {
+  const handleStartSentenceReview = (mode: 'JA_TO_VI' | 'VI_TO_JA', targetDeck: any[] | null = null, forceAll: boolean = false) => {
     setSentenceReviewMode(mode);
-    setView('sentence_review');
+    setSentenceReviewTargetDeck(targetDeck);
+    setSentenceReviewForceAll(forceAll);
+    setIsSentenceReviewOpen(true);
   };
 
   const handleFreeStudyReview = (id: string, isRemember: boolean) => {
@@ -419,6 +425,7 @@ export default function App() {
             onRemoveWord={removeIntensiveWord}
             onUpdateWord={updateIntensiveWord}
             onReorderDeck={reorderIntensiveWords}
+            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, true)}
           />
         )}
         
@@ -433,18 +440,7 @@ export default function App() {
           </div>
         )}
 
-        {view === 'sentence_review' && (
-          <div className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
-            <SentenceReview
-              deck={intensiveDeck}
-              mainDeck={deck}
-              mode={sentenceReviewMode}
-              onClose={() => setView('dashboard')}
-              onUpdateWord={updateIntensiveWord}
-              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
-            />
-          </div>
-        )}
+
 
         {view === 'conversation' && (
           <ConversationView
@@ -454,6 +450,7 @@ export default function App() {
             onUpdateConversation={updateConversation}
             onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             mainDeck={deck}
+            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, true)}
           />
         )}
       </main>
@@ -471,6 +468,20 @@ export default function App() {
           onUpdateCard={updateCard}
         />
       )}
+
+        {isSentenceReviewOpen && (
+          <div className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
+            <SentenceReview
+              deck={sentenceReviewTargetDeck || intensiveDeck}
+              mainDeck={deck}
+              mode={sentenceReviewMode}
+              forceAll={sentenceReviewForceAll}
+              onClose={() => setIsSentenceReviewOpen(false)}
+              onUpdateWord={updateIntensiveWord}
+              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+            />
+          </div>
+        )}
     </div>
   );
 }

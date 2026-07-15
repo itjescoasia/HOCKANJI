@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -24,6 +24,7 @@ interface ConversationViewProps {
   onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
   onRecordReview?: (isCorrect: boolean) => void;
   mainDeck: KanjiCard[];
+  onStartTopicReview?: (topicDeck: any[]) => void;
 }
 
 export default function ConversationView({
@@ -35,6 +36,7 @@ export default function ConversationView({
   onReviewCard,
   onRecordReview,
   mainDeck,
+  onStartTopicReview,
 }: ConversationViewProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "detail">("list");
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -141,6 +143,7 @@ export default function ConversationView({
         onReviewCard={onReviewCard}
         onRecordReview={onRecordReview}
         mainDeck={mainDeck}
+        onStartTopicReview={onStartTopicReview}
       />
     );
   }
@@ -263,6 +266,7 @@ function ConversationDetail({
   onReviewCard,
   onRecordReview,
   mainDeck,
+  onStartTopicReview,
 }: {
   conversation: Conversation;
   onBack: () => void;
@@ -271,6 +275,7 @@ function ConversationDetail({
   onReviewCard?: (id: string, grade: 'forgot' | 'hard' | 'good' | 'easy') => void;
   onRecordReview?: (isCorrect: boolean) => void;
   mainDeck: KanjiCard[];
+  onStartTopicReview?: (topicDeck: any[]) => void;
 }) {
   const [newJp, setNewJp] = useState("");
   const [newHira, setNewHira] = useState("");
@@ -600,6 +605,33 @@ function ConversationDetail({
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
+            {onStartTopicReview && conversation.dialogues.length > 0 && (
+              <button
+                onClick={() => {
+                  const topicDeck = [{
+                    id: conversation.id,
+                    word: conversation.title,
+                    reading: '',
+                    category: 'Conversation',
+                    explanation: conversation.description || '',
+                    createdAt: conversation.createdAt,
+                    examples: conversation.dialogues.map(d => ({
+                      id: d.id,
+                      sentence: d.japanese,
+                      reading: d.hiragana,
+                      romaji: d.romaji,
+                      translation: d.vietnamese,
+                      specialNote: d.explanation
+                    }))
+                  }];
+                  onStartTopicReview(topicDeck);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary text-theme-base rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-theme-accent transition-colors shrink-0"
+              >
+                <Eye className="w-3 h-3" />
+                <span>Ôn câu ví dụ</span>
+              </button>
+            )}
             <div className="flex bg-theme-base border border-theme-subtle rounded p-0.5 gap-0.5 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setViewMode("list")}
