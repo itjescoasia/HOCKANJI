@@ -452,57 +452,11 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
      targetWordCard = mainDeck?.find(c => c.kanji === targetWord || c.reading === targetWord) || fallbackTargetCard;
   }
 
-  const newTokens: typeof tokens = [];
-  tokens.forEach(token => {
-    if (token.status !== 'neutral' || !targetWord) {
-      newTokens.push(token);
-      return;
-    }
-    
-    let targetToHighlight = targetWord;
-    
-    if (!token.text.includes(targetWord)) {
-       // Try removing trailing okurigana
-       const stem = targetWord.replace(/[ぁ-ん]+$/, '');
-       if (stem && stem !== targetWord && /[\u4e00-\u9faf々]/.test(stem) && token.text.includes(stem)) {
-           targetToHighlight = stem;
-       } else {
-           const kanjiChars = targetWord.match(/[\u4e00-\u9faf]+/g);
-           if (kanjiChars && kanjiChars.length > 0) {
-               const justKanji = kanjiChars.join('');
-               targetToHighlight = token.text.includes(justKanji) ? justKanji : kanjiChars[0];
-           }
-       }
-    }
-
-    if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
-      const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${safeStem}[ぁ-ん]*)`, 'g');
-      const parts = token.text.split(regex);
-      parts.forEach((part) => {
-        if (part.length > 0) {
-          if (part.startsWith(targetToHighlight)) {
-            newTokens.push({ text: part, status: 'target', card: targetWordCard });
-          } else {
-            newTokens.push({ text: part, status: 'neutral' });
-          }
-        }
-      });
-    } else if (token.text.includes(targetToHighlight)) {
-      const parts = token.text.split(targetToHighlight);
-      parts.forEach((part, i) => {
-        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
-        if (i < parts.length - 1) newTokens.push({ text: targetToHighlight, status: 'target', card: targetWordCard });
-      });
-    } else {
-      newTokens.push(token);
-    }
-  });
-  tokens = newTokens;
-
   uniqueCandidates.forEach(({ matchStr, card, isStem, matchedForm }) => {
     let status: 'good' | 'bad' | 'neutral' | 'new' | 'target' = 'good';
-    if (vocabScores && vocabScores[card.id] !== undefined) {
+    if (targetWord && (card.kanji === targetWord || card.reading === targetWord || card.id === targetWordCard?.id)) {
+      status = 'target';
+    } else if (vocabScores && vocabScores[card.id] !== undefined) {
       const score = vocabScores[card.id];
       if (score < 0) {
         status = 'bad';
@@ -567,6 +521,54 @@ export const tokenizeExampleText = (example: string, targetWord: string, mainDec
   });
 
   
+
+  const newTokens: typeof tokens = [];
+  tokens.forEach(token => {
+    if (token.status !== 'neutral' || !targetWord) {
+      newTokens.push(token);
+      return;
+    }
+    
+    let targetToHighlight = targetWord;
+    
+    if (!token.text.includes(targetWord)) {
+       // Try removing trailing okurigana
+       const stem = targetWord.replace(/[ぁ-ん]+$/, '');
+       if (stem && stem !== targetWord && /[\u4e00-\u9faf々]/.test(stem) && token.text.includes(stem)) {
+           targetToHighlight = stem;
+       } else {
+           const kanjiChars = targetWord.match(/[\u4e00-\u9faf]+/g);
+           if (kanjiChars && kanjiChars.length > 0) {
+               const justKanji = kanjiChars.join('');
+               targetToHighlight = token.text.includes(justKanji) ? justKanji : kanjiChars[0];
+           }
+       }
+    }
+
+    if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
+      const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${safeStem})`, 'g');
+      const parts = token.text.split(regex);
+      parts.forEach((part) => {
+        if (part.length > 0) {
+          if (part.startsWith(targetToHighlight)) {
+            newTokens.push({ text: part, status: 'target', card: targetWordCard });
+          } else {
+            newTokens.push({ text: part, status: 'neutral' });
+          }
+        }
+      });
+    } else if (token.text.includes(targetToHighlight)) {
+      const parts = token.text.split(targetToHighlight);
+      parts.forEach((part, i) => {
+        if (part.length > 0) newTokens.push({ text: part, status: 'neutral' });
+        if (i < parts.length - 1) newTokens.push({ text: targetToHighlight, status: 'target', card: targetWordCard });
+      });
+    } else {
+      newTokens.push(token);
+    }
+  });
+  tokens = newTokens;
 
   const cardCounts = new Map<string, number>();
   tokens.forEach(token => {

@@ -43,13 +43,30 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
   ]
 }`;
       
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: 'gemini-3.5-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          }
+        });
+      } catch (error: any) {
+        const errorMsg = error.message || '';
+        if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
+           console.log('gemini-3.5-flash is overloaded (503), falling back to gemini-3.1-flash-lite...');
+           response = await ai.models.generateContent({
+             model: 'gemini-3.1-flash-lite',
+             contents: prompt,
+             config: {
+               responseMimeType: 'application/json',
+             }
+           });
+        } else {
+           throw error;
         }
-      });
+      }
 
       const text = response.text || '';
       res.json(JSON.parse(text));
