@@ -11,6 +11,7 @@ interface ShortStudySessionProps {
 }
 
 interface ShortStudyCardProps {
+  key?: React.Key;
   currentWord: KanjiCard;
   onForgot: () => void;
   onRemember: () => void;

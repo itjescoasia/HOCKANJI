@@ -593,7 +593,7 @@ export default function IntensiveStudy({
 
                 return (
                   <button
-                    key={word.id}
+                    key={word.id || Math.random().toString()}
                     onClick={() => {
                       setSelectedWordId(word.id);
                       setTargetExampleId(matchedExample?.id || null);
@@ -661,7 +661,7 @@ export default function IntensiveStudy({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredDeck.map((word) => (
                 <SortableWordItem
-                  key={word.id}
+                  key={word.id || Math.random().toString()}
                   word={word}
                   searchQuery={searchQuery}
                   onRemoveWord={onRemoveWord}
@@ -1294,7 +1294,7 @@ function StudyView({
                 {word.examples.map((ex, index) => (
                   <Draggable
                     // @ts-ignore
-                    key={ex.id}
+                    key={ex.id || 'ex-' + index}
                     draggableId={ex.id}
                     index={index}
                     isDragDisabled={editingExampleId === ex.id}
@@ -1636,7 +1636,7 @@ function StudyView({
               ) : (
                 deck.filter(w => w.id !== word.id).map(w => (
                   <button
-                    key={w.id}
+                    key={w.id || Math.random().toString()}
                     onClick={() => {
                       onCopyExample(copyingExample, w.id);
                       setCopyingExample(null);
