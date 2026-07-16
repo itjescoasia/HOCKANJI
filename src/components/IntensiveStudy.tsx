@@ -86,7 +86,7 @@ function SortableWordItem({
   onRemoveWord: (id: string) => void;
   onSelectWord: (id: string) => void;
 }) {
-  const isDragDisabled = !!searchQuery.trim();
+  const isDragDisabled = !!String(searchQuery || "").trim();
   const {
     attributes,
     listeners,
@@ -192,7 +192,7 @@ function SortableWordItem({
 }
 
 const SearchHighlight = ({ text, query }: { text: string, query: string }) => {
-  if (!query.trim() || !text) return <Fragment>{text}</Fragment>;
+  if (!String(query || "").trim() || !text) return <Fragment>{text}</Fragment>;
   
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
   const parts = text.split(regex);
@@ -201,9 +201,9 @@ const SearchHighlight = ({ text, query }: { text: string, query: string }) => {
     <Fragment>
       {parts.map((part, i) => 
         part.toLowerCase() === query.toLowerCase() ? (
-          <span key={i} className="bg-theme-accent/20 text-theme-accent px-0.5 rounded font-medium">{part}</span>
+          <span key={i + '-' + part} className="bg-theme-accent/20 text-theme-accent px-0.5 rounded font-medium">{part}</span>
         ) : (
-          <span key={i}>{part}</span>
+          <span key={i + '-' + part}>{part}</span>
         )
       )}
     </Fragment>
@@ -217,6 +217,7 @@ export default function IntensiveStudy({
   onRemoveWord,
   onUpdateWord,
   onReorderDeck,
+  onStartTopicReview,
 }: IntensiveStudyProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "study">("list");
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
@@ -259,7 +260,7 @@ export default function IntensiveStudy({
   );
 
   const filteredDeck = React.useMemo(() => {
-    const q = searchQuery.trim();
+    const q = String(searchQuery || "").trim();
     if (!q) return deck;
     
     let results = fuse.search(q).map((result) => result.item);
@@ -335,7 +336,7 @@ export default function IntensiveStudy({
 
     if (over && active.id !== over.id) {
       if (!onReorderDeck) return;
-      if (searchQuery.trim()) return;
+      if (String(searchQuery || "").trim()) return;
 
       const oldIndex = deck.findIndex((item) => item.id === active.id);
       const newIndex = deck.findIndex((item) => item.id === over.id);
@@ -353,15 +354,15 @@ export default function IntensiveStudy({
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWordData.word.trim()) return;
+    if (!String(newWordData.word || "").trim()) return;
 
     const newWord: IntensiveWord = {
       id: crypto.randomUUID(),
-      word: newWordData.word.trim(),
-      reading: newWordData.reading.trim(),
-      romaji: newWordData.romaji.trim(),
+      word: String(newWordData.word || "").trim(),
+      reading: String(newWordData.reading || "").trim(),
+      romaji: String(newWordData.romaji || "").trim(),
       category: newWordData.category,
-      explanation: newWordData.explanation.trim(),
+      explanation: String(newWordData.explanation || "").trim(),
       examples: [],
       createdAt: Date.now(),
     };
@@ -511,7 +512,7 @@ export default function IntensiveStudy({
 
             <button
               type="submit"
-              disabled={!newWordData.word.trim()}
+              disabled={!String(newWordData.word || "").trim()}
               className="mt-4 bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-3 rounded uppercase tracking-widest text-sm transition-all"
             >
               Tạo Chuyên Đề
@@ -546,6 +547,7 @@ export default function IntensiveStudy({
         }}
         onUpdateWord={onUpdateWord}
         renderHighlight={renderExampleHighlight}
+        onStartTopicReview={onStartTopicReview}
       />
     );
   }
@@ -577,7 +579,7 @@ export default function IntensiveStudy({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-theme-panel border border-theme-subtle rounded pl-10 pr-4 py-3 text-base sm:text-sm focus:outline-none focus:border-theme-accent transition-colors"
           />
-          {searchQuery.trim() && filteredDeck.length > 0 && (
+          {String(searchQuery || "").trim() && filteredDeck.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-theme-panel border border-theme-subtle rounded-lg shadow-xl z-50 max-h-[60vh] overflow-y-auto">
               {filteredDeck.slice(0, 10).map((word) => {
                 const query = searchQuery.toLowerCase();
@@ -655,8 +657,8 @@ export default function IntensiveStudy({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <SortableContext items={filteredDeck.map(w => w.id)} strategy={rectSortingStrategy}>
+          <SortableContext items={filteredDeck.map(w => w.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredDeck.map((word) => (
                 <SortableWordItem
                   key={word.id}
@@ -669,8 +671,8 @@ export default function IntensiveStudy({
                   }}
                 />
               ))}
-            </SortableContext>
-          </div>
+            </div>
+          </SortableContext>
         </DndContext>
       )}
     </div>
@@ -685,6 +687,7 @@ function StudyView({
   onBack,
   onUpdateWord,
   renderHighlight,
+  onStartTopicReview,
 }: {
   deck: IntensiveWord[];
   word: IntensiveWord;
@@ -693,6 +696,7 @@ function StudyView({
   onBack: () => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
   renderHighlight: (text: string, kanji: string) => React.ReactNode;
+  onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
 }) {
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
   const [copyingExample, setCopyingExample] = useState<IntensiveExample | null>(null);
@@ -715,7 +719,7 @@ function StudyView({
 
   // Real-time duplicate detection for adding
   useEffect(() => {
-    if ((newSentence || "").trim()) {
+    if (String(newSentence || "").trim()) {
       const existing = word.examples.find(
         (ex) => normalizeSentence(ex.sentence) === normalizeSentence(newSentence)
       );
@@ -791,13 +795,13 @@ function StudyView({
 
   // Real-time duplicate detection for editing
   useEffect(() => {
-    if (editingExampleId && editExampleData && (editExampleData.sentence || "").trim()) {
+    if (editingExampleId && editExampleData && String(editExampleData.sentence || "").trim()) {
       const existing = word.examples.find(
         (ex) => ex.id !== editingExampleId && normalizeSentence(ex.sentence) === normalizeSentence(editExampleData.sentence)
       );
       setDuplicateWarningId(existing ? existing.id : null);
     } else {
-      if (!(newSentence || "").trim()) {
+      if (!String(newSentence || "").trim()) {
         setDuplicateWarningId(null);
       }
     }
@@ -820,7 +824,7 @@ function StudyView({
 
   const handleEditExampleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(editExampleData.sentence || "").trim() || !editingExampleId) return;
+    if (!String(editExampleData.sentence || "").trim() || !editingExampleId) return;
 
     const existingExample = word.examples.find(
       (ex) =>
@@ -837,11 +841,11 @@ function StudyView({
       if (ex.id === editingExampleId) {
         return {
           ...ex,
-          sentence: (editExampleData.sentence || "").trim(),
-          reading: (editExampleData.reading || "").trim(),
-          romaji: (editExampleData.romaji || "").trim(),
-          translation: (editExampleData.translation || "").trim(),
-          specialNote: (editExampleData.specialNote || "").trim(),
+          sentence: String(editExampleData.sentence || "").trim(),
+          reading: String(editExampleData.reading || "").trim(),
+          romaji: String(editExampleData.romaji || "").trim(),
+          translation: String(editExampleData.translation || "").trim(),
+          specialNote: String(editExampleData.specialNote || "").trim(),
         };
       }
       return ex;
@@ -853,20 +857,20 @@ function StudyView({
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editWordData.word.trim()) return;
+    if (!String(editWordData.word || "").trim()) return;
     onUpdateWord(word.id, {
-      word: editWordData.word.trim(),
-      reading: editWordData.reading.trim(),
-      romaji: editWordData.romaji.trim(),
+      word: String(editWordData.word || "").trim(),
+      reading: String(editWordData.reading || "").trim(),
+      romaji: String(editWordData.romaji || "").trim(),
       category: editWordData.category,
-      explanation: editWordData.explanation.trim(),
+      explanation: String(editWordData.explanation || "").trim(),
     });
     setIsEditing(false);
   };
 
   const handleAddExample = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(newSentence || "").trim()) return;
+    if (!String(newSentence || "").trim()) return;
 
     const existingExample = word.examples.find(
       (ex) =>
@@ -880,11 +884,11 @@ function StudyView({
 
     const newExample: IntensiveExample = {
       id: crypto.randomUUID(),
-      sentence: (newSentence || "").trim(),
-      reading: (newReading || "").trim(),
-      romaji: (newRomaji || "").trim(),
-      translation: (newTranslation || "").trim(),
-      specialNote: (newSpecialNote || "").trim(),
+      sentence: String(newSentence || "").trim(),
+      reading: String(newReading || "").trim(),
+      romaji: String(newRomaji || "").trim(),
+      translation: String(newTranslation || "").trim(),
+      specialNote: String(newSpecialNote || "").trim(),
     };
 
     onUpdateWord(word.id, {
@@ -1027,7 +1031,7 @@ function StudyView({
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="submit"
-                  disabled={!editWordData.word.trim()}
+                  disabled={!String(editWordData.word || "").trim()}
                   className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
                 >
                   Lưu Thay Đổi
@@ -1256,7 +1260,7 @@ function StudyView({
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="submit"
-                  disabled={!(newSentence || "").trim()}
+                  disabled={!String(newSentence || "").trim()}
                   className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
                 >
                   Lưu Ví Dụ
@@ -1434,7 +1438,7 @@ function StudyView({
                               <div className="flex items-center gap-3 pt-2">
                                 <button
                                   type="submit"
-                                  disabled={!(editExampleData.sentence || "").trim()}
+                                  disabled={!String(editExampleData.sentence || "").trim()}
                                   className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 rounded uppercase tracking-widest text-sm transition-all"
                                 >
                                   Lưu

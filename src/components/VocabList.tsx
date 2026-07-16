@@ -176,32 +176,32 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const saveEdit = () => {
     if (editingId && editForm.kanji && editForm.meaning && onUpdate) {
       
-      const validExamples = editForm.examples?.filter(ex => ex.sentence.trim() || ex.translation.trim()).map(ex => ({
+      const validExamples = editForm.examples?.filter(ex => String(ex.sentence || "").trim() || String(ex.translation || "").trim()).map(ex => ({
         id: ex.id || crypto.randomUUID(),
-        sentence: ex.sentence.trim(),
-        reading: ex.reading?.trim() || '',
-        romaji: ex.romaji?.trim() || '',
-        translation: ex.translation.trim()
+        sentence: String(ex.sentence || "").trim(),
+        reading: String(ex.reading || "").trim() || '',
+        romaji: String(ex.romaji || "").trim() || '',
+        translation: String(ex.translation || "").trim()
       })) || [];
         
-      const validForms = editForm.forms?.filter(f => f.name.trim() && f.value.trim()).map(f => ({
+      const validForms = editForm.forms?.filter(f => String(f.name || "").trim() && String(f.value || "").trim()).map(f => ({
         id: f.id || crypto.randomUUID(),
-        name: f.name.trim(), reading: f.reading?.trim() || "", romaji: f.romaji?.trim() || "", meaning: f.meaning?.trim() || "",
-        value: f.value.trim()
+        name: String(f.name || "").trim(), reading: String(f.reading || "").trim() || "", romaji: String(f.romaji || "").trim() || "", meaning: String(f.meaning || "").trim() || "",
+        value: String(f.value || "").trim()
       })) || [];
         
       onUpdate(editingId, {
-        kanji: editForm.kanji.trim(),
-        reading: editForm.reading?.trim() || '',
-        romaji: editForm.romaji?.trim() || '',
-        sinoVietnamese: editForm.sinoVietnamese?.trim() || '',
-        kanjiExplanation: editForm.kanjiExplanation?.trim() || '',
-        meaning: editForm.meaning.trim(),
-        example: editForm.example?.trim() || '',
-        exampleTranslation: editForm.exampleTranslation?.trim() || '',
+        kanji: String(editForm.kanji || "").trim(),
+        reading: String(editForm.reading || "").trim() || '',
+        romaji: String(editForm.romaji || "").trim() || '',
+        sinoVietnamese: String(editForm.sinoVietnamese || "").trim() || '',
+        kanjiExplanation: String(editForm.kanjiExplanation || "").trim() || '',
+        meaning: String(editForm.meaning || "").trim(),
+        example: String(editForm.example || "").trim() || '',
+        exampleTranslation: String(editForm.exampleTranslation || "").trim() || '',
         examples: validExamples,
         forms: validForms,
-        wordType: editForm.wordType?.trim() || ''
+        wordType: String(editForm.wordType || "").trim() || ''
       });
       setEditingId(null);
     }
@@ -213,7 +213,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const filteredDeck = deck.filter(c => {
-    const searchLower = search.trim().toLowerCase();
+    const searchLower = String(search || "").trim().toLowerCase();
     if (!searchLower) return filterType === 'all' || c.wordType === filterType;
 
     const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';

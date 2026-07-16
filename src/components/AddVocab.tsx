@@ -17,7 +17,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
   const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
-  const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string}[]>([]);
+  const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string, meaning: string}[]>([]);
   const [wordType, setWordType] = useState('');
   
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -32,84 +32,6 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   }, [kanji, deck]);
 
   
-  const [isFetchingOjad, setIsFetchingOjad] = useState(false);
-
-  const fetchOjadData = async (overrideMeaning?: string) => {
-    if (!kanji.trim()) {
-      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
-      return;
-    }
-    try {
-      setIsFetchingOjad(true);
-      const res = await fetch(`/api/ojad?word=${encodeURIComponent(kanji.trim())}`);
-      if (!res.ok) throw new Error('Không thể lấy dữ liệu OJAD');
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-         const result = data.results[0];
-         let updatedForms = [...forms];
-         const ojadForms = result.forms;
-         
-         const baseMeaning = (overrideMeaning !== undefined ? overrideMeaning : meaning).trim();
-         const getFormMeaning = (formName: string, base: string) => {
-            if (!base) return '';
-            const lowerBase = base.toLowerCase();
-            if (formName.includes('thể た')) return `đã ${lowerBase}`;
-            if (formName.includes('thể ない')) return `không ${lowerBase}`;
-            if (formName.includes('thể ば')) return `nếu ${lowerBase}`;
-            if (formName.includes('sai khiến')) return `bắt / cho phép ${lowerBase}`;
-            if (formName.includes('bị động') && !formName.includes('sai khiến')) return `bị / được ${lowerBase}`;
-            if (formName.includes('mệnh lệnh')) return `hãy ${lowerBase} (ra lệnh)`;
-            if (formName.includes('khả năng')) return `có thể ${lowerBase}`;
-            if (formName.includes('thể よう')) return `hãy cùng / định ${lowerBase}`;
-            if (formName.includes('thể て')) return `${lowerBase} rồi...`;
-            return '';
-         };
-         
-         // Setup standard forms if empty
-         if (updatedForms.length === 0) {
-            updatedForms = [
-              { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '' },
-              { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '' },
-              { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '' },
-              { name: 'Thể て', value: '', reading: '', romaji: '' },
-              { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '' },
-              { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '' },
-              { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '' },
-              { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '' },
-              { name: 'Thể khả năng', value: '', reading: '', romaji: '' },
-              { name: 'Thể bị động', value: '', reading: '', romaji: '' },
-              { name: 'Thể sai khiến', value: '', reading: '', romaji: '' },
-              { name: 'Thể điều kiện (thể ば)', value: '', reading: '', romaji: '' }
-            ];
-         }
-         
-         ojadForms.forEach((f: any) => {
-            const romajiValue = f.reading ? toRomaji(f.reading) : '';
-            const formMeaning = getFormMeaning(f.name, baseMeaning);
-            
-            const existingIdx = updatedForms.findIndex(uf => uf.name === f.name);
-            if (existingIdx !== -1) {
-                updatedForms[existingIdx].value = f.value;
-                updatedForms[existingIdx].reading = f.reading;
-                updatedForms[existingIdx].romaji = romajiValue;
-                updatedForms[existingIdx].meaning = formMeaning;
-            } else {
-                updatedForms.push({ name: f.name, value: f.value, reading: f.reading, romaji: romajiValue, meaning: formMeaning });
-            }
-         });
-         
-         setForms(updatedForms);
-      } else {
-         alert('Không tìm thấy dữ liệu OJAD cho từ này.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Lỗi kết nối hoặc lấy dữ liệu OJAD.');
-    } finally {
-      setIsFetchingOjad(false);
-    }
-  };
-
   const autoFillAI = async () => {
     if (!kanji.trim()) {
       alert('Vui lòng nhập từ tiếng Nhật vào ô Kanji (Từ vựng) trước khi dùng AI tự động điền.');
@@ -142,11 +64,18 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           translation: ex.translation || ''
         })));
       }
+      if (data.forms && Array.isArray(data.forms) && data.forms.length > 0) {
+        setForms(data.forms.map((f: any) => ({
+          name: f.name || '',
+          value: f.value || '',
+          reading: f.reading || '',
+          romaji: f.romaji || '',
+          meaning: f.meaning || ''
+        })));
+      }
+
       if (data.wordType) {
          setWordType(data.wordType);
-         if (data.wordType.includes('Động từ')) {
-           fetchOjadData(data.meaning);
-         }
       }
     } catch (err: any) {
       console.error(err);
@@ -165,15 +94,15 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '' },
           { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '' },
           { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '' },
-          { name: 'Thể て', value: '', reading: '', romaji: '' },
+          { name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '' },
           { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '' },
-          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '' },
+          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '' },
-          { name: 'Thể khả năng', value: '', reading: '', romaji: '' },
-          { name: 'Thể sai khiến', value: '', reading: '', romaji: '' },
-          { name: 'Thể bị động', value: '', reading: '', romaji: '' },
-          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '' }
+          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' }
         ]);
       }
     }
@@ -202,7 +131,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
 
     const validForms = forms.filter(f => f.name.trim() && f.value.trim()).map(f => ({
       id: crypto.randomUUID(),
-      name: f.name.trim(), reading: f.reading?.trim(), romaji: f.romaji?.trim(),
+      name: f.name.trim(), reading: String(f.reading || "").trim(), romaji: String(f.romaji || "").trim(), meaning: String(f.meaning || "").trim(),
       value: f.value.trim()
     }));
     
@@ -372,20 +301,11 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80">{formsLabel}</label>
-                  {isVerbs && (
-                    <button
-                      type="button"
-                      onClick={fetchOjadData}
-                      disabled={isFetchingOjad}
-                      className="text-[10px] bg-[#1a5f7a] text-white px-2 py-1 rounded-sm hover:bg-[#227b9e] transition-colors disabled:opacity-50 tracking-wider uppercase font-bold"
-                    >
-                      {isFetchingOjad ? 'Đang lấy OJAD...' : 'Lấy từ OJAD'}
-                    </button>
-                  )}
+                  
                 </div>
                 <button 
                   type="button" 
-                  onClick={() => setForms([...forms, { name: '', value: '' }])}
+                  onClick={() => setForms([...forms, { name: '', value: '', reading: '', romaji: '', meaning: '' }])}
                   className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
                   title="Thêm thể"
                 >

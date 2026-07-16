@@ -291,7 +291,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(editData.sentence || "").trim()) return;
+    if (!String(editData.sentence || "").trim()) return;
 
     const currentExample = examples[currentIndex];
 
@@ -302,10 +302,10 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           if (ex.id === currentExample.id) {
             return {
               ...ex,
-              sentence: (editData.sentence || "").trim(),
-              reading: (editData.reading || "").trim(),
-              romaji: (editData.romaji || "").trim(),
-              translation: (editData.translation || "").trim(),
+              sentence: String(editData.sentence || "").trim(),
+              reading: String(editData.reading || "").trim(),
+              romaji: String(editData.romaji || "").trim(),
+              translation: String(editData.translation || "").trim(),
             };
           }
           return ex;
@@ -319,10 +319,10 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         if (i === currentIndex) {
           return {
             ...ex,
-            sentence: (editData.sentence || "").trim(),
-            reading: (editData.reading || "").trim(),
-            romaji: (editData.romaji || "").trim(),
-            translation: (editData.translation || "").trim(),
+            sentence: String(editData.sentence || "").trim(),
+            reading: String(editData.reading || "").trim(),
+            romaji: String(editData.romaji || "").trim(),
+            translation: String(editData.translation || "").trim(),
           };
         }
         return ex;
@@ -390,7 +390,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     >
       {/* Front */}
       <div 
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center justify-center text-center group overflow-y-auto ${showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center group overflow-y-auto ${showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
       >
         <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/30">
@@ -435,7 +435,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           </form>
         ) : (
           <HighlightProvider>
-            <div className="mb-8 mt-4">
+            <div className="mb-8 mt-4 my-auto">
               <p
                 className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
               >
@@ -459,14 +459,14 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
       {/* Back */}
       <div 
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center justify-center text-center group overflow-y-auto ${!showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center group overflow-y-auto ${!showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
       >
         <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/30">
           {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
         </span>
         <HighlightProvider>
-          <div className="w-full flex flex-col items-center justify-center min-h-[150px]">
+          <div className="w-full flex flex-col items-center justify-center min-h-[150px] my-auto">
             {mode === "JA_TO_VI" && (
               <div className="mb-6 opacity-70">
                 <p className="font-serif text-theme-japanese text-lg sm:text-xl mb-2">

@@ -64,11 +64,11 @@ export default function ConversationView({
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!String(newTitle || "").trim()) return;
     const newConv: Conversation = {
       id: crypto.randomUUID(),
-      title: newTitle.trim(),
-      description: newDescription.trim(),
+      title: String(newTitle || "").trim(),
+      description: String(newDescription || "").trim(),
       dialogues: [],
       createdAt: Date.now(),
     };
@@ -119,7 +119,7 @@ export default function ConversationView({
             </div>
             <button
               type="submit"
-              disabled={!newTitle.trim()}
+              disabled={!String(newTitle || "").trim()}
               className="mt-4 bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-3 px-6 uppercase tracking-widest text-sm transition-all text-center"
             >
               Tạo chủ đề
@@ -290,7 +290,7 @@ function ConversationDetail({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (newJp.trim()) {
+    if (String(newJp || "").trim()) {
       const existing = conversation.dialogues.find(
         (d) => normalizeSentence(d.japanese) === normalizeSentence(newJp)
       );
@@ -308,13 +308,13 @@ function ConversationDetail({
   const [editExplanation, setEditExplanation] = useState("");
 
   useEffect(() => {
-    if (editingId && editJp.trim()) {
+    if (editingId && String(editJp || "").trim()) {
       const existing = conversation.dialogues.find(
         (d) => d.id !== editingId && normalizeSentence(d.japanese) === normalizeSentence(editJp)
       );
       setDuplicateWarningId(existing ? existing.id : null);
     } else {
-      if (!newJp.trim()) {
+      if (!String(newJp || "").trim()) {
         setDuplicateWarningId(null);
       }
     }
@@ -331,7 +331,7 @@ function ConversationDetail({
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   const handleSaveMetadata = () => {
-    if (!editTitle.trim()) return;
+    if (!String(editTitle || "").trim()) return;
     onUpdate(conversation.id, { title: editTitle, description: editDescription });
     setIsEditingMetadata(false);
   };
@@ -432,7 +432,7 @@ function ConversationDetail({
 
   const handleAddDialogue = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newJp.trim()) return;
+    if (!String(newJp || "").trim()) return;
 
     const existingDialogue = conversation.dialogues.find(
       (d) => normalizeSentence(d.japanese) === normalizeSentence(newJp)
@@ -445,11 +445,11 @@ function ConversationDetail({
 
     const newDialogue: DialogueSentence = {
       id: crypto.randomUUID(),
-      japanese: newJp.trim(),
-      hiragana: newHira.trim(),
-      romaji: (newRomaji || "").trim(),
-      vietnamese: newVietnamese.trim(),
-      explanation: newExplanation.trim(),
+      japanese: String(newJp || "").trim(),
+      hiragana: String(newHira || "").trim(),
+      romaji: String(newRomaji || "").trim(),
+      vietnamese: String(newVietnamese || "").trim(),
+      explanation: String(newExplanation || "").trim(),
     };
 
     onUpdate(conversation.id, {
@@ -482,7 +482,7 @@ function ConversationDetail({
 
   const handleUpdateDialogue = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editJp.trim() || !editingId) return;
+    if (!String(editJp || "").trim() || !editingId) return;
 
     const existingDialogue = conversation.dialogues.find(
       (d) => d.id !== editingId && normalizeSentence(d.japanese) === normalizeSentence(editJp)
@@ -498,11 +498,11 @@ function ConversationDetail({
         d.id === editingId 
           ? {
               ...d,
-              japanese: editJp.trim(),
-              hiragana: editHira.trim(),
-              romaji: editRomaji.trim(),
-              vietnamese: editVietnamese.trim(),
-              explanation: editExplanation.trim(),
+              japanese: String(editJp || "").trim(),
+              hiragana: String(editHira || "").trim(),
+              romaji: String(editRomaji || "").trim(),
+              vietnamese: String(editVietnamese || "").trim(),
+              explanation: String(editExplanation || "").trim(),
             }
           : d
       )
@@ -799,7 +799,7 @@ function ConversationDetail({
                                 <textarea value={editExplanation} onChange={(e) => setEditExplanation(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors h-24 resize-none" placeholder="Giải thích chi tiết ngữ pháp, từ vựng..." />
                               </div>
                               <div className="flex gap-3 pt-2">
-                                <button type="submit" disabled={!editJp.trim()} className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1 flex items-center justify-center gap-2">
+                                <button type="submit" disabled={!String(editJp || "").trim()} className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1 flex items-center justify-center gap-2">
                                   <Check className="w-4 h-4" /> Lưu
                                 </button>
                                 <button type="button" onClick={() => setEditingId(null)} className="text-theme-primary/60 hover:text-theme-primary px-4 py-2 uppercase tracking-wider text-xs transition-colors flex-1 border border-theme-subtle hover:border-theme-primary/30 flex items-center justify-center gap-2">
@@ -1096,7 +1096,7 @@ function ConversationDetail({
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                disabled={!newJp.trim()}
+                disabled={!String(newJp || "").trim()}
                 className="bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-2 px-6 uppercase tracking-widest text-xs transition-all flex-1"
               >
                 Thêm

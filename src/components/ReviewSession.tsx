@@ -50,7 +50,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         setExerciseType('flip');
       } else {
         setExerciseType('mcq_meaning');
-        const wrongOptions = allOptions.filter(o => o.trim().toLowerCase() !== correctAnswer.trim().toLowerCase());
+        const wrongOptions = allOptions.filter(o => String(o || "").trim().toLowerCase() !== String(correctAnswer || "").trim().toLowerCase());
         
         // Fisher-Yates shuffle wrongOptions
         for (let i = wrongOptions.length - 1; i > 0; i--) {
@@ -131,7 +131,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   };
 
   const handleCheckReading = () => {
-    if (readingInput.trim() === currentCard.reading.trim()) {
+    if (String(readingInput || "").trim() === String(currentCard.reading || "").trim()) {
       setInputError(false);
       setShowAnswer(true);
     } else {
@@ -139,7 +139,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
     }
   };
 
-  const isWordWithKanji = currentCard?.kanji && currentCard?.reading && currentCard.kanji.trim() !== currentCard.reading.trim();
+  const isWordWithKanji = currentCard?.kanji && currentCard?.reading && String(currentCard.kanji || "").trim() !== String(currentCard.reading || "").trim();
 
   const handleMcqSelect = (option: string) => {
     const field = exerciseType === 'mcq_meaning' ? 'meaning' : 'reading';

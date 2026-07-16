@@ -62,7 +62,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
     return <Fragment>{cleanText}</Fragment>;
   }
   
-  target = target.trim();
+  target = String(target || "").trim();
   let matchStr = target;
   let lowerText = cleanText.toLowerCase();
   
@@ -263,10 +263,10 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
   const card = hoveredCard.card;
   if (!card || !card.meaning) return <Fragment>{text}</Fragment>;
 
-  let meanings = card.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
+  let meanings = card.meaning.split(/[;,]/).map(s => String(s || "").trim()).filter(s => s.length > 0);
   
   if (hoveredCard.matchedForm && hoveredCard.matchedForm.meaning) {
-    meanings = hoveredCard.matchedForm.meaning.split(/[;,]/).map(s => s.trim()).filter(s => s.length > 0);
+    meanings = hoveredCard.matchedForm.meaning.split(/[;,]/).map(s => String(s || "").trim()).filter(s => s.length > 0);
   }
   
   let bestMatch = manualMatch;
@@ -551,9 +551,11 @@ export function trimAuxiliary(text: string) {
           newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
         }
         
-        let actualMatchStr = trimAuxiliary(matchStr);
-        // Avoid trimming entirely, just in case
-        if (!actualMatchStr) actualMatchStr = matchStr;
+        let actualMatchStr = matchStr;
+        if (!matchedForm) {
+          actualMatchStr = trimAuxiliary(matchStr);
+          if (!actualMatchStr) actualMatchStr = matchStr;
+        }
         
         newTokens.push({ text: actualMatchStr, status, card, matchedForm });
         
