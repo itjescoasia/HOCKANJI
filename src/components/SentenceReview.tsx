@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2 } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 
@@ -34,6 +34,18 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const showAnswer = flippedState[currentIndex] || false;
   const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
   const [isInitialized, setIsInitialized] = useState(false);
+
+  const handleTTS = (text: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "ja-JP";
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  };
   
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -489,17 +501,29 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             <span className="text-xs font-mono text-theme-accent/30 mb-4 block uppercase">
               {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
             </span>
-            <p
-              className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
-            >
-              {mode === "VI_TO_JA"
-                ? renderExampleHighlight(
-                    currentExample.sentence,
-                    currentExample.word,
-                    mainDeck,
-                  )
-                : <HighlightVietnamese text={answerText} />}
-            </p>
+            <div className="flex flex-col items-center gap-3">
+              <p
+                className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
+              >
+                {mode === "VI_TO_JA"
+                  ? renderExampleHighlight(
+                      currentExample.sentence,
+                      currentExample.word,
+                      mainDeck,
+                    )
+                  : <HighlightVietnamese text={answerText} />}
+              </p>
+              {mode === "VI_TO_JA" && (
+                <button
+                  type="button"
+                  onClick={(e) => handleTTS(currentExample.sentence, e)}
+                  className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors mt-2"
+                  title="Phát âm"
+                >
+                  <Volume2 className="w-5 h-5" />
+                </button>
+              )}
+            </div>
             {mode === "VI_TO_JA" && currentExample.reading && (
               <p className="text-theme-primary/60 mt-4 text-sm">
                 <RelatedHighlight text={currentExample.reading} type="hiragana" />

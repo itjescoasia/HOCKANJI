@@ -447,7 +447,7 @@ export function trimAuxiliary(text: string) {
   deckWordsInExample.forEach(card => {
     if (card.kanji) allMatchCandidates.push({ matchStr: card.kanji, card });
     if (card.reading && card.reading !== card.kanji) allMatchCandidates.push({ matchStr: card.reading, card });
-    if (card.kanji && (!card.forms || card.forms.length === 0)) {
+    if (card.kanji) {
       // Remove trailing hiragana for verbs/adjectives if no forms are provided
       const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
       if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem)) {
@@ -551,10 +551,27 @@ export function trimAuxiliary(text: string) {
           newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
         }
         
+        let matchLen = matchStr.length;
+        if (isStem) {
+           // Consume trailing hiragana
+           while (idx + matchLen < currentText.length) {
+              const c = currentText[idx + matchLen];
+              if (/[ぁ-ん]/.test(c)) {
+                 matchLen++;
+              } else {
+                 break;
+              }
+           }
+        }
+        
         let actualMatchStr = matchStr;
-        if (!matchedForm) {
+        if (!matchedForm && !isStem) {
           actualMatchStr = trimAuxiliary(matchStr);
           if (!actualMatchStr) actualMatchStr = matchStr;
+        }
+        
+        if (isStem) {
+          actualMatchStr = currentText.substring(idx, idx + matchLen);
         }
         
         newTokens.push({ text: actualMatchStr, status, card, matchedForm });
