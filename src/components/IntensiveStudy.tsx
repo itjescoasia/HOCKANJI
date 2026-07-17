@@ -270,11 +270,11 @@ export default function IntensiveStudy({
     const lowerQ = q.toLowerCase();
     deck.forEach(item => {
         if (!existingIds.has(item.id)) {
-            const isMatch = item.word.toLowerCase().includes(lowerQ) ||
+            const isMatch = (item.word && item.word.toLowerCase().includes(lowerQ)) ||
                             (item.reading && item.reading.toLowerCase().includes(lowerQ)) ||
                             (item.romaji && item.romaji.toLowerCase().includes(lowerQ)) ||
-                            item.examples.some(ex => 
-                                ex.sentence.toLowerCase().includes(lowerQ) ||
+                            (item.examples || []).some(ex => 
+                                (ex.sentence && ex.sentence.toLowerCase().includes(lowerQ)) ||
                                 (ex.reading && ex.reading.toLowerCase().includes(lowerQ)) ||
                                 (ex.translation && ex.translation.toLowerCase().includes(lowerQ))
                             );
@@ -307,7 +307,7 @@ export default function IntensiveStudy({
        const lowerAltQ = altQ.toLowerCase();
        deck.forEach(item => {
            if (!existingIds.has(item.id)) {
-               const isMatch = item.word.toLowerCase().includes(lowerAltQ) ||
+               const isMatch = (item.word && item.word.toLowerCase().includes(lowerAltQ)) ||
                                (item.reading && item.reading.toLowerCase().includes(lowerAltQ));
                if (isMatch) {
                    results.push(item);
@@ -583,13 +583,13 @@ export default function IntensiveStudy({
             <div className="absolute top-full left-0 right-0 mt-2 bg-theme-panel border border-theme-subtle rounded-lg shadow-xl z-50 max-h-[60vh] overflow-y-auto">
               {filteredDeck.slice(0, 10).map((word) => {
                 const query = searchQuery.toLowerCase();
-                const matchedExample = word.examples.find(
+                const matchedExample = (word.examples || []).find(
                   (ex) =>
-                    ex.sentence.toLowerCase().includes(query) ||
+                    (ex.sentence && ex.sentence.toLowerCase().includes(query)) ||
                     (ex.translation &&
                       ex.translation.toLowerCase().includes(query)) ||
                     (ex.reading && ex.reading.toLowerCase().includes(query))
-                ) || word.examples[0];
+                ) || (word.examples || [])[0];
 
                 return (
                   <button

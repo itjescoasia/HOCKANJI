@@ -218,11 +218,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
     const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';
     
-    const matchesSearch = c.kanji.toLowerCase().includes(searchLower) || 
-                          c.meaning.toLowerCase().includes(searchLower) ||
-                          c.reading.toLowerCase().includes(searchLower) ||
+    const matchesSearch = (c.kanji && c.kanji.toLowerCase().includes(searchLower)) || 
+                          (c.meaning && c.meaning.toLowerCase().includes(searchLower)) ||
+                          (c.reading && c.reading.toLowerCase().includes(searchLower)) ||
                           (c.romaji && c.romaji.toLowerCase().includes(searchLower)) ||
-                          (c.forms && c.forms.some(f => f.value.toLowerCase().includes(searchLower))) ||
+                          (c.forms && c.forms.some(f => f.value && f.value.toLowerCase().includes(searchLower))) ||
                           (stem && stem.length > 0 && searchLower.includes(stem.toLowerCase()));
                           
     const matchesFilter = filterType === 'all' || c.wordType === filterType;
