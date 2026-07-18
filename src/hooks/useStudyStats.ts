@@ -4,6 +4,8 @@ import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getLocalDateString } from "../lib/dateUtils";
 
 export interface DailyStats {
+  remembered?: number;
+  wotdId?: string;
   reviewed: number;
   correct: number;
   mastered: number;

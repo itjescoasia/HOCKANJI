@@ -16,7 +16,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [sinoVietnamese, setSinoVietnamese] = useState('');
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
-  const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
+  const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', meaning: '', translation: '' }]);
   const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string, meaning: string}[]>([]);
   const [wordType, setWordType] = useState('');
   
@@ -91,18 +91,18 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     if (newWordType.includes('Động từ')) {
       if (forms.length === 0) {
         setForms([
-          { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '' },
-          { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '' },
-          { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '' },
-          { name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '' },
-          { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '' },
-          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '' },
-          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' }
+          { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể て', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '', meaning: '' }
         ]);
       }
     }
@@ -147,20 +147,20 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     setSinoVietnamese('');
     setKanjiExplanation('');
     setMeaning('');
-    setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }]);
+    setExamples([{ sentence: '', reading: '', romaji: '', meaning: '', translation: '' }]);
     setForms([]);
     setWordType('');
   };
 
   const addExampleField = () => {
-    setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }, ...examples]);
+    setExamples([{ sentence: '', reading: '', romaji: '', meaning: '', translation: '' }, ...examples]);
   };
 
   const removeExampleField = (index: number) => {
     const newExamples = [...examples];
     newExamples.splice(index, 1);
     if (newExamples.length === 0) {
-      newExamples.push({ sentence: '', reading: '', romaji: '', translation: '' });
+      newExamples.push({ sentence: '', reading: '', romaji: '', meaning: '', translation: '' });
     }
     setExamples(newExamples);
   };
@@ -305,7 +305,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
                 </div>
                 <button 
                   type="button" 
-                  onClick={() => setForms([...forms, { name: '', value: '', reading: '', romaji: '', meaning: '' }])}
+                  onClick={() => setForms([...forms, { name: '', value: '', reading: '', romaji: '', meaning: '', meaning: '' }])}
                   className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
                   title="Thêm thể"
                 >

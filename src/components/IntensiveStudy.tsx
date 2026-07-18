@@ -192,7 +192,7 @@ function SortableWordItem({
   );
 }
 
-const SearchHighlight = ({ text, query }: { text: string, query: string }) => {
+const SearchHighlight = ({ text, query }: { text: string | undefined | null, query: string }) => {
   if (!String(query || "").trim() || !text) return <Fragment>{text}</Fragment>;
   
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -210,6 +210,13 @@ const SearchHighlight = ({ text, query }: { text: string, query: string }) => {
     </Fragment>
   );
 };
+
+
+function cleanMarkdownForDisplay(text: string | undefined | null) {
+  if (!text) return text;
+  // Remove markdown headers like ###, **, *
+  return text.replace(/^#{1,6}\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '');
+}
 
 export default function IntensiveStudy({
   deck,
@@ -236,7 +243,7 @@ export default function IntensiveStudy({
 
   const selectedWord = deck.find((w) => w.id === selectedWordId);
 
-  const playAudio = (e: React.MouseEvent, text: string) => {
+  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
     e.stopPropagation();
     if (!text || !('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -696,7 +703,7 @@ function StudyView({
   onCopyExample: (example: IntensiveExample, targetWordId: string) => void;
   onBack: () => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
-  renderHighlight: (text: string, kanji: string) => React.ReactNode;
+  renderHighlight: (text: string | undefined | null, kanji: string) => React.ReactNode;
   onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
 }) {
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
@@ -755,7 +762,7 @@ function StudyView({
     word.examples.length > 0 &&
     hiddenMeaningIds.length === word.examples.length;
 
-  const playAudio = (e: React.MouseEvent, text: string) => {
+  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
     e.stopPropagation();
     if (!text || !('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -1107,7 +1114,7 @@ function StudyView({
               </div>
               {word.explanation && (
                 <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body">
-                  <Markdown>{word.explanation}</Markdown>
+                  <Markdown>{cleanMarkdownForDisplay(word.explanation)}</Markdown>
                 </div>
               )}
             </div>
@@ -1595,7 +1602,7 @@ function StudyView({
                                             </h4>
                                           </div>
                                           <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
-                                            <Markdown>{ex.specialNote}</Markdown>
+                                            <Markdown>{cleanMarkdownForDisplay(ex.specialNote)}</Markdown>
                                           </div>
                                         </div>
                                       </motion.div>

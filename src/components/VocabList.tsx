@@ -16,7 +16,7 @@ interface VocabListProps {
   editCardReq?: { id: string, ts: number } | null;
 }
 
-function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string) => void }) {
+function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null) => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!card.examples || card.examples.length === 0) return null;
@@ -66,6 +66,13 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
   );
 }
 
+
+function cleanMarkdownForDisplay(text: string | undefined | null) {
+  if (!text) return text;
+  // Remove markdown headers like ###, **, *
+  return text.replace(/^#{1,6}\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '');
+}
+
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null }: VocabListProps) {
   const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
@@ -74,7 +81,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const playAudio = (e: React.MouseEvent, text: string) => {
+  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
     e.stopPropagation();
     if (!text || !('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -784,7 +791,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-pre-wrap w-full sm:min-w-[300px] lg:min-w-[500px]">{card.meaning}</div>
                         {card.kanjiExplanation && (
                           <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px] markdown-body">
-                            <Markdown>{card.kanjiExplanation}</Markdown>
+                            <Markdown>{cleanMarkdownForDisplay(card.kanjiExplanation)}</Markdown>
                           </div>
                         )}
                         
