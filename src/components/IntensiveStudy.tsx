@@ -1106,10 +1106,8 @@ function StudyView({
                 </span>
               </div>
               {word.explanation && (
-                <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar">
-                  <div className="whitespace-pre-wrap font-sans">
-                    {word.explanation}
-                  </div>
+                <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body">
+                  <Markdown>{word.explanation}</Markdown>
                 </div>
               )}
             </div>
@@ -1596,8 +1594,8 @@ function StudyView({
                                               Lưu ý đặc biệt
                                             </h4>
                                           </div>
-                                          <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                                            {ex.specialNote}
+                                          <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                                            <Markdown>{ex.specialNote}</Markdown>
                                           </div>
                                         </div>
                                       </motion.div>
