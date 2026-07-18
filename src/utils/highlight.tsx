@@ -391,6 +391,31 @@ const suffixes = [
   "から", "ので", "のに", "けれども", "けれど", "けど", "が", "と", "ば", "たら", "なら"
 ].sort((a, b) => b.length - a.length);
 
+
+export function trimTrailingParticles(text: string) {
+  const particles = [
+    "から", "ので", "のに", "けれども", "けれど", "けど", "が", "と", "ば", "たら", "なら",
+    "し", "ね", "よ", "わ", "ぞ", "ぜ", "か", "かしら", "さ", "くらい", "ぐらい", "だけ",
+    "ばかり", "など", "まで", "でも", "とか", "や", "の", "に", "を", "へ", "で", "は", "も", "って"
+  ].sort((a, b) => b.length - a.length);
+  
+  let changed = true;
+  let result = text;
+  while (changed) {
+    changed = false;
+    for (const p of particles) {
+      if (result.endsWith(p) && result.length > p.length) {
+        // Ensure we don't trim the entire string
+        if (result === p) break;
+        result = result.substring(0, result.length - p.length);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
 export function trimAuxiliary(text: string) {
   let changed = true;
   let result = text;
@@ -577,6 +602,10 @@ export function trimAuxiliary(text: string) {
         
         if (isStem) {
           actualMatchStr = currentText.substring(idx, idx + matchLen);
+          let trimmed = trimTrailingParticles(actualMatchStr);
+          if (trimmed && trimmed.length >= matchStr.length) {
+            actualMatchStr = trimmed;
+          }
         }
         
         newTokens.push({ text: actualMatchStr, status, card, matchedForm });
