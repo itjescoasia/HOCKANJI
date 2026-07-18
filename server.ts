@@ -26,6 +26,8 @@ async function startServer() {
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `Bạn là một chuyên gia ngôn ngữ tiếng Nhật. Hãy phân tích từ vựng/ngữ pháp tiếng Nhật sau đây: "${word}".
+TUYỆT ĐỐI KHÔNG sử dụng Markdown (như **in đậm**, *in nghiêng*, ### tiêu đề, v.v.) trong bất kỳ giá trị nào. Chỉ sử dụng văn bản thuần túy.
+
 Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đúng cấu trúc sau:
 {
   "kanji": "từ vựng gốc (chữ Hán nếu có, nếu không thì để hiragana/katakana gốc)",
@@ -89,12 +91,20 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       try {
         parsedData = JSON.parse(text);
       } catch (e) {
-        const start = text.indexOf('{');
-        const end = text.lastIndexOf('}');
-        if (start !== -1 && end !== -1) {
-          parsedData = JSON.parse(text.substring(start, end + 1));
-        } else {
-          throw e;
+        try {
+          parsedData = JSON.parse(jsonrepair(text));
+        } catch (e2) {
+          const start = text.indexOf('{');
+          const end = text.lastIndexOf('}');
+          if (start !== -1 && end !== -1) {
+            try {
+              parsedData = JSON.parse(jsonrepair(text.substring(start, end + 1)));
+            } catch (e3) {
+              throw e2;
+            }
+          } else {
+            throw e2;
+          }
         }
       }
       res.json(parsedData);
