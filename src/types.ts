@@ -74,6 +74,18 @@ export interface DialogueSentence {
   romaji: string;
   vietnamese: string;
   explanation?: string;
+  jaToViMastered?: boolean;
+  viToJaMastered?: boolean;
+  jaToViNextReviewDate?: number;
+  viToJaNextReviewDate?: number;
+  jaToViInterval?: number;
+  viToJaInterval?: number;
+  jaToViFailCount?: number;
+  viToJaFailCount?: number;
+  jaToViRepetition?: number;
+  viToJaRepetition?: number;
+  jaToViEaseFactor?: number;
+  viToJaEaseFactor?: number;
 }
 
 export interface Conversation {

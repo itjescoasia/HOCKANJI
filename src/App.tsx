@@ -477,7 +477,35 @@ export default function App() {
               mode={sentenceReviewMode}
               forceAll={sentenceReviewForceAll}
               onClose={() => setIsSentenceReviewOpen(false)}
-              onUpdateWord={updateIntensiveWord}
+              onUpdateWord={(id, updates) => {
+                const conv = conversations.find(c => c.id === id);
+                if (conv) {
+                  const updatedDialogues = conv.dialogues.map(d => {
+                    const ex = updates.examples?.find(e => e.id === d.id);
+                    if (ex) {
+                      return {
+                        ...d,
+                        jaToViMastered: ex.jaToViMastered,
+                        viToJaMastered: ex.viToJaMastered,
+                        jaToViNextReviewDate: ex.jaToViNextReviewDate,
+                        viToJaNextReviewDate: ex.viToJaNextReviewDate,
+                        jaToViInterval: ex.jaToViInterval,
+                        viToJaInterval: ex.viToJaInterval,
+                        jaToViFailCount: ex.jaToViFailCount,
+                        viToJaFailCount: ex.viToJaFailCount,
+                        jaToViRepetition: ex.jaToViRepetition,
+                        viToJaRepetition: ex.viToJaRepetition,
+                        jaToViEaseFactor: ex.jaToViEaseFactor,
+                        viToJaEaseFactor: ex.viToJaEaseFactor
+                      };
+                    }
+                    return d;
+                  });
+                  updateConversation(id, { dialogues: updatedDialogues });
+                } else {
+                  updateIntensiveWord(id, updates);
+                }
+              }}
               onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             />
           </div>

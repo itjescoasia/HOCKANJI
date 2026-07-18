@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
 import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
@@ -782,8 +783,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         </div>
                         <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-pre-wrap w-full sm:min-w-[300px] lg:min-w-[500px]">{card.meaning}</div>
                         {card.kanjiExplanation && (
-                          <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 whitespace-pre-wrap leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px]">
-                            {card.kanjiExplanation}
+                          <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px] markdown-body">
+                            <Markdown>{card.kanjiExplanation}</Markdown>
                           </div>
                         )}
                         

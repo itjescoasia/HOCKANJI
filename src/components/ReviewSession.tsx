@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown';
 import React, { useState, useEffect, Fragment } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { motion } from 'motion/react';
@@ -421,8 +422,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                 <div className="w-16 h-px bg-theme-active mx-auto my-2 sm:my-4 flex-shrink-0"></div>
                 <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-theme-primary leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
                 {currentCard.kanjiExplanation && (
-                  <div className="mt-4 px-6 py-4 bg-theme-hover/50 border border-theme-subtle rounded text-sm sm:text-base text-theme-primary font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap">
-                    {currentCard.kanjiExplanation}
+                  <div className="mt-4 px-6 py-4 bg-theme-hover/50 border border-theme-subtle rounded text-sm sm:text-base text-theme-primary font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap markdown-body">
+                    <Markdown>{currentCard.kanjiExplanation}</Markdown>
                   </div>
                 )}
                 {currentCard.examples && currentCard.examples.length > 0 ? (
