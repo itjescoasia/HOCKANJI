@@ -295,8 +295,10 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
       
       const words = lowerM.split(/[\s\.\,\!\?]+/).filter(w => w.length > 0);
       
-      // Try combinations of words from longest to shortest
-      for (let numWords = words.length; numWords >= 1; numWords--) {
+      // Try combinations of words from longest to shortest. Limit to max 6 words to prevent UI freeze
+      const maxPhraseLength = Math.min(words.length, 6);
+      for (let numWords = maxPhraseLength; numWords >= 1; numWords--) {
+        let foundMatch = false;
         for (let start = 0; start <= words.length - numWords; start++) {
           const phrase = words.slice(start, start + numWords).join(' ');
           
@@ -312,21 +314,24 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
           ];
           if (numWords === 1 && ignoreWords.includes(phrase)) continue;
 
-          const safePhrase = phrase.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
-          // Use Unicode letters and digits for word boundaries
-          const regex = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${safePhrase})(?:[^\\p{L}\\p{N}]|$)`, 'giu');
-          
-          const matches = [...cleanText.matchAll(regex)];
-          for (const match of matches) {
-            if (match.index !== undefined) {
-              const matchedStr = match[1];
-              const exactIdx = cleanText.indexOf(matchedStr, match.index);
-              if (exactIdx !== -1 && matchedStr.length > bestMatch.length) {
-                bestMatch = { index: exactIdx, length: matchedStr.length, str: cleanText.substring(exactIdx, exactIdx + matchedStr.length) };
+          let searchIdx = 0;
+          const phraseLower = phrase.toLowerCase();
+          while (searchIdx < lowerText.length) {
+            const idx = lowerText.indexOf(phraseLower, searchIdx);
+            if (idx === -1) break;
+            const before = idx === 0 ? ' ' : lowerText[idx - 1];
+            const after = idx + phrase.length >= lowerText.length ? ' ' : lowerText[idx + phrase.length];
+            const isWordChar = (c) => /[\p{L}\p{N}]/u.test(c);
+            if (!isWordChar(before) && !isWordChar(after)) {
+              if (phrase.length > bestMatch.length) {
+                bestMatch = { index: idx, length: phrase.length, str: cleanText.substring(idx, idx + phrase.length) };
+                foundMatch = true;
               }
             }
+            searchIdx = idx + 1;
           }
         }
+        if (foundMatch) break;
       }
     });
   }
