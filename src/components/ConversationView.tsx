@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
 import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download, Eye } from "lucide-react";
@@ -921,8 +922,8 @@ function ConversationDetail({
                                           Góc học tập
                                         </h4>
                                       </div>
-                                      <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                                        {dialogue.explanation}
+                                      <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                                        <Markdown>{dialogue.explanation}</Markdown>
                                       </div>
                                     </div>
                                   </motion.div>
@@ -984,8 +985,8 @@ function ConversationDetail({
                         Góc học tập
                       </h4>
                     </div>
-                    <div className="relative z-10 text-base md:text-lg text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                      {conversation.dialogues[currentSlideIndex].explanation}
+                    <div className="relative z-10 text-base md:text-lg text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                      <Markdown>{conversation.dialogues[currentSlideIndex].explanation}</Markdown>
                     </div>
                   </div>
                 </div>

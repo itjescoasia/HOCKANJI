@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --color-theme-base: var(--bg-base);
@@ -109,5 +110,47 @@ body {
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: var(--border-strong);
+  }
+}
+
+@layer components {
+  .markdown-body {
+    @apply text-theme-primary;
+  }
+  .markdown-body p {
+    @apply mb-2 last:mb-0;
+  }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+    @apply text-theme-accent font-serif mb-2 mt-4 first:mt-0 font-bold;
+  }
+  .markdown-body h3 {
+    @apply text-lg;
+  }
+  .markdown-body strong {
+    @apply font-bold text-theme-accent;
+  }
+  .markdown-body em {
+    @apply italic opacity-90;
+  }
+  .markdown-body ul {
+    @apply list-disc list-inside mb-2;
+  }
+  .markdown-body ol {
+    @apply list-decimal list-inside mb-2;
+  }
+  .markdown-body li {
+    @apply mb-1;
+  }
+  .markdown-body code {
+    @apply bg-theme-hover px-1 py-0.5 rounded text-sm text-theme-accent font-mono;
+  }
+  .markdown-body pre {
+    @apply bg-theme-panel border border-theme-subtle p-3 rounded mb-2 overflow-x-auto;
+  }
+  .markdown-body pre code {
+    @apply bg-transparent px-0 text-theme-primary;
+  }
+  .markdown-body blockquote {
+    @apply border-l-4 border-theme-accent pl-4 italic opacity-80 mb-2;
   }
 }

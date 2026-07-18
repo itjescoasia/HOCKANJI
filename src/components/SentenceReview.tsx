@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2 } from "lucide-react";
@@ -545,8 +546,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                     Lưu ý đặc biệt
                   </h4>
                 </div>
-                <div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                  {currentExample.specialNote}
+                <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                  <Markdown>{currentExample.specialNote}</Markdown>
                 </div>
               </div>
             )}

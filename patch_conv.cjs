@@ -1,36 +1,28 @@
 const fs = require('fs');
 let file = fs.readFileSync('src/components/ConversationView.tsx', 'utf8');
 
-const oldLogic = `                    examples: conversation.dialogues.map(d => ({
-                      id: d.id,
-                      sentence: d.japanese,
-                      reading: d.hiragana,
-                      romaji: d.romaji,
-                      translation: d.vietnamese,
-                      specialNote: d.explanation
-                    }))`;
+const importStatement = "import Markdown from 'react-markdown';\n";
+if (!file.includes('react-markdown')) {
+  file = importStatement + file;
+}
 
-const newLogic = `                    examples: conversation.dialogues.map(d => ({
-                      id: d.id,
-                      sentence: d.japanese,
-                      reading: d.hiragana,
-                      romaji: d.romaji,
-                      translation: d.vietnamese,
-                      specialNote: d.explanation,
-                      jaToViMastered: d.jaToViMastered,
-                      viToJaMastered: d.viToJaMastered,
-                      jaToViNextReviewDate: d.jaToViNextReviewDate,
-                      viToJaNextReviewDate: d.viToJaNextReviewDate,
-                      jaToViInterval: d.jaToViInterval,
-                      viToJaInterval: d.viToJaInterval,
-                      jaToViFailCount: d.jaToViFailCount,
-                      viToJaFailCount: d.viToJaFailCount,
-                      jaToViRepetition: d.jaToViRepetition,
-                      viToJaRepetition: d.viToJaRepetition,
-                      jaToViEaseFactor: d.jaToViEaseFactor,
-                      viToJaEaseFactor: d.viToJaEaseFactor
-                    }))`;
+const oldLogicExp1 = `<div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
+                                        {dialogue.explanation}
+                                      </div>`;
 
-file = file.replace(oldLogic, newLogic);
+const newLogicExp1 = `<div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                                        <Markdown>{dialogue.explanation}</Markdown>
+                                      </div>`;
+
+const oldLogicExp2 = `<div className="relative z-10 text-base md:text-lg text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
+                      {conversation.dialogues[currentSlideIndex].explanation}
+                    </div>`;
+
+const newLogicExp2 = `<div className="relative z-10 text-base md:text-lg text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                      <Markdown>{conversation.dialogues[currentSlideIndex].explanation}</Markdown>
+                    </div>`;
+
+file = file.replace(oldLogicExp1, newLogicExp1);
+file = file.replace(oldLogicExp2, newLogicExp2);
 fs.writeFileSync('src/components/ConversationView.tsx', file);
 console.log('Patched ConversationView');
