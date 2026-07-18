@@ -4,6 +4,8 @@ import { createServer as createViteServer } from 'vite';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { GoogleGenAI } from '@google/genai';
+import { jsonrepair } from 'jsonrepair';
+
 
 async function startServer() {
   const app = express();
@@ -81,8 +83,21 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
         }
       }
 
-      const text = response.text || '';
-      res.json(JSON.parse(text));
+      let text = response.text || '';
+      text = text.replace(/^\s*```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      let parsedData;
+      try {
+        parsedData = JSON.parse(text);
+      } catch (e) {
+        const start = text.indexOf('{');
+        const end = text.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          parsedData = JSON.parse(text.substring(start, end + 1));
+        } else {
+          throw e;
+        }
+      }
+      res.json(parsedData);
     } catch (error: any) {
       console.error('Error generating vocab:', error);
       
