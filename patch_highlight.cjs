@@ -1,59 +1,28 @@
 const fs = require('fs');
 let file = fs.readFileSync('src/utils/highlight.tsx', 'utf8');
 
-const oldLogic = `        // Valid match found!
-        if (idx > 0) {
-          newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
-        }
-        
-        let actualMatchStr = matchStr;
-        if (!matchedForm) {
-          actualMatchStr = trimAuxiliary(matchStr);
-          if (!actualMatchStr) actualMatchStr = matchStr;
-        }
-        
-        newTokens.push({ text: actualMatchStr, status, card, matchedForm });
-        
-        currentText = currentText.substring(idx + actualMatchStr.length);
-        searchIndex = 0;`;
+// Replace the span in RelatedHighlight manualMatch
+file = file.replace(
+  '<span className="px-1 rounded transition-all duration-200 bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative">',
+  '<span className="rounded transition-all duration-200 bg-theme-accent text-white shadow-sm relative">'
+);
 
-const newLogic = `        // Valid match found!
-        if (idx > 0) {
-          newTokens.push({ text: currentText.substring(0, idx), status: 'neutral' });
-        }
-        
-        let matchLen = matchStr.length;
-        if (isStem) {
-           // Consume trailing hiragana
-           while (idx + matchLen < currentText.length) {
-              const c = currentText[idx + matchLen];
-              if (/[ぁ-ん]/.test(c)) {
-                 matchLen++;
-              } else {
-                 break;
-              }
-           }
-        }
-        
-        let actualMatchStr = matchStr;
-        if (!matchedForm && !isStem) {
-          actualMatchStr = trimAuxiliary(matchStr);
-          if (!actualMatchStr) actualMatchStr = matchStr;
-        }
-        
-        if (isStem) {
-          actualMatchStr = currentText.substring(idx, idx + matchLen);
-        }
-        
-        newTokens.push({ text: actualMatchStr, status, card, matchedForm });
-        
-        currentText = currentText.substring(idx + actualMatchStr.length);
-        searchIndex = 0;`;
+// Replace the span in RelatedHighlight map
+file = file.replace(
+  /className=\{`px-1 rounded transition-all duration-200 \$\{isCurrentMatch \? 'bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative' : 'bg-theme-accent\/20 text-theme-accent font-bold'\}`\}/g,
+  'className={`rounded transition-colors duration-200 ${isCurrentMatch ? \'bg-theme-accent text-white shadow-sm relative z-10\' : \'bg-theme-accent/20 text-theme-accent\'}`}'
+);
 
-if (file.includes('newTokens.push({ text: currentText.substring(0, idx), status: \'neutral\' });')) {
-  file = file.replace(oldLogic, newLogic);
-  fs.writeFileSync('src/utils/highlight.tsx', file);
-  console.log('Patched highlight.tsx');
-} else {
-  console.log('Could not find old logic in highlight.tsx');
-}
+// Do the same for HighlightVietnamese
+file = file.replace(
+  '<span className="px-1 rounded transition-all duration-200 bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative">',
+  '<span className="rounded transition-colors duration-200 bg-theme-accent text-white shadow-sm relative z-10">'
+);
+
+file = file.replace(
+  /className=\{`px-1 rounded transition-all duration-200 \$\{isCurrentMatch \? 'bg-theme-accent text-white font-bold scale-110 shadow-sm inline-block z-10 relative' : 'bg-theme-accent\/20 text-theme-accent font-bold'\}`\}/g,
+  'className={`rounded transition-colors duration-200 ${isCurrentMatch ? \'bg-theme-accent text-white shadow-sm relative z-10\' : \'bg-theme-accent/20 text-theme-accent\'}`}'
+);
+
+fs.writeFileSync('src/utils/highlight.tsx', file);
+console.log('Patched highlight.tsx');
