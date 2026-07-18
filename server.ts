@@ -46,8 +46,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
     }
   ],
   "examples": [
-    // BẮT BUỘC TẠO ÍT NHẤT 1 VÍ DỤ CHO TỪ GỐC. 
-    // NẾU LÀ ĐỘNG TỪ VÀ CÓ CÁC THỂ Ở TRÊN, HÃY TẠO THÊM ÍT NHẤT 1 VÍ DỤ CHO MỖI THỂ ĐÓ.
+    // BẮT BUỘC TẠO TỪ 3 ĐẾN 5 VÍ DỤ ĐA DẠNG CHO TỪ VỰNG NÀY (Bao gồm từ gốc và một số thể thường gặp).
     {
       "sentence": "câu ví dụ tiếng Nhật chứa từ vựng hoặc thể của từ",
       "reading": "cách đọc hiragana của cả câu ví dụ (cách nhau bởi khoảng trắng hoặc dấu phẩy)",
