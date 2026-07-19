@@ -94,15 +94,15 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể て', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
+          { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
-          { name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
-          { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '', meaning: '' },
-          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '', meaning: '' }
+          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' }
         ]);
       }
     }
@@ -305,7 +305,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
                 </div>
                 <button 
                   type="button" 
-                  onClick={() => setForms([...forms, { name: '', value: '', reading: '', romaji: '', meaning: '', meaning: '' }])}
+                  onClick={() => setForms([...forms, { name: '', value: '', reading: '', romaji: '', meaning: '' }])}
                   className="p-1.5 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors"
                   title="Thêm thể"
                 >
