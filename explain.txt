@@ -1,0 +1,6 @@
+CORTEX_RESPONSE_START: 
+I have investigated the CSS selector you mentioned (`div#root:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(26)`). 
+
+Because the application renders elements dynamically (like lists of words in Intensive Study, or word types in the Dashboard chart), styling based on the exact DOM index (like \`div:nth-of-type(26)\`) is highly brittle and will break as soon as your vocabulary data changes.
+
+Could you please describe in words which specific UI element you are trying to change? (For example: 'the word cards in Intensive Study', 'the search dropdown list', or 'the legend items in the pie chart'). Once you let me know, I will add a stable, dedicated CSS class to that element so we can style it reliably.

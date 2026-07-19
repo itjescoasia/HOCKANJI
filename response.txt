@@ -1,0 +1,8 @@
+Chào bạn, tôi đã kiểm tra phần tử mà bạn vừa chọn (tương ứng với **thẻ từ vựng thứ 26 trong màn hình Ôn chuyên từ vựng - Intensive Study**).
+
+Nếu bạn đang thắc mắc tại sao từ vựng này **vẫn còn tồn tại** dù bạn có thể đã xoá nó trước đó, thì nguyên nhân là do:
+**Kho từ vựng chính** và **Danh sách Ôn chuyên sâu** được lưu trữ hoàn toàn độc lập với nhau. Khi bạn xoá một từ ở "Kho từ vựng", hệ thống sẽ **không tự động xoá** từ đó trong danh sách "Ôn chuyên sâu" (vì danh sách này được thiết kế để bạn tự do gom nhóm các từ khó hoặc theo chủ đề riêng biệt).
+
+👉 **Cách khắc phục**: Để xoá hoàn toàn thẻ từ này khỏi phần Ôn chuyên sâu, bạn hãy rê chuột vào thẻ từ đó và click vào **biểu tượng thùng rác (Trash)** ở góc trên cùng bên phải của thẻ nhé.
+
+Nếu ý bạn không phải như vậy, hoặc bạn đã bấm xoá bằng thùng rác nhưng từ đó vẫn không biến mất (lỗi đồng bộ dữ liệu), xin hãy phản hồi lại để tôi xử lý ngay nhé!
