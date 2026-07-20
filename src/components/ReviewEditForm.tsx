@@ -170,7 +170,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
                 </button>
                 
                 <input 
-                  value={ex.sentence} 
+                  value={ex.sentence || ''} 
                   onChange={e => {
                     const newExamples = [...(editForm.examples || [])];
                     newExamples[index] = { ...newExamples[index], sentence: e.target.value };

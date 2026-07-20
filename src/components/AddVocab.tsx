@@ -16,7 +16,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [sinoVietnamese, setSinoVietnamese] = useState('');
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
-  const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', meaning: '', translation: '' }]);
+  const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
   const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string, meaning: string}[]>([]);
   const [wordType, setWordType] = useState('');
   
@@ -147,20 +147,20 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     setSinoVietnamese('');
     setKanjiExplanation('');
     setMeaning('');
-    setExamples([{ sentence: '', reading: '', romaji: '', meaning: '', translation: '' }]);
+    setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }]);
     setForms([]);
     setWordType('');
   };
 
   const addExampleField = () => {
-    setExamples([{ sentence: '', reading: '', romaji: '', meaning: '', translation: '' }, ...examples]);
+    setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }, ...examples]);
   };
 
   const removeExampleField = (index: number) => {
     const newExamples = [...examples];
     newExamples.splice(index, 1);
     if (newExamples.length === 0) {
-      newExamples.push({ sentence: '', reading: '', romaji: '', meaning: '', translation: '' });
+      newExamples.push({ sentence: '', reading: '', romaji: '', translation: '' });
     }
     setExamples(newExamples);
   };

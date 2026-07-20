@@ -447,8 +447,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             </div>
           </form>
         ) : (
-          <HighlightProvider>
-            <div className="mb-8 mt-4 my-auto">
+          <> <div className="flex-1 shrink-0 min-h-0" /> <HighlightProvider>
+            <div className="w-full shrink-0 my-4">
               <p
                 className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
               >
@@ -466,7 +466,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 </p>
               )}
             </div>
-          </HighlightProvider>
+          </HighlightProvider> <div className="flex-1 shrink-0 min-h-0" /> </>
         )}
       </div>
 
@@ -478,8 +478,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/30">
           {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
         </span>
-        <HighlightProvider>
-          <div className="w-full flex flex-col items-center justify-center min-h-[150px] my-auto">
+        <> <div className="flex-1 shrink-0 min-h-0" /> <HighlightProvider>
+          <div className="w-full shrink-0 flex flex-col items-center justify-center min-h-[150px] my-4">
             {mode === "JA_TO_VI" && (
               <div className="mb-6 opacity-70">
                 <p className="font-serif text-theme-japanese text-lg sm:text-xl mb-2">
@@ -585,7 +585,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               })()}
             </div>
           </div>
-        </HighlightProvider>
+        </HighlightProvider> <div className="flex-1 shrink-0 min-h-0" /> </>
       </div>
     </motion.div>
   </div>

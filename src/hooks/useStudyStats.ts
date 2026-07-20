@@ -11,7 +11,6 @@ export interface DailyStats {
   mastered: number;
   newLearned: number;
   freeStudyTime?: number;
-  wotdId?: string;
   wotdUpdatedAt?: number;
 }
 

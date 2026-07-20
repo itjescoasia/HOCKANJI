@@ -1,25 +1,20 @@
 const fs = require('fs');
-const content = fs.readFileSync('src/components/IntensiveStudy.tsx', 'utf8');
 
-const target = `{word.reading && (
-          <div className="text-theme-accent opacity-90 font-medium mb-1 w-full truncate">
-            {word.reading}
-          </div>
-        )}`;
-const replacement = `{word.reading && (
-          <div className="text-theme-accent opacity-90 font-medium mb-1 w-full truncate">
-            {word.reading}
-          </div>
-        )}
-        {word.romaji && (
-          <div className="text-theme-primary/60 font-medium mb-1 w-full truncate text-sm">
-            {word.romaji}
-          </div>
-        )}`;
-
-if (content.includes(target)) {
-  fs.writeFileSync('src/components/IntensiveStudy.tsx', content.replace(target, replacement));
-  console.log("Success");
-} else {
-  console.log("Target not found");
+function fix(file, typeName, funcName) {
+    let content = fs.readFileSync(file, 'utf8');
+    const badStr = `const ${funcName} = async (id: string, updates: Partial<any>) => {
+    if (!id) return;
+ Partial<${typeName}>) => {`;
+    const goodStr = `const ${funcName} = async (id: string, updates: Partial<${typeName}>) => {\n    if (!id) return;`;
+    content = content.replace(badStr, goodStr);
+    
+    // Also fix the id injection fix that I did previously but maybe didn't verify
+    content = content.replace(`loadedDeck.push(docSnap.data() as ${typeName});`, `loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as ${typeName});`);
+    content = content.replace(`loadedConversations.push(docSnap.data() as Conversation);`, `loadedConversations.push({ id: docSnap.id, ...docSnap.data() } as Conversation);`);
+    
+    fs.writeFileSync(file, content);
 }
+
+fix('src/hooks/useIntensiveVocab.ts', 'IntensiveWord', 'updateWord');
+fix('src/hooks/useVocabDeck.ts', 'KanjiCard', 'updateCard');
+fix('src/hooks/useConversations.ts', 'Conversation', 'updateConversation');

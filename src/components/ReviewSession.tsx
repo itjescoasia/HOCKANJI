@@ -279,7 +279,9 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
   };
 
   return (
-    <div className="fixed inset-0 bg-theme-base-alt flex flex-col items-center justify-center z-50 p-4 font-sans text-theme-primary">
+    <div className="fixed inset-0 bg-theme-base-alt z-50 font-sans text-theme-primary">
+      <div className="w-full h-full overflow-y-auto flex flex-col items-center p-4 sm:p-8">
+        <div className="flex-1 shrink-0 min-h-0" />
       {isFreeStudy && (
         <div className="absolute top-0 left-0 w-full h-1 bg-theme-hover">
           <div className="h-full bg-theme-accent transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}></div>
@@ -313,7 +315,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         </button>
       )}
 
-      <div className="w-full max-w-2xl flex flex-col items-center">
+      <div className="w-full max-w-2xl flex flex-col items-center my-auto shrink-0 py-12">
         {isEditing ? (
           <ReviewEditForm 
             editForm={editForm}
@@ -621,6 +623,8 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
         </div>
           </>
         )}
+      </div>
+        <div className="flex-1 shrink-0 min-h-0" />
       </div>
     </div>
   );

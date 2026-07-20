@@ -41,7 +41,7 @@ export function useVocabDeck() {
         unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
           const loadedDeck: KanjiCard[] = [];
           snapshot.forEach((docSnap) => {
-            loadedDeck.push(docSnap.data() as KanjiCard);
+            loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as KanjiCard);
           });
           setDeck(loadedDeck.sort((a,b) => b.createdAt - a.createdAt));
           setIsLoaded(true);
@@ -278,6 +278,7 @@ export function useVocabDeck() {
   };
 
   const updateCard = async (id: string, updates: Partial<KanjiCard>) => {
+    if (!id) return;
     if (auth.currentUser) {
       try {
         const cleanedUpdates = removeUndefined(updates);

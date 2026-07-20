@@ -55,7 +55,7 @@ export function useIntensiveVocab() {
         unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
           const loadedDeck: IntensiveWord[] = [];
           snapshot.forEach((docSnap) => {
-            loadedDeck.push(docSnap.data() as IntensiveWord);
+            loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as IntensiveWord);
           });
           setIntensiveDeck(loadedDeck.sort((a,b) => {
             if (a.order !== undefined && b.order !== undefined) {
@@ -120,6 +120,7 @@ export function useIntensiveVocab() {
   };
 
   const updateWord = async (id: string, updates: Partial<IntensiveWord>) => {
+    if (!id) return;
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {

@@ -948,7 +948,8 @@ function ConversationDetail({
       ) : (
         <div className="mb-8">
           {conversation.dialogues.length > 0 ? (
-            <div className="relative border border-theme-subtle bg-theme-panel p-8 min-h-[300px] flex flex-col justify-center rounded-xl shadow-lg">
+            <div className="relative border border-theme-subtle bg-theme-panel p-8 min-h-[300px] flex flex-col rounded-xl shadow-lg">
+              <div className="flex-1 shrink-0 min-h-0" />
               <div className="absolute top-4 left-4 text-theme-primary/30 font-serif text-xl">
                 {String(currentSlideIndex + 1).padStart(2, "0")} / {String(conversation.dialogues.length).padStart(2, "0")}
               </div>

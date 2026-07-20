@@ -718,11 +718,11 @@ function StudyView({
   const [newSpecialNote, setNewSpecialNote] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
-    word: word.word,
-    reading: word.reading,
+    word: word.word || "",
+    reading: word.reading || "",
     romaji: word.romaji || "",
     category: word.category as WordCategory,
-    explanation: word.explanation,
+    explanation: word.explanation || "",
   });
 
   // Real-time duplicate detection for adding

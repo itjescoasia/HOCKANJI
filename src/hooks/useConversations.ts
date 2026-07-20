@@ -55,7 +55,7 @@ export function useConversations() {
         unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
           const loadedConversations: Conversation[] = [];
           snapshot.forEach((docSnap) => {
-            loadedConversations.push(docSnap.data() as Conversation);
+            loadedConversations.push({ id: docSnap.id, ...docSnap.data() } as Conversation);
           });
           setConversations(loadedConversations.sort((a,b) => b.createdAt - a.createdAt));
           setIsLoaded(true);
@@ -113,6 +113,7 @@ export function useConversations() {
   };
 
   const updateConversation = async (id: string, updates: Partial<Conversation>) => {
+    if (!id) return;
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${id}`;
       try {

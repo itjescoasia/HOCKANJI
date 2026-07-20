@@ -1,8 +1,21 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/ShortStudySession.tsx', 'utf8');
-code = code.replace("const nextIndex =  return (", `const nextIndex = (currentIndex + 1) % queue.length;
-    setCurrentIndex(nextIndex);
-  };
-
-  return (`);
-fs.writeFileSync('src/components/ShortStudySession.tsx', code);
+const content = fs.readFileSync('src/components/ReviewSession.tsx', 'utf8');
+const newContent = content.replace(
+`        </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}`,
+`        </div>
+          </>
+        )}
+      </div>
+        <div className="flex-1 shrink-0 min-h-0" />
+      </div>
+    </div>
+  );
+}`
+);
+fs.writeFileSync('src/components/ReviewSession.tsx', newContent);
