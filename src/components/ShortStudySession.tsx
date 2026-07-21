@@ -104,9 +104,9 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
                </div>
                <div className="text-xl text-theme-primary font-medium mt-3 text-center">{currentWord.meaning}</div>
                
-               {currentWord.kanjiExplanation && (
+               { (currentWord.kanjiExplanation || currentWord.wordType) && (
                  <div className="mt-3 px-6 py-3 bg-theme-base/50 border border-theme-subtle rounded text-sm text-theme-primary font-sans opacity-90 leading-relaxed max-w-lg mx-auto whitespace-pre-wrap text-center w-full shrink-0">
-                   {currentWord.kanjiExplanation}
+                   {(currentWord.wordType ? `Loại từ: ${currentWord.wordType}\n\n` : "") + (currentWord.kanjiExplanation || "")}
                  </div>
                )}
                {currentWord.sinoVietnamese && (

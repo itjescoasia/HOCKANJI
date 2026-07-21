@@ -3,7 +3,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { jsonrepair } from 'jsonrepair';
 
 
@@ -66,7 +66,46 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           model: 'gemini-3.5-flash',
           contents: prompt,
           config: {
+            
             responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                kanji: { type: Type.STRING },
+                reading: { type: Type.STRING },
+                romaji: { type: Type.STRING },
+                sinoVietnamese: { type: Type.STRING },
+                meaning: { type: Type.STRING },
+                kanjiExplanation: { type: Type.STRING },
+                wordType: { type: Type.STRING },
+                forms: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      value: { type: Type.STRING },
+                      reading: { type: Type.STRING },
+                      romaji: { type: Type.STRING },
+                      meaning: { type: Type.STRING }
+                    }
+                  }
+                },
+                examples: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      sentence: { type: Type.STRING },
+                      reading: { type: Type.STRING },
+                      romaji: { type: Type.STRING },
+                      translation: { type: Type.STRING }
+                    }
+                  }
+                }
+              }
+            },
+
           }
         });
       } catch (error: any) {
@@ -77,7 +116,46 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
              model: 'gemini-3.1-flash-lite',
              contents: prompt,
              config: {
-               responseMimeType: 'application/json',
+               
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                kanji: { type: Type.STRING },
+                reading: { type: Type.STRING },
+                romaji: { type: Type.STRING },
+                sinoVietnamese: { type: Type.STRING },
+                meaning: { type: Type.STRING },
+                kanjiExplanation: { type: Type.STRING },
+                wordType: { type: Type.STRING },
+                forms: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      value: { type: Type.STRING },
+                      reading: { type: Type.STRING },
+                      romaji: { type: Type.STRING },
+                      meaning: { type: Type.STRING }
+                    }
+                  }
+                },
+                examples: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      sentence: { type: Type.STRING },
+                      reading: { type: Type.STRING },
+                      romaji: { type: Type.STRING },
+                      translation: { type: Type.STRING }
+                    }
+                  }
+                }
+              }
+            },
+
              }
            });
         } else {

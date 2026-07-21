@@ -1112,9 +1112,9 @@ function StudyView({
                   {word.category}
                 </span>
               </div>
-              {word.explanation && (
+              { (word.explanation || word.category) && (
                 <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body">
-                  <Markdown>{cleanMarkdownForDisplay(word.explanation)}</Markdown>
+                  <Markdown>{(word.category ? `Loại từ: ${word.category}\n\n` : "") + cleanMarkdownForDisplay(word.explanation || "")}</Markdown>
                 </div>
               )}
             </div>

@@ -595,10 +595,6 @@ export function trimAuxiliary(text: string) {
         }
         
         let actualMatchStr = matchStr;
-        if (!matchedForm && !isStem) {
-          actualMatchStr = trimAuxiliary(matchStr);
-          if (!actualMatchStr) actualMatchStr = matchStr;
-        }
         
         if (isStem) {
           actualMatchStr = currentText.substring(idx, idx + matchLen);
@@ -626,8 +622,7 @@ export function trimAuxiliary(text: string) {
       return;
     }
     
-    let targetToHighlight = trimAuxiliary(targetWord);
-    if (!targetToHighlight) targetToHighlight = targetWord;
+    let targetToHighlight = targetWord;
     
     if (!token.text.includes(targetToHighlight)) {
        // Try removing trailing okurigana
