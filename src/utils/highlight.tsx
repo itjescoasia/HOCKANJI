@@ -227,10 +227,17 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
             </span>
             {card.sinoVietnamese && <span className="text-[10px] text-theme-accent uppercase tracking-wider mb-0.5 whitespace-nowrap">{card.sinoVietnamese}</span>}
           </span>
+          
           {card.reading && card.kanji && (
             <span className="text-sm text-theme-primary/70">{card.reading} {card.romaji ? `(${card.romaji})` : ''}</span>
           )}
           <span className="text-sm text-theme-primary mt-1 border-t border-theme-subtle/50 pt-1">{card.meaning}</span>
+          {(card.wordType || card.kanjiExplanation) && (
+             <span className="text-xs text-theme-primary mt-1 border-t border-theme-subtle/50 pt-1 flex flex-col gap-1">
+               {card.wordType && <span className="font-semibold text-theme-accent">Loại từ: {card.wordType}</span>}
+               {card.kanjiExplanation && <span className="opacity-80 italic whitespace-pre-wrap">{card.kanjiExplanation}</span>}
+             </span>
+          )}
         </span>
       )}
     </span>

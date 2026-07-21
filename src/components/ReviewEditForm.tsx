@@ -33,12 +33,12 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
 
       setEditForm({
         ...editForm,
-        reading: data.reading || editForm.reading,
-        romaji: data.romaji || editForm.romaji,
-        meaning: data.meaning || editForm.meaning,
-        sinoVietnamese: data.sinoVietnamese || editForm.sinoVietnamese,
-        kanjiExplanation: data.kanjiExplanation || editForm.kanjiExplanation,
-        wordType: data.wordType || editForm.wordType,
+        reading: data.reading !== undefined ? data.reading : editForm.reading,
+        romaji: data.romaji !== undefined ? data.romaji : editForm.romaji,
+        meaning: data.meaning !== undefined ? data.meaning : editForm.meaning,
+        sinoVietnamese: data.sinoVietnamese !== undefined ? data.sinoVietnamese : editForm.sinoVietnamese,
+        kanjiExplanation: data.kanjiExplanation !== undefined ? data.kanjiExplanation : editForm.kanjiExplanation,
+        wordType: data.wordType !== undefined ? data.wordType : editForm.wordType,
         forms: data.forms && data.forms.length > 0 ? data.forms : editForm.forms,
         examples: data.examples && data.examples.length > 0 ? data.examples : editForm.examples
       });

@@ -36,9 +36,9 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
   "sinoVietnamese": "âm Hán Việt của các chữ Hán (nếu có, ví dụ: THỰC, nếu không để chuỗi rỗng)",
   "meaning": "nghĩa tiếng Việt (ngắn gọn, chính xác)",
   "kanjiExplanation": "Giải thích cấu tạo Kanji hoặc cách nhớ (nếu có, không thì để trống)",
-  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ đuôi-i', 'Tính từ đuôi-na', 'Ngữ pháp', 'Trạng từ (副詞)', 'Khác')",
+  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ i', 'Tính từ na', 'Trạng từ', 'Ngữ pháp', 'Khác')",
   "forms": [
-    // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN đối với Danh từ, Tính từ (đuôi-i, đuôi-na) và Động từ (nhóm I, II, III).
+    // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN đối với Danh từ, Tính từ (i, na) và Động từ (nhóm I, II, III).
     // Động từ gồm: "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể điều kiện (ば/たら)", "Thể sai khiến", "Thể bị động", "Thể mệnh lệnh", "Thể khả năng", "Thể ý chí (ngắn - よう)", "Thể ý chí lịch sự (ましょう)".
     // Danh từ/Tính từ gồm: "Hiện tại khẳng định (lịch sự)", "Hiện tại phủ định (lịch sự)", "Quá khứ khẳng định (lịch sự)", "Quá khứ phủ định (lịch sự)", "Hiện tại khẳng định (ngắn)", "Hiện tại phủ định (ngắn)", "Quá khứ khẳng định (ngắn)", "Quá khứ phủ định (ngắn)".
     {
@@ -65,48 +65,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
         response = await ai.models.generateContent({
           model: 'gemini-3.5-flash',
           contents: prompt,
-          config: {
-            
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                kanji: { type: Type.STRING },
-                reading: { type: Type.STRING },
-                romaji: { type: Type.STRING },
-                sinoVietnamese: { type: Type.STRING },
-                meaning: { type: Type.STRING },
-                kanjiExplanation: { type: Type.STRING },
-                wordType: { type: Type.STRING },
-                forms: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING },
-                      value: { type: Type.STRING },
-                      reading: { type: Type.STRING },
-                      romaji: { type: Type.STRING },
-                      meaning: { type: Type.STRING }
-                    }
-                  }
-                },
-                examples: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      sentence: { type: Type.STRING },
-                      reading: { type: Type.STRING },
-                      romaji: { type: Type.STRING },
-                      translation: { type: Type.STRING }
-                    }
-                  }
-                }
-              }
-            },
-
-          }
+          config: { responseMimeType: 'application/json' }
         });
       } catch (error: any) {
         const errorMsg = error.message || '';
@@ -115,48 +74,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
            response = await ai.models.generateContent({
              model: 'gemini-3.1-flash-lite',
              contents: prompt,
-             config: {
-               
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                kanji: { type: Type.STRING },
-                reading: { type: Type.STRING },
-                romaji: { type: Type.STRING },
-                sinoVietnamese: { type: Type.STRING },
-                meaning: { type: Type.STRING },
-                kanjiExplanation: { type: Type.STRING },
-                wordType: { type: Type.STRING },
-                forms: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING },
-                      value: { type: Type.STRING },
-                      reading: { type: Type.STRING },
-                      romaji: { type: Type.STRING },
-                      meaning: { type: Type.STRING }
-                    }
-                  }
-                },
-                examples: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      sentence: { type: Type.STRING },
-                      reading: { type: Type.STRING },
-                      romaji: { type: Type.STRING },
-                      translation: { type: Type.STRING }
-                    }
-                  }
-                }
-              }
-            },
-
-             }
+             config: { responseMimeType: 'application/json' }
            });
         } else {
            throw error;

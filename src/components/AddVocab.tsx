@@ -54,8 +54,8 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       if (data.reading) setReading(data.reading);
       if (data.romaji) setRomaji(data.romaji);
       if (data.meaning) setMeaning(data.meaning);
-      if (data.sinoVietnamese) setSinoVietnamese(data.sinoVietnamese);
-      if (data.kanjiExplanation) setKanjiExplanation(data.kanjiExplanation);
+      if (data.sinoVietnamese !== undefined) setSinoVietnamese(data.sinoVietnamese);
+      if (data.kanjiExplanation !== undefined) setKanjiExplanation(data.kanjiExplanation);
       if (data.examples && Array.isArray(data.examples) && data.examples.length > 0) {
         setExamples(data.examples.map((ex: any) => ({
           sentence: ex.sentence || '',
