@@ -395,7 +395,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('form')) {
            return;
         }
-        setShowAnswer(!showAnswer);
+        if (showAnswer) return;
+        setShowAnswer(true);
       }}
       style={{ transformStyle: "preserve-3d" }}
       animate={{ rotateY: showAnswer ? 180 : 0 }}
