@@ -192,7 +192,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   }
 
   return (
-    <span className="relative inline-block" ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}>
+    <span className={`relative inline-block ${isOpen ? "z-[9999]" : ""}`} ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}>
       <span 
         className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current`}
         onClick={(e) => {
@@ -204,7 +204,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
         {text}
       </span>
       {isOpen && (
-        <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max max-w-[280px] max-h-[250px] overflow-y-auto bg-theme-panel border border-theme-subtle rounded shadow-xl p-4 z-50 flex flex-col gap-1 text-left font-sans text-base whitespace-normal">
+        <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-max max-w-[280px] max-h-[250px] overflow-y-auto bg-theme-panel border border-theme-subtle rounded shadow-xl p-4 z-[9999] flex flex-col gap-1 text-left font-sans text-base whitespace-normal">
           <span className="flex items-start justify-between gap-3">
             <span className="flex items-center gap-2">
               <strong className="text-xl font-serif text-theme-primary leading-none">{card.kanji || card.reading}</strong>

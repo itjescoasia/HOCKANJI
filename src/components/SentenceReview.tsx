@@ -482,7 +482,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         <> <div className="flex-1 shrink-0 min-h-0" /> <HighlightProvider>
           <div className="w-full shrink-0 flex flex-col items-center justify-center min-h-[150px] my-4">
             {mode === "JA_TO_VI" && (
-              <div className="mb-6 opacity-70">
+              <div className="mb-6 text-theme-primary/70">
                 <p className="font-serif text-theme-japanese text-lg sm:text-xl mb-2">
                   {renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)}
                 </p>
@@ -494,7 +494,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               </div>
             )}
             {mode === "VI_TO_JA" && (
-              <div className="mb-6 opacity-70">
+              <div className="mb-6 text-theme-primary/70">
                 <p className="font-serif text-theme-primary text-lg sm:text-xl mb-2">
                   {currentExample.translation}
                 </p>

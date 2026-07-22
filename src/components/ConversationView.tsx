@@ -750,7 +750,7 @@ function ConversationDetail({
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         style={provided.draggableProps.style}
-                        className={`relative rounded-lg border ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle"} bg-theme-panel group mb-4`}
+                        className={`relative rounded-lg border ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle hover:z-40 focus-within:z-40"} bg-theme-panel group mb-4`}
                       >
                         <div className={`p-4 relative z-10 w-full min-h-full ${editingId !== dialogue.id ? "pl-14" : ""}`}>
                           {editingId !== dialogue.id && !deleteEnabled && (
