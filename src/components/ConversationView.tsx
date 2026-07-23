@@ -454,7 +454,7 @@ function ConversationDetail({
     };
 
     onUpdate(conversation.id, {
-      dialogues: [...conversation.dialogues, newDialogue],
+      dialogues: [newDialogue, ...conversation.dialogues],
     });
 
     setNewJp("");
@@ -1128,7 +1128,7 @@ function ConversationDetail({
       )}
 
       {!isAdding && viewMode === "list" && (
-        <div className="sticky bottom-8 z-10 w-full mt-4 flex justify-center pointer-events-none">
+        <div className="sticky bottom-8 z-[60] w-full mt-4 flex justify-center pointer-events-none">
           <button
             onClick={() => setIsAdding(true)}
             className="flex items-center gap-2 text-theme-inverted bg-theme-accent hover:bg-theme-accent-light uppercase tracking-widest text-xs font-bold transition-all py-3 px-8 justify-center rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] pointer-events-auto hover:scale-105"
