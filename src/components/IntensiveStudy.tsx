@@ -8,7 +8,6 @@ import {
   KanjiCard,
 } from "../types";
 import {
-  PlusCircle,
   Search,
   Trash2,
   ArrowLeft,
@@ -23,7 +22,11 @@ import {
   Volume2,
   CopyPlus,
   CheckCircle,
-  Info
+  Info,
+  BookOpen,
+  MessageCircle,
+  ArrowRight,
+  PlusCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
@@ -231,6 +234,7 @@ export default function IntensiveStudy({
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [targetExampleId, setTargetExampleId] = useState<string | null>(null);
+  const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
 
   // Add Form State
   const [newWordData, setNewWordData] = useState({
@@ -339,7 +343,7 @@ export default function IntensiveStudy({
     })
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = (event: any) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -403,289 +407,314 @@ export default function IntensiveStudy({
     );
   };
 
-  if (viewState === "add") {
-    return (
-      <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
-        <button
-          onClick={() => setViewState("list")}
-          className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium tracking-wider uppercase">
-            Quay lại
-          </span>
-        </button>
-
-        <div className="bg-theme-hover p-6 sm:p-8 rounded-lg border border-theme-subtle shadow-xl">
-          <h2 className="text-xl font-serif text-theme-accent mb-6 tracking-widest text-center sm:text-left">
-            THÊM TỪ VỰNG CHUYÊN SÂU
-          </h2>
-
-          <form onSubmit={handleAddSubmit} className="flex flex-col gap-6">
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                Từ khóa / Kanji *
-              </label>
-              <input
-                required
-                type="text"
-                value={newWordData.word}
-                onChange={(e) =>
-                  setNewWordData({ ...newWordData, word: e.target.value })
-                }
-                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-4 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-2xl transition-colors placeholder:text-theme-primary/40 shadow-inner"
-                placeholder="Ví dụ: 情報, 食べる, Ngữ pháp ~て..."
-              />
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-5">
-              <div className="flex-1 space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                  Cách đọc (Hiragana)
-                </label>
-                <input
-                  type="text"
-                  value={newWordData.reading}
-                  onChange={(e) =>
-                    setNewWordData({
-                      ...newWordData,
-                      reading: e.target.value,
-                    })
-                  }
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
-                  placeholder="e.g. じょうほう"
-                />
-              </div>
-              <div className="flex-1 space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                  Phiên âm Romaji
-                </label>
-                <input
-                  type="text"
-                  value={newWordData.romaji}
-                  onChange={(e) =>
-                    setNewWordData({ ...newWordData, romaji: e.target.value })
-                  }
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
-                  placeholder="e.g. jōhō"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                Tính chất
-              </label>
-              <select
-                value={newWordData.category}
-                onChange={(e) =>
-                  setNewWordData({
-                    ...newWordData,
-                    category: e.target.value as WordCategory,
-                  })
-                }
-                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent appearance-none"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d4d4d4' opacity='0.6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "right 1rem center",
-                  backgroundSize: "1.2em",
-                }}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                Giải thích
-              </label>
-              <textarea
-                rows={3}
-                value={newWordData.explanation}
-                onChange={(e) =>
-                  setNewWordData({
-                    ...newWordData,
-                    explanation: e.target.value,
-                  })
-                }
-                className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
-                placeholder="e.g. Đây là từ ít xuất hiện, thường dùng trong ngữ cảnh..."
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={!String(newWordData.word || "").trim()}
-              className="mt-4 bg-theme-accent hover:bg-theme-accent-hover disabled:bg-theme-active disabled:text-theme-primary/40 text-theme-inverted font-bold py-3 rounded uppercase tracking-widest text-sm transition-all"
-            >
-              Tạo Chuyên Đề
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+  
 
   const handleCopyExample = (example: IntensiveExample, targetWordId: string) => {
     const targetWord = deck.find(w => w.id === targetWordId);
     if (!targetWord) return;
-    
-    // Copy the example with a new id
-    const copiedExample = { ...example, id: crypto.randomUUID() };
     onUpdateWord(targetWordId, {
-      examples: [...targetWord.examples, copiedExample]
+      examples: [...targetWord.examples, { ...example, id: crypto.randomUUID() }]
     });
   };
 
-  if (viewState === "study" && selectedWord) {
-    return (
-      <StudyView
-        deck={deck}
-        word={selectedWord}
-        targetExampleId={targetExampleId}
-        onCopyExample={handleCopyExample}
-        onBack={() => {
-          setViewState("list");
-          setTargetExampleId(null);
-        }}
-        onUpdateWord={onUpdateWord}
-        renderHighlight={renderExampleHighlight}
-        onStartTopicReview={onStartTopicReview}
-      />
-    );
-  }
-
   return (
-    <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h2 className="text-2xl font-serif text-theme-primary tracking-wider">
-          ÔN CHUYÊN TỪ VỰNG
-        </h2>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setViewState("add")}
-            className="bg-theme-hover hover:bg-theme-active text-theme-accent border border-theme-subtle px-4 py-2 rounded flex items-center gap-2 transition-all font-medium uppercase tracking-wider text-xs sm:text-sm"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Thêm Từ</span>
-          </button>
-        </div>
-      </div>
-
-      {deck.length > 0 && (
-        <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-theme-primary/40" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm chuyên đề, câu ví dụ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-theme-panel border border-theme-subtle rounded pl-10 pr-4 py-3 text-base sm:text-sm focus:outline-none focus:border-theme-accent transition-colors"
-          />
-          {String(searchQuery || "").trim() && filteredDeck.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-theme-panel border border-theme-subtle rounded-lg shadow-xl z-50 max-h-[60vh] overflow-y-auto">
-              {filteredDeck.slice(0, 10).map((word) => {
-                const query = searchQuery.toLowerCase();
-                const matchedExample = (word.examples || []).find(
-                  (ex) =>
-                    (ex.sentence && ex.sentence.toLowerCase().includes(query)) ||
-                    (ex.translation &&
-                      ex.translation.toLowerCase().includes(query)) ||
-                    (ex.reading && ex.reading.toLowerCase().includes(query))
-                ) || (word.examples || [])[0];
-
-                return (
-                  <button
-                    key={word.id || Math.random().toString()}
-                    onClick={() => {
-                      setSelectedWordId(word.id);
-                      setTargetExampleId(matchedExample?.id || null);
-                      setViewState("study");
-                      setSearchQuery("");
-                    }}
-                    className="w-full text-left p-3 sm:p-4 border-b border-theme-subtle hover:bg-theme-hover transition-colors last:border-0 flex flex-col gap-1"
-                  >
-                    <div className="flex items-center gap-2 w-full min-w-0">
-                      <span className="font-serif text-base sm:text-lg text-theme-primary truncate">
-                        <SearchHighlight text={word.word} query={searchQuery} />
-                      </span>
-                      {word.reading && (
-                        <span className="text-theme-accent text-sm font-medium truncate">
-                          <SearchHighlight text={word.reading} query={searchQuery} />
-                        </span>
-                      )}
-                      {word.romaji && (
-                        <span className="text-theme-primary/60 text-xs font-medium truncate">
-                          <SearchHighlight text={word.romaji} query={searchQuery} />
-                        </span>
-                      )}
-                      <span className="text-[10px] uppercase tracking-wider text-theme-primary/40 ml-auto whitespace-nowrap flex-shrink-0">
-                        {word.category}
-                      </span>
-                    </div>
-                    {matchedExample && (
-                      <div className="text-sm text-theme-primary/70 mt-2 pl-3 border-l-2 border-theme-accent/50 italic flex flex-col gap-1">
-                        <span className="block text-theme-primary font-serif">
-                          <SearchHighlight text={matchedExample.sentence} query={searchQuery} />
-                        </span>
-                        {matchedExample.romaji && (
-                          <span className="block text-xs font-mono text-theme-primary/60">
-                            <SearchHighlight text={matchedExample.romaji} query={searchQuery} />
-                          </span>
-                        )}
-                        {matchedExample.translation && (
-                          <span className="block text-xs">
-                            <SearchHighlight text={matchedExample.translation} query={searchQuery} />
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {deck.length === 0 ? (
-        <div className="text-center py-20 bg-theme-panel border border-theme-subtle rounded-lg mt-8">
-          <p className="text-theme-primary/60 font-medium mb-4">
-            Bạn chưa tạo chuyên đề từ vựng nào.
-          </p>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+    <AnimatePresence mode="wait">
+      {viewState === "add" && (
+        <motion.div
+          key="add"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.3 }}
+          className="w-full"
         >
-          <SortableContext items={filteredDeck.map(w => w.id)} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDeck.map((word) => (
-                <SortableWordItem
-                  key={word.id || Math.random().toString()}
-                  word={word}
-                  searchQuery={searchQuery}
-                  onRemoveWord={onRemoveWord}
-                  onSelectWord={(id) => {
-                    setSelectedWordId(id);
-                    setViewState("study");
-                  }}
-                />
-              ))}
+          <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
+            <button
+              onClick={() => setViewState("list")}
+              className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors w-fit mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-xs font-medium tracking-wider uppercase">
+                Về danh sách
+              </span>
+            </button>
+            <div className="bg-theme-panel p-8 border border-theme-subtle shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <BookOpen className="w-32 h-32 text-theme-accent" />
+              </div>
+              <h2 className="text-2xl font-serif text-theme-primary mb-8 relative z-10">
+                Thêm chuyên đề mới
+              </h2>
+              <form onSubmit={handleAddSubmit} className="flex flex-col gap-6 relative z-10">
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Từ khóa / Kanji *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={newWordData.word}
+                    onChange={(e) => setNewWordData({...newWordData, word: e.target.value})}
+                    className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-xl transition-colors placeholder:text-theme-primary/40"
+                    placeholder="Ví dụ: 経済, Kế hoạch..."
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                      Cách đọc (Hiragana)
+                    </label>
+                    <input
+                      type="text"
+                      value={newWordData.reading}
+                      onChange={(e) => setNewWordData({...newWordData, reading: e.target.value})}
+                      className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                      Phiên âm Romaji
+                    </label>
+                    <input
+                      type="text"
+                      value={newWordData.romaji}
+                      onChange={(e) => setNewWordData({...newWordData, romaji: e.target.value})}
+                      className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Danh mục / Chủ đề
+                  </label>
+                  <input
+                    type="text"
+                    value={newWordData.category}
+                    onChange={(e) => setNewWordData({...newWordData, category: e.target.value as any})}
+                    className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40"
+                    placeholder="Ví dụ: Kinh tế, IT..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Giải thích chi tiết
+                  </label>
+                  <textarea
+                    value={newWordData.explanation}
+                    onChange={(e) => setNewWordData({...newWordData, explanation: e.target.value})}
+                    className="w-full bg-theme-base border border-theme-subtle px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent transition-colors placeholder:text-theme-primary/40 min-h-[120px] resize-y"
+                    placeholder="Viết ghi chú, giải nghĩa, điểm ngữ pháp cần nhớ..."
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!String(newWordData.word || "").trim()}
+                  className="mt-4 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-4 px-6 uppercase tracking-widest text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Lưu chuyên đề
+                </button>
+              </form>
             </div>
-          </SortableContext>
-        </DndContext>
+          </div>
+        </motion.div>
       )}
-    </div>
+
+      {viewState === "study" && selectedWord && (
+        <motion.div
+          key="study"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+          className="w-full"
+        >
+          <StudyView
+            deck={deck}
+            word={selectedWord}
+            targetExampleId={targetExampleId || undefined}
+            onCopyExample={handleCopyExample}
+            onBack={() => {
+              setViewState("list");
+              setSelectedWordId(null);
+              setTargetExampleId(null);
+            }}
+            onUpdateWord={onUpdateWord}
+            renderHighlight={renderExampleHighlight}
+            onStartTopicReview={onStartTopicReview}
+          />
+        </motion.div>
+      )}
+
+      {viewState === "list" && (
+        <motion.div
+          key="list"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.3 }}
+          className="w-full"
+        >
+          <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full">
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-serif text-theme-accent mb-2 tracking-widest uppercase">
+                  Chuyên Đề Học Sâu
+                </h2>
+                <span className="text-theme-primary opacity-50 text-[10px] uppercase tracking-widest">
+                  {deck.length} chuyên đề • {deck.reduce((sum, w) => sum + w.examples.length, 0)} mẫu câu
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsDeleteUnlocked(!isDeleteUnlocked)}
+                  className={`flex items-center justify-center p-2.5 transition-colors border ${
+                    isDeleteUnlocked 
+                      ? "bg-red-500/10 border-red-500/50 text-red-500" 
+                      : "bg-theme-panel border-theme-subtle text-theme-primary/40 hover:text-theme-accent hover:border-theme-accent"
+                  }`}
+                  title={isDeleteUnlocked ? "Khóa chế độ xóa" : "Mở khóa chế độ xóa"}
+                >
+                  {isDeleteUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setViewState("add")}
+                  className="flex items-center gap-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-2.5 font-bold uppercase tracking-widest text-xs transition-colors shrink-0"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Thêm chủ đề
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-8 relative max-w-xl">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-theme-primary opacity-40" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-4 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-sm"
+                placeholder="Tìm kiếm chuyên đề, từ vựng..."
+              />
+            </div>
+
+            {filteredDeck.length === 0 ? (
+              <div className="text-center py-20 bg-theme-panel border border-theme-subtle border-dashed">
+                <p className="text-theme-primary/50 text-sm uppercase tracking-wider">
+                  {searchQuery ? "Không tìm thấy kết quả nào." : "Chưa có chuyên đề nào."}
+                </p>
+              </div>
+            ) : (
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="intensive-deck">
+                  {(provided) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
+                      <AnimatePresence>
+                        {filteredDeck.map((word, index) => (
+                          <Draggable
+                            key={word.id}
+                            draggableId={word.id}
+                            index={index}
+                            isDragDisabled={!!searchQuery.trim()}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                style={provided.draggableProps.style}
+                                className={`h-full ${snapshot.isDragging ? "z-50" : "z-0"}`}
+                              >
+                                <motion.div
+                                  initial={{ opacity: 0, y: 15 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.9 }}
+                                  className={`group bg-theme-panel border ${snapshot.isDragging ? 'border-theme-accent shadow-2xl ring-2 ring-theme-accent/20 scale-105' : 'border-theme-subtle hover:border-theme-accent hover:shadow-xl hover:-translate-y-1 hover:shadow-theme-accent/10'} p-6 transition-all duration-300 ease-out cursor-pointer relative h-full flex flex-col overflow-hidden`}
+                                  onClick={() => {
+                                    setSelectedWordId(word.id);
+                                    setViewState("study");
+                                  }}
+                                >
+                                  {/* Beautiful background accent */}
+                                  <div className="absolute -right-12 -top-12 w-32 h-32 bg-theme-accent/5 rounded-full blur-2xl group-hover:bg-theme-accent/10 transition-colors duration-500 pointer-events-none"></div>
+
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                  <div className="flex items-center gap-3">
+                                    {!searchQuery.trim() && (
+                                      <div 
+                                        {...provided.dragHandleProps}
+                                        className="text-theme-primary/20 hover:text-theme-accent transition-colors p-1 -ml-2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Kéo thả để sắp xếp"
+                                      >
+                                        <GripVertical className="w-5 h-5" />
+                                      </div>
+                                    )}
+                                    <h3 className="font-serif text-2xl text-theme-primary group-hover:text-theme-accent transition-colors">
+                                      {word.word}
+                                    </h3>
+                                  </div>
+                                  {word.category && (
+                                    <span className="text-[10px] font-bold text-theme-accent/80 bg-theme-accent/5 px-2 py-1 rounded-sm uppercase tracking-wider border border-theme-accent/10 whitespace-nowrap">
+                                      {word.category}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {word.reading && (
+                                  <div className="text-theme-primary/60 text-sm mb-4">
+                                    {word.reading} {word.romaji ? `(${word.romaji})` : ""}
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between mt-6">
+                                  <span className="text-xs font-bold uppercase tracking-widest text-theme-primary/40 group-hover:text-theme-accent/60 transition-colors flex items-center gap-2">
+                                    <MessageCircle className="w-4 h-4" />
+                                    {word.examples.length} MẪU CÂU
+                                  </span>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    {isDeleteUnlocked && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (confirm("Bạn có chắc chắn muốn xóa chuyên đề này không? Toàn bộ mẫu câu bên trong sẽ bị mất.")) {
+                                            onRemoveWord(word.id);
+                                          }
+                                        }}
+                                        className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                        title="Xóa chuyên đề"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                    <ArrowRight className="w-5 h-5 text-theme-primary/20 group-hover:text-theme-accent transition-colors" />
+                                  </div>
+                                </div>
+                              </motion.div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </AnimatePresence>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
+
+
 
 function StudyView({
   deck,
