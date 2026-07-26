@@ -1,28 +1,53 @@
 const fs = require('fs');
-let file = fs.readFileSync('src/components/ConversationView.tsx', 'utf8');
 
-const importStatement = "import Markdown from 'react-markdown';\n";
-if (!file.includes('react-markdown')) {
-  file = importStatement + file;
-}
+let content = fs.readFileSync('src/components/ConversationView.tsx', 'utf8');
 
-const oldLogicExp1 = `<div className="relative z-10 text-[15px] text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                                        {dialogue.explanation}
-                                      </div>`;
+// 1. Add ArrowRightLeft import
+content = content.replace(
+  'ArrowRight } from "lucide-react";',
+  'ArrowRight, ArrowRightLeft } from "lucide-react";'
+);
 
-const newLogicExp1 = `<div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
-                                        <Markdown>{dialogue.explanation}</Markdown>
-                                      </div>`;
+// 2. Add conversations to ConversationDetail parameters
+content = content.replace(
+  'function ConversationDetail({\n  conversation,',
+  'function ConversationDetail({\n  conversation,\n  conversations,'
+);
 
-const oldLogicExp2 = `<div className="relative z-10 text-base md:text-lg text-theme-primary/80 whitespace-pre-wrap leading-relaxed font-serif">
-                      {conversation.dialogues[currentSlideIndex].explanation}
-                    </div>`;
+content = content.replace(
+  '}: {\n  conversation: Conversation;',
+  '}: {\n  conversation: Conversation;\n  conversations: Conversation[];'
+);
 
-const newLogicExp2 = `<div className="relative z-10 text-base md:text-lg text-theme-primary/80 leading-relaxed font-serif markdown-body">
-                      <Markdown>{conversation.dialogues[currentSlideIndex].explanation}</Markdown>
-                    </div>`;
+// 3. Add movingDialogueId state and handleMoveDialogue
+const stateInsertion = `
+  const [movingDialogueId, setMovingDialogueId] = useState<string | null>(null);
 
-file = file.replace(oldLogicExp1, newLogicExp1);
-file = file.replace(oldLogicExp2, newLogicExp2);
-fs.writeFileSync('src/components/ConversationView.tsx', file);
-console.log('Patched ConversationView');
+  const handleMoveDialogue = (dialogue: DialogueSentence, targetConversationId: string) => {
+    if (!targetConversationId) return;
+    const targetConv = conversations.find(c => c.id === targetConversationId);
+    if (!targetConv) return;
+    
+    // update target
+    onUpdate(targetConv.id, {
+      dialogues: [...targetConv.dialogues, dialogue]
+    });
+    // update source
+    onUpdate(conversation.id, {
+      dialogues: conversation.dialogues.filter(d => d.id !== dialogue.id)
+    });
+    setMovingDialogueId(null);
+  };
+`;
+content = content.replace(
+  'const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);',
+  'const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);' + stateInsertion
+);
+
+// 4. Update the ConversationDetail call in ConversationView component
+content = content.replace(
+  '<ConversationDetail\n            conversation={selectedConv}',
+  '<ConversationDetail\n            conversations={conversations}\n            conversation={selectedConv}'
+);
+
+fs.writeFileSync('src/components/ConversationView.tsx', content);

@@ -1,7 +1,7 @@
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download, Eye, ArrowRight } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download, Eye, ArrowRight, ArrowRightLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -151,6 +151,7 @@ export default function ConversationView({
           className="w-full"
         >
           <ConversationDetail
+            conversations={conversations}
             conversation={selectedConv}
             onBack={() => {
               setViewState("list");
@@ -299,6 +300,7 @@ export default function ConversationView({
 
 function ConversationDetail({
   conversation,
+  conversations,
   onBack,
   onUpdate,
   onUpdateCard,
@@ -308,6 +310,7 @@ function ConversationDetail({
   onStartTopicReview,
 }: {
   conversation: Conversation;
+  conversations: Conversation[];
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<Conversation>) => void;
   onUpdateCard?: (id: string, updates: Partial<KanjiCard>) => void;
@@ -361,6 +364,24 @@ function ConversationDetail({
 
   const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [movingDialogueId, setMovingDialogueId] = useState<string | null>(null);
+
+  const handleMoveDialogue = (dialogue: DialogueSentence, targetConversationId: string) => {
+    if (!targetConversationId) return;
+    const targetConv = conversations.find(c => c.id === targetConversationId);
+    if (!targetConv) return;
+    
+    // update target
+    onUpdate(targetConv.id, {
+      dialogues: [...(targetConv.dialogues || []), dialogue]
+    });
+    // update source
+    onUpdate(conversation.id, {
+      dialogues: (conversation.dialogues || []).filter(d => d.id !== dialogue.id)
+    });
+    setMovingDialogueId(null);
+  };
+
   const [deleteEnabled, setDeleteEnabled] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
@@ -505,7 +526,7 @@ function ConversationDetail({
 
   const handleRemoveDialogue = (id: string) => {
     onUpdate(conversation.id, {
-      dialogues: conversation.dialogues.filter((d) => d.id !== id),
+      dialogues: (conversation.dialogues || []).filter((d) => d.id !== id),
     });
     setConfirmingDeleteId(null);
   };
@@ -894,6 +915,15 @@ function ConversationDetail({
                                   )}
                                 </div></HighlightProvider>
                                 <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start relative z-20">
+                                  
+                                  <button
+                                    onClick={() => setMovingDialogueId(movingDialogueId === dialogue.id ? null : dialogue.id)}
+                                    className={`p-2 transition-all ${movingDialogueId === dialogue.id ? 'text-theme-accent' : 'text-theme-primary/40 hover:text-theme-accent'}`}
+                                    title="Chuyển sang chủ đề khác"
+                                  >
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                  </button>
+
                                   <button
                                     onClick={() => startEditing(dialogue)}
                                     className="p-2 text-theme-primary/40 hover:text-theme-accent transition-all"
@@ -943,7 +973,10 @@ function ConversationDetail({
                               
                               {/* Detailed Explanation Section */}
                               <AnimatePresence>
-                                {expandedExplanationId === dialogue.id && dialogue.explanation && (
+                                
+                              
+
+                              {expandedExplanationId === dialogue.id && dialogue.explanation && (
                                   <motion.div
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: "auto", opacity: 1 }}
@@ -1165,6 +1198,54 @@ function ConversationDetail({
         </div>
       )}
 
+
+      {/* Modal for Moving Dialogue */}
+      {movingDialogueId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMovingDialogueId(null)}
+          />
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-serif text-theme-primary">
+                Chuyển sang chủ đề khác
+              </h3>
+              <button
+                onClick={() => setMovingDialogueId(null)}
+                className="p-2 text-theme-primary/40 hover:text-theme-primary transition-colors rounded-full hover:bg-theme-hover"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2 flex flex-col gap-2">
+              {conversations.filter(c => c.id !== conversation.id).map(targetConv => (
+                <button
+                  key={targetConv.id}
+                  onClick={() => {
+                    const dialogueToMove = conversation.dialogues.find(d => d.id === movingDialogueId);
+                    if (dialogueToMove) {
+                      handleMoveDialogue(dialogueToMove, targetConv.id);
+                    }
+                  }}
+                  className="w-full text-left px-4 py-3 text-base text-theme-primary/80 hover:text-theme-accent hover:bg-theme-accent/10 rounded-lg border border-theme-subtle hover:border-theme-accent/30 transition-all flex items-center justify-between group"
+                >
+                  <span className="truncate pr-4 font-medium">{targetConv.title}</span>
+                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
+              
+              {conversations.filter(c => c.id !== conversation.id).length === 0 && (
+                <div className="text-center py-8 text-theme-primary/50 text-sm italic">
+                  Không có chủ đề nào khác để chuyển tới
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isAdding && viewMode === "list" && (
         <div className="sticky bottom-8 z-[60] w-full mt-4 flex justify-center pointer-events-none">
           <button
@@ -1179,6 +1260,7 @@ function ConversationDetail({
     </div>
   );
 }
+
 
 function getVocabForConversation(conversation: Conversation, mainDeck: KanjiCard[]): KanjiCard[] {
   const combinedText = conversation.dialogues.map(d => d.japanese).join(" ");
