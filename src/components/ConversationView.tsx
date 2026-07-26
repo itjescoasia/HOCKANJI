@@ -63,6 +63,43 @@ export default function ConversationView({
     ? fuse.search(searchQuery).map((r) => r.item)
     : conversations;
 
+
+  const handleConvDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+    if (searchQuery.trim() !== "") return;
+
+    const items = Array.from(filteredConversations);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    const destIndex = result.destination.index;
+    let newOrder;
+
+    if (items.length <= 1) return;
+
+    if (destIndex === 0) {
+      // Moved to top
+      const nextItem = items[1];
+      const nextOrder = nextItem.order ?? nextItem.createdAt;
+      newOrder = nextOrder + 100000;
+    } else if (destIndex === items.length - 1) {
+      // Moved to bottom
+      const prevItem = items[items.length - 2];
+      const prevOrder = prevItem.order ?? prevItem.createdAt;
+      newOrder = prevOrder - 100000;
+    } else {
+      // Moved in between
+      const prevItem = items[destIndex - 1];
+      const nextItem = items[destIndex + 1];
+      const prevOrder = prevItem.order ?? prevItem.createdAt;
+      const nextOrder = nextItem.order ?? nextItem.createdAt;
+      newOrder = (prevOrder + nextOrder) / 2;
+    }
+
+    onUpdateConversation(reorderedItem.id, { order: newOrder });
+  };
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!String(newTitle || "").trim()) return;
@@ -230,14 +267,34 @@ export default function ConversationView({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+<DragDropContext onDragEnd={handleConvDragEnd}>
+  <Droppable droppableId="conversation-list" direction="vertical">
+    {(provided) => (
+      <div 
+        className="flex flex-col gap-4 relative"
+        {...provided.droppableProps}
+        ref={provided.innerRef}
+      >
+
                 <AnimatePresence>
-                  {filteredConversations.map((conv) => (
-                    <motion.div
-                      key={conv.id}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
+                  {filteredConversations.map((conv, index) => (
+                    <Draggable key={conv.id} draggableId={conv.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            ...(snapshot.isDragging ? { zIndex: 50, scale: 1.05, opacity: 0.9 } : {})
+                          }}
+                          className="h-full"
+                        >
+                          <motion.div
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
                       className="group bg-theme-panel border border-theme-subtle hover:border-theme-accent hover:shadow-xl hover:-translate-y-1 hover:shadow-theme-accent/10 p-6 transition-all duration-300 ease-out cursor-pointer relative flex flex-col h-full overflow-hidden"
                       onClick={() => {
                         setSelectedConvId(conv.id);
@@ -285,9 +342,16 @@ export default function ConversationView({
                         </div>
                       </div>
                     </motion.div>
+                        </div>
+                      )}
+                    </Draggable>
                   ))}
+                  {provided.placeholder}
                 </AnimatePresence>
               </div>
+            )}
+  </Droppable>
+</DragDropContext>
             )}
           </div>
         </motion.div>

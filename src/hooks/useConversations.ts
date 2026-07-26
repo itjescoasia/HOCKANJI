@@ -57,7 +57,7 @@ export function useConversations() {
           snapshot.forEach((docSnap) => {
             loadedConversations.push({ id: docSnap.id, ...docSnap.data() } as Conversation);
           });
-          setConversations(loadedConversations.sort((a,b) => b.createdAt - a.createdAt));
+          setConversations(loadedConversations.sort((a,b) => (b.order ?? b.createdAt) - (a.order ?? a.createdAt)));
           setIsLoaded(true);
         }, (error) => {
           setIsLoaded(true);

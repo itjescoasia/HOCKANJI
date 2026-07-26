@@ -332,36 +332,23 @@ export default function IntensiveStudy({
     return results;
   }, [searchQuery, deck, fuse]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  
 
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event;
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+    if (String(searchQuery || "").trim()) return;
+    if (!onReorderDeck) return;
 
-    if (over && active.id !== over.id) {
-      if (!onReorderDeck) return;
-      if (String(searchQuery || "").trim()) return;
+    const items = Array.from(filteredDeck);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
 
-      const oldIndex = deck.findIndex((item) => item.id === active.id);
-      const newIndex = deck.findIndex((item) => item.id === over.id);
-
-      const newDeck = arrayMove(deck, oldIndex, newIndex);
-
-      const updatedDeck = newDeck.map((word, index) => ({
-        ...word,
-        order: index,
-      }));
-
-      onReorderDeck(updatedDeck);
-    }
+    const updatedDeck = items.map((word, index) => ({
+      ...word,
+      order: index,
+    }));
+    onReorderDeck(updatedDeck);
   };
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -607,12 +594,12 @@ export default function IntensiveStudy({
               </div>
             ) : (
               <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="intensive-deck">
+                <Droppable droppableId="intensive-deck" direction="vertical">
                   {(provided) => (
                     <div
                       {...provided.droppableProps}
                       ref={provided.innerRef}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                      className="flex flex-col gap-4 relative"
                     >
                       <AnimatePresence>
                         {filteredDeck.map((word, index) => (
