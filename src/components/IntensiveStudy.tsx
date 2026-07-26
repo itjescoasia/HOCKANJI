@@ -1326,7 +1326,7 @@ function StudyView({
                         id={`example-${ex.id}`}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative rounded-lg border transition-all duration-500 ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle hover:z-40 focus-within:z-40"} ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
+                        className={`relative overflow-hidden rounded-lg border transition-all duration-300 ease-out ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50 scale-[1.02]" : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"} ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
                         <div
