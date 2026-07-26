@@ -961,6 +961,20 @@ function ConversationDetail({
                                     >
                                       <Volume2 className="w-4 h-4" />
                                     </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(dialogue.japanese);
+                                        const btn = e.currentTarget;
+                                        const originalHTML = btn.innerHTML;
+                                        btn.innerHTML = '<svg class="w-4 h-4 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                                        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                                      }}
+                                      className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                                      title="Copy câu hội thoại"
+                                    >
+                                      <Copy className="w-4 h-4" />
+                                    </button>
                                   </div>
                                   {dialogue.hiragana && (
                                     <p className="text-sm text-theme-primary/80">
