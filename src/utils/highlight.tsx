@@ -688,7 +688,7 @@ export function trimAuxiliary(text: string) {
 
     if (targetToHighlight !== targetWord && targetToHighlight.length > 0 && token.text.includes(targetToHighlight)) {
       const safeStem = targetToHighlight.replace(/[.*+?^\$\{\}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(\${safeStem}[ぁ-ん]*)`, 'g');
+      const regex = new RegExp(`(${safeStem}[ぁ-ん]*)`, 'g');
       const parts = token.text.split(regex);
       parts.forEach((part) => {
         if (part.length > 0) {

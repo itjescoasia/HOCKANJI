@@ -7,6 +7,7 @@ import { renderExampleHighlight, RelatedHighlight, HighlightVietnamese, Highligh
 import ReviewEditForm from './ReviewEditForm';
 
 interface ReviewSessionProps {
+  deck?: KanjiCard[];
   dueCards: KanjiCard[];
   onReview: (id: string, grade: ReviewGrade) => void;
   onFreeStudyReview?: (id: string, isRemember: boolean) => void;
@@ -17,7 +18,7 @@ interface ReviewSessionProps {
   isDifficultReview?: boolean;
 }
 
-export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, onUpdateCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
+export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, onUpdateCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flippedState, setFlippedState] = useState<Record<number, boolean>>({});
@@ -434,7 +435,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                       <HighlightProvider key={ex.id}><div className="w-full flex flex-col items-start gap-2 bg-theme-base-alt p-4 sm:p-5 border border-theme-subtle rounded-lg text-left shadow-sm group/ex relative">
                         <div className="w-full flex items-start gap-2 justify-between">
                           <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">
-                            {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, [], currentCard)}
+                            {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, deck || [], currentCard)}
                           </p>
                           <button
                             onClick={(e) => handleSpeak(e, ex.sentence)}
@@ -465,7 +466,7 @@ export default function ReviewSession({ dueCards, onReview, onFreeStudyReview, o
                         {currentCard.example && (
                           <div className="w-full flex items-start gap-2 justify-between">
                             <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">
-                              {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, [], currentCard)}
+                              {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck || [], currentCard)}
                             </p>
                             <button
                               onClick={(e) => handleSpeak(e, currentCard.example!)}

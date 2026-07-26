@@ -790,7 +790,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         </div>
                         <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-pre-wrap w-full sm:min-w-[300px] lg:min-w-[500px]">{card.meaning}</div>
                         { (card.kanjiExplanation || card.wordType) && (
-                          <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px] markdown-body">
+                          <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px] markdown-body whitespace-pre-wrap">
                             <Markdown>{(card.wordType ? `**Loại từ: ${card.wordType}**\n\n` : "") + cleanMarkdownForDisplay(card.kanjiExplanation || "")}</Markdown>
                           </div>
                         )}

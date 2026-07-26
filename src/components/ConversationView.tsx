@@ -960,7 +960,7 @@ function ConversationDetail({
                                           Góc học tập
                                         </h4>
                                       </div>
-                                      <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                                      <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body whitespace-pre-wrap">
                                         <Markdown>{dialogue.explanation}</Markdown>
                                       </div>
                                     </div>
@@ -1024,7 +1024,7 @@ function ConversationDetail({
                         Góc học tập
                       </h4>
                     </div>
-                    <div className="relative z-10 text-base md:text-lg text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                    <div className="relative z-10 text-base md:text-lg text-theme-primary/80 leading-relaxed font-serif markdown-body whitespace-pre-wrap">
                       <Markdown>{conversation.dialogues[currentSlideIndex].explanation}</Markdown>
                     </div>
                   </div>

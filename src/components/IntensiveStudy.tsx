@@ -1142,7 +1142,7 @@ function StudyView({
                 </span>
               </div>
               { (word.explanation || word.category) && (
-                <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body">
+                <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body whitespace-pre-wrap">
                   <Markdown>{(word.category ? `Loại từ: ${word.category}\n\n` : "") + cleanMarkdownForDisplay(word.explanation || "")}</Markdown>
                 </div>
               )}
@@ -1630,7 +1630,7 @@ function StudyView({
                                               Lưu ý đặc biệt
                                             </h4>
                                           </div>
-                                          <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                                          <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body whitespace-pre-wrap">
                                             <Markdown>{cleanMarkdownForDisplay(ex.specialNote)}</Markdown>
                                           </div>
                                         </div>

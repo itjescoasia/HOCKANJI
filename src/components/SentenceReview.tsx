@@ -547,7 +547,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                     Lưu ý đặc biệt
                   </h4>
                 </div>
-                <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body">
+                <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body whitespace-pre-wrap">
                   <Markdown>{currentExample.specialNote}</Markdown>
                 </div>
               </div>

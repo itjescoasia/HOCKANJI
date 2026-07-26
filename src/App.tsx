@@ -457,7 +457,7 @@ export default function App() {
 
       {/* Review Overlay */}
       {view === 'review' && (
-        <ReviewSession 
+        <ReviewSession deck={deck} 
           dueCards={isDifficultReviewMode ? getDifficultStudyDeck() : (isFreeStudyMode ? getFreeStudyDeck() : dueCards)}
           onReview={handleReviewCard}
           onFreeStudyReview={isDifficultReviewMode ? handleDifficultReview : handleFreeStudyReview}
