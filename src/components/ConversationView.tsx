@@ -49,19 +49,69 @@ export default function ConversationView({
 
   const selectedConv = conversations.find((c) => c.id === selectedConvId);
 
-  const fuse = React.useMemo(
-    () =>
-      new Fuse(conversations, {
-        keys: ["title", "description"],
-        threshold: 0.4,
-        ignoreLocation: true,
-      }),
-    [conversations]
-  );
-
-  const filteredConversations = searchQuery.trim()
-    ? fuse.search(searchQuery).map((r) => r.item)
-    : conversations;
+  const searchResults = React.useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    
+    const cleanText = (str) => {
+      if (!str) return "";
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/đ/g, "d").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+    };
+    
+    const query = cleanText(searchQuery);
+    const queryWords = query.split(/\s+/).filter(Boolean);
+    if (queryWords.length === 0) return null;
+    
+    const results = [];
+    
+    conversations.forEach(conv => {
+      const titleMatch = cleanText(conv.title).includes(query);
+      const descMatch = cleanText(conv.description).includes(query);
+      
+      let matchedAnyDialogue = false;
+      
+      conv.dialogues.forEach(d => {
+        const j = cleanText(d.japanese);
+        const v = cleanText(d.vietnamese);
+        const h = cleanText(d.hiragana);
+        const r = cleanText(d.romaji);
+        const textToSearch = `${j} ${v} ${h} ${r}`;
+        
+        let isMatch = false;
+        let score = 0;
+        
+        if (textToSearch.includes(query)) {
+          isMatch = true;
+          score = 100;
+        } else {
+          const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
+          if (matchCount > 0 && (matchCount / queryWords.length) >= 0.5) {
+            isMatch = true;
+            score = Math.round((matchCount / queryWords.length) * 100);
+          }
+        }
+        
+        if (isMatch) {
+          matchedAnyDialogue = true;
+          results.push({
+            type: 'dialogue',
+            dialogue: d,
+            conversation: conv,
+            score
+          });
+        }
+      });
+      
+      if ((titleMatch || descMatch) && !matchedAnyDialogue) {
+        results.push({
+          type: 'conversation',
+          conversation: conv,
+          score: titleMatch ? 100 : 80
+        });
+      }
+    });
+    
+    return results.sort((a, b) => b.score - a.score);
+  }, [conversations, searchQuery]);
 
 
   const handleConvDragEnd = (result: DropResult) => {
@@ -69,7 +119,7 @@ export default function ConversationView({
     if (result.source.index === result.destination.index) return;
     if (searchQuery.trim() !== "") return;
 
-    const items = Array.from(filteredConversations);
+    const items = Array.from(conversations);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
@@ -258,100 +308,155 @@ export default function ConversationView({
               />
             </div>
 
-            {filteredConversations.length === 0 ? (
-              <div className="text-center py-20 bg-theme-panel border border-theme-subtle border-dashed">
-                <p className="text-theme-primary/50 text-sm uppercase tracking-wider">
-                  {searchQuery
-                    ? "Không tìm thấy chủ đề nào."
-                    : "Chưa có chủ đề hội thoại nào."}
-                </p>
-              </div>
-            ) : (
-              
-<DragDropContext onDragEnd={handleConvDragEnd}>
-  <Droppable droppableId="conversation-list" direction="vertical">
-    {(provided) => (
-      <div 
-        className="flex flex-col gap-4 relative"
-        {...provided.droppableProps}
-        ref={provided.innerRef}
-      >
-
-                <AnimatePresence>
-                  {filteredConversations.map((conv, index) => (
-                    <Draggable key={conv.id} draggableId={conv.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          style={{
-                            ...provided.draggableProps.style,
-                            ...(snapshot.isDragging ? { zIndex: 50, scale: 1.05, opacity: 0.9 } : {})
-                          }}
-                          className="h-full"
-                        >
-                          <motion.div
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                      className="group bg-theme-panel border border-theme-subtle hover:border-theme-accent hover:shadow-xl hover:-translate-y-1 hover:shadow-theme-accent/10 p-6 transition-all duration-300 ease-out cursor-pointer relative flex flex-col h-full overflow-hidden"
+            {searchQuery.trim() !== "" && searchResults ? (
+              searchResults.length === 0 ? (
+                <div className="text-center py-20 bg-theme-panel border border-theme-subtle border-dashed">
+                  <p className="text-theme-primary/50 text-sm uppercase tracking-wider">
+                    Không tìm thấy kết quả nào cho "{searchQuery}"
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <h3 className="text-xs uppercase tracking-widest text-theme-primary/40 font-bold mb-2">Kết quả tìm kiếm ({searchResults.length})</h3>
+                  {searchResults.map((result, idx) => (
+                    <div 
+                      key={idx}
+                      className="bg-theme-panel border border-theme-subtle hover:border-theme-accent hover:shadow-lg p-4 transition-all duration-300 ease-out cursor-pointer group flex flex-col gap-2"
                       onClick={() => {
-                        setSelectedConvId(conv.id);
+                        setSelectedConvId(result.conversation.id);
                         setViewState("detail");
                       }}
                     >
-                      {/* Beautiful background accent */}
-                      <div className="absolute -right-12 -top-12 w-32 h-32 bg-theme-accent/5 rounded-full blur-2xl group-hover:bg-theme-accent/10 transition-colors duration-500 pointer-events-none"></div>
-                      <div className="flex items-start justify-between gap-4 mb-4 relative z-10">
-                        <h3 className="font-serif text-xl text-theme-primary group-hover:text-theme-accent transition-colors">
-                          {conv.title}
-                        </h3>
-                        <div className="text-xs text-theme-primary/40 font-mono tracking-wider shrink-0 mt-1">
-                          {new Date(conv.createdAt).toLocaleDateString()}
+                      {result.type === 'conversation' ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] bg-theme-base border border-theme-subtle px-2 py-0.5 rounded text-theme-primary/60 uppercase">Chủ đề</span>
+                            <h4 className="font-serif text-lg text-theme-primary group-hover:text-theme-accent">{result.conversation.title}</h4>
+                          </div>
+                          {result.conversation.description && (
+                            <p className="text-sm text-theme-primary/60 line-clamp-1">{result.conversation.description}</p>
+                          )}
                         </div>
-                      </div>
-                      
-                      {conv.description && (
-                        <p className="text-theme-primary/60 text-sm mb-6 line-clamp-2">
-                          {conv.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className="text-xs font-bold uppercase tracking-widest text-theme-primary/40 group-hover:text-theme-accent/60 transition-colors">
-                          {conv.dialogues.length} CÂU
-                        </span>
-                        
-                        <div className="flex items-center gap-2">
-                          {isDeleteUnlocked && (
+                      ) : (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] bg-theme-accent/10 text-theme-accent border border-theme-accent/20 px-2 py-0.5 rounded uppercase font-bold">Câu ví dụ</span>
+                            <span className="text-xs text-theme-primary/40 line-clamp-1">Trong: {result.conversation.title}</span>
+                          </div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-theme-primary font-serif text-lg">{result.dialogue.japanese}</p>
+                              <p className="text-theme-primary/60 text-sm mt-1">{result.dialogue.vietnamese}</p>
+                            </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm("Bạn có chắc chắn muốn xóa chủ đề này không? Toàn bộ các câu hội thoại bên trong sẽ bị mất.")) {
-                                  onRemoveConversation(conv.id);
-                                }
+                                const u = new SpeechSynthesisUtterance(result.dialogue.japanese);
+                                u.lang = 'ja-JP';
+                                window.speechSynthesis.speak(u);
                               }}
-                              className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                              title="Xóa chủ đề"
+                              className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 bg-theme-base rounded-full"
+                              title="Nghe phát âm"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Volume2 className="w-4 h-4" />
                             </button>
-                          )}
-                          <ArrowRight className="w-5 h-5 text-theme-primary/20 group-hover:text-theme-accent transition-colors" />
-                        </div>
-                      </div>
-                    </motion.div>
+                          </div>
                         </div>
                       )}
-                    </Draggable>
+                    </div>
                   ))}
-                  {provided.placeholder}
-                </AnimatePresence>
+                </div>
+              )
+            ) : conversations.length === 0 ? (
+              <div className="text-center py-20 bg-theme-panel border border-theme-subtle border-dashed">
+                <p className="text-theme-primary/50 text-sm uppercase tracking-wider">
+                  Chưa có chủ đề hội thoại nào.
+                </p>
               </div>
-            )}
-  </Droppable>
-</DragDropContext>
+            ) : (
+              <DragDropContext onDragEnd={handleConvDragEnd}>
+                <Droppable droppableId="conversation-list" direction="vertical">
+                  {(provided) => (
+                    <div 
+                      className="flex flex-col gap-4 relative"
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                    >
+                      <AnimatePresence>
+                        {conversations.map((conv, index) => (
+                          <Draggable key={conv.id} draggableId={conv.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  ...(snapshot.isDragging ? { zIndex: 50, scale: 1.05, opacity: 0.9 } : {})
+                                }}
+                                className="h-full"
+                              >
+                                <motion.div
+                                  initial={{ opacity: 0, y: 15 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.9 }}
+                                  className="group bg-theme-panel border border-theme-subtle hover:border-theme-accent hover:shadow-xl hover:-translate-y-1 hover:shadow-theme-accent/10 p-6 transition-all duration-300 ease-out cursor-pointer relative flex flex-col h-full overflow-hidden"
+                                  onClick={() => {
+                                    setSelectedConvId(conv.id);
+                                    setViewState("detail");
+                                  }}
+                                >
+                                  {/* Beautiful background accent */}
+                                  <div className="absolute -right-12 -top-12 w-32 h-32 bg-theme-accent/5 rounded-full blur-2xl group-hover:bg-theme-accent/10 transition-colors duration-500 pointer-events-none"></div>
+                                  <div className="flex items-start justify-between gap-4 mb-4 relative z-10">
+                                    <h3 className="font-serif text-xl text-theme-primary group-hover:text-theme-accent transition-colors">
+                                      {conv.title}
+                                    </h3>
+                                    <div className="text-xs text-theme-primary/40 font-mono tracking-wider shrink-0 mt-1">
+                                      {new Date(conv.createdAt).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                  
+                                  {conv.description && (
+                                    <p className="text-theme-primary/60 text-sm mb-6 line-clamp-2">
+                                      {conv.description}
+                                    </p>
+                                  )}
+
+                                  <div className="flex items-center justify-between mt-auto">
+                                    <span className="text-xs font-bold uppercase tracking-widest text-theme-primary/40 group-hover:text-theme-accent/60 transition-colors">
+                                      {conv.dialogues.length} CÂU
+                                    </span>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      {isDeleteUnlocked && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm("Bạn có chắc chắn muốn xóa chủ đề này không? Toàn bộ các câu hội thoại bên trong sẽ bị mất.")) {
+                                              onRemoveConversation(conv.id);
+                                            }
+                                          }}
+                                          className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                          title="Xóa chủ đề"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                      <ArrowRight className="w-5 h-5 text-theme-primary/20 group-hover:text-theme-accent transition-colors" />
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </AnimatePresence>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             )}
           </div>
         </motion.div>
