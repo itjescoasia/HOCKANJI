@@ -40,7 +40,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
   "forms": [
     // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN đối với Danh từ, Tính từ (i, na) và Động từ (nhóm I, II, III).
     // Động từ gồm: "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể điều kiện (ば/たら)", "Thể sai khiến", "Thể bị động", "Thể mệnh lệnh", "Thể khả năng", "Thể ý chí (ngắn - よう)", "Thể ý chí lịch sự (ましょう)".
-    // Danh từ/Tính từ gồm: "Hiện tại khẳng định (lịch sự)", "Hiện tại phủ định (lịch sự)", "Quá khứ khẳng định (lịch sự)", "Quá khứ phủ định (lịch sự)", "Hiện tại khẳng định (ngắn)", "Hiện tại phủ định (ngắn)", "Quá khứ khẳng định (ngắn)", "Quá khứ phủ định (ngắn)".
+    // Danh từ/Tính từ gồm: "Hiện tại khẳng định (lịch sự)", "Hiện tại phủ định (lịch sự)", "Quá khứ khẳng định (lịch sự)", "Quá khứ phủ định (lịch sự)", "Hiện tại khẳng định (ngắn)", "Hiện tại phủ định (ngắn)", "Quá khứ khẳng định (ngắn)", "Quá khứ phủ định (ngắn)". ĐẶC BIỆT NẾU LÀ TÍNH TỪ ĐUÔI い (i) BẮT BUỘC PHẢI THÊM "Tính từ đuôi い chia ở thể て".
     {
       "name": "Tên thể (ví dụ: Thể quá khứ (た))",
       "value": "cách viết của thể này (bằng Kanji/Kana giống từ gốc)",
@@ -50,7 +50,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
     }
   ],
   "examples": [
-    // BẮT BUỘC TẠO TỪ 3 ĐẾN 5 VÍ DỤ ĐA DẠNG CHO TỪ VỰNG NÀY (Bao gồm từ gốc và một số thể thường gặp).
+    // BẮT BUỘC TẠO TỪ 3 ĐẾN 5 VÍ DỤ ĐA DẠNG CHO TỪ VỰNG NÀY (Bao gồm từ gốc và một số thể thường gặp). ĐẶC BIỆT NẾU LÀ TÍNH TỪ ĐUÔI い (i) THÌ PHẢI CÓ 1 VÍ DỤ SỬ DỤNG "thể て".
     {
       "sentence": "câu ví dụ tiếng Nhật chứa từ vựng hoặc thể của từ",
       "reading": "cách đọc hiragana của cả câu ví dụ (cách nhau bởi khoảng trắng hoặc dấu phẩy)",
@@ -63,19 +63,28 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       let response;
       try {
         response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-2.5-pro',
           contents: prompt,
           config: { responseMimeType: 'application/json' }
         });
       } catch (error: any) {
         const errorMsg = error.message || '';
-        if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
-           console.log('gemini-3.5-flash is overloaded (503), falling back to gemini-3.1-flash-lite...');
-           response = await ai.models.generateContent({
-             model: 'gemini-3.1-flash-lite',
-             contents: prompt,
-             config: { responseMimeType: 'application/json' }
-           });
+        if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE') || error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota exceeded')) {
+           console.log('gemini-2.5-pro failed (503/429), falling back to gemini-2.5-flash...');
+           try {
+             response = await ai.models.generateContent({
+               model: 'gemini-2.5-flash',
+               contents: prompt,
+               config: { responseMimeType: 'application/json' }
+             });
+           } catch (fallbackError) {
+             console.log('Fallback failed, trying gemini-2.0-flash-lite-preview-02-27...');
+             response = await ai.models.generateContent({
+               model: 'gemini-2.0-flash-lite-preview-02-27',
+               contents: prompt,
+               config: { responseMimeType: 'application/json' }
+             });
+           }
         } else {
            throw error;
         }
