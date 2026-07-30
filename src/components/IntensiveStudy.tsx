@@ -658,7 +658,72 @@ export default function IntensiveStudy({
                                   </div>
                                 )}
 
-                                <div className="flex items-center justify-between mt-6">
+                                {searchQuery.trim() !== "" && (() => {
+                                  const q = searchQuery.trim().toLowerCase();
+                                  
+                                  // normalize function to ignore accents
+                                  const cleanText = (str) => {
+                                    if (!str) return "";
+                                    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/đ/g, "d").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+                                  };
+                                  
+                                  const cleanQ = cleanText(q);
+                                  const queryWords = cleanQ.split(/\s+/).filter(Boolean);
+                                  
+                                  const matchedExamples = word.examples.filter(ex => {
+                                    const s = cleanText(ex.sentence);
+                                    const r = cleanText(ex.reading);
+                                    const t = cleanText(ex.translation);
+                                    const textToSearch = `${s} ${r} ${t}`;
+                                    
+                                    if (textToSearch.includes(cleanQ)) return true;
+                                    
+                                    if (queryWords.length > 0) {
+                                      const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
+                                      return (matchCount / queryWords.length) >= 0.6;
+                                    }
+                                    return false;
+                                  });
+                                  
+                                  if (matchedExamples.length === 0) return null;
+                                  
+                                  return (
+                                    <div className="mb-4 mt-2 flex flex-col gap-2">
+                                      {matchedExamples.slice(0, 3).map((ex, i) => (
+                                        <div key={i} className="bg-theme-base p-3 border border-theme-subtle rounded-md text-sm">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                              <p className="text-theme-primary font-serif text-base">{ex.sentence}</p>
+                                              {(ex.reading || ex.romaji) && (
+                                                <p className="text-theme-primary/40 text-xs mt-0.5">
+                                                  {ex.reading} {ex.reading && ex.romaji && '•'} {ex.romaji}
+                                                </p>
+                                              )}
+                                              <p className="text-theme-primary/60 text-sm mt-1">{ex.translation}</p>
+                                            </div>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const u = new SpeechSynthesisUtterance(ex.sentence);
+                                                u.lang = 'ja-JP';
+                                                window.speechSynthesis.speak(u);
+                                              }}
+                                              className="p-1.5 bg-theme-panel text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors shrink-0"
+                                              title="Nghe phát âm"
+                                            >
+                                              <Volume2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      {matchedExamples.length > 3 && (
+                                        <p className="text-xs text-theme-primary/40 italic">...và thêm {matchedExamples.length - 3} mẫu câu khác</p>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+
+                                <div className="flex items-center justify-between mt-auto pt-6">
                                   <span className="text-xs font-bold uppercase tracking-widest text-theme-primary/40 group-hover:text-theme-accent/60 transition-colors flex items-center gap-2">
                                     <MessageCircle className="w-4 h-4" />
                                     {word.examples.length} MẪU CÂU

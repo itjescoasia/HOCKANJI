@@ -74,7 +74,9 @@ export default function ConversationView({
         const v = cleanText(d.vietnamese);
         const h = cleanText(d.hiragana);
         const r = cleanText(d.romaji);
+        
         const textToSearch = `${j} ${v} ${h} ${r}`;
+        const wordsToSearch = textToSearch.split(/\s+/).filter(Boolean);
         
         let isMatch = false;
         let score = 0;
@@ -83,7 +85,14 @@ export default function ConversationView({
           isMatch = true;
           score = 100;
         } else {
-          const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
+          // Count how many words in the query match ANY word in the target exactly (or as a prefix)
+          let matchCount = 0;
+          for (const qw of queryWords) {
+            if (wordsToSearch.some(tw => tw === qw || tw.startsWith(qw))) {
+              matchCount++;
+            }
+          }
+          
           if (matchCount > 0 && (matchCount / queryWords.length) >= 0.5) {
             isMatch = true;
             score = Math.round((matchCount / queryWords.length) * 100);
@@ -110,7 +119,12 @@ export default function ConversationView({
       }
     });
     
-    return results.sort((a, b) => b.score - a.score);
+    // Sort by score descending, then by type (dialogue first)
+    return results.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.type !== b.type) return a.type === 'dialogue' ? -1 : 1;
+      return 0;
+    });
   }, [conversations, searchQuery]);
 
 
@@ -346,6 +360,11 @@ export default function ConversationView({
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <p className="text-theme-primary font-serif text-lg">{result.dialogue.japanese}</p>
+                              {(result.dialogue.hiragana || result.dialogue.romaji) && (
+                                <p className="text-theme-primary/50 text-xs font-medium mt-1">
+                                  {result.dialogue.hiragana} {result.dialogue.hiragana && result.dialogue.romaji && '•'} {result.dialogue.romaji}
+                                </p>
+                              )}
                               <p className="text-theme-primary/60 text-sm mt-1">{result.dialogue.vietnamese}</p>
                             </div>
                             <button
