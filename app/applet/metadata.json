@@ -1,0 +1,8 @@
+{
+  "name": "Nihongo SRS",
+  "description": "Japanese spaced repetition app",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
