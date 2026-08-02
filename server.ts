@@ -77,7 +77,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           let response;
           try {
             response = await ai.models.generateContent({
-              model: 'gemini-2.0-flash',
+              model: 'gemini-3.5-flash',
               contents: prompt,
               config: { responseMimeType: 'application/json' }
             });
@@ -85,7 +85,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
             const errorMsg = error.message || '';
             if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE') || error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota exceeded')) {
                response = await ai.models.generateContent({
-                 model: 'gemini-2.0-flash-lite-preview-02-27',
+                 model: 'gemini-3.5-flash-lite',
                  contents: prompt,
                  config: { responseMimeType: 'application/json' }
             });
