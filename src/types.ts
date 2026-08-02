@@ -63,6 +63,8 @@ export interface IntensiveWord {
   createdAt: number;
   reviewScore?: number;
   order?: number;
+  hasAudio?: boolean;
+  audioUrl?: string | null;
 }
 
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
@@ -96,6 +98,8 @@ export interface Conversation {
   createdAt: number;
   vocabScores?: Record<string, number>;
   order?: number;
+  hasAudio?: boolean;
+  audioUrl?: string | null;
 }
 
 export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation';

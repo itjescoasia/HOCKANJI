@@ -332,7 +332,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex flex-col">
       {/* Header / Nav */}
-      <header className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-[45]">
+      <header className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-[10000]">
         <div className="max-w-5xl mx-auto px-2 sm:px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent shrink-0">

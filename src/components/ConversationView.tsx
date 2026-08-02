@@ -1,3 +1,5 @@
+import localforage from 'localforage';
+import { auth } from '../lib/firebase';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
@@ -573,6 +575,44 @@ function ConversationDetail({
   const [deleteEnabled, setDeleteEnabled] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const audioInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (conversation.hasAudio) {
+      localforage.getItem<Blob>(`audio_${conversation.id}`).then((blob) => {
+        if (blob) {
+          setAudioUrl(URL.createObjectURL(blob));
+        }
+      });
+    }
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [conversation.id, conversation.hasAudio]);
+
+  const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('audio/')) {
+      await localforage.setItem(`audio_${conversation.id}`, file);
+      setAudioUrl(URL.createObjectURL(file));
+      onUpdate(conversation.id, { hasAudio: true });
+    }
+    if (e.target) {
+        e.target.value = '';
+    }
+  };
+  
+  const handleRemoveAudio = async () => {
+    await localforage.removeItem(`audio_${conversation.id}`);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    onUpdate(conversation.id, { hasAudio: false });
+  };
+
   const [editTitle, setEditTitle] = useState(conversation.title);
   const [editDescription, setEditDescription] = useState(conversation.description || "");
   const [viewMode, setViewMode] = useState<"list" | "slideshow" | "review_vocab">("list");
@@ -785,6 +825,42 @@ function ConversationDetail({
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-start">
             <div className="flex-1 mr-4">
+
+          {/* Audio Section */}
+          <div className="mt-4 p-4 border border-theme-subtle bg-theme-base rounded-xl">
+             <div className="flex items-center gap-4">
+                <input 
+                  type="file" 
+                  accept="audio/*" 
+                  ref={audioInputRef} 
+                  onChange={handleUploadAudio} 
+                  className="hidden" 
+                  id="upload-audio-btn" 
+                />
+                {!audioUrl ? (
+                  <button 
+                    onClick={() => audioInputRef.current?.click()} 
+                    className="flex items-center gap-2 px-4 py-2 bg-theme-accent text-white rounded-lg font-medium text-sm hover:bg-theme-accent/90 transition-colors disabled:opacity-50"
+                    disabled={isUploadingAudio}
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    {isUploadingAudio ? 'Uploading...' : 'Upload MP3'}
+                  </button>
+                ) : (
+                  <div className="flex-1 flex items-center gap-4 flex-wrap">
+                    <audio controls src={audioUrl} className="h-10 flex-1 min-w-[200px]" />
+                    <button 
+                      onClick={handleRemoveAudio}
+                      className="flex items-center gap-2 px-3 py-1.5 border border-red-500/20 text-red-500 rounded hover:bg-red-500/10 transition-colors text-xs font-medium uppercase tracking-wider"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Xóa Audio
+                    </button>
+                  </div>
+                )}
+             </div>
+          </div>
+
               {isEditingMetadata ? (
                 <div className="flex flex-col gap-3">
                   <input
