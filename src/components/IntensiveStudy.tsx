@@ -687,19 +687,31 @@ export default function IntensiveStudy({
                                   
                                   if (matchedExamples.length === 0) return null;
                                   
+                                  const highlightText = (text, highlight) => {
+                                    if (!highlight.trim() || !text) return text;
+                                    const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                    const regex = new RegExp(`(${escapedHighlight})`, 'gi');
+                                    const parts = text.split(regex);
+                                    return parts.map((part, i) => 
+                                      part.toLowerCase() === highlight.trim().toLowerCase() 
+                                        ? <mark key={i} className="bg-theme-accent/20 text-theme-accent font-bold px-0.5 rounded-sm">{part}</mark> 
+                                        : <span key={i}>{part}</span>
+                                    );
+                                  };
+
                                   return (
                                     <div className="mb-4 mt-2 flex flex-col gap-2">
                                       {matchedExamples.slice(0, 3).map((ex, i) => (
                                         <div key={i} className="bg-theme-base p-3 border border-theme-subtle rounded-md text-sm">
                                           <div className="flex items-start justify-between gap-2">
                                             <div>
-                                              <p className="text-theme-primary font-serif text-base">{ex.sentence}</p>
+                                              <p className="text-theme-primary font-serif text-base">{highlightText(ex.sentence, searchQuery)}</p>
                                               {(ex.reading || ex.romaji) && (
                                                 <p className="text-theme-primary/40 text-xs mt-0.5">
-                                                  {ex.reading} {ex.reading && ex.romaji && '•'} {ex.romaji}
+                                                  {highlightText(ex.reading || "", searchQuery)} {(ex.reading && ex.romaji) ? '•' : ''} {highlightText(ex.romaji || "", searchQuery)}
                                                 </p>
                                               )}
-                                              <p className="text-theme-primary/60 text-sm mt-1">{ex.translation}</p>
+                                              <p className="text-theme-primary/60 text-sm mt-1">{highlightText(ex.translation || "", searchQuery)}</p>
                                             </div>
                                             <button
                                               onClick={(e) => {
