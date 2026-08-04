@@ -347,7 +347,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
           style={{ perspective: 1000 }}
           onClick={() => {
             if (!(isFreeStudy && exerciseType !== 'flip')) {
-              setShowAnswer(!showAnswer);
+              setShowAnswer(true);
             }
           }}
         >
