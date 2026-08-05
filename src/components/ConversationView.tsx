@@ -1,5 +1,6 @@
 import localforage from 'localforage';
-import { auth } from '../lib/firebase';
+import { auth, storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
@@ -580,26 +581,42 @@ function ConversationDetail({
   const audioInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (conversation.hasAudio) {
+    let active = true;
+    if (conversation.audioUrl) {
+      setAudioUrl(conversation.audioUrl);
+    } else if (conversation.hasAudio) {
       localforage.getItem<Blob>(`audio_${conversation.id}`).then((blob) => {
-        if (blob) {
+        if (blob && active) {
           setAudioUrl(URL.createObjectURL(blob));
         }
       });
     }
     return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
+      active = false;
     };
-  }, [conversation.id, conversation.hasAudio]);
+  }, [conversation.id, conversation.hasAudio, conversation.audioUrl]);
 
   const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('audio/')) {
-      await localforage.setItem(`audio_${conversation.id}`, file);
-      setAudioUrl(URL.createObjectURL(file));
-      onUpdate(conversation.id, { hasAudio: true });
+      setIsUploadingAudio(true);
+      try {
+        if (auth.currentUser) {
+          const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversation.id}/audio.mp3`);
+          await uploadBytes(storageRef, file);
+          const url = await getDownloadURL(storageRef);
+          onUpdate(conversation.id, { hasAudio: true, audioUrl: url });
+          setAudioUrl(url);
+        } else {
+          await localforage.setItem(`audio_${conversation.id}`, file);
+          const url = URL.createObjectURL(file);
+          onUpdate(conversation.id, { hasAudio: true, audioUrl: null });
+          setAudioUrl(url);
+        }
+      } catch (err) {
+        console.error("Upload error", err);
+      }
+      setIsUploadingAudio(false);
     }
     if (e.target) {
         e.target.value = '';
@@ -607,10 +624,19 @@ function ConversationDetail({
   };
   
   const handleRemoveAudio = async () => {
-    await localforage.removeItem(`audio_${conversation.id}`);
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    if (auth.currentUser && conversation.audioUrl) {
+      try {
+        const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversation.id}/audio.mp3`);
+        await deleteObject(storageRef);
+      } catch (e) {
+        console.error("Delete error", e);
+      }
+    } else {
+      await localforage.removeItem(`audio_${conversation.id}`);
+    }
+    if (audioUrl && !audioUrl.startsWith('http')) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
-    onUpdate(conversation.id, { hasAudio: false });
+    onUpdate(conversation.id, { hasAudio: false, audioUrl: null });
   };
 
   const [editTitle, setEditTitle] = useState(conversation.title);
@@ -766,6 +792,13 @@ function ConversationDetail({
     setEditRomaji(dialogue.romaji || "");
     setEditVietnamese(dialogue.vietnamese || "");
     setEditExplanation(dialogue.explanation || "");
+  };
+
+  
+  const handleUpdateDialogueField = (id: string, updates: Partial<DialogueSentence>) => {
+    onUpdate(conversation.id, {
+      dialogues: conversation.dialogues.map(d => d.id === id ? { ...d, ...updates } : d)
+    });
   };
 
   const handleUpdateDialogue = (e: React.FormEvent) => {
@@ -1191,6 +1224,7 @@ function ConversationDetail({
                                       <HighlightVietnamese text={dialogue.vietnamese || ""} />
                                     </p>
                                   )}
+                                  <SentenceAudio conversationId={conversation.id} dialogue={dialogue} onUpdateDialogue={handleUpdateDialogueField} />
                                 </div></HighlightProvider>
                                 <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start relative z-20">
                                   
@@ -1322,6 +1356,13 @@ function ConversationDetail({
                   </p>
                 )}
               </div></HighlightProvider>
+              <div className="flex justify-center mt-6">
+                <SentenceAudio 
+                  conversationId={conversation.id} 
+                  dialogue={conversation.dialogues[currentSlideIndex]} 
+                  onUpdateDialogue={handleUpdateDialogueField} 
+                />
+              </div>
               
               {conversation.dialogues[currentSlideIndex].explanation && (
                 <div className="mt-12 max-w-2xl mx-auto w-full">
@@ -1850,6 +1891,104 @@ function ConversationVocabReview({
           )}
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+
+function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { conversationId: string, dialogue: DialogueSentence, onUpdateDialogue: (id: string, updates: Partial<DialogueSentence>) => void }) {
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (dialogue.audioUrl) {
+      setAudioUrl(dialogue.audioUrl);
+    } else if (dialogue.hasAudio) {
+      localforage.getItem<Blob>(`audio_${conversationId}_${dialogue.id}`).then((blob) => {
+        if (blob && active) {
+          setAudioUrl(URL.createObjectURL(blob));
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [conversationId, dialogue.id, dialogue.hasAudio, dialogue.audioUrl]);
+
+  const [isUploading, setIsUploading] = useState(false);
+  const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('audio/')) {
+      setIsUploading(true);
+      try {
+        if (auth.currentUser) {
+          const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversationId}/audio_${dialogue.id}.mp3`);
+          await uploadBytes(storageRef, file);
+          const url = await getDownloadURL(storageRef);
+          onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: url });
+          setAudioUrl(url);
+        } else {
+          await localforage.setItem(`audio_${conversationId}_${dialogue.id}`, file);
+          const url = URL.createObjectURL(file);
+          onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: null });
+          setAudioUrl(url);
+        }
+      } catch (err) {
+        console.error("Upload error", err);
+      }
+      setIsUploading(false);
+    }
+    if (e.target) {
+        e.target.value = '';
+    }
+  };
+  
+  const handleRemoveAudio = async () => {
+    if (auth.currentUser && dialogue.audioUrl) {
+      try {
+        const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversationId}/audio_${dialogue.id}.mp3`);
+        await deleteObject(storageRef);
+      } catch (e) {
+        console.error("Delete error", e);
+      }
+    } else {
+      await localforage.removeItem(`audio_${conversationId}_${dialogue.id}`);
+    }
+    if (audioUrl && !audioUrl.startsWith('http')) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    onUpdateDialogue(dialogue.id, { hasAudio: false, audioUrl: null }); 
+  };
+
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <input 
+        type="file" 
+        accept="audio/*" 
+        ref={audioInputRef} 
+        onChange={handleUploadAudio} 
+        className="hidden" 
+      />
+      {!audioUrl ? (
+        <button 
+          onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
+          className="flex items-center gap-1.5 px-2 py-1 bg-theme-primary/10 text-theme-primary/70 rounded text-[10px] hover:bg-theme-accent hover:text-theme-inverted transition-colors"
+        >
+          <Volume2 className="w-3 h-3" />
+          {isUploading ? 'Đang tải...' : 'Thêm MP3'}
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 w-full max-w-sm">
+          <audio controls src={audioUrl} className="h-8 flex-1" />
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleRemoveAudio(); }}
+            className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
+            title="Xóa MP3"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

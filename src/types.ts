@@ -42,6 +42,8 @@ export interface IntensiveExample {
   viToJaMastered?: boolean;
   jaToViNextReviewDate?: number;
   viToJaNextReviewDate?: number;
+  audioUrl?: string | null;
+  hasAudio?: boolean;
   jaToViInterval?: number;
   viToJaInterval?: number;
   jaToViFailCount?: number;
@@ -70,6 +72,8 @@ export interface IntensiveWord {
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';
 
 export interface DialogueSentence {
+  hasAudio?: boolean;
+  audioUrl?: string | null;
   id: string;
   japanese: string;
   hiragana: string;
