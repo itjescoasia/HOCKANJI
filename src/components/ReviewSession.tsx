@@ -28,6 +28,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
   
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<KanjiCard>>({});
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   const [readingInput, setReadingInput] = useState('');
   const [inputError, setInputError] = useState(false);
@@ -638,7 +639,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDeleteCard(confirmingDeleteId);
+                  if (confirmingDeleteId) onRemoveCard(confirmingDeleteId);
                   setConfirmingDeleteId(null);
                 }}
                 className="bg-red-500 text-white px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:bg-red-600"

@@ -129,9 +129,9 @@ function SortableWordItem({
         onClick={(e) => {
           e.stopPropagation();
           if (
-            true
+            window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
           ) {
-            setConfirmingDeleteId(word.id);
+            onRemoveWord(word.id);
           }
         }}
         className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel z-20"
@@ -775,10 +775,7 @@ export default function IntensiveStudy({
                 onClick={() => {
                   onRemoveWord(confirmingDeleteId);
                   setConfirmingDeleteId(null);
-                  if (viewState === "study") {
-                     setViewState("list");
-                     setSelectedWordId(null);
-                  }
+
                 }}
                 className="bg-red-500 text-white px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:bg-red-600"
               >
