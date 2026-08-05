@@ -29,6 +29,7 @@ interface ConversationViewProps {
   onRecordReview?: (isCorrect: boolean) => void;
   mainDeck: KanjiCard[];
   onStartTopicReview?: (topicDeck: any[]) => void;
+  onAddIntensiveWord?: (word: any) => void;
 }
 
 export default function ConversationView({
@@ -41,11 +42,13 @@ export default function ConversationView({
   onRecordReview,
   mainDeck,
   onStartTopicReview,
+  onAddIntensiveWord,
 }: ConversationViewProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "detail">("list");
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
@@ -185,7 +188,7 @@ export default function ConversationView({
 
   
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {viewState === "add" && (
         <motion.div
           key="add"
@@ -267,6 +270,8 @@ export default function ConversationView({
             onRecordReview={onRecordReview}
             mainDeck={mainDeck}
             onStartTopicReview={onStartTopicReview}
+            onRemoveConversation={onRemoveConversation}
+            onAddIntensiveWord={onAddIntensiveWord}
           />
         </motion.div>
       )}
@@ -455,9 +460,7 @@ export default function ConversationView({
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            if (confirm("Bạn có chắc chắn muốn xóa chủ đề này không? Toàn bộ các câu hội thoại bên trong sẽ bị mất.")) {
-                                              onRemoveConversation(conv.id);
-                                            }
+                                            setConfirmingDeleteId(conv.id);
                                           }}
                                           className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 transition-colors"
                                           title="Xóa chủ đề"
@@ -473,7 +476,28 @@ export default function ConversationView({
                             )}
                           </Draggable>
                         ))}
-                      </AnimatePresence>
+                        {confirmingDeleteId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingDeleteId(null)} />
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col">
+            <h3 className="text-xl font-serif text-theme-primary mb-4 text-red-500">Xóa chủ đề?</h3>
+            <p className="text-theme-primary/70 mb-6">Bạn có chắc chắn muốn xóa chủ đề này không? Toàn bộ các câu hội thoại bên trong sẽ bị mất.</p>
+            <div className="flex gap-3 justify-end mt-2">
+              <button onClick={() => setConfirmingDeleteId(null)} className="px-4 py-2 text-theme-primary/60 hover:text-theme-primary text-sm uppercase tracking-wider">Hủy</button>
+              <button 
+                onClick={() => {
+                  onRemoveConversation(confirmingDeleteId);
+                  setConfirmingDeleteId(null);
+                }}
+                className="bg-red-500 text-white px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:bg-red-600"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AnimatePresence>
                       {provided.placeholder}
                     </div>
                   )}
@@ -499,6 +523,8 @@ function ConversationDetail({
   onRecordReview,
   mainDeck,
   onStartTopicReview,
+  onRemoveConversation,
+  onAddIntensiveWord,
 }: {
   conversation: Conversation;
   conversations: Conversation[];
@@ -509,6 +535,8 @@ function ConversationDetail({
   onRecordReview?: (isCorrect: boolean) => void;
   mainDeck: KanjiCard[];
   onStartTopicReview?: (topicDeck: any[]) => void;
+  onRemoveConversation: (id: string) => void;
+  onAddIntensiveWord?: (word: any) => void;
 }) {
   const [newJp, setNewJp] = useState("");
   const [newHira, setNewHira] = useState("");
@@ -574,6 +602,7 @@ function ConversationDetail({
   };
 
   const [deleteEnabled, setDeleteEnabled] = useState(false);
+  const [confirmingConvert, setConfirmingConvert] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isEditingMetadata, setIsEditingMetadata] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -1042,6 +1071,14 @@ function ConversationDetail({
 
             <div className="flex-1" />
 
+            <button
+              onClick={() => setConfirmingConvert(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded shrink-0 bg-theme-base text-theme-primary/60 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/60"
+              title="Chuyển thành Chuyên đề"
+            >
+              <Brain className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chuyển sang Chuyên đề</span>
+            </button>
             <button
               onClick={handleExportWord}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded shrink-0 bg-theme-base text-theme-primary/60 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/60"
@@ -1518,6 +1555,50 @@ function ConversationDetail({
       )}
 
 
+      {/* Modal for Converting to Topic */}
+      {confirmingConvert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingConvert(false)} />
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col">
+            <h3 className="text-xl font-serif text-theme-primary mb-4">Chuyển thành Chuyên đề</h3>
+            <p className="text-theme-primary/70 mb-6">Bạn có muốn chuyển hội thoại này thành một Chuyên đề học sâu và xóa khỏi đây không?</p>
+            <div className="flex gap-3 justify-end mt-2">
+              <button onClick={() => setConfirmingConvert(false)} className="px-4 py-2 text-theme-primary/60 hover:text-theme-primary text-sm uppercase tracking-wider">Hủy</button>
+              <button 
+                onClick={() => {
+                  if (!onAddIntensiveWord) return;
+                  const newWord = {
+                    id: String(Date.now()) + Math.random().toString(36).slice(2),
+                    word: conversation.title,
+                    reading: "",
+                    category: "Khác",
+                    explanation: conversation.description || "",
+                    examples: conversation.dialogues.map(d => ({
+                      id: d.id,
+                      sentence: d.japanese,
+                      reading: d.hiragana,
+                      romaji: d.romaji,
+                      translation: d.vietnamese,
+                      specialNote: d.explanation || "",
+                      hasAudio: d.hasAudio,
+                      audioUrl: d.audioUrl
+                    })),
+                    createdAt: Date.now()
+                  };
+                  onAddIntensiveWord(newWord);
+                  onRemoveConversation(conversation.id);
+                  onBack();
+                  setConfirmingConvert(false);
+                }}
+                className="bg-theme-accent text-theme-inverted px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:opacity-90"
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal for Moving Dialogue */}
       {movingDialogueId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1556,10 +1637,45 @@ function ConversationDetail({
               ))}
               
               {conversations.filter(c => c.id !== conversation.id).length === 0 && (
-                <div className="text-center py-8 text-theme-primary/50 text-sm italic">
-                  Không có chủ đề nào khác để chuyển tới
+                <div className="text-center py-4 text-theme-primary/50 text-sm italic">
+                  Không có hội thoại nào khác để chuyển tới
                 </div>
               )}
+              
+              <hr className="border-theme-subtle my-2" />
+              <button
+                onClick={() => {
+                  const d = conversation.dialogues.find(x => x.id === movingDialogueId);
+                  if (d && onAddIntensiveWord) {
+                    onAddIntensiveWord({
+                      id: String(Date.now()) + Math.random().toString(36).slice(2),
+                      word: d.japanese,
+                      reading: d.hiragana || "",
+                      category: "Khác",
+                      explanation: d.explanation || "",
+                      examples: [{
+                        id: d.id,
+                        sentence: d.japanese,
+                        reading: d.hiragana,
+                        romaji: d.romaji,
+                        translation: d.vietnamese,
+                        specialNote: d.explanation || "",
+                        hasAudio: d.hasAudio,
+                        audioUrl: d.audioUrl
+                      }],
+                      createdAt: Date.now()
+                    });
+                    onUpdate(conversation.id, {
+                      dialogues: conversation.dialogues.filter(x => x.id !== movingDialogueId)
+                    });
+                    setMovingDialogueId(null);
+                  }
+                }}
+                className="w-full text-left px-4 py-3 text-base text-theme-accent hover:bg-theme-accent/10 rounded-lg border border-theme-accent/30 transition-all flex items-center justify-between group"
+              >
+                <span className="truncate pr-4 font-medium italic">Tạo thành Chuyên đề mới</span>
+                <Brain className="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" />
+              </button>
             </div>
           </div>
         </div>

@@ -129,9 +129,9 @@ function SortableWordItem({
         onClick={(e) => {
           e.stopPropagation();
           if (
-            window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
+            true
           ) {
-            onRemoveWord(word.id);
+            setConfirmingDeleteId(word.id);
           }
         }}
         className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel z-20"
@@ -235,6 +235,7 @@ export default function IntensiveStudy({
   const [searchQuery, setSearchQuery] = useState("");
   const [targetExampleId, setTargetExampleId] = useState<string | null>(null);
   const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   // Add Form State
   const [newWordData, setNewWordData] = useState({
@@ -746,9 +747,7 @@ export default function IntensiveStudy({
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (confirm("Bạn có chắc chắn muốn xóa chuyên đề này không? Toàn bộ mẫu câu bên trong sẽ bị mất.")) {
-                                            onRemoveWord(word.id);
-                                          }
+                                          setConfirmingDeleteId(word.id);
                                         }}
                                         className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 transition-colors"
                                         title="Xóa chuyên đề"
@@ -764,7 +763,33 @@ export default function IntensiveStudy({
                             )}
                           </Draggable>
                         ))}
-                      </AnimatePresence>
+                        {confirmingDeleteId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingDeleteId(null)} />
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col">
+            <h3 className="text-xl font-serif text-theme-primary mb-4 text-red-500">Xóa chuyên đề?</h3>
+            <p className="text-theme-primary/70 mb-6">Bạn có chắc chắn muốn xóa chuyên đề này không? Toàn bộ mẫu câu bên trong sẽ bị mất.</p>
+            <div className="flex gap-3 justify-end mt-2">
+              <button onClick={() => setConfirmingDeleteId(null)} className="px-4 py-2 text-theme-primary/60 hover:text-theme-primary text-sm uppercase tracking-wider">Hủy</button>
+              <button 
+                onClick={() => {
+                  onRemoveWord(confirmingDeleteId);
+                  setConfirmingDeleteId(null);
+                  if (viewState === "study") {
+                     setViewState("list");
+                     setSelectedWordId(null);
+                  }
+                }}
+                className="bg-red-500 text-white px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:bg-red-600"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+    </AnimatePresence>
                       {provided.placeholder}
                     </div>
                   )}

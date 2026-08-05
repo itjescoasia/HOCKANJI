@@ -451,6 +451,7 @@ export default function App() {
             onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             mainDeck={deck}
             onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, true)}
+            onAddIntensiveWord={addIntensiveWord}
           />
         )}
       </main>

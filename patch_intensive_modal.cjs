@@ -1,22 +1,6 @@
 const fs = require('fs');
 let content = fs.readFileSync('src/components/IntensiveStudy.tsx', 'utf8');
 
-const target1 = `            window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
-          ) {
-            onRemoveWord(word.id);
-          }`;
-const newTarget1 = `            true
-          ) {
-            setConfirmingDeleteId(word.id);
-          }`;
-content = content.replace(target1, newTarget1);
-
-const target2 = `                                          if (confirm("Bạn có chắc chắn muốn xóa chuyên đề này không? Toàn bộ mẫu câu bên trong sẽ bị mất.")) {
-                                            onRemoveWord(word.id);
-                                          }`;
-const newTarget2 = `                                          setConfirmingDeleteId(word.id);`;
-content = content.replace(target2, newTarget2);
-
 const modalCode = `      {confirmingDeleteId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingDeleteId(null)} />
@@ -29,6 +13,10 @@ const modalCode = `      {confirmingDeleteId && (
                 onClick={() => {
                   onRemoveWord(confirmingDeleteId);
                   setConfirmingDeleteId(null);
+                  if (viewState === "study") {
+                     setViewState("list");
+                     setSelectedWordId(null);
+                  }
                 }}
                 className="bg-red-500 text-white px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:bg-red-600"
               >
@@ -37,9 +25,9 @@ const modalCode = `      {confirmingDeleteId && (
             </div>
           </div>
         </div>
-      )}`;
+      )}
+      `;
 
-content = content.replace('{/* Modals */}', '{/* Modals */}\n' + modalCode);
-
+content = content.replace('    </AnimatePresence>', modalCode + '\n    </AnimatePresence>');
 fs.writeFileSync('src/components/IntensiveStudy.tsx', content);
-console.log("Patched IntensiveStudy");
+console.log("Patched IntensiveStudy modal");
