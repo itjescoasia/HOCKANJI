@@ -1,0 +1,29 @@
+                                onClick={() => {
+                                  if (!onUpdateCard) return;
+                                  const updatedExamples = currentCard.examples!.map(e => 
+                                    e.id === ex.id ? { ...e, ...editExampleForm } : e
+                                  );
+                                  onUpdateCard(currentCard.id, { examples: updatedExamples });
+                                  setEditingExampleId(null);
+                                }}
+                                className="px-3 py-1.5 text-sm bg-theme-accent text-white rounded hover:bg-opacity-90"
+                              >
+                                Lưu thay đổi
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="w-full flex items-start gap-2 justify-between">
+                              <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">
+                                {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, deck || [], currentCard)}
+                              </p>
+                              <div className="flex items-center opacity-0 group-hover/ex:opacity-100 transition-opacity shrink-0 -mt-1 gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingExampleId(ex.id);
+                                    setEditExampleForm({
+                                      sentence: ex.sentence,
+                                      translation: ex.translation || "",
+                                      reading: ex.reading || "",
+                                      romaji: ex.romaji || ""
