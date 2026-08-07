@@ -13,7 +13,7 @@ import ConversationView from './components/ConversationView';
 import ShortStudySession from './components/ShortStudySession';
 import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
-import { BookMarked, Home, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee } from 'lucide-react';
+import { BookMarked, Home, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useConversations } from './hooks/useConversations';
@@ -24,16 +24,16 @@ export default function App() {
   const [dayTrigger, setDayTrigger] = useState(getLocalDateString());
   
   // Theme state
-  const [theme, setTheme] = useState<'dark' | 'light' | 'sepia'>(() => {
+  const [theme, setTheme] = useState<'dark' | 'light' | 'sepia' | 'dim'>(() => {
     const saved = localStorage.getItem('app_theme');
-    if (saved === 'dark' || saved === 'light' || saved === 'sepia') {
-      return saved as 'dark' | 'light' | 'sepia';
+    if (saved === 'dark' || saved === 'light' || saved === 'sepia' || saved === 'dim') {
+      return saved as 'dark' | 'light' | 'sepia' | 'dim';
     }
     return 'dark';
   });
 
   useEffect(() => {
-    document.documentElement.classList.remove('theme-light', 'theme-sepia');
+    document.documentElement.classList.remove('theme-light', 'theme-sepia', 'theme-dim');
     if (theme === 'light') {
       document.documentElement.classList.add('theme-light');
     } else if (theme === 'sepia') {
@@ -346,12 +346,13 @@ export default function App() {
               onClick={() => {
                 if (theme === 'dark') setTheme('light');
                 else if (theme === 'light') setTheme('sepia');
+                else if (theme === 'sepia') setTheme('dim');
                 else setTheme('dark');
               }}
               className="p-2 text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover rounded transition-all"
               title="Đổi màu nền"
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : theme === 'light' ? <Coffee className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : theme === 'light' ? <Coffee className="w-4 h-4" /> : theme === 'sepia' ? <Moon className="w-4 h-4" /> : <CloudMoon className="w-4 h-4" />}
             </button>
             {navItems.map(item => (
               <button

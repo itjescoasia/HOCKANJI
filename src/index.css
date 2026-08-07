@@ -90,6 +90,27 @@
   --accent: #a66a2b;
   --accent-hover: #8c5620;
   --accent-light: #c28243;
+}\n\n.theme-dim {
+  /* Soft Night Mode (Eye-friendly dark blue/grey) */
+  --bg-base: #15202b;
+  --bg-base-alt: #192734;
+  --bg-panel: #1e2f3d;
+  --bg-hover: #223545;
+  --bg-active: #2c4255;
+  --bg-active-alt: #385268;
+  
+  --border-subtle: #2c4255;
+  --border-strong: #385268;
+  
+  --text-primary: #e4e6eb;
+  --text-muted: #8899a6;
+  --text-accent-dark: #4b8cc4;
+  --text-inverted: #15202b;
+  --text-japanese: #88c0d0;
+  
+  --accent: #81a1c1;
+  --accent-hover: #5e81ac;
+  --accent-light: #88c0d0;
 }
 
 body {
