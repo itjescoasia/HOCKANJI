@@ -627,7 +627,7 @@ function ConversationDetail({
 
   const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
+    if (file) {
       setIsUploadingAudio(true);
       try {
         if (auth.currentUser) {
@@ -893,7 +893,7 @@ function ConversationDetail({
              <div className="flex items-center gap-4">
                 <input 
                   type="file" 
-                  accept="audio/*" 
+                  accept="audio/*,.mp3,.wav,.m4a" 
                   ref={audioInputRef} 
                   onChange={handleUploadAudio} 
                   className="hidden" 
@@ -2035,7 +2035,7 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
   const [isUploading, setIsUploading] = useState(false);
   const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
+    if (file) {
       setIsUploading(true);
       try {
         if (auth.currentUser) {
@@ -2080,7 +2080,7 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
     <div className="mt-2 flex items-center gap-2">
       <input 
         type="file" 
-        accept="audio/*" 
+        accept="audio/*,.mp3,.wav,.m4a" 
         ref={audioInputRef} 
         onChange={handleUploadAudio} 
         className="hidden" 
