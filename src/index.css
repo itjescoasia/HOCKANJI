@@ -90,7 +90,9 @@
   --accent: #a66a2b;
   --accent-hover: #8c5620;
   --accent-light: #c28243;
-}\n\n.theme-dim {
+}
+
+.theme-dim {
   /* Soft Night Mode (Eye-friendly dark blue/grey) */
   --bg-base: #15202b;
   --bg-base-alt: #192734;

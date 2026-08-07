@@ -1,6 +1,7 @@
 import localforage from 'localforage';
-import { auth, storage } from '../lib/firebase';
+import { auth, storage, db } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
@@ -31,6 +32,16 @@ interface ConversationViewProps {
   onStartTopicReview?: (topicDeck: any[]) => void;
   onAddIntensiveWord?: (word: any) => void;
 }
+
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
 
 export default function ConversationView({
   conversations,
@@ -612,7 +623,16 @@ function ConversationDetail({
   useEffect(() => {
     let active = true;
     if (conversation.audioUrl) {
-      setAudioUrl(conversation.audioUrl);
+      if (conversation.audioUrl.startsWith('firestore:') && auth.currentUser) {
+        const audioId = conversation.audioUrl.split(':')[1];
+        getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId)).then((docSnap) => {
+           if (docSnap.exists() && active) {
+              setAudioUrl(docSnap.data().data);
+           }
+        }).catch(err => console.error("Failed to load audio from firestore", err));
+      } else {
+        setAudioUrl(conversation.audioUrl);
+      }
     } else if (conversation.hasAudio) {
       localforage.getItem<Blob>(`audio_${conversation.id}`).then((blob) => {
         if (blob && active) {
@@ -630,13 +650,22 @@ function ConversationDetail({
     if (file) {
       setIsUploadingAudio(true);
       try {
+        let uploadedToStorage = false;
         if (auth.currentUser) {
-          const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversation.id}/audio.mp3`);
-          await uploadBytes(storageRef, file);
-          const url = await getDownloadURL(storageRef);
-          onUpdate(conversation.id, { hasAudio: true, audioUrl: url });
-          setAudioUrl(url);
-        } else {
+          try {
+            const base64 = await fileToBase64(file);
+            // Save to Firestore instead of Storage
+            const audioDocRef = doc(db, 'users', auth.currentUser.uid, 'audio', conversation.id);
+            await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
+            onUpdate(conversation.id, { hasAudio: true, audioUrl: 'firestore:' + conversation.id });
+            setAudioUrl(base64);
+            uploadedToStorage = true;
+          } catch (storageErr) {
+            console.warn("Firestore audio upload failed, falling back to local", storageErr);
+          }
+        }
+        
+        if (!uploadedToStorage) {
           await localforage.setItem(`audio_${conversation.id}`, file);
           const url = URL.createObjectURL(file);
           onUpdate(conversation.id, { hasAudio: true, audioUrl: null });
@@ -655,8 +684,13 @@ function ConversationDetail({
   const handleRemoveAudio = async () => {
     if (auth.currentUser && conversation.audioUrl) {
       try {
-        const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversation.id}/audio.mp3`);
-        await deleteObject(storageRef);
+        if (conversation.audioUrl.startsWith('firestore:')) {
+           const audioId = conversation.audioUrl.split(':')[1];
+           await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+        } else {
+           const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversation.id}/audio.mp3`);
+           await deleteObject(storageRef);
+        }
       } catch (e) {
         console.error("Delete error", e);
       }
@@ -896,7 +930,7 @@ function ConversationDetail({
                   accept="audio/*,.mp3,.wav,.m4a" 
                   ref={audioInputRef} 
                   onChange={handleUploadAudio} 
-                  className="hidden" 
+                  className="sr-only" 
                   id="upload-audio-btn" 
                 />
                 {!audioUrl ? (
@@ -2019,7 +2053,16 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
   useEffect(() => {
     let active = true;
     if (dialogue.audioUrl) {
-      setAudioUrl(dialogue.audioUrl);
+      if (dialogue.audioUrl.startsWith('firestore:') && auth.currentUser) {
+        const audioId = dialogue.audioUrl.split(':')[1];
+        getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId)).then((docSnap) => {
+           if (docSnap.exists() && active) {
+              setAudioUrl(docSnap.data().data);
+           }
+        }).catch(err => console.error("Failed to load audio from firestore", err));
+      } else {
+        setAudioUrl(dialogue.audioUrl);
+      }
     } else if (dialogue.hasAudio) {
       localforage.getItem<Blob>(`audio_${conversationId}_${dialogue.id}`).then((blob) => {
         if (blob && active) {
@@ -2038,13 +2081,22 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
     if (file) {
       setIsUploading(true);
       try {
+        let uploadedToStorage = false;
         if (auth.currentUser) {
-          const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversationId}/audio_${dialogue.id}.mp3`);
-          await uploadBytes(storageRef, file);
-          const url = await getDownloadURL(storageRef);
-          onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: url });
-          setAudioUrl(url);
-        } else {
+          try {
+            const base64 = await fileToBase64(file);
+            const audioId = `${conversationId}_${dialogue.id}`;
+            const audioDocRef = doc(db, 'users', auth.currentUser.uid, 'audio', audioId);
+            await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
+            onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: 'firestore:' + audioId });
+            setAudioUrl(base64);
+            uploadedToStorage = true;
+          } catch (storageErr) {
+            console.warn("Firestore audio upload failed, falling back to local", storageErr);
+          }
+        }
+        
+        if (!uploadedToStorage) {
           await localforage.setItem(`audio_${conversationId}_${dialogue.id}`, file);
           const url = URL.createObjectURL(file);
           onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: null });
@@ -2063,8 +2115,13 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
   const handleRemoveAudio = async () => {
     if (auth.currentUser && dialogue.audioUrl) {
       try {
-        const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversationId}/audio_${dialogue.id}.mp3`);
-        await deleteObject(storageRef);
+        if (dialogue.audioUrl.startsWith('firestore:')) {
+           const audioId = dialogue.audioUrl.split(':')[1];
+           await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+        } else {
+           const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversationId}/audio_${dialogue.id}.mp3`);
+           await deleteObject(storageRef);
+        }
       } catch (e) {
         console.error("Delete error", e);
       }
@@ -2083,7 +2140,7 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
         accept="audio/*,.mp3,.wav,.m4a" 
         ref={audioInputRef} 
         onChange={handleUploadAudio} 
-        className="hidden" 
+        className="sr-only" 
       />
       {!audioUrl ? (
         <button 
