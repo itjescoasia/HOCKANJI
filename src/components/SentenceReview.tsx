@@ -1,7 +1,7 @@
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2 } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 
@@ -463,6 +463,34 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   <RelatedHighlight text={currentExample.reading} type="hiragana" />
                 </p>
               )}
+              {mode === "JA_TO_VI" && (
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={(e) => handleTTS(currentExample.sentence, e)}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Phát âm"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(currentExample.sentence);
+                      const btn = e.currentTarget;
+                      const originalHTML = btn.innerHTML;
+                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                    }}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Copy câu tiếng Nhật"
+                  >
+                    <Copy className="w-5 h-5" />
+                  </button>
+
+                </div>
+              )}
             </div>
           </HighlightProvider> <div className="flex-1 shrink-0 min-h-0" /> </>
         )}
@@ -526,6 +554,32 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                     <RelatedHighlight text={currentExample.reading} type="hiragana" />
                   </p>
                 )}
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={(e) => handleTTS(currentExample.sentence, e)}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Phát âm"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(currentExample.sentence);
+                      const btn = e.currentTarget;
+                      const originalHTML = btn.innerHTML;
+                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                    }}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Copy câu tiếng Nhật"
+                  >
+                    <Copy className="w-5 h-5" />
+                  </button>
+
+                </div>
               </div>
             )}
             {mode === "VI_TO_JA" && (
@@ -551,14 +605,32 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   : <HighlightVietnamese text={answerText} />}
               </p>
               {mode === "VI_TO_JA" && (
-                <button
-                  type="button"
-                  onClick={(e) => handleTTS(currentExample.sentence, e)}
-                  className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors mt-2"
-                  title="Phát âm"
-                >
-                  <Volume2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={(e) => handleTTS(currentExample.sentence, e)}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Phát âm"
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(currentExample.sentence);
+                      const btn = e.currentTarget;
+                      const originalHTML = btn.innerHTML;
+                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                    }}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Copy câu tiếng Nhật"
+                  >
+                    <Copy className="w-5 h-5" />
+                  </button>
+
+                </div>
               )}
             </div>
             {mode === "VI_TO_JA" && currentExample.reading && (
