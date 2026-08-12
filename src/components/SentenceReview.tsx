@@ -1,3 +1,6 @@
+import localforage from 'localforage';
+import { auth, db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -36,11 +39,44 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const handleTTS = (text: string, e?: React.MouseEvent) => {
+  const handleTTS = async (text: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
+    
+    // Check if we have an example with audio
+    const currentExample = examples[currentIndex];
+    if (currentExample && (currentExample.audioUrl || currentExample.hasAudio)) {
+        try {
+            let urlToPlay = null;
+            if (currentExample.audioUrl) {
+                if (currentExample.audioUrl.startsWith('firestore:') && auth.currentUser) {
+                    const audioId = currentExample.audioUrl.split(':')[1];
+                    const docSnap = await getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+                    if (docSnap.exists()) {
+                        urlToPlay = docSnap.data().data;
+                    }
+                } else {
+                    urlToPlay = currentExample.audioUrl;
+                }
+            } else if (currentExample.hasAudio) {
+                const blob = await localforage.getItem<Blob>(`audio_intensive_${currentExample.wordId}_${currentExample.id}`);
+                if (blob) {
+                    urlToPlay = URL.createObjectURL(blob);
+                }
+            }
+            
+            if (urlToPlay) {
+                const audio = new Audio(urlToPlay);
+                audio.play().catch(e => console.error("Error playing audio", e));
+                return;
+            }
+        } catch (err) {
+            console.error("Failed to load/play audio", err);
+        }
+    }
+
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "ja-JP";
