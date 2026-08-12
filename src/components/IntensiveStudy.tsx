@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
-import { normalizeSentence } from "../utils/stringUtils";
+import { normalizeSentence, cleanTextForSearch } from "../utils/stringUtils";
 import {
   DragDropContext,
   Droppable,
@@ -660,28 +660,22 @@ export default function IntensiveStudy({
                                 )}
 
                                 {searchQuery.trim() !== "" && (() => {
-                                  const q = searchQuery.trim().toLowerCase();
+                                  const q = searchQuery.trim();
                                   
-                                  // normalize function to ignore accents
-                                  const cleanText = (str) => {
-                                    if (!str) return "";
-                                    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/đ/g, "d").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-                                  };
-                                  
-                                  const cleanQ = cleanText(q);
+                                  const cleanQ = cleanTextForSearch(q);
                                   const queryWords = cleanQ.split(/\s+/).filter(Boolean);
                                   
                                   const matchedExamples = word.examples.filter(ex => {
-                                    const s = cleanText(ex.sentence);
-                                    const r = cleanText(ex.reading);
-                                    const t = cleanText(ex.translation);
+                                    const s = cleanTextForSearch(ex.sentence);
+                                    const r = cleanTextForSearch(ex.reading);
+                                    const t = cleanTextForSearch(ex.translation);
                                     const textToSearch = `${s} ${r} ${t}`;
                                     
                                     if (textToSearch.includes(cleanQ)) return true;
                                     
                                     if (queryWords.length > 0) {
                                       const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
-                                      return (matchCount / queryWords.length) >= 0.6;
+                                      return (matchCount / queryWords.length) >= 0.7; // At least 70% match
                                     }
                                     return false;
                                   });

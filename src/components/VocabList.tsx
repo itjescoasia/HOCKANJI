@@ -3,6 +3,7 @@ import { KanjiCard, KanjiExample } from '../types';
 import { Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { cleanTextForSearch } from '../utils/stringUtils';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
 
@@ -260,17 +261,32 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const filteredDeck = deck.filter(c => {
-    const searchLower = String(search || "").trim().toLowerCase();
-    if (!searchLower) return filterType === 'all' || c.wordType === filterType;
+    const q = String(search || "").trim();
+    if (!q) return filterType === 'all' || c.wordType === filterType;
+    
+    const cleanQ = cleanTextForSearch(q);
+    const queryWords = cleanQ.split(/\s+/).filter(Boolean);
 
     const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';
     
-    const matchesSearch = (c.kanji && c.kanji.toLowerCase().includes(searchLower)) || 
-                          (c.meaning && c.meaning.toLowerCase().includes(searchLower)) ||
-                          (c.reading && c.reading.toLowerCase().includes(searchLower)) ||
-                          (c.romaji && c.romaji.toLowerCase().includes(searchLower)) ||
-                          (c.forms && c.forms.some(f => f.value && f.value.toLowerCase().includes(searchLower))) ||
-                          (stem && stem.length > 0 && searchLower.includes(stem.toLowerCase()));
+    const k = cleanTextForSearch(c.kanji);
+    const m = cleanTextForSearch(c.meaning);
+    const r = cleanTextForSearch(c.reading);
+    const ro = cleanTextForSearch(c.romaji);
+    const stemClean = cleanTextForSearch(stem);
+    
+    const textToSearch = `${k} ${m} ${r} ${ro}`;
+
+    let matchesSearch = textToSearch.includes(cleanQ) || (stemClean && stemClean.length > 0 && cleanQ.includes(stemClean));
+    
+    if (!matchesSearch && queryWords.length > 0) {
+        const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
+        matchesSearch = (matchCount / queryWords.length) >= 0.7;
+    }
+    
+    if (!matchesSearch && c.forms) {
+        matchesSearch = c.forms.some(f => f.value && cleanTextForSearch(f.value).includes(cleanQ));
+    }
                           
     const matchesFilter = filterType === 'all' || c.wordType === filterType;
     return matchesSearch && matchesFilter;
