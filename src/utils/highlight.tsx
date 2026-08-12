@@ -507,6 +507,10 @@ export function trimAuxiliary(text: string) {
     
     let isMatch = example.includes(wordStr);
     
+    if (!isMatch && card.reading && card.reading.length > 1 && example.includes(card.reading)) {
+      isMatch = true;
+    }
+    
     if (!isMatch && card.kanji) {
       const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
       if (stem && stem !== card.kanji && /[\u4e00-\u9faf々]/.test(stem) && example.includes(stem)) {
@@ -516,7 +520,7 @@ export function trimAuxiliary(text: string) {
 
     if (!isMatch && card.forms) {
       for (const form of card.forms) {
-        if (form.value && example.includes(form.value)) {
+        if ((form.value && example.includes(form.value)) || (form.reading && example.includes(form.reading))) {
           isMatch = true;
           break;
         }
@@ -543,7 +547,7 @@ export function trimAuxiliary(text: string) {
 
   deckWordsInExample.forEach(card => {
     if (card.kanji) allMatchCandidates.push({ matchStr: card.kanji, card });
-    if (card.reading && card.reading !== card.kanji) allMatchCandidates.push({ matchStr: card.reading, card });
+    if (card.reading && card.reading !== card.kanji && (card.reading.length > 1 || !card.kanji)) allMatchCandidates.push({ matchStr: card.reading, card });
     if (card.kanji) {
       // Remove trailing hiragana for verbs/adjectives if no forms are provided
       const stem = card.kanji.replace(/[ぁ-ん]+$/, '');
@@ -555,6 +559,9 @@ export function trimAuxiliary(text: string) {
       card.forms.forEach(f => {
         if (f.value) {
           allMatchCandidates.push({ matchStr: f.value, card, matchedForm: f });
+        }
+        if (f.reading && f.reading !== f.value) {
+          allMatchCandidates.push({ matchStr: f.reading, card, matchedForm: f });
         }
       });
     }
