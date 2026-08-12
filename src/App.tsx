@@ -272,6 +272,7 @@ export default function App() {
       setIsFreeStudyMode(false);
       setIsDifficultReviewMode(false);
     }
+    setIsSentenceReviewOpen(false);
     setView(newView);
     if (newView !== 'list') {
       setListSearchQuery('');

@@ -223,7 +223,13 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           }
           return ex;
         });
-        onUpdateWord(word.id, { examples: updatedExamples });
+        const oldScore = word.reviewScore || 0;
+        let scoreDelta = 0;
+        if (grade === 'good') scoreDelta = 1;
+        else if (grade === 'hard') scoreDelta = -1;
+        else if (grade === 'forgot') scoreDelta = -2;
+        const newScore = oldScore + scoreDelta;
+        onUpdateWord(word.id, { examples: updatedExamples, reviewScore: newScore });
       }
     }
 
