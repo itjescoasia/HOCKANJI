@@ -106,7 +106,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
         <p className="text-theme-primary/60 mb-6 font-serif text-lg">
-          Chưa có câu ví dụ nào trong Chuyên đề.
+          {deck.some((word) => word.examples.length > 0) ? "Tuyệt vời, bạn đã ôn hết các câu đến hạn!" : "Chưa có câu ví dụ nào."}
         </p>
         <button
           onClick={onClose}

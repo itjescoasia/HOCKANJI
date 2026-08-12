@@ -1,3 +1,9 @@
+
+import localforage from 'localforage';
+import { auth, db } from '../lib/firebase';
+import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 import Markdown from 'react-markdown';
 import React, { useState, Fragment, useEffect } from "react";
 import Fuse from "fuse.js";
@@ -573,6 +579,81 @@ export default function IntensiveStudy({
                   {deck.length} chuyên đề • {deck.reduce((sum, w) => sum + w.examples.length, 0)} mẫu câu
                 </span>
               </div>
+
+            </div>
+            
+            {deck.length > 0 && (
+              <div className="mb-8 p-6 bg-theme-panel border border-theme-subtle rounded-xl w-full">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-theme-primary/60 mb-6 flex justify-between items-center">
+                  <span>Thống kê mức độ thành thạo</span>
+                  <span className="text-[10px] text-theme-primary/40 normal-case tracking-normal font-normal">Dựa trên tỷ lệ câu trả lời đúng</span>
+                </h3>
+                <div className="w-full h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={deck.map(word => {
+                        const targetScore = Math.max(1, word.examples.length * 3);
+                        const percent = Math.max(0, Math.min(100, Math.round(((word.reviewScore || 0) / targetScore) * 100)));
+                        return {
+                          name: word.word,
+                          percent: percent,
+                          totalExamples: word.examples.length
+                        };
+                      }).sort((a, b) => b.percent - a.percent)}
+                      margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-theme-primary/5" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fill: 'currentColor', fontSize: 10 }} 
+                        className="text-theme-primary/60" 
+                        axisLine={false}
+                        tickLine={false}
+                        tickMargin={10}
+                      />
+                      <YAxis 
+                        tick={{ fill: 'currentColor', fontSize: 10 }} 
+                        className="text-theme-primary/40" 
+                        axisLine={false}
+                        tickLine={false}
+                        domain={[0, 100]}
+                        tickFormatter={(v) => `${v}%`}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-theme-panel border border-theme-subtle p-3 rounded shadow-lg text-theme-primary">
+                                <p className="font-bold mb-1 text-sm">{data.name}</p>
+                                <p className="text-xs opacity-70 mb-1">{data.totalExamples} mẫu câu</p>
+                                <p className="text-sm font-bold text-theme-accent">{data.percent}% thành thạo</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="percent" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        {
+                          deck.map((entry, index) => {
+                            const targetScore = Math.max(1, entry.examples.length * 3);
+                            const percent = Math.max(0, Math.min(100, Math.round(((entry.reviewScore || 0) / targetScore) * 100)));
+                            let color = "#3b82f6"; // accent (blue)
+                            if (percent >= 80) color = "#22c55e"; // green-500
+                            else if (percent >= 40) color = "#f97316"; // orange-500
+                            return <Cell key={`cell-${index}`} fill={color} />;
+                          })
+                        }
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+            
+            <div className="mb-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsDeleteUnlocked(!isDeleteUnlocked)}
@@ -1761,6 +1842,14 @@ function StudyView({
                                         (<HighlightVietnamese text={ex.translation || ""} />)
                                       </p>
                                     )}
+                                  <IntensiveExampleAudio 
+                                    wordId={word.id} 
+                                    example={ex} 
+                                    onUpdateExample={(exId, updates) => {
+                                      const updatedExamples = word.examples.map(e => e.id === exId ? { ...e, ...updates } : e);
+                                      onUpdateWord(word.id, { examples: updatedExamples });
+                                    }} 
+                                  />
                                   
                                   <AnimatePresence>
                                     {expandedNoteIds.includes(ex.id) && ex.specialNote && (
@@ -1870,6 +1959,136 @@ function StudyView({
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
+function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: string, example: IntensiveExample, onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void }) {
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (example.audioUrl) {
+      if (example.audioUrl.startsWith('firestore:') && auth.currentUser) {
+        const audioId = example.audioUrl.split(':')[1];
+        getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId)).then((docSnap) => {
+           if (docSnap.exists() && active) {
+              setAudioUrl(docSnap.data().data);
+           }
+        }).catch(err => console.error("Failed to load audio from firestore", err));
+      } else {
+        setAudioUrl(example.audioUrl);
+      }
+    } else if (example.hasAudio) {
+      localforage.getItem<Blob>(`audio_intensive_${wordId}_${example.id}`).then((blob) => {
+        if (blob && active) {
+          setAudioUrl(URL.createObjectURL(blob));
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [wordId, example.id, example.hasAudio, example.audioUrl]);
+
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsUploading(true);
+      try {
+        let uploadedToStorage = false;
+        if (auth.currentUser) {
+          try {
+            const base64 = await fileToBase64(file);
+            const audioId = `intensive_${wordId}_${example.id}`;
+            const audioDocRef = doc(db, 'users', auth.currentUser.uid, 'audio', audioId);
+            await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
+            onUpdateExample(example.id, { hasAudio: true, audioUrl: 'firestore:' + audioId });
+            setAudioUrl(base64);
+            uploadedToStorage = true;
+          } catch (storageErr) {
+            console.warn("Firestore audio upload failed, falling back to local", storageErr);
+          }
+        }
+        
+        if (!uploadedToStorage) {
+          await localforage.setItem(`audio_intensive_${wordId}_${example.id}`, file);
+          const url = URL.createObjectURL(file);
+          onUpdateExample(example.id, { hasAudio: true, audioUrl: null });
+          setAudioUrl(url);
+        }
+      } catch (err) {
+        console.error("Upload error", err);
+      }
+      setIsUploading(false);
+    }
+    if (e.target) {
+        e.target.value = '';
+    }
+  };
+  
+  const handleRemoveAudio = async () => {
+    if (auth.currentUser && example.audioUrl) {
+      try {
+        if (example.audioUrl.startsWith('firestore:')) {
+           const audioId = example.audioUrl.split(':')[1];
+           await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+        } else {
+           // local storage
+        }
+      } catch (e) {
+        console.error("Delete error", e);
+      }
+    } else {
+      await localforage.removeItem(`audio_intensive_${wordId}_${example.id}`);
+    }
+    if (audioUrl && !audioUrl.startsWith('http')) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(null);
+    onUpdateExample(example.id, { hasAudio: false, audioUrl: null }); 
+  };
+
+  return (
+    <div className="mt-3 flex items-center gap-2 border-t border-theme-subtle pt-3">
+      <input 
+        type="file" 
+        accept="audio/*,.mp3,.wav,.m4a" 
+        ref={audioInputRef} 
+        onChange={handleUploadAudio} 
+        className="sr-only" 
+      />
+      {!audioUrl ? (
+        <button 
+          onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider"
+        >
+          <Volume2 className="w-3 h-3" />
+          {isUploading ? 'Đang tải...' : 'Thêm MP3'}
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 w-full">
+          <audio controls src={audioUrl} className="h-8 w-full max-w-[240px]" />
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleRemoveAudio(); }}
+            className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
+            title="Xóa MP3"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

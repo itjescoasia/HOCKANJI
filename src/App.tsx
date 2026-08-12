@@ -427,7 +427,7 @@ export default function App() {
             onRemoveWord={removeIntensiveWord}
             onUpdateWord={updateIntensiveWord}
             onReorderDeck={reorderIntensiveWords}
-            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, true)}
+            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
           />
         )}
         
@@ -452,7 +452,7 @@ export default function App() {
             onUpdateConversation={updateConversation}
             onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
             mainDeck={deck}
-            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, true)}
+            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
             onAddIntensiveWord={addIntensiveWord}
           />
         )}
