@@ -36,6 +36,20 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+
+export function getCategoryBadgeStyle(category: string | undefined, defaultClasses: string) {
+  if (!category) return defaultClasses;
+  const type = category.trim();
+  if (type === "Động từ nhóm I") {
+    return "text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-sm uppercase tracking-wider border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50 whitespace-nowrap";
+  } else if (type === "Động từ nhóm II") {
+    return "text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded-sm uppercase tracking-wider border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50 whitespace-nowrap";
+  } else if (type === "Động từ nhóm III") {
+    return "text-[10px] font-bold bg-pink-100 text-pink-700 px-2 py-1 rounded-sm uppercase tracking-wider border border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800/50 whitespace-nowrap";
+  }
+  return defaultClasses;
+}
+
 import { normalizeSentence, cleanTextForSearch } from "../utils/stringUtils";
 import {
   DragDropContext,
@@ -749,7 +763,7 @@ export default function IntensiveStudy({
                                     </h3>
                                   </div>
                                   {word.category && (
-                                    <span className="text-[10px] font-bold text-theme-accent/80 bg-theme-accent/5 px-2 py-1 rounded-sm uppercase tracking-wider border border-theme-accent/10 whitespace-nowrap">
+                                    <span className={getCategoryBadgeStyle(word.category, "text-[10px] font-bold text-theme-accent/80 bg-theme-accent/5 px-2 py-1 rounded-sm uppercase tracking-wider border border-theme-accent/10 whitespace-nowrap")}>
                                       {word.category}
                                     </span>
                                   )}

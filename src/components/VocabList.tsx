@@ -7,6 +7,20 @@ import { cleanTextForSearch } from '../utils/stringUtils';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
 
+export function getWordTypeBadgeStyle(wordType: string | undefined, defaultClasses: string) {
+  if (!wordType) return defaultClasses;
+  const type = wordType.trim();
+  if (type === "Động từ nhóm I") {
+    return "text-[10px] font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-sm border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50";
+  } else if (type === "Động từ nhóm II") {
+    return "text-[10px] font-medium bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-sm border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50";
+  } else if (type === "Động từ nhóm III") {
+    return "text-[10px] font-medium bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-sm border border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800/50";
+  }
+  return defaultClasses;
+}
+
+
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
@@ -798,7 +812,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             <div className="text-xs font-serif text-theme-primary opacity-50 italic">{card.romaji}</div>
                           )}
                           {card.wordType && (
-                            <span className="text-[10px] text-theme-muted bg-theme-hover px-1.5 py-0.5 rounded-sm border border-theme-subtle">{card.wordType}</span>
+                            <span className={getWordTypeBadgeStyle(card.wordType, "text-[10px] text-theme-muted bg-theme-hover px-1.5 py-0.5 rounded-sm border border-theme-subtle")}>{card.wordType}</span>
                           )}
                           {card.sinoVietnamese && (
                             <span className="text-[10px] text-theme-accent uppercase tracking-widest border border-theme-accent/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
