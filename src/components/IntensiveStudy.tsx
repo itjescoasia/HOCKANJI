@@ -1741,6 +1741,7 @@ function StudyView({
                                   </button>
                                 )}
                                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                                  {!ex.hasAudio && !ex.audioUrl && (
                                   <button
                                     onClick={(e) => playAudio(e, ex.sentence)}
                                     className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
@@ -1748,6 +1749,7 @@ function StudyView({
                                   >
                                     <Volume2 className="w-4 h-4" />
                                   </button>
+                                  )}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1839,6 +1841,7 @@ function StudyView({
                                     )}
                                   <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
                                     {renderHighlight(ex.sentence, word.word)}
+                                    {!ex.hasAudio && !ex.audioUrl && (
                                     <button
                                       onClick={(e) => playAudio(e, ex.sentence)}
                                       className="inline-flex items-center justify-center p-2 ml-3 text-theme-primary/40 hover:text-theme-accent transition-colors align-middle rounded-full hover:bg-theme-accent/10"
@@ -1846,6 +1849,7 @@ function StudyView({
                                     >
                                       <Volume2 className="w-5 h-5" />
                                     </button>
+                                    )}
 
                                   </p>
                                   {ex.romaji &&
