@@ -81,9 +81,9 @@ export default function Dashboard({
     const intensiveMatches = intensiveDeck.filter(c =>
       cleanTextForSearch(c.word).includes(query) || 
       cleanTextForSearch(c.reading || '').includes(query) || 
-      cleanTextForSearch(c.meaning || '').includes(query) ||
+      cleanTextForSearch(c.explanation || '').includes(query) ||
       (c.examples || []).some(ex => cleanTextForSearch(ex.sentence || '').includes(query) || cleanTextForSearch(ex.translation || '').includes(query))
-    ).map(c => ({ type: 'intensive', word: c.word, reading: c.reading || '', meaning: c.meaning || '', id: c.id, item: c }));
+    ).map(c => ({ type: 'intensive', word: c.word, reading: c.reading || '', meaning: c.explanation || '', id: c.id, item: c }));
 
     return [...normalMatches, ...intensiveMatches].slice(0, 8);
   }, [searchQuery, deck, intensiveDeck]);

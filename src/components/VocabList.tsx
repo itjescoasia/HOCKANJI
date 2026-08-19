@@ -97,6 +97,8 @@ function cleanMarkdownForDisplay(text: string | undefined | null) {
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null }: VocabListProps) {
   const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>>({});
@@ -280,39 +282,43 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     setEditForm({});
   };
 
-  const filteredDeck = deck.filter(c => {
-    const q = String(search || "").trim();
-    if (!q) return filterType === 'all' || c.wordType === filterType;
-    
-    const cleanQ = cleanTextForSearch(q);
-    const queryWords = cleanQ.split(/\s+/).filter(Boolean);
+  const filteredDeck = React.useMemo(() => {
+    return deck.filter(c => {
+      const q = String(search || "").trim();
+      if (!q) return filterType === 'all' || c.wordType === filterType;
+      
+      const cleanQ = cleanTextForSearch(q);
+      const queryWords = cleanQ.split(/\s+/).filter(Boolean);
 
-    const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';
-    
-    const k = cleanTextForSearch(c.kanji);
-    const m = cleanTextForSearch(c.meaning);
-    const r = cleanTextForSearch(c.reading);
-    const ro = cleanTextForSearch(c.romaji);
-    const stemClean = cleanTextForSearch(stem);
-    
-    const textToSearch = `${k} ${m} ${r} ${ro}`;
+      const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';
+      
+      const k = cleanTextForSearch(c.kanji);
+      const m = cleanTextForSearch(c.meaning);
+      const r = cleanTextForSearch(c.reading);
+      const ro = cleanTextForSearch(c.romaji);
+      const stemClean = cleanTextForSearch(stem);
+      
+      const textToSearch = `${k} ${m} ${r} ${ro}`;
 
-    let matchesSearch = textToSearch.includes(cleanQ) || (stemClean && stemClean.length > 0 && cleanQ.includes(stemClean));
-    
-    if (!matchesSearch && queryWords.length > 0) {
-        const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
-        matchesSearch = (matchCount / queryWords.length) >= 0.7;
-    }
-    
-    if (!matchesSearch && c.forms) {
-        matchesSearch = c.forms.some(f => f.value && cleanTextForSearch(f.value).includes(cleanQ));
-    }
-                          
-    const matchesFilter = filterType === 'all' || c.wordType === filterType;
-    return matchesSearch && matchesFilter;
-  });
+      let matchesSearch = textToSearch.includes(cleanQ) || (stemClean && stemClean.length > 0 && cleanQ.includes(stemClean));
+      
+      if (!matchesSearch && queryWords.length > 0) {
+          const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
+          matchesSearch = (matchCount / queryWords.length) >= 0.7;
+      }
+      
+      if (!matchesSearch && c.forms) {
+          matchesSearch = c.forms.some(f => f.value && cleanTextForSearch(f.value).includes(cleanQ));
+      }
+                            
+      const matchesFilter = filterType === 'all' || c.wordType === filterType;
+      return matchesSearch && matchesFilter;
+    });
+  }, [deck, search, filterType]);
 
-  const uniqueWordTypes = Array.from(new Set(deck.map(c => c.wordType).filter(Boolean)));
+  const uniqueWordTypes = React.useMemo(() => {
+    return Array.from(new Set(deck.map(c => c.wordType).filter(Boolean)));
+  }, [deck]);
 
   const handleExport = () => {
     const data = deck.map(d => ({
@@ -411,7 +417,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
             className="px-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary focus:outline-none focus:border-theme-accent transition-colors rounded-none text-sm w-full sm:w-auto min-w-[150px]"
           >
             <option value="all">Tất cả loại từ</option>
@@ -427,7 +433,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               type="text"
               placeholder="Tìm kiếm Kanji, nghĩa, romaji..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
               className="pl-11 pr-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:border-theme-accent transition-colors rounded-none placeholder:opacity-30 text-sm"
             />
           </div>
@@ -459,7 +465,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2a2a2a]">
-                {filteredDeck.map((card) => {
+                {filteredDeck.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((card) => {
                   const endOfToday = new Date();
                   endOfToday.setHours(23, 59, 59, 999);
                   const isDue = card.nextReviewDate <= endOfToday.getTime();
@@ -900,6 +906,30 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 })}
               </tbody>
             </table>
+          {filteredDeck.length > itemsPerPage && (
+            <div className="p-4 flex items-center justify-between border-t border-theme-subtle">
+              <div className="text-xs text-theme-muted">
+                Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, filteredDeck.length)} - {Math.min(currentPage * itemsPerPage, filteredDeck.length)} trong {filteredDeck.length} từ
+              </div>
+              <div className="flex gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className="px-4 py-1.5 bg-theme-base border border-theme-subtle hover:bg-theme-hover disabled:opacity-50 disabled:hover:bg-theme-base text-theme-primary transition-colors text-sm rounded-sm"
+                >
+                  Trước
+                </button>
+                <button
+                  disabled={currentPage >= Math.ceil(filteredDeck.length / itemsPerPage)}
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredDeck.length / itemsPerPage), prev + 1))}
+                  className="px-4 py-1.5 bg-theme-base border border-theme-subtle hover:bg-theme-hover disabled:opacity-50 disabled:hover:bg-theme-base text-theme-primary transition-colors text-sm rounded-sm"
+                >
+                  Tiếp
+                </button>
+              </div>
+            </div>
+          )}
+
           </div>
         </div>
       )}

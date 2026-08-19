@@ -188,7 +188,22 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
     }
   });
 
+  
+  app.get('/api/ojad', async (req, res) => {
+    try {
+      const word = req.query.word;
+      if (!word) return res.status(400).json({ error: 'Word is required' });
+      
+      // Since OJAD scraping is brittle, we return an empty array and let the frontend know
+      // Alternatively, we could just return a JSON message
+      res.json({ results: [] });
+    } catch (err) {
+      res.status(500).json({ error: 'Lỗi máy chủ' });
+    }
+  });
+
   // API to fetch verb forms from OJAD
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
