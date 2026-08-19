@@ -90,6 +90,8 @@ export default function App() {
   const [isSentenceReviewOpen, setIsSentenceReviewOpen] = useState(false);
 
   const [listSearchQuery, setListSearchQuery] = useState('');
+  const [intensiveSearchQuery, setIntensiveSearchQuery] = useState('');
+  const [intensiveSelectedWordId, setIntensiveSelectedWordId] = useState<string | null>(null);
   const [editCardReq, setEditCardReq] = useState<{id: string, ts: number} | null>(null);
 
   useEffect(() => {
@@ -397,6 +399,16 @@ export default function App() {
             onStartSentenceReview={handleStartSentenceReview}
             onNavigateAdd={() => handleNavigate('add')} 
             onRecordWordOfTheDay={recordWordOfTheDay}
+            onNavigateToWord={(word, isIntensive, id) => {
+              if (isIntensive) {
+                setIntensiveSearchQuery(word);
+                setIntensiveSelectedWordId(id);
+                setView('intensive_vocab');
+              } else {
+                setListSearchQuery(word);
+                setView('list');
+              }
+            }}
           />
         )}
         
@@ -428,6 +440,8 @@ export default function App() {
             onUpdateWord={updateIntensiveWord}
             onReorderDeck={reorderIntensiveWords}
             onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
+            initialSearchQuery={intensiveSearchQuery}
+            initialSelectedWordId={intensiveSelectedWordId}
           />
         )}
         

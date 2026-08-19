@@ -105,6 +105,8 @@ interface IntensiveStudyProps {
   onRemoveWord: (id: string) => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
   onReorderDeck?: (deck: IntensiveWord[]) => void;
+  initialSearchQuery?: string;
+  initialSelectedWordId?: string | null;
 }
 
 const CATEGORIES: WordCategory[] = [
@@ -290,6 +292,8 @@ export default function IntensiveStudy({
   onUpdateWord,
   onReorderDeck,
   onStartTopicReview,
+  initialSearchQuery = "",
+  initialSelectedWordId = null,
 }: IntensiveStudyProps) {
   const [viewState, setViewState] = useState<"list" | "add" | "study">("list");
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
@@ -580,6 +584,7 @@ export default function IntensiveStudy({
           <StudyView
             deck={deck}
             word={selectedWord}
+            searchQuery={searchQuery}
             targetExampleId={targetExampleId || undefined}
             onCopyExample={handleCopyExample}
             onBack={() => {
@@ -954,6 +959,7 @@ function StudyView({
   deck,
   word,
   targetExampleId,
+  searchQuery,
   onCopyExample,
   onBack,
   onUpdateWord,
@@ -963,12 +969,26 @@ function StudyView({
   deck: IntensiveWord[];
   word: IntensiveWord;
   targetExampleId?: string | null;
+  searchQuery?: string;
   onCopyExample: (example: IntensiveExample, targetWordId: string) => void;
   onBack: () => void;
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
   renderHighlight: (text: string | undefined | null, kanji: string) => React.ReactNode;
   onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
 }) {
+  const highlightSearchTerm = (text: string | undefined | null, highlight?: string) => {
+    if (!text) return "";
+    if (!highlight || !highlight.trim()) return text;
+    const escapedHighlight = highlight.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escapedHighlight})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, i) => 
+      part.toLowerCase() === highlight.trim().toLowerCase()
+        ? <mark key={i} className="bg-theme-accent/20 text-theme-accent font-bold px-0.5 rounded-sm">{part}</mark>
+        : <span key={i}>{part}</span>
+    );
+  };
+
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
   const [copyingExample, setCopyingExample] = useState<IntensiveExample | null>(null);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
@@ -1861,7 +1881,11 @@ function StudyView({
                                   {ex.translation &&
                                     !hiddenMeaningIds.includes(ex.id) && (
                                       <p className="text-sm text-theme-primary/50 italic mb-2">
-                                        (<HighlightVietnamese text={ex.translation || ""} />)
+                                        (<span>
+                                          {searchQuery 
+                                            ? highlightSearchTerm(ex.translation || "", searchQuery) 
+                                            : <HighlightVietnamese text={ex.translation || ""} />}
+                                        </span>)
                                       </p>
                                     )}
                                   <IntensiveExampleAudio 
