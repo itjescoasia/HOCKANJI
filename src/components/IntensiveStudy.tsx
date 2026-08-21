@@ -56,17 +56,17 @@ export function getCategoryBadgeStyle(typeStr: string | undefined, defaultClasse
   if (!typeStr) return defaultClasses;
   const type = typeStr.trim();
   if (type === "Động từ nhóm I") {
-    return "text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50";
+    return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)] border-[var(--badge-blue-border)]";
   } else if (type === "Động từ nhóm II") {
-    return "text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50";
+    return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)] border-[var(--badge-purple-border)]";
   } else if (type === "Động từ nhóm III") {
-    return "text-[10px] font-bold bg-pink-100 text-pink-700 px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800/50";
+    return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-pink-bg)] text-[var(--badge-pink-text)] border-[var(--badge-pink-border)]";
   } else if (type === "Danh từ") {
-    return "text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50";
+    return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border-[var(--badge-emerald-border)]";
   } else if (type === "Tính từ đuôi-i" || type === "Tính từ i") {
-    return "text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50";
+    return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border-[var(--badge-amber-border)]";
   } else if (type === "Tính từ đuôi-na" || type === "Tính từ na") {
-    return "text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800/50";
+    return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-orange-bg)] text-[var(--badge-orange-text)] border-[var(--badge-orange-border)]";
   }
   return defaultClasses;
 }
@@ -212,7 +212,7 @@ function SortableWordItem({
                 const percent = calculateMasteryPercent(word);
                 let colorClass = "text-theme-accent bg-theme-accent";
                 if (percent >= 80) colorClass = "text-green-500 bg-green-500";
-                else if (percent >= 40) colorClass = "text-orange-500 bg-orange-500";
+                else if (percent >= 40) colorClass = " ";
                 
                 return (
                   <div className="flex items-center gap-3 border-l border-theme-subtle pl-4">
@@ -879,7 +879,7 @@ export default function IntensiveStudy({
                                       const percent = calculateMasteryPercent(word);
                                       let colorClass = "text-theme-accent bg-theme-accent";
                                       if (percent >= 80) colorClass = "text-green-500 bg-green-500";
-                                      else if (percent >= 40) colorClass = "text-orange-500 bg-orange-500";
+                                      else if (percent >= 40) colorClass = " ";
                                       
                                       return (
                                         <div className="flex flex-col gap-1.5 w-24 border-l border-theme-subtle pl-4">

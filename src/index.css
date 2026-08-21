@@ -24,6 +24,38 @@
 }
 
 :root {
+  --badge-blue-bg: rgba(30, 58, 138, 0.3);
+  --badge-blue-text: #93c5fd;
+  --badge-blue-border: rgba(30, 64, 175, 0.5);
+  
+  --badge-purple-bg: rgba(88, 28, 135, 0.3);
+  --badge-purple-text: #d8b4fe;
+  --badge-purple-border: rgba(107, 33, 168, 0.5);
+  
+  --badge-pink-bg: rgba(131, 24, 67, 0.3);
+  --badge-pink-text: #f9a8d4;
+  --badge-pink-border: rgba(157, 23, 77, 0.5);
+  
+  --badge-emerald-bg: rgba(6, 78, 59, 0.3);
+  --badge-emerald-text: #6ee7b7;
+  --badge-emerald-border: rgba(6, 95, 70, 0.5);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.3);
+  --badge-amber-text: #fcd34d;
+  --badge-amber-border: rgba(146, 64, 14, 0.5);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.3);
+  --badge-orange-text: #fdba74;
+  --badge-orange-border: rgba(154, 52, 18, 0.5);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.3);
+  --badge-cyan-text: #7dd3fc;
+  --badge-cyan-border: rgba(7, 89, 133, 0.5);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.3);
+  --badge-indigo-text: #a5b4fc;
+  --badge-indigo-border: rgba(55, 48, 163, 0.5);
+
   /* Default: Dark Mode */
   --bg-base: #0a0a0a;
   --bg-base-alt: #0c0c0c;
@@ -47,6 +79,38 @@
 }
 
 .theme-light {
+  --badge-blue-bg: #dbeafe;
+  --badge-blue-text: #1d4ed8;
+  --badge-blue-border: #bfdbfe;
+  
+  --badge-purple-bg: #f3e8ff;
+  --badge-purple-text: #7e22ce;
+  --badge-purple-border: #e9d5ff;
+  
+  --badge-pink-bg: #fce7f3;
+  --badge-pink-text: #be185d;
+  --badge-pink-border: #fbcfe8;
+  
+  --badge-emerald-bg: #d1fae5;
+  --badge-emerald-text: #047857;
+  --badge-emerald-border: #a7f3d0;
+  
+  --badge-amber-bg: #fef3c7;
+  --badge-amber-text: #b45309;
+  --badge-amber-border: #fde68a;
+  
+  --badge-orange-bg: #ffedd5;
+  --badge-orange-text: #c2410c;
+  --badge-orange-border: #fed7aa;
+  
+  --badge-cyan-bg: #cffafe;
+  --badge-cyan-text: #0369a1;
+  --badge-cyan-border: #a5f3fc;
+  
+  --badge-indigo-bg: #e0e7ff;
+  --badge-indigo-text: #4338ca;
+  --badge-indigo-border: #c7d2fe;
+
   /* Soft, eye-friendly light mode */
   --bg-base: #f9f7f3;
   --bg-base-alt: #f4f1ea;
@@ -70,6 +134,38 @@
 }
 
 .theme-sepia {
+  --badge-blue-bg: #e2e6f0;
+  --badge-blue-text: #2f4b7c;
+  --badge-blue-border: #c7d0e0;
+  
+  --badge-purple-bg: #eae2f0;
+  --badge-purple-text: #665191;
+  --badge-purple-border: #d4c7e0;
+  
+  --badge-pink-bg: #f0e2ea;
+  --badge-pink-text: #a05195;
+  --badge-pink-border: #e0c7d4;
+  
+  --badge-emerald-bg: #e2f0e6;
+  --badge-emerald-text: #2f7c4b;
+  --badge-emerald-border: #c7e0d0;
+  
+  --badge-amber-bg: #f0ead2;
+  --badge-amber-text: #8c6b14;
+  --badge-amber-border: #e0d4a8;
+  
+  --badge-orange-bg: #f0e6d2;
+  --badge-orange-text: #9c5c14;
+  --badge-orange-border: #e0cc98;
+  
+  --badge-cyan-bg: #d2eef0;
+  --badge-cyan-text: #147a8c;
+  --badge-cyan-border: #a8dce0;
+  
+  --badge-indigo-bg: #e2e2f0;
+  --badge-indigo-text: #4b4b9c;
+  --badge-indigo-border: #c7c7e0;
+
   /* Warm Sepia Mode */
   --bg-base: #f4ecd8;
   --bg-base-alt: #eee4cc;
@@ -93,6 +189,38 @@
 }
 
 .theme-dim {
+  --badge-blue-bg: rgba(30, 58, 138, 0.3);
+  --badge-blue-text: #93c5fd;
+  --badge-blue-border: rgba(30, 64, 175, 0.5);
+  
+  --badge-purple-bg: rgba(88, 28, 135, 0.3);
+  --badge-purple-text: #d8b4fe;
+  --badge-purple-border: rgba(107, 33, 168, 0.5);
+  
+  --badge-pink-bg: rgba(131, 24, 67, 0.3);
+  --badge-pink-text: #f9a8d4;
+  --badge-pink-border: rgba(157, 23, 77, 0.5);
+  
+  --badge-emerald-bg: rgba(6, 78, 59, 0.3);
+  --badge-emerald-text: #6ee7b7;
+  --badge-emerald-border: rgba(6, 95, 70, 0.5);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.3);
+  --badge-amber-text: #fcd34d;
+  --badge-amber-border: rgba(146, 64, 14, 0.5);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.3);
+  --badge-orange-text: #fdba74;
+  --badge-orange-border: rgba(154, 52, 18, 0.5);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.3);
+  --badge-cyan-text: #7dd3fc;
+  --badge-cyan-border: rgba(7, 89, 133, 0.5);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.3);
+  --badge-indigo-text: #a5b4fc;
+  --badge-indigo-border: rgba(55, 48, 163, 0.5);
+
   /* Soft Night Mode (Eye-friendly dark blue/grey) */
   --bg-base: #15202b;
   --bg-base-alt: #192734;

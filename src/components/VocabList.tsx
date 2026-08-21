@@ -6,22 +6,27 @@ import * as XLSX from 'xlsx';
 import { cleanTextForSearch } from '../utils/stringUtils';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
+import AudioUpload from './AudioUpload';
 
 export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
   if (!typeStr) return defaultClasses;
   const type = typeStr.trim();
   if (type === "Động từ nhóm I") {
-    return "text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-sm border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50";
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)] border-[var(--badge-blue-border)]";
   } else if (type === "Động từ nhóm II") {
-    return "text-[10px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-sm border border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50";
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)] border-[var(--badge-purple-border)]";
   } else if (type === "Động từ nhóm III") {
-    return "text-[10px] font-bold bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-sm border border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800/50";
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-pink-bg)] text-[var(--badge-pink-text)] border-[var(--badge-pink-border)]";
   } else if (type === "Danh từ") {
-    return "text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-sm border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50";
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border-[var(--badge-emerald-border)]";
   } else if (type === "Tính từ đuôi-i" || type === "Tính từ i") {
-    return "text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50";
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border-[var(--badge-amber-border)]";
   } else if (type === "Tính từ đuôi-na" || type === "Tính từ na") {
-    return "text-[10px] font-bold bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-sm border border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800/50";
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-orange-bg)] text-[var(--badge-orange-text)] border-[var(--badge-orange-border)]";
+  } else if (type === "Trạng từ" || type === "Trạng từ (副詞)") {
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-cyan-bg)] text-[var(--badge-cyan-text)] border-[var(--badge-cyan-border)]";
+  } else if (type === "Ngữ pháp") {
+    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-indigo-bg)] text-[var(--badge-indigo-text)] border-[var(--badge-indigo-border)]";
   }
   return defaultClasses;
 }
@@ -37,7 +42,7 @@ interface VocabListProps {
   editCardReq?: { id: string, ts: number } | null;
 }
 
-function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null) => void }) {
+function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!card.examples || card.examples.length === 0) return null;
@@ -60,7 +65,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
         <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
           <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
           <button
-            onClick={(e) => playAudio(e, ex.sentence)}
+            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
             className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
             title="Nghe câu ví dụ"
           >
@@ -101,11 +106,15 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const itemsPerPage = 10;
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
+  const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      new Audio(audioUrl).play().catch(console.error);
+      return;
+    }
     if (!text || !('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
@@ -482,6 +491,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               className="w-full bg-theme-base-alt border border-theme-subtle text-xl font-serif text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                               placeholder="Kanji"
                             />
+                            <AudioUpload 
+                              audioUrl={editForm.audioUrl} 
+                              onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
+                              className="w-full mt-2" 
+                            />
                             <button
                               type="button"
                               onClick={autoFillAI}
@@ -710,6 +724,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                       className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
                                       placeholder="Dịch nghĩa (Tiếng Việt) - Cũ"
                                     />
+                                    <AudioUpload 
+                                      audioUrl={editForm.audioUrl} 
+                                      onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
+                                    />
                                   </div>
                                 ) : (
                                   editForm.examples.map((ex, index) => (
@@ -737,6 +755,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                         placeholder="Câu ví dụ (Tiếng Nhật)"
                                       />
                                       
+                                      <AudioUpload 
+                                        audioUrl={ex.audioUrl} 
+                                        onAudioChange={(url) => {
+                                          const newExamples = [...(editForm.examples || [])];
+                                          newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                          setEditForm({...editForm, examples: newExamples});
+                                        }} 
+                                      />
                                       <div className="grid grid-cols-2 gap-2">
                                         <input 
                                           value={ex.reading || ''} 
@@ -809,7 +835,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div className="flex items-center gap-3">
                           <div className="text-3xl font-serif text-theme-primary">{card.kanji}</div>
                           <button
-                            onClick={(e) => playAudio(e, card.kanji || card.reading)}
+                            onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
                             className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
                             title="Nghe phát âm"
                           >
@@ -849,7 +875,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                   <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
                                     <span title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
                                     <button
-                                      onClick={(e) => playAudio(e, card.example!)}
+                                      onClick={(e) => playAudio(e, card.example!, card.audioUrl)}
                                       className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
                                       title="Nghe câu ví dụ"
                                     >

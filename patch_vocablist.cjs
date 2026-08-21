@@ -1,54 +1,54 @@
 const fs = require('fs');
-const file = 'src/components/VocabList.tsx';
-let code = fs.readFileSync(file, 'utf8');
+let code = fs.readFileSync('src/components/VocabList.tsx', 'utf8');
 
-// The main optimization here is to limit the number of items rendered
-// by default, or implement a simple pagination / virtualization.
-// We can easily slice filteredDeck to only show the first 50 items and add a "Load More" button.
+const t1 = `                            <button
+                              type="button"
+                              onClick={autoFillAI}`;
+const r1 = `                            <AudioUpload 
+                              audioUrl={editForm.audioUrl} 
+                              onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
+                              className="w-full mt-2" 
+                            />
+                            <button
+                              type="button"
+                              onClick={autoFillAI}`;
 
-const renderTableStart = `        <div className="bg-theme-panel border border-theme-subtle rounded-sm overflow-hidden overflow-x-auto shadow-sm">
-          <table className="w-full text-left border-collapse min-w-[600px]">`;
+code = code.replace(t1, r1);
 
-if (code.includes('filteredDeck.map((card) => {') && !code.includes('const [visibleCount, setVisibleCount] =')) {
-  // Add state for visible items
-  code = code.replace(
-    "const [filterType, setFilterType] = useState('all');",
-    "const [filterType, setFilterType] = useState('all');\n  const [visibleCount, setVisibleCount] = useState(50);"
-  );
+const t2 = `                                    <input 
+                                      value={editForm.exampleTranslation || ''} 
+                                      onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
+                                      className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                      placeholder="Dịch nghĩa (Tiếng Việt) - Cũ"
+                                    />`;
+const r2 = `                                    <input 
+                                      value={editForm.exampleTranslation || ''} 
+                                      onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
+                                      className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                      placeholder="Dịch nghĩa (Tiếng Việt) - Cũ"
+                                    />
+                                    <AudioUpload 
+                                      audioUrl={editForm.audioUrl} 
+                                      onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
+                                    />`;
 
-  // Reset visibleCount when search changes
-  code = code.replace(
-    'value={search}',
-    'value={search}\n              onChange={e => { setSearch(e.target.value); setVisibleCount(50); }}'
-  );
-  code = code.replace(
-    "onChange={(e) => setFilterType(e.target.value)}",
-    "onChange={(e) => { setFilterType(e.target.value); setVisibleCount(50); }}"
-  );
+code = code.replace(t2, r2);
 
-  // Apply slice to map
-  code = code.replace(
-    'filteredDeck.map((card) => {',
-    'filteredDeck.slice(0, visibleCount).map((card) => {'
-  );
+const t3 = `                                      <div className="grid grid-cols-2 gap-2">
+                                        <input 
+                                          value={ex.reading || ''}`;
+const r3 = `                                      <AudioUpload 
+                                        audioUrl={ex.audioUrl} 
+                                        onAudioChange={(url) => {
+                                          const newExamples = [...(editForm.examples || [])];
+                                          newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                          setEditForm({...editForm, examples: newExamples});
+                                        }} 
+                                      />
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <input 
+                                          value={ex.reading || ''}`;
 
-  // Add load more button
-  const loadMoreBtn = `            </tbody>
-          </table>
-          {visibleCount < filteredDeck.length && (
-            <div className="p-4 flex justify-center border-t border-theme-subtle">
-              <button onClick={() => setVisibleCount(prev => prev + 50)} className="px-6 py-2 bg-theme-hover text-theme-primary rounded-sm border border-theme-subtle hover:border-theme-accent transition-colors text-sm">Hiển thị thêm</button>
-            </div>
-          )}
-        </div>`;
-  
-  code = code.replace(
-    '            </tbody>\n          </table>\n        </div>',
-    loadMoreBtn
-  );
-  
-  fs.writeFileSync(file, code);
-  console.log("Patched VocabList successfully");
-} else {
-  console.log("Could not patch VocabList");
-}
+code = code.replace(t3, r3);
+
+fs.writeFileSync('src/components/VocabList.tsx', code);

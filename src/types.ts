@@ -4,6 +4,8 @@ export interface KanjiExample {
   reading?: string;
   romaji?: string;
   translation: string;
+  audioUrl?: string | null;
+  hasAudio?: boolean;
 }
 
 export interface KanjiCard {
@@ -16,6 +18,8 @@ export interface KanjiCard {
   meaning: string;
   example?: string;
   exampleTranslation?: string;
+  audioUrl?: string | null;
+  hasAudio?: boolean;
   examples?: KanjiExample[];
   forms?: { id: string; name: string; value: string; reading?: string; romaji?: string; meaning?: string; }[];
   wordType?: string;
@@ -36,14 +40,14 @@ export interface IntensiveExample {
   reading?: string;
   romaji?: string;
   translation: string;
+  audioUrl?: string | null;
+  hasAudio?: boolean;
   specialNote?: string;
   mastered?: boolean; // legacy
   jaToViMastered?: boolean;
   viToJaMastered?: boolean;
   jaToViNextReviewDate?: number;
   viToJaNextReviewDate?: number;
-  audioUrl?: string | null;
-  hasAudio?: boolean;
   jaToViInterval?: number;
   viToJaInterval?: number;
   jaToViFailCount?: number;

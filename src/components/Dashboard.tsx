@@ -296,7 +296,7 @@ export default function Dashboard({
                   <span className="text-sm font-serif text-theme-primary truncate">{res.word}</span>
                   <span className="text-xs text-theme-primary/60 truncate">{res.reading} {res.reading && res.meaning ? '•' : ''} {res.meaning}</span>
                 </div>
-                <span className={`shrink-0 text-[10px] px-2 py-0.5 uppercase tracking-widest rounded-sm ${res.type === 'intensive' ? 'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50' : 'bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50'}`}>
+                <span className={`shrink-0 text-[10px] px-2 py-0.5 uppercase tracking-widest rounded-sm ${res.type === 'intensive' ? 'bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border border-[var(--badge-amber-border)]' : 'bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border border-[var(--badge-emerald-border)]'}`}>
                   {res.type === 'intensive' ? 'Chuyên sâu' : 'Từ vựng'}
                 </span>
               </button>
@@ -405,7 +405,7 @@ export default function Dashboard({
           </span>
         </div>
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
-          <Zap className="w-6 h-6 text-blue-500 mb-4 opacity-70" />
+          <Zap className="w-6 h-6  mb-4 opacity-70" />
           <div className="flex items-end gap-2 mb-2">
             <span className="text-4xl font-serif text-theme-primary">
               {todayStats.newLearned || 0}
@@ -414,7 +414,7 @@ export default function Dashboard({
               / 15
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-blue-400 opacity-70">
+          <span className="text-[10px] uppercase tracking-widest  opacity-70">
             Thẻ Mới Đã Học
           </span>
         </div>
