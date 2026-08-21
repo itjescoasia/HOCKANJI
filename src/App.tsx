@@ -446,7 +446,7 @@ export default function App() {
         )}
         
         {view === 'short_study' && (
-          <div className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
+          <div className="fixed inset-0 z-[99999] bg-theme-base-alt overflow-y-auto w-full h-full">
             <ShortStudySession
               queue={shortStudyQueue}
               onExit={() => setView('dashboard')}
@@ -487,7 +487,7 @@ export default function App() {
       )}
 
         {isSentenceReviewOpen && (
-          <div className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
+          <div className="fixed inset-0 z-[99999] bg-theme-base-alt overflow-y-auto w-full h-full">
             <SentenceReview
               deck={sentenceReviewTargetDeck || intensiveDeck}
               mainDeck={deck}

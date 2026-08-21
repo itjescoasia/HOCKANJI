@@ -963,7 +963,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         </div>
       )}
       {viewingCard && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-theme-base w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg shadow-2xl flex flex-col relative custom-scrollbar" onClick={e => e.stopPropagation()}>
             {/* Header / Main Vocab */}
             <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-10 border-b border-theme-subtle px-6 py-4 flex justify-between items-start">

@@ -917,7 +917,7 @@ export default function IntensiveStudy({
                           </Draggable>
                         ))}
                         {confirmingDeleteId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingDeleteId(null)} />
           <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col">
             <h3 className="text-xl font-serif text-theme-primary mb-4 text-red-500">Xóa chuyên đề?</h3>
@@ -1939,7 +1939,7 @@ function StudyView({
       </div>
 
       {copyingExample && (
-        <div className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-theme-panel border border-theme-subtle rounded-xl w-full max-w-md shadow-2xl p-6 relative">
             <h3 className="text-xl font-serif text-theme-primary mb-4">
               Sao chép câu ví dụ
