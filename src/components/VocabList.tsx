@@ -681,6 +681,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                           placeholder="Nghĩa (Tiếng Việt)"
                                         />
                                       </div>
+                                      <div className="flex gap-2">
+                                        <AudioUpload 
+                                          audioUrl={f.audioUrl} 
+                                          onAudioChange={(url) => {
+                                            const newForms = [...(editForm.forms || [])];
+                                            newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
+                                            setEditForm({...editForm, forms: newForms});
+                                          }}
+                                        />
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -1036,8 +1046,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-xl font-serif text-theme-primary">{f.value}</span>
                           <button
-                            onClick={(e) => playAudio(e, f.value)}
+                            onClick={(e) => playAudio(e, f.value, f.audioUrl)}
                             className="p-1.5 bg-theme-base rounded-full text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel transition-colors"
+                            title="Nghe phát âm"
                           >
                             <Volume2 className="w-4 h-4" />
                           </button>

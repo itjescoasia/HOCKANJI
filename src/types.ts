@@ -21,7 +21,7 @@ export interface KanjiCard {
   audioUrl?: string | null;
   hasAudio?: boolean;
   examples?: KanjiExample[];
-  forms?: { id: string; name: string; value: string; reading?: string; romaji?: string; meaning?: string; }[];
+  forms?: { id: string; name: string; value: string; reading?: string; romaji?: string; meaning?: string; audioUrl?: string | null; hasAudio?: boolean; }[];
   wordType?: string;
   freeStudyScore?: number;
   difficultScore?: number;

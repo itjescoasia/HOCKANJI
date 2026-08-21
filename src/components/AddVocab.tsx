@@ -1,3 +1,4 @@
+import AudioUpload from './AudioUpload';
 import React, { useState, useEffect } from 'react';
 import { KanjiExample, KanjiCard } from '../types';
 import { Plus, X, AlertTriangle } from 'lucide-react';
@@ -372,6 +373,15 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
                         }}
                         className="w-full px-4 py-2 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm"
                         placeholder="Nghĩa (Tiếng Việt)"
+                      />
+                      <AudioUpload 
+                        audioUrl={f.audioUrl} 
+                        onAudioChange={(url) => {
+                          const newForms = [...forms];
+                          newForms[index].audioUrl = url;
+                          newForms[index].hasAudio = !!url;
+                          setForms(newForms);
+                        }}
                       />
                     </div>
                     <button
