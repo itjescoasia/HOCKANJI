@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, Music } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../lib/firebase'; // or whatever the path is
+import { storage, auth } from '../lib/firebase'; // or whatever the path is
 
 interface AudioUploadProps {
   audioUrl?: string | null;
@@ -24,14 +24,42 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '' }:
 
     try {
       setIsUploading(true);
-      const filename = `audio/${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, filename);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      onAudioChange(url);
-    } catch (err) {
-      console.error("Upload error", err);
-      alert('Lỗi tải file âm thanh lên.');
+      
+      // Attempt Firebase Storage first
+      try {
+        const uid = auth.currentUser?.uid;
+        if (!uid) throw new Error("Chưa đăng nhập");
+        const filename = `users/${uid}/audio/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, filename);
+        
+        // Thêm timeout 5 giây để tránh treo Firebase
+        await Promise.race([
+          uploadBytes(storageRef, file),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 5000))
+        ]);
+        
+        const url = await getDownloadURL(storageRef);
+        onAudioChange(url);
+      } catch (err) {
+        console.warn("Firebase Storage failed, falling back to Base64", err);
+        // Fallback to Base64 data URL if storage is not provisioned or blocked
+        if (file.size > 700 * 1024) {
+           alert('Tải lên Cloud bị lỗi và file quá lớn (giới hạn 700KB cho chế độ dự phòng). Vui lòng chọn file ngắn hơn.');
+           return;
+        }
+        await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+             onAudioChange(reader.result);
+             resolve(null);
+          };
+          reader.onerror = () => {
+             alert('Lỗi đọc file âm thanh nội bộ.');
+             reject(new Error("Lỗi đọc file"));
+          };
+          reader.readAsDataURL(file);
+        });
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -68,23 +96,22 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '' }:
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="flex items-center gap-1 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary opacity-70 hover:opacity-100 disabled:opacity-50"
+        <label
+          className={`flex items-center gap-1 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary opacity-70 hover:opacity-100 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           <Upload className="w-3 h-3" />
           {isUploading ? 'Đang tải...' : 'Thêm MP3'}
-        </button>
+          <input 
+            type="file" 
+            accept="audio/*" 
+            ref={fileInputRef}
+            onChange={handleFileChange} 
+            className="hidden" 
+            disabled={isUploading}
+          />
+        </label>
       )}
-      <input 
-        type="file" 
-        accept="audio/*" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        className="hidden" 
-      />
+
     </div>
   );
 }
