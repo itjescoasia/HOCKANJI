@@ -71,7 +71,7 @@ export function getCategoryBadgeStyle(typeStr: string | undefined, defaultClasse
   return defaultClasses;
 }
 
-import { normalizeSentence, cleanTextForSearch } from "../utils/stringUtils";
+import { normalizeSentence, cleanTextForSearch, cleanMarkdownForDisplay } from "../utils/stringUtils";
 import {
   DragDropContext,
   Droppable,
@@ -278,7 +278,7 @@ const SearchHighlight = ({ text, query }: { text: string | undefined | null, que
 };
 
 
-function cleanMarkdownForDisplay(text: string | undefined | null) {
+export function _cleanMarkdownForDisplay(text: string | undefined | null) {
   if (!text) return text;
   // Remove markdown headers like ###, **, *
   return text.replace(/^#{1,6}\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '');
