@@ -67,7 +67,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
           <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
           <button
             onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-            className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
+            className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-100 shrink-0 -mt-0.5"
             title="Nghe câu ví dụ"
           >
             <Volume2 className="w-4 h-4" />
@@ -256,14 +256,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         sentence: String(ex.sentence || "").trim(),
         reading: String(ex.reading || "").trim() || '',
         romaji: String(ex.romaji || "").trim() || '',
-        translation: String(ex.translation || "").trim()
-      })) || [];
+        translation: String(ex.translation || "").trim(), audioUrl: ex.audioUrl || null, hasAudio: !!ex.audioUrl })) || [];
         
       const validForms = editForm.forms?.filter(f => String(f.name || "").trim() && String(f.value || "").trim()).map(f => ({
         id: f.id || crypto.randomUUID(),
         name: String(f.name || "").trim(), reading: String(f.reading || "").trim() || "", romaji: String(f.romaji || "").trim() || "", meaning: String(f.meaning || "").trim() || "",
-        value: String(f.value || "").trim()
-      })) || [];
+        value: String(f.value || "").trim(), audioUrl: f.audioUrl || null, hasAudio: !!f.audioUrl })) || [];
         
       onUpdate(editingId, {
         kanji: String(editForm.kanji || "").trim(),
@@ -276,8 +274,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         exampleTranslation: String(editForm.exampleTranslation || "").trim() || '',
         examples: validExamples,
         forms: validForms,
-        wordType: String(editForm.wordType || "").trim() || ''
-      });
+        wordType: String(editForm.wordType || '').trim() || '', audioUrl: editForm.audioUrl || null, hasAudio: !!editForm.audioUrl });
       setEditingId(null);
     }
   };
@@ -842,7 +839,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           <div className="text-3xl font-serif text-theme-primary">{card.kanji}</div>
                           <button
                             onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
-                            className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-100"
                             title="Nghe phát âm"
                           >
                             <Volume2 className="w-4 h-4" />
@@ -882,7 +879,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                     <span title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
                                     <button
                                       onClick={(e) => playAudio(e, card.example!, card.audioUrl)}
-                                      className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover/ex:opacity-100 shrink-0 -mt-0.5"
+                                      className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-100 shrink-0 -mt-0.5"
                                       title="Nghe câu ví dụ"
                                     >
                                       <Volume2 className="w-4 h-4" />
@@ -1084,13 +1081,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           <div className="pr-10 text-lg text-theme-primary mb-3 flex flex-col gap-1.5">
                             <span className="font-serif leading-relaxed">
                               <HighlightProvider>
-                                {renderExampleHighlight(ex.sentence, viewingCard.kanji || viewingCard.reading, [], viewingCard)}
+                                {renderExampleHighlight(ex.sentence, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
                               </HighlightProvider>
                             </span>
                             {(ex.reading || ex.romaji) && (
-                              <div className="flex gap-3 text-sm opacity-60 italic mt-1">
-                                {ex.reading && <span>{ex.reading}</span>}
-                                {ex.romaji && <span className="font-mono">[{ex.romaji}]</span>}
+                              <div className="text-sm opacity-60 italic mt-1 leading-relaxed">
+                                {ex.reading && <span className="mr-3 inline-block">{ex.reading}</span>}
+                                {ex.romaji && <span className="font-mono inline-block">[{ex.romaji}]</span>}
                               </div>
                             )}
                           </div>
@@ -1101,7 +1098,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           </div>
                           <button
                             onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-                            className="absolute top-4 right-4 p-2.5 text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel rounded-full transition-colors opacity-0 group-hover/ex:opacity-100 shadow-sm"
+                            className={`absolute top-4 right-4 p-2.5 rounded-full transition-colors shadow-sm ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10' : 'text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel'}`}
                             title="Nghe phát âm"
                           >
                             <Volume2 className="w-5 h-5" />
@@ -1112,7 +1109,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                       <div className="bg-theme-hover p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm">
                         <div className="pr-10 text-lg text-theme-primary mb-3 font-serif leading-relaxed">
                           <HighlightProvider>
-                            {renderExampleHighlight(viewingCard.example!, viewingCard.kanji || viewingCard.reading, [], viewingCard)}
+                            {renderExampleHighlight(viewingCard.example!, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
                           </HighlightProvider>
                         </div>
                         {viewingCard.exampleTranslation && (
@@ -1124,7 +1121,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         )}
                         <button
                           onClick={(e) => playAudio(e, viewingCard.example!, viewingCard.audioUrl)}
-                          className="absolute top-4 right-4 p-2.5 text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel rounded-full transition-colors opacity-0 group-hover/ex:opacity-100 shadow-sm"
+                          className="absolute top-4 right-4 p-2.5 text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel rounded-full transition-colors opacity-100 shadow-sm"
                           title="Nghe phát âm"
                         >
                           <Volume2 className="w-5 h-5" />

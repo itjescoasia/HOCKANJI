@@ -1,29 +1,7 @@
-@import "tailwindcss";
+const fs = require('fs');
+let code = fs.readFileSync('src/index.css', 'utf8');
 
-
-@theme {
-  --color-theme-base: var(--bg-base);
-  --color-theme-base-alt: var(--bg-base-alt);
-  --color-theme-panel: var(--bg-panel);
-  --color-theme-hover: var(--bg-hover);
-  --color-theme-active: var(--bg-active);
-  --color-theme-active-alt: var(--bg-active-alt);
-  
-  --color-theme-subtle: var(--border-subtle);
-  --color-theme-strong: var(--border-strong);
-  
-  --color-theme-primary: var(--text-primary);
-  --color-theme-muted: var(--text-muted);
-  --color-theme-accent-dark: var(--text-accent-dark);
-  --color-theme-inverted: var(--text-inverted);
-  --color-theme-japanese: var(--text-japanese);
-  
-  --color-theme-accent: var(--accent);
-  --color-theme-accent-hover: var(--accent-hover);
-  --color-theme-accent-light: var(--accent-light);
-}
-
-:root {
+const newRoot = `:root {
   --badge-blue-bg: rgba(30, 58, 138, 0.3);
   --badge-blue-text: #93c5fd;
   --badge-blue-border: rgba(30, 64, 175, 0.5);
@@ -77,9 +55,9 @@
   --accent: #c5a059;
   --accent-hover: #b08d4a;
   --accent-light: #d6b16a;
-}
+}`;
 
-.theme-light {
+const newLight = `.theme-light {
   --badge-blue-bg: #dbeafe;
   --badge-blue-text: #1d4ed8;
   --badge-blue-border: #bfdbfe;
@@ -133,9 +111,9 @@
   --accent: #b07d35;
   --accent-hover: #966829;
   --accent-light: #c49551;
-}
+}`;
 
-.theme-sepia {
+const newSepia = `.theme-sepia {
   --badge-blue-bg: #e2e6f0;
   --badge-blue-text: #2f4b7c;
   --badge-blue-border: #c7d0e0;
@@ -189,9 +167,9 @@
   --accent: #a66a2b;
   --accent-hover: #8c5620;
   --accent-light: #c28243;
-}
+}`;
 
-.theme-dim {
+const newDim = `.theme-dim {
   --badge-blue-bg: rgba(30, 58, 138, 0.3);
   --badge-blue-text: #93c5fd;
   --badge-blue-border: rgba(30, 64, 175, 0.5);
@@ -245,67 +223,11 @@
   --accent: #81a1c1;
   --accent-hover: #5e81ac;
   --accent-light: #88c0d0;
-}
+}`;
 
-body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-}
+code = code.replace(/:root\s*{[^}]*--accent-light:[^}]*}/, newRoot);
+code = code.replace(/\.theme-light\s*{[^}]*--accent-light:[^}]*}/, newLight);
+code = code.replace(/\.theme-sepia\s*{[^}]*--accent-light:[^}]*}/, newSepia);
+code = code.replace(/\.theme-dim\s*{[^}]*--accent-light:[^}]*}/, newDim);
 
-@layer utilities {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--border-subtle);
-    border-radius: 20px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: var(--border-strong);
-  }
-}
-
-@layer components {
-  .markdown-body {
-    @apply text-theme-primary;
-  }
-  .markdown-body p {
-    @apply mb-2 last:mb-0;
-  }
-  .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
-    @apply text-theme-accent font-serif mb-2 mt-4 first:mt-0 font-bold;
-  }
-  .markdown-body h3 {
-    @apply text-lg;
-  }
-  .markdown-body strong {
-    @apply font-bold text-theme-accent;
-  }
-  .markdown-body em {
-    @apply italic opacity-90;
-  }
-  .markdown-body ul {
-    @apply list-disc list-inside mb-2;
-  }
-  .markdown-body ol {
-    @apply list-decimal list-inside mb-2;
-  }
-  .markdown-body li {
-    @apply mb-1;
-  }
-  .markdown-body code {
-    @apply bg-theme-hover px-1 py-0.5 rounded text-sm text-theme-accent font-mono;
-  }
-  .markdown-body pre {
-    @apply bg-theme-panel border border-theme-subtle p-3 rounded mb-2 overflow-x-auto;
-  }
-  .markdown-body pre code {
-    @apply bg-transparent px-0 text-theme-primary;
-  }
-  .markdown-body blockquote {
-    @apply border-l-4 border-theme-accent pl-4 italic opacity-80 mb-2;
-  }
-}
+fs.writeFileSync('src/index.css', code);

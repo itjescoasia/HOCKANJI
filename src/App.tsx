@@ -38,6 +38,8 @@ export default function App() {
       document.documentElement.classList.add('theme-light');
     } else if (theme === 'sepia') {
       document.documentElement.classList.add('theme-sepia');
+    } else if (theme === 'dim') {
+      document.documentElement.classList.add('theme-dim');
     }
     localStorage.setItem('app_theme', theme);
   }, [theme]);
@@ -423,8 +425,8 @@ export default function App() {
               setListSearchQuery(kanji);
               setView('list');
             }}
-            onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms) => {
-              await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || []);
+            onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms, audioUrl, hasAudio) => {
+              await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || [], audioUrl, hasAudio);
               alert('Vừa thêm từ vựng mới thành công');
               handleNavigate('list'); // Redirect to list to show success
             }} 

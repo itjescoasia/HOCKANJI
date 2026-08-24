@@ -7,7 +7,7 @@ import { toRomaji } from 'wanakana';
 interface AddVocabProps {
   deck?: KanjiCard[];
   onNavigateToWord?: (kanji: string) => void;
-  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string, forms?: { id: string, name: string, value: string, reading?: string, romaji?: string }[]) => void;
+  onAdd: (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, examples?: KanjiExample[], wordType?: string, kanjiExplanation?: string, romaji?: string, forms?: any[], audioUrl?: string | null, hasAudio?: boolean) => void;
 }
 
 export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVocabProps) {
@@ -17,6 +17,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [sinoVietnamese, setSinoVietnamese] = useState('');
   const [kanjiExplanation, setKanjiExplanation] = useState('');
   const [meaning, setMeaning] = useState('');
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
   const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string, meaning: string}[]>([]);
   const [wordType, setWordType] = useState('');
@@ -140,7 +141,8 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       kanji.trim(), reading.trim(), meaning.trim(), sinoVietnamese.trim(), 
       validExamples.length > 0 ? validExamples : undefined, 
       wordType, kanjiExplanation.trim(), romaji.trim(), 
-      validForms.length > 0 ? validForms : undefined
+      validForms.length > 0 ? validForms : undefined,
+      audioUrl, !!audioUrl
     );
     setKanji('');
     setReading('');
@@ -151,6 +153,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     setExamples([{ sentence: '', reading: '', romaji: '', translation: '' }]);
     setForms([]);
     setWordType('');
+    setAudioUrl(null);
   };
 
   const addExampleField = () => {
@@ -284,6 +287,13 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
             onChange={e => setMeaning(e.target.value)}
             className="w-full px-5 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-serif uppercase tracking-widest text-center"
             placeholder="NGÔN NGỮ"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Âm thanh phát âm</label>
+          <AudioUpload 
+            audioUrl={audioUrl} 
+            onAudioChange={setAudioUrl} 
           />
         </div>
         
