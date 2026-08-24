@@ -95,6 +95,7 @@ export default function App() {
   const [intensiveSearchQuery, setIntensiveSearchQuery] = useState('');
   const [intensiveSelectedWordId, setIntensiveSelectedWordId] = useState<string | null>(null);
   const [editCardReq, setEditCardReq] = useState<{id: string, ts: number} | null>(null);
+  const [viewCardReq, setViewCardReq] = useState<{id: string, ts: number} | null>(null);
 
   useEffect(() => {
     const handleEditEvent = (e: any) => {
@@ -104,8 +105,16 @@ export default function App() {
       setView('list');
     };
     window.addEventListener('editCard', handleEditEvent);
+    const handleViewEvent = (e: any) => {
+      const card = e.detail;
+      setViewCardReq({ id: card.id, ts: Date.now() });
+      setListSearchQuery(card.kanji || card.reading);
+      setView('list');
+    };
+    window.addEventListener('viewCard', handleViewEvent);
     return () => {
       window.removeEventListener('editCard', handleEditEvent);
+      window.removeEventListener('viewCard', handleViewEvent);
     };
   }, []);
 

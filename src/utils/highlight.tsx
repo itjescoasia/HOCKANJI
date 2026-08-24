@@ -137,7 +137,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2, Edit2 } from 'lucide-react';
+import { Volume2, Edit2, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }> = ({ text, status, card, occurrenceIndex = 0, matchedForm }) => {

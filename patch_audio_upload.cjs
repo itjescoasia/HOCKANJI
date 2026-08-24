@@ -1,4 +1,7 @@
-import React, { useRef, useState } from 'react';
+const fs = require('fs');
+let code = fs.readFileSync('src/components/AudioUpload.tsx', 'utf8');
+
+const newComponent = `import React, { useRef, useState } from 'react';
 import { Upload, X, Music, Link as LinkIcon, Check } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '../lib/firebase';
@@ -32,7 +35,7 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '' }:
         const uid = auth.currentUser?.uid;
         if (!uid) throw new Error("Chưa đăng nhập");
 
-        const filename = `users/${uid}/audio/${Date.now()}_${file.name}`;
+        const filename = \`users/\${uid}/audio/\${Date.now()}_\${file.name}\`;
         const storageRef = ref(storage, filename);
         
         // Thêm timeout 5 giây để tránh treo Firebase
@@ -81,7 +84,7 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '' }:
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={\`flex items-center gap-2 \${className}\`}>
       {audioUrl ? (
         <div className="flex items-center gap-2 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary">
           <Music className="w-3 h-3 text-theme-accent" />
@@ -137,7 +140,7 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '' }:
       ) : (
         <div className="flex items-center gap-2">
           <label
-            className={`flex items-center gap-1 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary opacity-70 hover:opacity-100 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={\`flex items-center gap-1 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary opacity-70 hover:opacity-100 \${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}\`}
           >
             <Upload className="w-3 h-3" />
             {isUploading ? 'Đang tải...' : 'File MP3'}
@@ -164,3 +167,6 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '' }:
     </div>
   );
 }
+`;
+
+fs.writeFileSync('src/components/AudioUpload.tsx', newComponent);

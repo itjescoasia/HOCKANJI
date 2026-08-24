@@ -1359,8 +1359,8 @@ function StudyView({
 
 
             {/* Main Visual */}
-            <div className="w-32 min-h-[8rem] sm:w-40 sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex flex-col items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0 relative group/speaker">
-              <span className="text-2xl sm:text-4xl font-serif text-theme-primary text-center break-words mb-2">
+            <div className="min-w-[8rem] sm:min-w-[10rem] w-full sm:w-auto sm:max-w-[60%] min-h-[8rem] sm:min-h-[10rem] shrink-0 bg-theme-base-alt flex flex-col items-center justify-center rounded border border-theme-subtle shadow-inner mb-4 sm:mb-0 p-4 mx-auto sm:mx-0 relative group/speaker">
+              <span className={`font-serif text-theme-primary text-center break-words mb-2 ${word.word.length > 20 ? 'text-lg sm:text-xl' : word.word.length > 10 ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl'}`}>
                 {word.word}
               </span>
               {onStartTopicReview && word.examples.length > 0 && (
@@ -1855,7 +1855,7 @@ function StudyView({
                                 <HighlightProvider><div className="flex-1 pt-1">
                                   {ex.reading &&
                                     !hiddenMeaningIds.includes(ex.id) && (
-                                      <p className="text-sm text-theme-accent opacity-80 mb-1">
+                                      <p className="text-xl sm:text-2xl text-theme-accent opacity-80 mb-1 font-serif">
                                         <RelatedHighlight text={ex.reading} type="hiragana" />
                                       </p>
                                     )}

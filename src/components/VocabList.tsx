@@ -41,6 +41,7 @@ interface VocabListProps {
   initialSearchQuery?: string;
   initialEditId?: string | null;
   editCardReq?: { id: string, ts: number } | null;
+  viewCardReq?: { id: string, ts: number } | null;
 }
 
 function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => void }) {
@@ -94,7 +95,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
   );
 }
 
-export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null }: VocabListProps) {
+export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null }: VocabListProps) {
   const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -247,6 +248,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       }
     }
   }, [editCardReq, initialEditId, deck]);
+
+  React.useEffect(() => {
+    if (viewCardReq?.id) {
+      const card = deck.find(c => c.id === viewCardReq.id);
+      if (card) {
+        setViewingCard(card);
+        setSearch(card.kanji || card.reading);
+      }
+    }
+  }, [viewCardReq, deck]);
 
   const saveEdit = () => {
     if (editingId && editForm.kanji && editForm.meaning && onUpdate) {
