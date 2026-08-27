@@ -999,6 +999,18 @@ function StudyView({
   const [newRomaji, setNewRomaji] = useState("");
   const [newTranslation, setNewTranslation] = useState("");
   const [newSpecialNote, setNewSpecialNote] = useState("");
+  const [exampleSearchQuery, setExampleSearchQuery] = useState("");
+    const filteredExamples = React.useMemo(() => {
+    if (!exampleSearchQuery.trim()) return word.examples;
+    const q = exampleSearchQuery.toLowerCase();
+    return word.examples.filter(ex => 
+      ex.sentence?.toLowerCase().includes(q) ||
+      ex.translation?.toLowerCase().includes(q) ||
+      ex.reading?.toLowerCase().includes(q) ||
+      ex.romaji?.toLowerCase().includes(q) ||
+      ex.specialNote?.toLowerCase().includes(q)
+    );
+  }, [word.examples, exampleSearchQuery]);
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
     word: word.word || "",
@@ -1407,9 +1419,21 @@ function StudyView({
 
       {/* Examples List */}
       <div className="space-y-6">
+        <div className="relative mb-6">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-theme-primary opacity-40" />
+          </div>
+          <input
+            type="text"
+            value={exampleSearchQuery}
+            onChange={(e) => setExampleSearchQuery(e.target.value)}
+            className="w-full bg-theme-base-alt border border-theme-subtle py-2.5 pl-10 pr-4 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors text-sm rounded-md"
+            placeholder="Tìm kiếm câu ví dụ (Tiếng Nhật, Romaji, Tiếng Việt...)"
+          />
+        </div>
         <div className="flex items-center justify-between border-b border-theme-subtle pb-4">
           <h3 className="text-lg font-serif text-theme-primary tracking-widest uppercase">
-            Các Câu Ví Dụ ({word.examples.length})
+            Các Câu Ví Dụ ({filteredExamples.length}{exampleSearchQuery.trim() ? ` / ${word.examples.length}` : ""})
           </h3>
           <div className="flex items-center gap-6">
             {word.examples.length > 0 && (
@@ -1571,6 +1595,7 @@ function StudyView({
         <DragDropContext
           onDragEnd={(result: DropResult) => {
             if (!result.destination) return;
+            if (exampleSearchQuery.trim()) return; // Disable reorder when searching
             const newExamples = Array.from(word.examples);
             const [reorderedItem] = newExamples.splice(result.source.index, 1);
             newExamples.splice(result.destination.index, 0, reorderedItem);
@@ -1580,13 +1605,13 @@ function StudyView({
           <Droppable droppableId="examples">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef}>
-                {word.examples.map((ex, index) => (
+                {filteredExamples.map((ex, index) => (
                   <Draggable
                     // @ts-ignore
                     key={ex.id || 'ex-' + index}
                     draggableId={ex.id}
                     index={index}
-                    isDragDisabled={editingExampleId === ex.id}
+                    isDragDisabled={editingExampleId === ex.id || !!exampleSearchQuery.trim()}
                   >
                     {(provided, snapshot) => (
                       <div
