@@ -12,24 +12,25 @@ import AudioUpload from './AudioUpload';
 export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
   if (!typeStr) return defaultClasses;
   const type = typeStr.trim();
+  const base = "text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap ";
   if (type === "Động từ nhóm I") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)] border-[var(--badge-blue-border)]";
+    return base + "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
   } else if (type === "Động từ nhóm II") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)] border-[var(--badge-purple-border)]";
+    return base + "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300";
   } else if (type === "Động từ nhóm III") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-pink-bg)] text-[var(--badge-pink-text)] border-[var(--badge-pink-border)]";
+    return base + "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300";
   } else if (type === "Danh từ") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border-[var(--badge-emerald-border)]";
+    return base + "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
   } else if (type === "Tính từ đuôi-i" || type === "Tính từ i") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border-[var(--badge-amber-border)]";
+    return base + "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
   } else if (type === "Tính từ đuôi-na" || type === "Tính từ na") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-orange-bg)] text-[var(--badge-orange-text)] border-[var(--badge-orange-border)]";
+    return base + "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300";
   } else if (type === "Trạng từ" || type === "Trạng từ (副詞)") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-cyan-bg)] text-[var(--badge-cyan-text)] border-[var(--badge-cyan-border)]";
+    return base + "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300";
   } else if (type === "Ngữ pháp") {
-    return "text-[10px] font-bold px-1.5 py-0.5 rounded-sm border bg-[var(--badge-indigo-bg)] text-[var(--badge-indigo-text)] border-[var(--badge-indigo-border)]";
+    return base + "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300";
   }
-  return defaultClasses;
+  return base + "bg-theme-base-alt text-theme-primary opacity-80 border border-theme-subtle";
 }
 
 
@@ -400,20 +401,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-serif text-theme-accent mb-2 tracking-widest uppercase">Kho từ vựng</h2>
+          <h2 className="text-3xl font-serif text-theme-primary font-bold mb-2 tracking-tight">Kho Từ Vựng</h2>
           <div className="flex items-center gap-4">
             <span className="text-theme-primary opacity-50 text-[10px] uppercase tracking-widest">Tổng cộng {deck.length} từ đã được thêm</span>
-            <div className="h-4 w-px bg-theme-active"></div>
+            <div className="h-4 w-px bg-theme-subtle"></div>
             <button
               onClick={handleExport}
-              className="text-[10px] uppercase tracking-widest text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors flex items-center gap-1"
+              className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm"
             >
               <Download className="w-3 h-3" /> Xuất Excel
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="text-[10px] uppercase tracking-widest text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors flex items-center gap-1"
+              className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm"
             >
               <Upload className="w-3 h-3" /> {isImporting ? 'Đang Import...' : 'Nhập Excel'}
             </button>
@@ -431,7 +432,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           <select
             value={filterType}
             onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
-            className="px-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary focus:outline-none focus:border-theme-accent transition-colors rounded-none text-sm w-full sm:w-auto min-w-[150px]"
+            className="px-4 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl text-sm w-full sm:w-auto min-w-[160px] shadow-sm cursor-pointer hover:border-theme-accent/50"
           >
             <option value="all">Tất cả loại từ</option>
             {uniqueWordTypes.map((type, idx) => (
@@ -447,37 +448,37 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               placeholder="Tìm kiếm Kanji, nghĩa, romaji..."
               value={search}
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="pl-11 pr-4 py-2 bg-theme-base-alt border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:border-theme-accent transition-colors rounded-none placeholder:opacity-30 text-sm"
+              className="pl-11 pr-4 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl placeholder:text-theme-primary/40 text-sm shadow-sm hover:border-theme-accent/50"
             />
           </div>
         </div>
       </div>
       
       {deck.length === 0 ? (
-        <div className="bg-theme-panel border border-theme-subtle p-16 text-center shadow-lg">
-          <div className="w-16 h-16 bg-theme-hover border border-theme-subtle flex items-center justify-center mx-auto mb-6">
+        <div className="bg-theme-panel border border-theme-subtle p-16 text-center shadow-sm rounded-2xl">
+          <div className="w-20 h-20 bg-theme-accent/10 border-theme-accent/20 flex items-center justify-center mx-auto mb-6 rounded-full">
             <Search className="w-8 h-8 text-theme-accent opacity-50" />
           </div>
-          <p className="text-lg font-serif text-theme-accent tracking-widest uppercase mb-2">Chưa có từ vựng nào</p>
+          <p className="text-xl font-bold text-theme-primary mb-2">Chưa có từ vựng nào</p>
           <p className="text-theme-primary opacity-50 max-w-md mx-auto text-sm leading-relaxed tracking-wide">Hãy thêm từ vựng mới để bắt đầu quá trình học ứng dụng Spaced Repetition nhé.</p>
         </div>
       ) : filteredDeck.length === 0 ? (
-        <div className="bg-theme-panel border border-theme-subtle p-16 text-center">
+        <div className="bg-theme-panel border border-theme-subtle p-16 text-center shadow-sm rounded-2xl">
           <p className="text-theme-primary opacity-50 text-sm tracking-wide">Không tìm thấy kết quả phù hợp với "{search}"</p>
         </div>
       ) : (
-        <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-lg">
+        <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-md sm:rounded-[20px] rounded-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
-                <tr className="bg-theme-hover border-b border-theme-subtle">
-                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Kanji</th>
-                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal">Cách đọc / Nghĩa</th>
+                <tr className="bg-theme-base-alt/50 border-b border-theme-subtle">
+                  <th className="px-6 py-4 text-xs text-theme-primary/60 font-semibold tracking-wider">Từ vựng</th>
+                  <th className="px-6 py-4 text-xs text-theme-primary/60 font-semibold tracking-wider">Cách đọc / Nghĩa</th>
                   <th className="hidden">Tiến trình (SRS)</th>
-                  <th className="px-8 py-4 text-[10px] text-theme-accent opacity-70 uppercase tracking-widest font-normal text-right">Quản lý</th>
+                  <th className="px-6 py-4 text-xs text-theme-primary/60 font-semibold tracking-wider text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#2a2a2a]">
+              <tbody className="divide-y divide-theme-subtle">
                 {filteredDeck.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((card) => {
                   const endOfToday = new Date();
                   endOfToday.setHours(23, 59, 59, 999);
@@ -845,9 +846,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   
                   return (
                     <tr key={card.id} className="hover:bg-theme-hover transition-colors group">
-                      <td className="px-8 py-5">
+                      <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="text-3xl font-serif text-theme-primary">{card.kanji}</div>
+                          <div className="text-3xl font-serif text-theme-primary bg-theme-base-alt px-3 py-1.5 rounded-xl shadow-sm border border-theme-subtle/50 inline-block">{card.kanji}</div>
                           <button
                             onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
                             className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-100"
@@ -857,7 +858,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           </button>
                         </div>
                       </td>
-                      <td className="px-8 py-5 min-w-[200px] sm:min-w-[auto]">
+                      <td className="px-6 py-5 min-w-[200px] sm:min-w-[auto]">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <div className="text-xs font-serif text-theme-primary italic opacity-60 tracking-wide break-all sm:break-normal">{card.reading || '---'}</div>
                           {card.romaji && (
@@ -925,24 +926,24 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-5 text-right whitespace-nowrap">
+                      <td className="px-6 py-5 text-right whitespace-nowrap">
                         <button 
                           onClick={() => setViewingCard(card)}
-                          className="p-2 text-[#555] hover:text-blue-500 transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100 mr-1"
+                          className="p-2 hover:bg-blue-500/10 text-theme-primary/40 hover:text-blue-500 transition-all rounded-xl inline-flex items-center justify-center mr-1"
                           title="Xem chi tiết"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => startEdit(card)}
-                          className="p-2 text-[#555] hover:text-theme-accent transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100 mr-1"
+                          className="p-2 hover:bg-theme-accent/10 text-theme-primary/40 hover:text-theme-accent transition-all rounded-xl inline-flex items-center justify-center mr-1"
                           title="Sửa thẻ"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => onRemove(card.id)}
-                          className="p-2 text-[#555] hover:text-red-500 transition-colors inline-flex items-center justify-center opacity-70 hover:opacity-100"
+                          className="p-2 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all rounded-xl inline-flex items-center justify-center"
                           title="Xóa thẻ"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -954,7 +955,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               </tbody>
             </table>
           {filteredDeck.length > itemsPerPage && (
-            <div className="p-4 flex items-center justify-between border-t border-theme-subtle">
+            <div className="p-4 flex items-center justify-between border-t border-theme-subtle/50 bg-theme-base-alt/30">
               <div className="text-xs text-theme-muted">
                 Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, filteredDeck.length)} - {Math.min(currentPage * itemsPerPage, filteredDeck.length)} trong {filteredDeck.length} từ
               </div>
@@ -962,14 +963,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  className="px-4 py-1.5 bg-theme-base border border-theme-subtle hover:bg-theme-hover disabled:opacity-50 disabled:hover:bg-theme-base text-theme-primary transition-colors text-sm rounded-sm"
+                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm"
                 >
                   Trước
                 </button>
                 <button
                   disabled={currentPage >= Math.ceil(filteredDeck.length / itemsPerPage)}
                   onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredDeck.length / itemsPerPage), prev + 1))}
-                  className="px-4 py-1.5 bg-theme-base border border-theme-subtle hover:bg-theme-hover disabled:opacity-50 disabled:hover:bg-theme-base text-theme-primary transition-colors text-sm rounded-sm"
+                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm"
                 >
                   Tiếp
                 </button>
@@ -982,7 +983,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       )}
       {viewingCard && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
-          <div className="bg-theme-base w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg shadow-2xl flex flex-col relative custom-scrollbar" onClick={e => e.stopPropagation()}>
+          <div className="bg-theme-base w-full max-w-4xl max-h-[90vh] overflow-y-auto sm:rounded-[24px] rounded-2xl shadow-2xl flex flex-col relative custom-scrollbar border border-theme-subtle/50" onClick={e => e.stopPropagation()}>
             {/* Header / Main Vocab */}
             <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-10 border-b border-theme-subtle px-6 py-4 flex justify-between items-start">
               <div className="flex flex-col">
