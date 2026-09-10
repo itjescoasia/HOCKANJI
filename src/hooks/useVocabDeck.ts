@@ -312,6 +312,9 @@ export function useVocabDeck() {
         }
         
         const cleanedUpdates = removeUndefined(safeUpdates);
+        console.log("updateCard CALLED WITH:", id);
+        console.log("Raw updates:", updates);
+        console.log("Cleaned updates ready for Firestore:", cleanedUpdates);
 
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), cleanedUpdates, { merge: true });
       } catch (err: any) {

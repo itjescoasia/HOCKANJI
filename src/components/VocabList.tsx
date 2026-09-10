@@ -3,6 +3,8 @@ import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
 import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { cleanTextForSearch } from '../utils/stringUtils';
@@ -158,7 +160,36 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           if (viewingCard.forms && viewingCard.forms.length > 0) updates.forms = newForms;
           if (viewingCard.examples && viewingCard.examples.length > 0) updates.examples = newExamples;
           
-          await onUpdate(viewingCard.id, updates);
+          console.log("BULK UPLOAD COMPLETED. Sending updates:", updates);
+          
+          // Bỏ qua onUpdate thông thường để force ghi trực tiếp lên Firebase cho chắc chắn
+          try {
+             if (auth.currentUser) {
+                const cardRef = doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', viewingCard.id);
+                
+                // Loại bỏ undefined
+                const cleanArray = (arr) => {
+                   if (!arr) return arr;
+                   return arr.map(item => {
+                      const cleanItem = {};
+                      for (const key in item) {
+                         if (item[key] !== undefined) cleanItem[key] = item[key];
+                      }
+                      return cleanItem;
+                   });
+                };
+                
+                const finalUpdates = {};
+                if (updates.forms) finalUpdates.forms = cleanArray(updates.forms);
+                if (updates.examples) finalUpdates.examples = cleanArray(updates.examples);
+                
+                await setDoc(cardRef, finalUpdates, { merge: true });
+                console.log("Forced Firebase update success!");
+             }
+          } catch (forceErr) {
+             console.error("Force update err:", forceErr);
+             await onUpdate(viewingCard.id, updates);
+          }
           
           // Also update the local viewingCard state so UI reflects changes instantly
           setViewingCard(prev => prev ? { ...prev, ...updates } : prev);

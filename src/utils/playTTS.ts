@@ -48,7 +48,7 @@ export const playTTS = async (text: string) => {
           if (uid) {
              const resBlob = await fetch(base64Url);
              const blob = await resBlob.blob();
-             const filename = `users/${uid}/audio/${Date.now()}_TTS.mp3`;
+             const filename = `users/${uid}/audio/${Date.now()}_${Math.random().toString(36).substring(7)}_TTS.mp3`;
              const storageRef = ref(storage, filename);
              
              await Promise.race([
@@ -118,7 +118,7 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
           if (uid) {
              const resBlob = await fetch(base64Url);
              const blob = await resBlob.blob();
-             const filename = `users/${uid}/audio/${Date.now()}_TTS.mp3`;
+             const filename = `users/${uid}/audio/${Date.now()}_${Math.random().toString(36).substring(7)}_TTS.mp3`;
              const storageRef = ref(storage, filename);
              
              await Promise.race([
