@@ -99,6 +99,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null }: VocabListProps) {
   const [search, setSearch] = useState(initialSearchQuery);
   const [filterType, setFilterType] = useState('all');
+  const [audioFilter, setAudioFilter] = useState<'all' | 'has_audio' | 'no_audio'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [isImporting, setIsImporting] = useState(false);
@@ -302,7 +303,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const filteredDeck = React.useMemo(() => {
     return deck.filter(c => {
       const q = String(search || "").trim();
-      if (!q) return filterType === 'all' || c.wordType === filterType;
+      if (!q) {
+        const matchesFilter = filterType === 'all' || c.wordType === filterType;
+        let matchesAudio = true;
+        if (audioFilter === 'has_audio') matchesAudio = !!c.audioUrl;
+        else if (audioFilter === 'no_audio') matchesAudio = !c.audioUrl;
+        return matchesFilter && matchesAudio;
+      }
       
       const cleanQ = cleanTextForSearch(q);
       const queryWords = cleanQ.split(/\s+/).filter(Boolean);
@@ -329,9 +336,17 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       }
                             
       const matchesFilter = filterType === 'all' || c.wordType === filterType;
-      return matchesSearch && matchesFilter;
+      
+      let matchesAudio = true;
+      if (audioFilter === 'has_audio') {
+        matchesAudio = !!c.audioUrl;
+      } else if (audioFilter === 'no_audio') {
+        matchesAudio = !c.audioUrl;
+      }
+      
+      return matchesSearch && matchesFilter && matchesAudio;
     });
-  }, [deck, search, filterType]);
+  }, [deck, search, filterType, audioFilter]);
 
   const uniqueWordTypes = React.useMemo(() => {
     return Array.from(new Set(deck.map(c => c.wordType).filter(Boolean)));
@@ -432,6 +447,15 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <select
+            value={audioFilter}
+            onChange={(e) => { setAudioFilter(e.target.value as any); setCurrentPage(1); }}
+            className="px-4 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl text-sm w-full sm:w-auto min-w-[160px] shadow-sm cursor-pointer hover:border-theme-accent/50"
+          >
+            <option value="all">Tất cả trạng thái MP3</option>
+            <option value="has_audio">Đã có MP3</option>
+            <option value="no_audio">Chưa có MP3</option>
+          </select>
           <select
             value={filterType}
             onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
