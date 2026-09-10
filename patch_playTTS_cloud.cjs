@@ -1,6 +1,7 @@
-import localforage from 'localforage';
+const fs = require('fs');
+const code = `import localforage from 'localforage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '../lib/firebase';
+import { storage, auth } from './lib/firebase';
 
 const ttsCache = localforage.createInstance({
   name: 'tts-cache',
@@ -14,7 +15,7 @@ export const playTTS = async (text: string) => {
     const cachedAudio = await ttsCache.getItem<string>(text);
     if (cachedAudio) {
       console.log("Playing from TTS Cache:", text);
-      const audio = new Audio(`data:audio/mp3;base64,${cachedAudio}`);
+      const audio = new Audio(\`data:audio/mp3;base64,\${cachedAudio}\`);
       audio.play().catch(console.error);
       
       // If we are playing from cache, maybe it wasn't saved to cloud yet?
@@ -38,7 +39,7 @@ export const playTTS = async (text: string) => {
         await ttsCache.setItem(text, data.audioContent);
         console.log("Saved to TTS Cache:", text);
         
-        const base64Url = `data:audio/mp3;base64,${data.audioContent}`;
+        const base64Url = \`data:audio/mp3;base64,\${data.audioContent}\`;
         const audio = new Audio(base64Url);
         audio.play().catch(console.error);
         
@@ -48,7 +49,7 @@ export const playTTS = async (text: string) => {
           if (uid) {
              const resBlob = await fetch(base64Url);
              const blob = await resBlob.blob();
-             const filename = `users/${uid}/audio/${Date.now()}_TTS.mp3`;
+             const filename = \`users/\${uid}/audio/\${Date.now()}_TTS.mp3\`;
              const storageRef = ref(storage, filename);
              
              await Promise.race([
@@ -99,3 +100,5 @@ const fallbackTTS = (text: string) => {
   if (jpVoice) utterance.voice = jpVoice;
   window.speechSynthesis.speak(utterance);
 }
+`;
+fs.writeFileSync('src/utils/playTTS.ts', code);
