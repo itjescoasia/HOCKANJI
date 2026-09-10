@@ -197,9 +197,15 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
     };
   }, [isOpen]);
 
-  const playAudio = (e: React.MouseEvent, textToSpeak: string) => {
+  const playAudio = (e: React.MouseEvent, textToSpeak: string, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if (!textToSpeak || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);
@@ -264,13 +270,16 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
-                  <button 
-                    onClick={(e) => playAudio(e, text)}
-                    className="p-2 rounded-full text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10 transition-colors shrink-0"
-                    title="Nghe phát âm"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col items-center gap-0.5">
+    <button 
+      onClick={(e) => playAudio(e, text, matchedForm?.audioUrl || card.audioUrl)}
+      className={`p-2 rounded-full transition-colors shrink-0 ${(matchedForm?.audioUrl || card.audioUrl) ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+      title={(matchedForm?.audioUrl || card.audioUrl) ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
+    >
+      <Volume2 className="w-4 h-4" />
+    </button>
+    {(matchedForm?.audioUrl || card.audioUrl) && <span className="text-[7px] font-bold text-theme-accent uppercase leading-none tracking-widest -mt-1">MP3</span>}
+  </div>
                   {onEditCard && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setIsOpen(false); if (onEditCard) onEditCard(card); window.dispatchEvent(new CustomEvent('editCard', { detail: card })); }}
