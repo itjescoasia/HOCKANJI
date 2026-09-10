@@ -236,6 +236,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       examples: card.examples ? JSON.parse(JSON.stringify(card.examples)) : [], // Deep copy
       forms: card.forms ? JSON.parse(JSON.stringify(card.forms)) : [], // Deep copy
       wordType: card.wordType || '',
+      audioUrl: card.audioUrl || null,
+      hasAudio: card.hasAudio || !!card.audioUrl,
     });
   };
 
@@ -849,13 +851,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
                           <div className="text-3xl font-serif text-theme-primary bg-theme-base-alt px-3 py-1.5 rounded-xl shadow-sm border border-theme-subtle/50 inline-block">{card.kanji}</div>
-                          <button
-                            onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
-                            className="p-1.5 text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-100"
-                            title="Nghe phát âm"
-                          >
-                            <Volume2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex flex-col items-center gap-0.5">
+    <button
+      onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
+      className={`p-1.5 rounded-full transition-colors opacity-100 ${card.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+      title={card.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
+    >
+      <Volume2 className="w-4 h-4" />
+    </button>
+    {card.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+  </div>
                         </div>
                       </td>
                       <td className="px-6 py-5 min-w-[200px] sm:min-w-[auto]">
@@ -989,13 +994,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-1">
                   <h2 className="text-4xl md:text-5xl font-serif text-theme-accent">{viewingCard.kanji || viewingCard.reading}</h2>
-                  <button
-                    onClick={(e) => playAudio(e, viewingCard.kanji || viewingCard.reading, viewingCard.audioUrl)}
-                    className="p-2 bg-theme-accent/10 text-theme-accent rounded-full hover:bg-theme-accent hover:text-theme-inverted transition-colors"
-                    title="Nghe phát âm"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
+                  <div className="flex flex-col items-center gap-0.5">
+    <button
+      onClick={(e) => playAudio(e, viewingCard.kanji || viewingCard.reading, viewingCard.audioUrl)}
+      className="p-2 bg-theme-accent/10 text-theme-accent rounded-full hover:bg-theme-accent hover:text-theme-inverted transition-colors"
+      title={viewingCard.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
+    >
+      <Volume2 className="w-5 h-5" />
+    </button>
+    {viewingCard.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest mt-1">MP3</span>}
+  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mt-2">
                   {viewingCard.kanji && viewingCard.reading && viewingCard.kanji !== viewingCard.reading && (
