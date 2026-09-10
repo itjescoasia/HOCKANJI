@@ -193,9 +193,88 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           
           // Also update the local viewingCard state so UI reflects changes instantly
           setViewingCard(prev => prev ? { ...prev, ...updates } : prev);
+          
+          // CRITICAL: If the user has the Edit Form open for this same card, inject the audio URLs 
+          // into the editForm state so they don't get erased if the user clicks "Lưu" (Save).
+          if (editingId === viewingCard.id) {
+             setEditForm(prev => {
+                const updatedForms = prev.forms ? [...prev.forms] : [];
+                if (updates.forms) {
+                   updates.forms.forEach((newF, idx) => {
+                      if (updatedForms[idx]) {
+                         updatedForms[idx].audioUrl = newF.audioUrl;
+                         updatedForms[idx].hasAudio = newF.hasAudio;
+                      }
+                   });
+                }
+                const updatedExamples = prev.examples ? [...prev.examples] : [];
+                if (updates.examples) {
+                   updates.examples.forEach((newEx, idx) => {
+                      if (updatedExamples[idx]) {
+                         updatedExamples[idx].audioUrl = newEx.audioUrl;
+                         updatedExamples[idx].hasAudio = newEx.hasAudio;
+                      }
+                   });
+                }
+                return { ...prev, forms: updatedForms, examples: updatedExamples };
+             });
+          }
        }
        
        alert(`Đã tự động tạo và tải lên thành công ${generatedCount}/${textsToGenerate.length} MP3.`);
+    } catch (e) {
+       console.error("Bulk generate error:", e);
+       alert("Có lỗi xảy ra khi tạo MP3 hàng loạt.");
+    } finally {
+       setIsBulkGenerating(false);
+       setTimeout(() => setBulkProgress(null), 1000);
+    }
+  };
+
+  const handleEditBulkGenerateAudio = async () => {
+    if (!editForm) return;
+    setIsBulkGenerating(true);
+    setBulkProgress(null);
+    let generatedCount = 0;
+    try {
+       const textsToGenerate = [];
+       if (editForm.forms) {
+          editForm.forms.forEach(f => {
+             if (f.value && !f.audioUrl) textsToGenerate.push(f.value);
+          });
+       }
+       if (editForm.examples) {
+          editForm.examples.forEach(ex => {
+             if (ex.sentence && !ex.audioUrl) textsToGenerate.push(ex.sentence);
+          });
+       }
+       
+       if (textsToGenerate.length === 0) {
+          setIsBulkGenerating(false);
+          return;
+       }
+       
+       setBulkProgress({ current: 0, total: textsToGenerate.length });
+       
+       let newForms = editForm.forms ? [...editForm.forms] : [];
+       let newExamples = editForm.examples ? [...editForm.examples] : [];
+       
+       for (let i = 0; i < textsToGenerate.length; i++) {
+          const text = textsToGenerate[i];
+          const url = await generateAndUploadTTS(text);
+          if (url) {
+             generatedCount++;
+             newForms = newForms.map(f => f.value === text ? { ...f, audioUrl: url, hasAudio: true } : f);
+             newExamples = newExamples.map(ex => ex.sentence === text ? { ...ex, audioUrl: url, hasAudio: true } : ex);
+          }
+          setBulkProgress({ current: i + 1, total: textsToGenerate.length });
+       }
+       
+       if (generatedCount > 0) {
+          setEditForm(prev => ({ ...prev, forms: newForms, examples: newExamples }));
+       }
+       
+       alert(`Đã tạo thành công ${generatedCount}/${textsToGenerate.length} MP3. Vui lòng nhấn "Lưu" để lưu lại vào Database.`);
     } catch (e) {
        console.error("Bulk generate error:", e);
        alert("Có lỗi xảy ra khi tạo MP3 hàng loạt.");
@@ -939,6 +1018,59 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                 )}
                               </div>
                             </div>
+                            
+                            {/* BULK AUDIO BUTTON IN EDIT MODE */}
+                            {((editForm.forms && editForm.forms.length > 0) || (editForm.examples && editForm.examples.length > 0)) && (
+                               <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-theme-subtle items-end">
+                                 {(() => {
+                                    const hasMissingMp3s = (editForm.forms?.some(f => f.value && !f.audioUrl)) || (editForm.examples?.some(ex => ex.sentence && !ex.audioUrl));
+                                    
+                                    if (!hasMissingMp3s && !isBulkGenerating) {
+                                       return (
+                                         <button
+                                            disabled
+                                           className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium text-green-500 bg-green-500/10 border border-green-500/20 rounded-md transition-colors min-w-[140px] justify-center cursor-default"
+                                           title="Tất cả các thể và câu ví dụ đều đã có MP3 trên Cloud"
+                                         >
+                                           <span className="flex items-center gap-1">
+                                             <Check className="w-3 h-3" />
+                                             Đã đủ MP3
+                                           </span>
+                                         </button>
+                                       );
+                                    }
+                                    return (
+                                       <button
+                                          onClick={handleEditBulkGenerateAudio}
+                                         disabled={isBulkGenerating}
+                                         className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium text-theme-accent bg-theme-accent/10 border border-theme-accent/20 hover:bg-theme-accent/20 rounded-md transition-colors disabled:opacity-50 min-w-[140px] justify-center"
+                                         title="Tự động tạo và tải lên Cloud MP3 cho tất cả các Thể và Ví dụ chưa có âm thanh"
+                                       >
+                                         {isBulkGenerating ? (
+                                           <span className="flex items-center gap-1.5">
+                                             <div className="w-3 h-3 border-2 border-theme-accent border-t-transparent rounded-full animate-spin"></div>
+                                             {bulkProgress ? `${bulkProgress.current}/${bulkProgress.total}` : 'Đang xử lý...'}
+                                           </span>
+                                         ) : (
+                                           <span className="flex items-center gap-1">
+                                             <Volume2 className="w-3 h-3" />
+                                             Tải MP3 hàng loạt
+                                           </span>
+                                         )}
+                                       </button>
+                                    );
+                                 })()}
+                                 {isBulkGenerating && bulkProgress && (
+                                   <div className="w-full max-w-[140px] bg-theme-accent/10 rounded-full h-1 overflow-hidden relative">
+                                      <div 
+                                        className="bg-theme-accent h-1 transition-all duration-300 absolute left-0 top-0 bottom-0" 
+                                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                                      ></div>
+                                   </div>
+                                 )}
+                               </div>
+                            )}
+
                           </div>
                         </td>
                         <td className="hidden">
