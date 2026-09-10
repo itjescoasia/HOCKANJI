@@ -128,9 +128,6 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
              
              const downloadUrl = await getDownloadURL(storageRef);
              
-             window.dispatchEvent(new CustomEvent('tts-generated', { 
-               detail: { text, audioUrl: downloadUrl } 
-             }));
              return downloadUrl;
           }
         } catch (uploadError) {
