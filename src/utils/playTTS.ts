@@ -53,7 +53,7 @@ export const playTTS = async (text: string) => {
              
              await Promise.race([
                 uploadBytes(storageRef, blob),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 5000))
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 15000))
              ]);
              
              const downloadUrl = await getDownloadURL(storageRef);
@@ -68,11 +68,7 @@ export const playTTS = async (text: string) => {
           console.warn("Failed to upload TTS to cloud storage:", uploadError);
         }
         
-        // Fallback: Dispatch the base64 if cloud upload failed or user not logged in
-        // The DB might reject it if it's too large, but we try.
-        window.dispatchEvent(new CustomEvent('tts-generated', { 
-          detail: { text, audioUrl: base64Url } 
-        }));
+        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB
         
         return; // Success
       }
@@ -99,3 +95,54 @@ const fallbackTTS = (text: string) => {
   if (jpVoice) utterance.voice = jpVoice;
   window.speechSynthesis.speak(utterance);
 }
+
+export const generateAndUploadTTS = async (text: string): Promise<string | null> => {
+  if (!text) return null;
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.audioContent) {
+        await ttsCache.setItem(text, data.audioContent);
+        console.log("Bulk generated & saved to TTS Cache:", text);
+        
+        const base64Url = `data:audio/mp3;base64,${data.audioContent}`;
+        
+        try {
+          const uid = auth.currentUser?.uid;
+          if (uid) {
+             const resBlob = await fetch(base64Url);
+             const blob = await resBlob.blob();
+             const filename = `users/${uid}/audio/${Date.now()}_TTS.mp3`;
+             const storageRef = ref(storage, filename);
+             
+             await Promise.race([
+                uploadBytes(storageRef, blob),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 15000))
+             ]);
+             
+             const downloadUrl = await getDownloadURL(storageRef);
+             
+             window.dispatchEvent(new CustomEvent('tts-generated', { 
+               detail: { text, audioUrl: downloadUrl } 
+             }));
+             return downloadUrl;
+          }
+        } catch (uploadError) {
+          console.warn("Bulk upload failed:", uploadError);
+        }
+        
+        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB
+        return null;
+      }
+    }
+  } catch (error) {
+    console.error("Error bulk generating TTS:", error);
+  }
+  return null;
+};
