@@ -88,9 +88,15 @@ export default function Dashboard({
     return [...normalMatches, ...intensiveMatches].slice(0, 8);
   }, [searchQuery, deck, intensiveDeck]);
 
-  const playAudio = (e: React.MouseEvent, text: string) => {
+  const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);
@@ -349,7 +355,7 @@ export default function Dashboard({
                     )}
                   </p>
                   <button
-                    onClick={(e) => playAudio(e, sentenceOfTheDay.example.sentence)}
+                    onClick={(e) => playAudio(e, sentenceOfTheDay.example.sentence, sentenceOfTheDay.example.audioUrl)}
                     className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-1"
                     title="Nghe câu"
                   >

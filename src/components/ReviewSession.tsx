@@ -185,8 +185,13 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
         || voices.find(v => v.lang.startsWith('ja'));
   };
 
-  const handleSpeak = (e: React.MouseEvent, text: string) => {
+  const handleSpeak = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -370,7 +375,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                 <div className="flex flex-col items-center gap-6">
                   <h1 className="text-6xl sm:text-[140px] font-serif text-theme-primary leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
                   <button 
-                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
+                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
                     className="p-3 text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors rounded-full transition-transform active:scale-95"
                     title="Phát âm"
                   >
@@ -397,7 +402,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                   <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
                     <h2 className="text-4xl sm:text-6xl font-serif text-theme-primary opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
                   <button 
-                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading)}
+                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
                     className="p-2 text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors rounded-full transition-transform active:scale-95"
                     title="Phát âm"
                   >
@@ -515,7 +520,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                                   <Edit3 className="w-5 h-5" />
                                 </button>
                                 <button
-                                  onClick={(e) => handleSpeak(e, ex.sentence)}
+                                  onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
                                   className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors"
                                   title="Nghe câu ví dụ"
                                 >
@@ -604,7 +609,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                                     <Edit3 className="w-5 h-5" />
                                   </button>
                                   <button
-                                    onClick={(e) => handleSpeak(e, currentCard.example!)}
+                                    onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
                                     className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors"
                                     title="Nghe câu ví dụ"
                                   >

@@ -389,9 +389,7 @@ export default function ConversationView({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const u = new SpeechSynthesisUtterance(result.dialogue.japanese);
-                                u.lang = 'ja-JP';
-                                window.speechSynthesis.speak(u);
+                                playAudio(e, result.dialogue.japanese, result.dialogue.audioUrl);
                               }}
                               className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 bg-theme-base rounded-full"
                               title="Nghe phát âm"
@@ -712,9 +710,15 @@ function ConversationDetail({
     onUpdate(conversation.id, { title: editTitle, description: editDescription });
     setIsEditingMetadata(false);
   };
-  const playAudio = (e: React.MouseEvent, text: string) => {
+  const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);
@@ -1259,7 +1263,7 @@ function ConversationDetail({
                                       {renderExampleHighlight(dialogue.japanese, "", mainDeck, undefined, conversation.vocabScores)}
                                     </p>
                                     <button
-                                      onClick={(e) => playAudio(e, dialogue.japanese)}
+                                      onClick={(e) => playAudio(e, dialogue.japanese, dialogue.audioUrl)}
                                       className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
                                       title="Nghe câu hội thoại"
                                     >
@@ -1944,11 +1948,7 @@ function ConversationVocabReview({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (currentCard.kanji || currentCard.reading) {
-                    const utterance = new SpeechSynthesisUtterance(currentCard.kanji || currentCard.reading);
-                    utterance.lang = 'ja-JP';
-                    window.speechSynthesis.speak(utterance);
-                  }
+                  playAudio(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl);
                 }}
                 className="p-3 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
                 title="Nghe phát âm"

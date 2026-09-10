@@ -1,12 +1,31 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/IntensiveStudy.tsx', 'utf8');
 
-const target = `<span className="text-2xl sm:text-4xl font-serif text-theme-primary text-center break-words mb-2">
-                {word.word}
-              </span>`;
-const replacement = `<span className={\`font-serif text-theme-primary text-center break-words mb-2 \${word.word.length > 20 ? 'text-lg sm:text-xl' : word.word.length > 10 ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl'}\`}>
-                {word.word}
-              </span>`;
+code = code.replace(
+  /const playAudio = \(e: React\.MouseEvent, text: string \| undefined \| null\) => {\n    e\.stopPropagation\(\);\n    if \(!text \|\| !\('speechSynthesis' in window\)\) return;\n    const utterance = new SpeechSynthesisUtterance\(text\);\n    utterance\.lang = 'ja-JP';\n    window\.speechSynthesis\.speak\(utterance\);\n  };/g,
+  `const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
+    e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
+    if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    window.speechSynthesis.speak(utterance);
+  };`
+);
 
-code = code.replace(target, replacement);
+code = code.replace(
+  "onClick={(e) => playAudio(e, word.word || word.reading)}",
+  "onClick={(e) => playAudio(e, word.word || word.reading, word.audioUrl)}"
+);
+
+code = code.replace(
+  "onClick={(e) => playAudio(e, ex.sentence)}",
+  "onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}"
+);
+
 fs.writeFileSync('src/components/IntensiveStudy.tsx', code);

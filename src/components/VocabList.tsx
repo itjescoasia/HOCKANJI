@@ -114,6 +114,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       return;
     }
     if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);

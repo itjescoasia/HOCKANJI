@@ -313,9 +313,15 @@ export default function IntensiveStudy({
 
   const selectedWord = deck.find((w) => w.id === selectedWordId);
 
-  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
+  const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);
@@ -850,9 +856,7 @@ export default function IntensiveStudy({
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                const u = new SpeechSynthesisUtterance(ex.sentence);
-                                                u.lang = 'ja-JP';
-                                                window.speechSynthesis.speak(u);
+                                                playAudio(e, ex.sentence, ex.audioUrl);
                                               }}
                                               className="p-1.5 bg-theme-panel text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors shrink-0"
                                               title="Nghe phát âm"
@@ -1057,9 +1061,15 @@ function StudyView({
     word.examples.length > 0 &&
     hiddenMeaningIds.length === word.examples.length;
 
-  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
+  const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);
@@ -1385,7 +1395,7 @@ function StudyView({
                 </button>
               )}
               <button
-                onClick={(e) => playAudio(e, word.word || word.reading)}
+                onClick={(e) => playAudio(e, word.word || word.reading, word.audioUrl)}
                 className="absolute -right-2 -bottom-2 p-2 bg-theme-panel text-theme-primary/50 hover:text-theme-accent border border-theme-subtle rounded-full shadow-md transition-all opacity-0 group-hover/speaker:opacity-100"
                 title="Nghe phát âm"
               >
@@ -1788,7 +1798,7 @@ function StudyView({
                                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                                   {!ex.hasAudio && !ex.audioUrl && (
                                   <button
-                                    onClick={(e) => playAudio(e, ex.sentence)}
+                                    onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
                                     className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
                                     title="Phát âm thanh"
                                   >

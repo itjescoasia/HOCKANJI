@@ -21,9 +21,15 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
   const [flipDegree, setFlipDegree] = useState(0);
   const isMeaningShown = Math.abs(flipDegree / 180) % 2 === 1;
 
-  const playAudio = (e: React.MouseEvent, text: string) => {
+  const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(console.error);
+      return;
+    }
     if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     window.speechSynthesis.speak(utterance);
@@ -66,7 +72,7 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    playAudio(e, currentWord.kanji || currentWord.reading);
+                    playAudio(e, currentWord.kanji || currentWord.reading, currentWord.audioUrl);
                   }}
                   className="absolute -right-12 p-3 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
                   title="Nghe phát âm"
@@ -90,7 +96,7 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
                    <button
                      onClick={(e) => {
                        e.stopPropagation();
-                       playAudio(e, currentWord.reading || currentWord.kanji);
+                       playAudio(e, currentWord.reading || currentWord.kanji, currentWord.audioUrl);
                      }}
                      className="p-2 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
                      title="Nghe phát âm"

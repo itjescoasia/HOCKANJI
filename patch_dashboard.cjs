@@ -1,0 +1,14 @@
+const fs = require('fs');
+let code = fs.readFileSync('src/components/Dashboard.tsx', 'utf8');
+
+code = code.replace(
+  "const playAudio = (e: React.MouseEvent, text: string) => {\n    e.stopPropagation();\n    if (!text || !('speechSynthesis' in window)) return;\n    const utterance = new SpeechSynthesisUtterance(text);\n    utterance.lang = 'ja-JP';\n    window.speechSynthesis.speak(utterance);\n  };",
+  "const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {\n    e.stopPropagation();\n    if (audioUrl) {\n      const audio = new Audio(audioUrl);\n      audio.play().catch(console.error);\n      return;\n    }\n    if (!text || !('speechSynthesis' in window)) return;\n    window.speechSynthesis.cancel();\n    const utterance = new SpeechSynthesisUtterance(text);\n    utterance.lang = 'ja-JP';\n    window.speechSynthesis.speak(utterance);\n  };"
+);
+
+code = code.replace(
+  "onClick={(e) => playAudio(e, sentenceOfTheDay.example.sentence)}",
+  "onClick={(e) => playAudio(e, sentenceOfTheDay.example.sentence, sentenceOfTheDay.example.audioUrl)}"
+);
+
+fs.writeFileSync('src/components/Dashboard.tsx', code);
