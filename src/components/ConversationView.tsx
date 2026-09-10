@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, storage, db } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -717,11 +718,7 @@ function ConversationDetail({
       audio.play().catch(console.error);
       return;
     }
-    if (!text || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
+    playTTS(text);
   };
   const [isCopied, setIsCopied] = useState(false);
 
@@ -1970,11 +1967,7 @@ function ConversationVocabReview({
                <button
                  onClick={(e) => {
                    e.stopPropagation();
-                   if (currentCard.reading || currentCard.kanji) {
-                     const utterance = new SpeechSynthesisUtterance(currentCard.reading || currentCard.kanji!);
-                     utterance.lang = 'ja-JP';
-                     window.speechSynthesis.speak(utterance);
-                   }
+                   playTTS(currentCard.reading || currentCard.kanji!);
                  }}
                  className="p-2 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
                  title="Nghe phát âm"

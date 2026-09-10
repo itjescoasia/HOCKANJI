@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -320,11 +321,7 @@ export default function IntensiveStudy({
       audio.play().catch(console.error);
       return;
     }
-    if (!text || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
+    playTTS(text);
   };
 
   const fuse = React.useMemo(
@@ -1068,11 +1065,7 @@ function StudyView({
       audio.play().catch(console.error);
       return;
     }
-    if (!text || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
+    playTTS(text);
   };
 
   const toggleAllMeanings = () => {
@@ -1419,7 +1412,7 @@ function StudyView({
               </div>
               { (word.explanation || word.category) && (
                 <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body whitespace-pre-wrap">
-                  <Markdown>{(word.category ? `Loại từ: ${word.category}\n\n` : "") + cleanMarkdownForDisplay(word.explanation || "")}</Markdown>
+                  <Markdown>{(word.category ? `Loại từ: ${word.category}\nn\n` : "") + cleanMarkdownForDisplay(word.explanation || "")}</Markdown>
                 </div>
               )}
             </div>

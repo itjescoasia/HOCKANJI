@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 import React, { useMemo, useEffect, Fragment } from "react";
 import { KanjiCard, IntensiveWord, IntensiveExample } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
@@ -95,11 +96,7 @@ export default function Dashboard({
       audio.play().catch(console.error);
       return;
     }
-    if (!text || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
+    playTTS(text);
   };
 
   const isDue = dueCards.length > 0;

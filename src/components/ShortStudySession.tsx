@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 import React, { useState } from 'react';
 import { KanjiCard } from '../types';
 import { ArrowLeft, Volume2 } from 'lucide-react';
@@ -28,11 +29,7 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
       audio.play().catch(console.error);
       return;
     }
-    if (!text || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
+    playTTS(text);
   };
 
   const handleFlip = () => {
@@ -112,7 +109,7 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
                
                { (currentWord.kanjiExplanation || currentWord.wordType) && (
                  <div className="mt-3 px-6 py-3 bg-theme-base/50 border border-theme-subtle rounded text-sm text-theme-primary font-sans opacity-90 leading-relaxed max-w-lg mx-auto whitespace-pre-wrap text-center w-full shrink-0">
-                   {(currentWord.wordType ? `Loại từ: ${currentWord.wordType}\n\n` : "") + (currentWord.kanjiExplanation || "")}
+                   {(currentWord.wordType ? `Loại từ: ${currentWord.wordType}\nn\n` : "") + (currentWord.kanjiExplanation || "")}
                  </div>
                )}
                {currentWord.sinoVietnamese && (

@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -77,11 +78,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         }
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "ja-JP";
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+    playTTS(text);
   };
   
   const [isEditing, setIsEditing] = useState(false);

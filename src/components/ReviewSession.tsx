@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, Fragment } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
@@ -192,20 +193,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
       audio.play().catch(console.error);
       return;
     }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ja-JP';
-      // Tùy chỉnh tham số phụ để nghe tự nhiên hơn một chút
-      utterance.rate = 0.9; // Đọc chậm lại một xíu giúp nghe rõ hơn
-      
-      const bestVoice = getJapaneseVoice();
-      if (bestVoice) {
-        utterance.voice = bestVoice;
-      }
-
-      window.speechSynthesis.speak(utterance);
-    }
+    playTTS(text);
   };
 
   const renderExampleWithHighlight = (example: string, kanji: string | undefined, reading: string | undefined) => {
@@ -434,7 +422,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                 <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-theme-primary leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
                 { (currentCard.kanjiExplanation || currentCard.wordType) && (
                   <div className="mt-4 px-6 py-4 bg-theme-hover/50 border border-theme-subtle rounded text-sm sm:text-base text-theme-primary font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap markdown-body">
-                    <Markdown>{(currentCard.wordType ? `**Loại từ: ${currentCard.wordType}**\n\n` : "") + (currentCard.kanjiExplanation || "")}</Markdown>
+                    <Markdown>{(currentCard.wordType ? `**Loại từ: ${currentCard.wordType}**\nn\n` : "") + (currentCard.kanjiExplanation || "")}</Markdown>
                   </div>
                 )}
                 {currentCard.examples && currentCard.examples.length > 0 ? (

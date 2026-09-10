@@ -1,3 +1,4 @@
+import { playTTS } from '../utils/playTTS';
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 export const HighlightContext = React.createContext<{
@@ -204,11 +205,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
       audio.play().catch(console.error);
       return;
     }
-    if (!textToSpeak || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
+    playTTS(textToSpeak);
   };
 
   let colorClass = "text-theme-accent";
