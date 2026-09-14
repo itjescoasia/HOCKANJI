@@ -1,4 +1,4 @@
-import { playTTS } from '../utils/playTTS';
+import { playTTS, generateAndUploadTTS } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, storage, db } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -6,7 +6,7 @@ import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect } from "react";
 import { Conversation, DialogueSentence, KanjiCard } from "../types";
-import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download, Eye, ArrowRight, ArrowRightLeft } from "lucide-react";
+import { PlusCircle, Search, Trash2, ArrowLeft, Plus, Edit2, Check, X, Info, Lightbulb, Lock, Unlock, GripVertical, List, Presentation, ChevronLeft, ChevronRight, Copy, Brain, Volume2, Download, Eye, ArrowRight, ArrowRightLeft, Music } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   DragDropContext,
@@ -2042,6 +2042,29 @@ function ConversationVocabReview({
 function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { conversationId: string, dialogue: DialogueSentence, onUpdateDialogue: (id: string, updates: Partial<DialogueSentence>) => void }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateAI = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const textToRead = dialogue.japanese || dialogue.hiragana;
+    if (!textToRead) return;
+    setIsGenerating(true);
+    try {
+      const url = await generateAndUploadTTS(textToRead);
+      if (url) {
+        onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: url });
+        setAudioUrl(url);
+        const audio = new Audio(url);
+        audio.play().catch(console.error);
+      } else {
+        alert("Có lỗi khi tạo âm thanh.");
+      }
+    } catch(err) {
+      alert("Lỗi khi gọi AI tạo âm thanh");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -2136,13 +2159,23 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
         className="sr-only" 
       />
       {!audioUrl ? (
-        <button 
-          onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
-          className="flex items-center gap-1.5 px-2 py-1 bg-theme-primary/10 text-theme-primary/70 rounded text-[10px] hover:bg-theme-accent hover:text-theme-inverted transition-colors"
-        >
-          <Volume2 className="w-3 h-3" />
-          {isUploading ? 'Đang tải...' : 'Thêm MP3'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button 
+            onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
+            className="flex items-center gap-1.5 px-2 py-1 bg-theme-primary/10 text-theme-primary/70 rounded text-[10px] hover:bg-theme-accent hover:text-theme-inverted transition-colors"
+          >
+            <Volume2 className="w-3 h-3" />
+            {isUploading ? 'Đang tải...' : 'Thêm MP3'}
+          </button>
+          <button 
+            onClick={handleGenerateAI}
+            disabled={isGenerating}
+            className="flex items-center gap-1.5 px-2 py-1 bg-theme-accent/10 text-theme-accent rounded text-[10px] hover:bg-theme-accent hover:text-theme-inverted transition-colors disabled:opacity-50"
+          >
+            <Music className="w-3 h-3" />
+            {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
+          </button>
+        </div>
       ) : (
         <div className="flex items-center gap-2 w-full max-w-sm">
           <audio controls src={audioUrl} className="h-8 flex-1" />

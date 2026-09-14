@@ -1,4 +1,4 @@
-import { playTTS } from '../utils/playTTS';
+import { playTTS, generateAndUploadTTS } from '../utils/playTTS';
 
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -27,7 +27,7 @@ import {
   Lock,
   Unlock,
   Volume2,
-  CopyPlus, Copy,
+  CopyPlus, Copy, Music,
   CheckCircle,
   Info,
   BookOpen,
@@ -1896,7 +1896,7 @@ function StudyView({
                                   <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
                                     {renderHighlight(ex.sentence, word.word)}
                                     {!ex.hasAudio && !ex.audioUrl && (
-                                    <div className="inline-flex flex-col items-center ml-3 gap-0.5 align-middle">
+                                    <span className="inline-flex flex-col items-center ml-3 gap-0.5 align-middle">
                                     <button
                                       onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
                                       className={`inline-flex items-center justify-center p-2 transition-colors rounded-full ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10'}`}
@@ -1905,7 +1905,7 @@ function StudyView({
                                       <Volume2 className="w-5 h-5" />
                                     </button>
                                     {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-0.5">MP3</span>}
-                                    </div>
+                                    </span>
                                     )}
 
                                   </p>
@@ -2059,6 +2059,28 @@ const fileToBase64 = (file: File): Promise<string> => {
 function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: string, example: IntensiveExample, onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateAI = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!example.sentence) return;
+    setIsGenerating(true);
+    try {
+      const url = await generateAndUploadTTS(example.sentence);
+      if (url) {
+        onUpdateExample(example.id, { hasAudio: true, audioUrl: url });
+        setAudioUrl(url);
+        const audio = new Audio(url);
+        audio.play().catch(console.error);
+      } else {
+        alert("Có lỗi khi tạo âm thanh.");
+      }
+    } catch(err) {
+      alert("Lỗi khi gọi AI tạo âm thanh");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -2153,13 +2175,23 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
         className="sr-only" 
       />
       {!audioUrl ? (
-        <button 
-          onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider"
-        >
-          <Volume2 className="w-3 h-3" />
-          {isUploading ? 'Đang tải...' : 'Thêm MP3'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button 
+            onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider"
+          >
+            <Volume2 className="w-3 h-3" />
+            {isUploading ? 'Đang tải...' : 'Thêm MP3'}
+          </button>
+          <button 
+            onClick={handleGenerateAI}
+            disabled={isGenerating}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 text-theme-accent rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider disabled:opacity-50"
+          >
+            <Music className="w-3 h-3" />
+            {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
+          </button>
+        </div>
       ) : (
         <div className="flex items-center gap-2 w-full">
           <audio controls src={audioUrl} className="h-8 w-full max-w-[240px]" />
