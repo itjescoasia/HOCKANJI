@@ -1,4 +1,4 @@
-import { playTTS, generateAndUploadTTS } from '../utils/playTTS';
+import { playTTS, generateAndUploadTTS , playAudioUrl} from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
@@ -122,8 +122,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       const url = await generateAndUploadTTS(text);
       if (url) {
         onComplete(url);
-        const audio = new Audio(url);
-        audio.play().catch(console.error);
+        playAudioUrl(url);
       } else {
         alert("Có lỗi khi tạo âm thanh. Vui lòng kiểm tra API Key.");
       }
@@ -312,7 +311,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      new Audio(audioUrl).play().catch(console.error);
+      playAudioUrl(audioUrl);
       return;
     }
     playTTS(text);

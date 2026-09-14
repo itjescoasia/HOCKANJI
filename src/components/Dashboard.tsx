@@ -1,4 +1,4 @@
-import { playTTS } from '../utils/playTTS';
+import { playTTS , playAudioUrl} from '../utils/playTTS';
 import React, { useMemo, useEffect, Fragment } from "react";
 import { KanjiCard, IntensiveWord, IntensiveExample } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
@@ -92,8 +92,7 @@ export default function Dashboard({
   const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
+      playAudioUrl(audioUrl);
       return;
     }
     playTTS(text);

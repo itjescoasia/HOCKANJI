@@ -1,3 +1,5 @@
+import { playAudioUrl } from '../utils/playTTS';
+import { playAudioUrl } from '../utils/playTTS';
 import React, { useRef, useState } from 'react';
 import { Upload, X, Music, Link as LinkIcon, Check } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -100,8 +102,7 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '', o
             type="button"
             onClick={(e) => { 
                e.stopPropagation();
-               const audio = new Audio(audioUrl);
-               audio.play().catch(() => alert("Không thể phát link âm thanh này. Link có thể bị hỏng hoặc bị chặn CORS."));
+               playAudioUrl(audioUrl);
             }}
             className="text-theme-accent opacity-80 hover:opacity-100 ml-1"
             title="Nghe thử"

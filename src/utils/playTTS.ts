@@ -7,6 +7,8 @@ const ttsCache = localforage.createInstance({
   storeName: 'audio_cache'
 });
 
+let currentActiveAudio: HTMLAudioElement | null = null;
+
 export const playTTS = async (text: string) => {
   if (!text) return;
   try {
@@ -14,7 +16,12 @@ export const playTTS = async (text: string) => {
     const cachedAudio = await ttsCache.getItem<string>(text);
     if (cachedAudio) {
       console.log("Playing from TTS Cache:", text);
+      if (currentActiveAudio) {
+        currentActiveAudio.pause();
+        currentActiveAudio.currentTime = 0;
+      }
       const audio = new Audio(`data:audio/mp3;base64,${cachedAudio}`);
+      currentActiveAudio = audio;
       audio.play().catch(console.error);
       
       // If we are playing from cache, maybe it wasn't saved to cloud yet?
@@ -44,7 +51,12 @@ export const playTTS = async (text: string) => {
         console.log("Saved to TTS Cache:", text);
         
         const base64Url = `data:audio/mp3;base64,${data.audioContent}`;
+        if (currentActiveAudio) {
+          currentActiveAudio.pause();
+          currentActiveAudio.currentTime = 0;
+        }
         const audio = new Audio(base64Url);
+        currentActiveAudio = audio;
         audio.play().catch(console.error);
         
         // 3. Upload to Firebase Storage so it is saved in the cloud
@@ -147,4 +159,14 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
     console.error("Error bulk generating TTS:", error);
   }
   return null;
+};
+
+export const playAudioUrl = (url: string) => {
+  if (currentActiveAudio) {
+    currentActiveAudio.pause();
+    currentActiveAudio.currentTime = 0;
+  }
+  const audio = new Audio(url);
+  currentActiveAudio = audio;
+  audio.play().catch(console.error);
 };

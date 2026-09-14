@@ -1,27 +1,32 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/utils/playTTS.ts', 'utf8');
 
-// In playTTS
-code = code.replace(
-  `        // Fallback: Dispatch the base64 if cloud upload failed or user not logged in
-        // The DB might reject it if it's too large, but we try.
-        window.dispatchEvent(new CustomEvent('tts-generated', { 
-          detail: { text, audioUrl: base64Url } 
-        }));`,
-  `        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB`
-);
+if (!code.includes('let currentActiveAudio: HTMLAudioElement | null = null;')) {
+  code = code.replace(`export const playTTS = async (text: string) => {`, `let currentActiveAudio: HTMLAudioElement | null = null;\n\nexport const playTTS = async (text: string) => {`);
+}
 
-// In generateAndUploadTTS
-code = code.replace(
-  `        window.dispatchEvent(new CustomEvent('tts-generated', { 
-          detail: { text, audioUrl: base64Url } 
-        }));
-        return base64Url;`,
-  `        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB
-        return null;`
-);
+const cachedAudioMatch = `      const audio = new Audio(\`data:audio/mp3;base64,\${cachedAudio}\`);
+      audio.play().catch(console.error);`;
+const cachedAudioReplacement = `      if (currentActiveAudio) {
+        currentActiveAudio.pause();
+        currentActiveAudio.currentTime = 0;
+      }
+      const audio = new Audio(\`data:audio/mp3;base64,\${cachedAudio}\`);
+      currentActiveAudio = audio;
+      audio.play().catch(console.error);`;
+code = code.replace(cachedAudioMatch, cachedAudioReplacement);
 
-// Tăng timeout lên 15 giây cho chắc ăn
-code = code.replaceAll('5000', '15000');
+const newAudioMatch = `        const base64Url = \`data:audio/mp3;base64,\${data.audioContent}\`;
+        const audio = new Audio(base64Url);
+        audio.play().catch(console.error);`;
+const newAudioReplacement = `        const base64Url = \`data:audio/mp3;base64,\${data.audioContent}\`;
+        if (currentActiveAudio) {
+          currentActiveAudio.pause();
+          currentActiveAudio.currentTime = 0;
+        }
+        const audio = new Audio(base64Url);
+        currentActiveAudio = audio;
+        audio.play().catch(console.error);`;
+code = code.replace(newAudioMatch, newAudioReplacement);
 
 fs.writeFileSync('src/utils/playTTS.ts', code);

@@ -1,4 +1,4 @@
-import { playTTS } from '../utils/playTTS';
+import { playTTS , playAudioUrl} from '../utils/playTTS';
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 export const HighlightContext = React.createContext<{
@@ -201,8 +201,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   const playAudio = (e: React.MouseEvent, textToSpeak: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
+      playAudioUrl(audioUrl);
       return;
     }
     playTTS(textToSpeak);

@@ -1,4 +1,4 @@
-import { playTTS } from '../utils/playTTS';
+import { playTTS , playAudioUrl} from '../utils/playTTS';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, Fragment } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
@@ -189,8 +189,7 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
   const handleSpeak = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
+      playAudioUrl(audioUrl);
       return;
     }
     playTTS(text);

@@ -1,4 +1,4 @@
-import { playTTS } from '../utils/playTTS';
+import { playTTS, playAudioUrl } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -40,6 +40,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
   const [isInitialized, setIsInitialized] = useState(false);
 
+
+
   const handleTTS = async (text: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -69,15 +71,14 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             }
             
             if (urlToPlay) {
-                const audio = new Audio(urlToPlay);
-                audio.play().catch(e => console.error("Error playing audio", e));
+                playAudioUrl(urlToPlay);
                 return;
             }
         } catch (err) {
             console.error("Failed to load/play audio", err);
         }
     }
-
+    
     playTTS(text);
   };
   

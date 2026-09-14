@@ -1,4 +1,4 @@
-import { playTTS, generateAndUploadTTS } from '../utils/playTTS';
+import { playTTS, generateAndUploadTTS, playAudioUrl } from '../utils/playTTS';
 
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -317,10 +317,10 @@ export default function IntensiveStudy({
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
+      playAudioUrl(audioUrl);
       return;
     }
+    
     playTTS(text);
   };
 
@@ -1061,10 +1061,10 @@ function StudyView({
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
+      playAudioUrl(audioUrl);
       return;
     }
+    
     playTTS(text);
   };
 
@@ -2070,8 +2070,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
       if (url) {
         onUpdateExample(example.id, { hasAudio: true, audioUrl: url });
         setAudioUrl(url);
-        const audio = new Audio(url);
-        audio.play().catch(console.error);
+        playAudioUrl(url);
       } else {
         alert("Có lỗi khi tạo âm thanh.");
       }
