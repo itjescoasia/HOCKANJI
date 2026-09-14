@@ -13,7 +13,7 @@ import ConversationView from './components/ConversationView';
 import ShortStudySession from './components/ShortStudySession';
 import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
-import { BookMarked, Home, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon } from 'lucide-react';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useConversations } from './hooks/useConversations';
@@ -76,6 +76,7 @@ export default function App() {
   const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord, reorderWords: reorderIntensiveWords } = useIntensiveVocab();
   const { conversations, addConversation, removeConversation, updateConversation } = useConversations();
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [view, setView] = useState<any>(() => {
     return localStorage.getItem('currentView') || 'dashboard';
   });
@@ -281,6 +282,10 @@ export default function App() {
 
   const handleNavigate = (newView: string) => {
     // The active time saving is handled by the unmount effect of the tracker above
+    if (newView === 'add') {
+      setIsAddModalOpen(true);
+      return;
+    }
     if (isFreeStudyMode || isDifficultReviewMode) {
       setIsFreeStudyMode(false);
       setIsDifficultReviewMode(false);
@@ -427,19 +432,33 @@ export default function App() {
           <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} editCardReq={editCardReq} />
         )}
         
-        {view === 'add' && (
-          <AddVocab 
-            deck={deck}
-            onNavigateToWord={(kanji) => {
-              setListSearchQuery(kanji);
-              setView('list');
-            }}
-            onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms, audioUrl, hasAudio) => {
-              await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || [], audioUrl, hasAudio);
-              alert('Vừa thêm từ vựng mới thành công');
-              handleNavigate('list'); // Redirect to list to show success
-            }} 
-          />
+        {/* Modals */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-[20000] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="relative bg-theme-panel w-full max-w-2xl my-auto rounded-xl shadow-2xl border border-theme-subtle">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[20001] p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div className="p-2 sm:p-4 max-h-[90vh] overflow-y-auto">
+                <AddVocab 
+                  deck={deck}
+                  onNavigateToWord={(kanji) => {
+                    setListSearchQuery(kanji);
+                    setIsAddModalOpen(false);
+                    setView('list');
+                  }}
+                  onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms, audioUrl, hasAudio) => {
+                    await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || [], audioUrl, hasAudio);
+                    alert('Vừa thêm từ vựng mới thành công');
+                    setIsAddModalOpen(false);
+                  }} 
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {view === 'intensive_vocab' && (
