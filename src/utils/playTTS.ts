@@ -31,6 +31,11 @@ export const playTTS = async (text: string) => {
       body: JSON.stringify({ text })
     });
     
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("API error", res.status, err);
+      return null;
+    }
     if (res.ok) {
       const data = await res.json();
       if (data.audioContent) {
@@ -134,8 +139,8 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
           console.warn("Bulk upload failed:", uploadError);
         }
         
-        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB
-        return null;
+        // Return base64Url as fallback so the UI still works even if cloud save fails
+        return base64Url;
       }
     }
   } catch (error) {

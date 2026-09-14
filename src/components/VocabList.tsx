@@ -70,13 +70,16 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
       <HighlightProvider><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
         <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
           <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
+          <div className="flex flex-col items-center gap-0.5 shrink-0 -mt-0.5">
           <button
             onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-            className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-100 shrink-0 -mt-0.5"
-            title="Nghe câu ví dụ"
+            className={`p-1.5 rounded-full transition-colors opacity-100 ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+            title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
           >
             <Volume2 className="w-4 h-4" />
           </button>
+          {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+          </div>
         </div>
         {(ex.reading || ex.romaji) && (
           <div className="flex gap-2 mb-1.5 mt-1">
@@ -110,6 +113,25 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [viewingCard, setViewingCard] = useState<KanjiCard | null>(null);
 
   const [isBulkGenerating, setIsBulkGenerating] = useState(false);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+
+  const handleGenerateSingle = async (text: string | undefined, onComplete: (url: string) => void, id: string) => {
+    if (!text) return;
+    setGeneratingId(id);
+    try {
+      const url = await generateAndUploadTTS(text);
+      if (url) {
+        onComplete(url);
+        const audio = new Audio(url);
+        audio.play().catch(console.error);
+      } else {
+        alert("Có lỗi khi tạo âm thanh. Vui lòng kiểm tra API Key.");
+      }
+    } catch(err) {
+      alert("Lỗi khi gọi AI tạo âm thanh");
+    }
+    setGeneratingId(null);
+  };
   const [bulkProgress, setBulkProgress] = useState<{current: number, total: number} | null>(null);
 
   const handleBulkGenerateAudio = async () => {
@@ -700,7 +722,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             />
                             <AudioUpload 
                               audioUrl={editForm.audioUrl} 
-                              onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
+                              onAudioChange={(url) => setEditForm(prev => ({...prev, audioUrl: url}))}
+                              onGenerateAI={editForm.kanji && !editForm.audioUrl ? () => {
+                                handleGenerateSingle(editForm.kanji, (url) => {
+                                  setEditForm(prev => ({ ...prev, audioUrl: url }));
+                                }, 'main-kanji');
+                              } : undefined}
+                              isGenerating={generatingId === 'main-kanji'}
                               className="w-full mt-2" 
                             />
                             <button
@@ -900,6 +928,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                             newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
                                             setEditForm({...editForm, forms: newForms});
                                           }}
+                                          onGenerateAI={f.value && !f.audioUrl ? () => {
+                                            handleGenerateSingle(f.value, (url) => {
+                                              setEditForm(prev => {
+                                                const newForms = [...(prev.forms || [])];
+                                                newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
+                                                return { ...prev, forms: newForms };
+                                              });
+                                            }, `form-${index}`);
+                                          } : undefined}
+                                          isGenerating={generatingId === `form-${index}`}
                                         />
                                       </div>
                                     </div>
@@ -944,6 +982,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                     <AudioUpload 
                                       audioUrl={editForm.audioUrl} 
                                       onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
+                                      onGenerateAI={editForm.example && !editForm.audioUrl ? () => {
+                                            handleGenerateSingle(editForm.example, (url) => {
+                                              setEditForm(prev => ({ ...prev, audioUrl: url }));
+                                            }, `old-example`);
+                                      } : undefined}
+                                      isGenerating={generatingId === `old-example`}
                                     />
                                   </div>
                                 ) : (
@@ -979,6 +1023,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                           newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
                                           setEditForm({...editForm, examples: newExamples});
                                         }} 
+                                        onGenerateAI={ex.sentence && !ex.audioUrl ? () => {
+                                            handleGenerateSingle(ex.sentence, (url) => {
+                                              setEditForm(prev => {
+                                                const newExamples = [...(prev.examples || [])];
+                                                newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                                return { ...prev, examples: newExamples };
+                                              });
+                                            }, `ex-${index}`);
+                                          } : undefined}
+                                        isGenerating={generatingId === `ex-${index}`}
                                       />
                                       <div className="grid grid-cols-2 gap-2">
                                         <input 
@@ -1147,13 +1201,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                 {card.example && (
                                   <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
                                     <span title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
+                                    <div className="flex flex-col items-center gap-0.5 shrink-0 -mt-0.5">
                                     <button
                                       onClick={(e) => playAudio(e, card.example!, card.audioUrl)}
-                                      className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-100 shrink-0 -mt-0.5"
-                                      title="Nghe câu ví dụ"
+                                      className={`p-1.5 rounded-full transition-colors opacity-100 ${card.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+                                      title={card.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
                                     >
                                       <Volume2 className="w-4 h-4" />
                                     </button>
+                                    {card.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                                    </div>
                                   </div>
                                 )}
                                 {card.exampleTranslation && (
@@ -1370,13 +1427,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div className="text-[10px] font-bold uppercase tracking-widest text-theme-accent/70 bg-theme-panel inline-block w-max px-2 py-0.5 rounded-sm mb-1">{f.name}</div>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-xl font-serif text-theme-primary">{f.value}</span>
+                          <div className="flex flex-col items-center gap-0.5">
                           <button
                             onClick={(e) => playAudio(e, f.value, f.audioUrl)}
-                            className="p-1.5 bg-theme-base rounded-full text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel transition-colors"
-                            title="Nghe phát âm"
+                            className={`p-1.5 rounded-full transition-colors ${f.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel bg-theme-base'}`}
+                            title={f.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
                           >
                             <Volume2 className="w-4 h-4" />
                           </button>
+                          {f.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                          </div>
                         </div>
                         {(f.reading || f.romaji) && (
                           <div className="text-[11px] text-theme-primary/60 mt-1 flex justify-between">
@@ -1424,13 +1484,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               <HighlightVietnamese text={ex.translation || ""} />
                             </HighlightProvider>
                           </div>
+                          <div className="absolute top-4 right-4 flex flex-col items-center gap-1">
                           <button
                             onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-                            className={`absolute top-4 right-4 p-2.5 rounded-full transition-colors shadow-sm ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10' : 'text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel'}`}
-                            title="Nghe phát âm"
+                            className={`p-2.5 rounded-full transition-colors shadow-sm ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel'}`}
+                            title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
                           >
                             <Volume2 className="w-5 h-5" />
                           </button>
+                          {ex.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest">MP3</span>}
+                          </div>
                         </div>
                       ))
                     ) : (

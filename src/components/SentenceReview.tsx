@@ -506,14 +506,17 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               )}
               {mode === "JA_TO_VI" && (
                 <div className="flex items-center justify-center gap-2 mt-4">
+                  <div className="flex flex-col items-center gap-0.5">
                   <button
                     type="button"
                     onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                    title="Phát âm"
+                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
                   >
                     <Volume2 className="w-5 h-5" />
                   </button>
+                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                  </div>
                   
                   <button
                     onClick={(e) => {
@@ -596,14 +599,17 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   </p>
                 )}
                 <div className="flex items-center justify-center gap-2 mt-2">
+                  <div className="flex flex-col items-center gap-0.5">
                   <button
                     type="button"
                     onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                    title="Phát âm"
+                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
                   >
                     <Volume2 className="w-5 h-5" />
                   </button>
+                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                  </div>
                   
                   <button
                     onClick={(e) => {
@@ -647,14 +653,17 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               </p>
               {mode === "VI_TO_JA" && (
                 <div className="flex items-center gap-2 mt-2">
+                  <div className="flex flex-col items-center gap-0.5">
                   <button
                     type="button"
                     onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                    title="Phát âm"
+                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
                   >
                     <Volume2 className="w-5 h-5" />
                   </button>
+                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                  </div>
                   
                   <button
                     onClick={(e) => {

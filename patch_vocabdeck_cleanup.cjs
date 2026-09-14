@@ -1,7 +1,7 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/hooks/useVocabDeck.ts', 'utf8');
 
-const t = `        // CLEANUP: Tự động xóa các file base64 quá lớn ra khỏi object update để tránh lỗi 1MB
+const t1 = `        // CLEANUP: Tự động xóa các file base64 quá lớn ra khỏi object update để tránh lỗi 1MB
         let safeUpdates = JSON.parse(JSON.stringify(updates));
         if (safeUpdates.audioUrl && safeUpdates.audioUrl.startsWith('data:audio')) {
            safeUpdates.audioUrl = null;
@@ -21,10 +21,19 @@ const t = `        // CLEANUP: Tự động xóa các file base64 quá lớn ra 
               }
               return f;
            });
-        }`;
+        }
+        
+        await updateDoc(doc(db, \`users/\${auth.currentUser.uid}/deck\`, id), {
+          ...safeUpdates,
+          updatedAt: Date.now()
+        });`;
 
-const r = `        // Removed base64 cleanup so that MP3 audio from AI can be saved to Firestore
-        let safeUpdates = JSON.parse(JSON.stringify(updates));`;
+const r1 = `        let safeUpdates = JSON.parse(JSON.stringify(updates));
+        
+        await updateDoc(doc(db, \`users/\${auth.currentUser.uid}/deck\`, id), {
+          ...safeUpdates,
+          updatedAt: Date.now()
+        });`;
 
-code = code.replace(t, r);
+code = code.replace(t1, r1);
 fs.writeFileSync('src/hooks/useVocabDeck.ts', code);

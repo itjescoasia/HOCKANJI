@@ -289,27 +289,8 @@ export function useVocabDeck() {
     if (!id) return;
     if (auth.currentUser) {
       try {
-        // CLEANUP: Tự động xóa các file base64 quá lớn ra khỏi object update để tránh lỗi 1MB
+        // Removed base64 cleanup so that MP3 audio from AI can be saved to Firestore
         let safeUpdates = JSON.parse(JSON.stringify(updates));
-        if (safeUpdates.audioUrl && safeUpdates.audioUrl.startsWith('data:audio')) {
-           safeUpdates.audioUrl = null;
-        }
-        if (safeUpdates.examples) {
-           safeUpdates.examples = safeUpdates.examples.map(ex => {
-              if (ex.audioUrl && ex.audioUrl.startsWith('data:audio')) {
-                 return { ...ex, audioUrl: null };
-              }
-              return ex;
-           });
-        }
-        if (safeUpdates.forms) {
-           safeUpdates.forms = safeUpdates.forms.map(f => {
-              if (f.audioUrl && f.audioUrl.startsWith('data:audio')) {
-                 return { ...f, audioUrl: null };
-              }
-              return f;
-           });
-        }
         
         const cleanedUpdates = removeUndefined(safeUpdates);
         console.log("updateCard CALLED WITH:", id);

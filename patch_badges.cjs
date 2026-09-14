@@ -1,31 +1,67 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/VocabList.tsx', 'utf8');
 
-code = code.replace(
-  /export function getWordTypeBadgeStyle[\s\S]*?return defaultClasses;\n}/,
-  `export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
-  if (!typeStr) return defaultClasses;
-  const type = typeStr.trim();
-  const base = "text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap ";
-  if (type === "Động từ nhóm I") {
-    return base + "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
-  } else if (type === "Động từ nhóm II") {
-    return base + "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300";
-  } else if (type === "Động từ nhóm III") {
-    return base + "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300";
-  } else if (type === "Danh từ") {
-    return base + "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
-  } else if (type === "Tính từ đuôi-i" || type === "Tính từ i") {
-    return base + "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
-  } else if (type === "Tính từ đuôi-na" || type === "Tính từ na") {
-    return base + "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300";
-  } else if (type === "Trạng từ" || type === "Trạng từ (副詞)") {
-    return base + "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300";
-  } else if (type === "Ngữ pháp") {
-    return base + "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300";
-  }
-  return base + "bg-theme-base-alt text-theme-primary opacity-80 border border-theme-subtle";
-}`
-);
+const target1 = `<button
+            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
+            className="p-1 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-100 shrink-0 -mt-0.5"
+            title="Nghe câu ví dụ"
+          >
+            <Volume2 className="w-4 h-4" />
+          </button>`;
+
+const replacement1 = `<div className="flex flex-col items-center gap-0.5 shrink-0 -mt-0.5">
+          <button
+            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
+            className={\`p-1.5 rounded-full transition-colors opacity-100 \${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}\`}
+            title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+          >
+            <Volume2 className="w-4 h-4" />
+          </button>
+          {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+          </div>`;
+
+code = code.replace(target1, replacement1);
+
+const target2 = `<button
+                            onClick={(e) => playAudio(e, f.value, f.audioUrl)}
+                            className="p-1.5 bg-theme-base rounded-full text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel transition-colors"
+                            title="Nghe phát âm"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>`;
+
+const replacement2 = `<div className="flex flex-col items-center gap-0.5">
+                          <button
+                            onClick={(e) => playAudio(e, f.value, f.audioUrl)}
+                            className={\`p-1.5 rounded-full transition-colors \${f.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel bg-theme-base'}\`}
+                            title={f.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                          {f.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                          </div>`;
+
+code = code.replace(target2, replacement2);
+
+const target3 = `<button
+                            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
+                            className={\`absolute top-4 right-4 p-2.5 rounded-full transition-colors shadow-sm \${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10' : 'text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel'}\`}
+                            title="Nghe phát âm"
+                          >
+                            <Volume2 className="w-5 h-5" />
+                          </button>`;
+
+const replacement3 = `<div className="absolute top-4 right-4 flex flex-col items-center gap-1">
+                          <button
+                            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
+                            className={\`p-2.5 rounded-full transition-colors shadow-sm \${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel'}\`}
+                            title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+                          >
+                            <Volume2 className="w-5 h-5" />
+                          </button>
+                          {ex.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest">MP3</span>}
+                          </div>`;
+
+code = code.replace(target3, replacement3);
 
 fs.writeFileSync('src/components/VocabList.tsx', code);

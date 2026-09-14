@@ -169,10 +169,12 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     setExamples(newExamples);
   };
 
-  const updateExample = (index: number, field: string, value: string) => {
-    const newExamples = [...examples];
-    newExamples[index] = { ...newExamples[index], [field]: value };
-    setExamples(newExamples);
+  const updateExample = (index: number, field: string, value: any) => {
+    setExamples(prev => {
+      const newExamples = [...prev];
+      newExamples[index] = { ...newExamples[index], [field]: value };
+      return newExamples;
+    });
   };
 
   return (

@@ -362,13 +362,16 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
               <div className="flex flex-col gap-4 items-center w-full py-4 shrink-0">
                 <div className="flex flex-col items-center gap-6">
                   <h1 className="text-6xl sm:text-[140px] font-serif text-theme-primary leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
+<div className="flex flex-col items-center gap-0.5">
                   <button 
                     onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                    className="p-3 text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors rounded-full transition-transform active:scale-95"
-                    title="Phát âm"
+                    className={`p-3 rounded-full transition-transform active:scale-95 ${currentCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors'}`}
+                    title={currentCard.audioUrl ? "Nghe file MP3" : "Phát âm"}
                   >
                     <Volume2 className="w-8 h-8 sm:w-10 sm:h-10 font-light" strokeWidth={1.5} />
                   </button>
+                  {currentCard.audioUrl && <span className="text-[10px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-1">MP3</span>}
+                  </div>
                 </div>
                 {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
                   <div className="text-theme-accent opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
@@ -389,13 +392,16 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                 <div className="flex flex-col items-center space-y-4 sm:space-y-6 w-full py-4 shrink-0">
                   <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
                     <h2 className="text-4xl sm:text-6xl font-serif text-theme-primary opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
+<div className="flex flex-col items-center gap-0.5">
                   <button 
                     onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                    className="p-2 text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors rounded-full transition-transform active:scale-95"
-                    title="Phát âm"
+                    className={`p-2 rounded-full transition-transform active:scale-95 ${currentCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors'}`}
+                    title={currentCard.audioUrl ? "Nghe file MP3" : "Phát âm"}
                   >
                     <Volume2 className="w-6 h-6 sm:w-8 sm:h-8 font-light" strokeWidth={1.5} />
                   </button>
+                  {currentCard.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-1">MP3</span>}
+                  </div>
                 </div>
                 <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
                   <div className="flex justify-end flex-1 flex-col items-end gap-1">
@@ -507,13 +513,16 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                                 >
                                   <Edit3 className="w-5 h-5" />
                                 </button>
+                                <div className="flex flex-col items-center gap-0.5">
                                 <button
                                   onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
-                                  className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors"
-                                  title="Nghe câu ví dụ"
+                                  className={`p-2 rounded-full transition-colors ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent'}`}
+                                  title={ex.audioUrl ? "Nghe file MP3" : "Nghe câu ví dụ"}
                                 >
                                   <Volume2 className="w-5 h-5" />
                                 </button>
+                                {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                                </div>
                               </div>
                             </div>
                             {(ex.reading || ex.romaji) && (
@@ -596,13 +605,16 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                                   >
                                     <Edit3 className="w-5 h-5" />
                                   </button>
+                                  <div className="flex flex-col items-center gap-0.5">
                                   <button
                                     onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
-                                    className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors"
-                                    title="Nghe câu ví dụ"
+                                    className={`p-2 rounded-full transition-colors ${currentCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent'}`}
+                                    title={currentCard.audioUrl ? "Nghe file MP3" : "Nghe câu ví dụ"}
                                   >
                                     <Volume2 className="w-5 h-5" />
                                   </button>
+                                  {currentCard.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                                  </div>
                                 </div>
                               </div>
                             )}
