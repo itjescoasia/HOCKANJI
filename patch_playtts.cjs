@@ -1,25 +1,18 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/utils/playTTS.ts', 'utf8');
 
-const t1 = `        } catch (uploadError) {
-          console.warn("Bulk upload failed:", uploadError);
-        }
-        
-        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB
-        return null;
-      }
-    }
-  } catch (error) {`;
+code = code.replace("import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';", "import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';");
 
-const r1 = `        } catch (uploadError) {
-          console.warn("Bulk upload failed:", uploadError);
-        }
-        
-        // Return base64Url as fallback so the UI still works even if cloud save fails
-        return base64Url;
-      }
-    }
-  } catch (error) {`;
-  
-code = code.replace(t1, r1);
+code += `\nexport const deleteCloudAudio = async (url?: string | null) => {
+  if (!url || typeof url !== 'string' || !url.includes('firebasestorage.googleapis.com')) return;
+  try {
+    const storageRef = ref(storage, url);
+    await deleteObject(storageRef);
+    console.log("Deleted old audio from cloud:", url);
+  } catch (err) {
+    console.warn("Failed to delete cloud audio:", err);
+  }
+};
+`;
+
 fs.writeFileSync('src/utils/playTTS.ts', code);

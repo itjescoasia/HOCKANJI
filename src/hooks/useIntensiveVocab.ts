@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IntensiveWord } from '../types';
 import { db, auth, removeUndefined } from '../lib/firebase';
+import { deleteCloudAudio } from '../utils/playTTS';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 
 enum OperationType {
@@ -107,6 +108,16 @@ export function useIntensiveVocab() {
   };
 
   const removeWord = async (id: string) => {
+    const wordToDelete = intensiveDeck.find(w => w.id === id);
+    if (wordToDelete) {
+      if (wordToDelete.audioUrl) await deleteCloudAudio(wordToDelete.audioUrl);
+      if (wordToDelete.examples && Array.isArray(wordToDelete.examples)) {
+        for (const ex of wordToDelete.examples) {
+          if (ex.audioUrl) await deleteCloudAudio(ex.audioUrl);
+        }
+      }
+    }
+
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
@@ -121,6 +132,23 @@ export function useIntensiveVocab() {
 
   const updateWord = async (id: string, updates: Partial<IntensiveWord>) => {
     if (!id) return;
+    
+    // Check for deleted audio in examples or main word
+    const oldWord = intensiveDeck.find(w => w.id === id);
+    if (oldWord) {
+       if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldWord.audioUrl)) {
+          if (oldWord.audioUrl) await deleteCloudAudio(oldWord.audioUrl);
+       }
+       if (updates.examples) {
+          const newAudioUrls = new Set(updates.examples.map(ex => ex.audioUrl).filter(Boolean));
+          for (const ex of oldWord.examples || []) {
+             if (ex.audioUrl && !newAudioUrls.has(ex.audioUrl)) {
+                 await deleteCloudAudio(ex.audioUrl);
+             }
+          }
+       }
+    }
+
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {

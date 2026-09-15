@@ -261,10 +261,16 @@ export default function Dashboard({
     return selectedList[seed % selectedList.length];
   }, [intensiveDeck, seed, stats, todayStr]);
 
+  const wotdAttemptedRef = React.useRef<string | null>(null);
+
   // Sync back to stats if WOTD changes and we have a function
   useEffect(() => {
     if (sentenceOfTheDay && onRecordWordOfTheDay && !stats[todayStr]?.wotdId) {
-      onRecordWordOfTheDay(sentenceOfTheDay.example.id);
+      const wotdId = sentenceOfTheDay.example.id;
+      if (wotdAttemptedRef.current !== wotdId) {
+        wotdAttemptedRef.current = wotdId;
+        onRecordWordOfTheDay(wotdId);
+      }
     }
   }, [sentenceOfTheDay, onRecordWordOfTheDay, stats, todayStr]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db, auth, removeUndefined } from "../lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getLocalDateString } from "../lib/dateUtils";
@@ -61,7 +61,7 @@ export function useStudyStats() {
     };
   }, []);
 
-  const recordReview = async (
+  const recordReview = useCallback(async (
     isCorrect: boolean,
     isNewlyMastered: boolean,
     isNewCard?: boolean,
@@ -118,9 +118,9 @@ export function useStudyStats() {
 
       return newStats;
     });
-  };
+  }, []);
 
-  const recordFreeStudyTime = async (seconds: number) => {
+  const recordFreeStudyTime = useCallback(async (seconds: number) => {
     if (seconds <= 0) return;
     const today = getLocalDateString();
 
@@ -163,9 +163,9 @@ export function useStudyStats() {
 
       return newStats;
     });
-  };
+  }, []);
 
-  const recordWordOfTheDay = async (wotdId: string) => {
+  const recordWordOfTheDay = useCallback(async (wotdId: string) => {
     const today = getLocalDateString();
 
     setStats((prevStats) => {
@@ -216,7 +216,7 @@ export function useStudyStats() {
 
       return newStats;
     });
-  };
+  }, []);
 
   return {
     stats,

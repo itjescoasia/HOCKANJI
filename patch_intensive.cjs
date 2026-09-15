@@ -1,72 +1,92 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/IntensiveStudy.tsx', 'utf8');
+let code = fs.readFileSync('src/hooks/useIntensiveVocab.ts', 'utf8');
 
 // Add import
-const importMatch = `import { formatDistanceToNow } from 'date-fns';`;
-if (!code.includes('generateAndUploadTTS')) {
-  code = code.replace(importMatch, importMatch + `\nimport { playTTS, generateAndUploadTTS } from '../utils/playTTS';\nimport { Music } from 'lucide-react';`);
-}
+code = code.replace(/import \{ db, auth, removeUndefined \} from '\.\.\/lib\/firebase';/, "import { db, auth, removeUndefined } from '../lib/firebase';\nimport { deleteCloudAudio } from '../utils/playTTS';");
 
-const t1 = `function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: string, example: IntensiveExample, onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void }) {
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const audioInputRef = React.useRef<HTMLInputElement>(null);`;
-
-const r1 = `function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: string, example: IntensiveExample, onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void }) {
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const audioInputRef = React.useRef<HTMLInputElement>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleGenerateAI = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!example.sentence) return;
-    setIsGenerating(true);
-    try {
-      const url = await generateAndUploadTTS(example.sentence);
-      if (url) {
-        onUpdateExample(example.id, { hasAudio: true, audioUrl: url });
-        setAudioUrl(url);
-        const audio = new Audio(url);
-        audio.play().catch(console.error);
-      } else {
-        alert("Có lỗi khi tạo âm thanh.");
+const oldRemove = `  const removeWord = async (id: string) => {
+    if (auth.currentUser) {
+      const path = \`users/\${auth.currentUser.uid}/intensiveVocab/\${id}\`;
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, path);
       }
-    } catch(err) {
-      alert("Lỗi khi gọi AI tạo âm thanh");
-    } finally {
-      setIsGenerating(false);
+    } else {
+      setIntensiveDeck(prev => prev.filter(c => c.id !== id));
     }
   };`;
 
-const t2 = `      {!audioUrl ? (
-        <button 
-          onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider"
-        >
-          <Volume2 className="w-3 h-3" />
-          {isUploading ? 'Đang tải...' : 'Thêm MP3'}
-        </button>
-      ) : (`;
+const newRemove = `  const removeWord = async (id: string) => {
+    const wordToDelete = intensiveDeck.find(w => w.id === id);
+    if (wordToDelete) {
+      if (wordToDelete.audioUrl) await deleteCloudAudio(wordToDelete.audioUrl);
+      if (wordToDelete.examples && Array.isArray(wordToDelete.examples)) {
+        for (const ex of wordToDelete.examples) {
+          if (ex.audioUrl) await deleteCloudAudio(ex.audioUrl);
+        }
+      }
+    }
 
-const r2 = `      {!audioUrl ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider"
-          >
-            <Volume2 className="w-3 h-3" />
-            {isUploading ? 'Đang tải...' : 'Thêm MP3'}
-          </button>
-          <button 
-            onClick={handleGenerateAI}
-            disabled={isGenerating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 text-theme-accent rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider disabled:opacity-50"
-          >
-            <Music className="w-3 h-3" />
-            {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
-          </button>
-        </div>
-      ) : (`;
+    if (auth.currentUser) {
+      const path = \`users/\${auth.currentUser.uid}/intensiveVocab/\${id}\`;
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, path);
+      }
+    } else {
+      setIntensiveDeck(prev => prev.filter(c => c.id !== id));
+    }
+  };`;
 
-code = code.replace(t1, r1);
-code = code.replace(t2, r2);
-fs.writeFileSync('src/components/IntensiveStudy.tsx', code);
+code = code.replace(oldRemove, newRemove);
+
+const oldUpdate = `  const updateWord = async (id: string, updates: Partial<IntensiveWord>) => {
+    if (!id) return;
+    if (auth.currentUser) {
+      const path = \`users/\${auth.currentUser.uid}/intensiveVocab/\${id}\`;
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id), removeUndefined(updates), { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    } else {
+      setIntensiveDeck(prev => prev.map(word => word.id === id ? { ...word, ...updates } : word));
+    }
+  };`;
+
+const newUpdate = `  const updateWord = async (id: string, updates: Partial<IntensiveWord>) => {
+    if (!id) return;
+    
+    // Check for deleted audio in examples or main word
+    const oldWord = intensiveDeck.find(w => w.id === id);
+    if (oldWord) {
+       if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldWord.audioUrl)) {
+          if (oldWord.audioUrl) await deleteCloudAudio(oldWord.audioUrl);
+       }
+       if (updates.examples) {
+          const newAudioUrls = new Set(updates.examples.map(ex => ex.audioUrl).filter(Boolean));
+          for (const ex of oldWord.examples || []) {
+             if (ex.audioUrl && !newAudioUrls.has(ex.audioUrl)) {
+                 await deleteCloudAudio(ex.audioUrl);
+             }
+          }
+       }
+    }
+
+    if (auth.currentUser) {
+      const path = \`users/\${auth.currentUser.uid}/intensiveVocab/\${id}\`;
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id), removeUndefined(updates), { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    } else {
+      setIntensiveDeck(prev => prev.map(word => word.id === id ? { ...word, ...updates } : word));
+    }
+  };`;
+
+code = code.replace(oldUpdate, newUpdate);
+
+fs.writeFileSync('src/hooks/useIntensiveVocab.ts', code);

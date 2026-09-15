@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Conversation, DialogueSentence } from '../types';
 import { db, auth, removeUndefined } from '../lib/firebase';
+import { deleteCloudAudio } from '../utils/playTTS';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query } from 'firebase/firestore';
 
 enum OperationType {
@@ -100,6 +101,16 @@ export function useConversations() {
   };
 
   const removeConversation = async (id: string) => {
+    const convoToDelete = conversations.find(c => c.id === id);
+    if (convoToDelete) {
+      if (convoToDelete.audioUrl) await deleteCloudAudio(convoToDelete.audioUrl);
+      if (convoToDelete.dialogues && Array.isArray(convoToDelete.dialogues)) {
+        for (const dia of convoToDelete.dialogues) {
+          if (dia.audioUrl) await deleteCloudAudio(dia.audioUrl);
+        }
+      }
+    }
+
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${id}`;
       try {

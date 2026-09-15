@@ -1,6 +1,7 @@
 import localforage from 'localforage';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { storage, auth, db } from '../lib/firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
 
 const ttsCache = localforage.createInstance({
   name: 'tts-cache',
@@ -169,4 +170,25 @@ export const playAudioUrl = (url: string) => {
   const audio = new Audio(url);
   currentActiveAudio = audio;
   audio.play().catch(console.error);
+};
+
+export const deleteCloudAudio = async (url?: string | null) => {
+  if (!url || typeof url !== 'string') return;
+  
+  try {
+    if (url.startsWith('firestore:') && auth.currentUser) {
+       const audioId = url.split(':')[1];
+       await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+       console.log("Deleted old audio from firestore:", url);
+       return;
+    }
+    
+    if (url.includes('firebasestorage.googleapis.com')) {
+      const storageRef = ref(storage, url);
+      await deleteObject(storageRef);
+      console.log("Deleted old audio from cloud storage:", url);
+    }
+  } catch (err) {
+    console.warn("Failed to delete cloud audio:", err);
+  }
 };

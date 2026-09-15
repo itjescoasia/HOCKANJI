@@ -4,6 +4,7 @@ import { calculateNextReview } from '../lib/sm2';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 import { getEndOfTodayTimestamp } from '../lib/dateUtils';
+import { deleteCloudAudio } from '../utils/playTTS';
 const removeUndefined = (obj: any): any => {
   if (Array.isArray(obj)) {
     return obj.map(removeUndefined);
@@ -147,6 +148,17 @@ export function useVocabDeck() {
   };
 
   const removeCard = async (id: string) => {
+    const cardToDelete = deck.find(c => c.id === id);
+    if (cardToDelete) {
+      // delete audio for card and all examples
+      if (cardToDelete.audioUrl) await deleteCloudAudio(cardToDelete.audioUrl);
+      if (cardToDelete.examples && Array.isArray(cardToDelete.examples)) {
+        for (const ex of cardToDelete.examples) {
+          if (ex.audioUrl) await deleteCloudAudio(ex.audioUrl);
+        }
+      }
+    }
+
     if (auth.currentUser) {
       try {
         await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id));
