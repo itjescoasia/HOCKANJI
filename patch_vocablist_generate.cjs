@@ -1,26 +1,36 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/VocabList.tsx', 'utf8');
 
-const t1 = `  const [isBulkGenerating, setIsBulkGenerating] = useState(false);`;
-const r1 = `  const [isBulkGenerating, setIsBulkGenerating] = useState(false);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
+const searchStr = `                                        onGenerateAI={ex.sentence && !ex.audioUrl ? () => {
+                                            handleGenerateSingle(ex.sentence, (url) => {
+                                              setEditForm(prev => {
+                                                const newExamples = [...(prev.examples || [])];
+                                                newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                                return { ...prev, examples: newExamples };
+                                              });
+                                            }, \`ex-\${index}\`);
+                                          } : undefined}`;
 
-  const handleGenerateSingle = async (text: string | undefined, onComplete: (url: string) => void, id: string) => {
-    if (!text) return;
-    setGeneratingId(id);
-    try {
-      const url = await generateAndUploadTTS(text);
-      if (url) {
-        onComplete(url);
-      } else {
-        alert("Có lỗi khi tạo âm thanh. Vui lòng kiểm tra API Key.");
-      }
-    } catch(err) {
-      alert("Lỗi khi gọi AI tạo âm thanh");
-    }
-    setGeneratingId(null);
-  };`;
+const replaceStr = `                                        onGenerateAI={ex.sentence && !ex.audioUrl ? () => {
+                                            handleGenerateSingle(ex.sentence, (url) => {
+                                              setEditForm(prev => {
+                                                const newExamples = [...(prev.examples || [])];
+                                                newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                                
+                                                // Tự động lưu ngay lập tức vào DB
+                                                if (editingId && onUpdate) {
+                                                   onUpdate(editingId, { ...prev, examples: newExamples });
+                                                }
+                                                
+                                                return { ...prev, examples: newExamples };
+                                              });
+                                            }, \`ex-\${index}\`);
+                                          } : undefined}`;
 
-code = code.replace(t1, r1);
-
-fs.writeFileSync('src/components/VocabList.tsx', code);
+if (code.includes(searchStr)) {
+    code = code.replace(searchStr, replaceStr);
+    fs.writeFileSync('src/components/VocabList.tsx', code);
+    console.log("Patched example AI generate in VocabList");
+} else {
+    console.log("Could not find the target string.");
+}

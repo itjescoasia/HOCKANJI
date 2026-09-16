@@ -1,62 +1,68 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/AudioUpload.tsx', 'utf8');
 
-const t1 = `interface AudioUploadProps {
-  audioUrl?: string | null;
-  onAudioChange: (url: string | null) => void;
-  className?: string;
-}`;
+// Add setDoc and doc to imports
+code = code.replace(
+  /import \{ ref, uploadBytes, getDownloadURL \} from 'firebase\/storage';/,
+  "import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';\nimport { doc, setDoc } from 'firebase/firestore';\nimport { db } from '../lib/firebase';"
+);
 
-const r1 = `interface AudioUploadProps {
-  audioUrl?: string | null;
-  onAudioChange: (url: string | null) => void;
-  className?: string;
-  onGenerateAI?: () => void;
-  isGenerating?: boolean;
-}`;
-code = code.replace(t1, r1);
+// Replace the fallback logic
+const searchStr = `        // Fallback to Base64 data URL if storage is not provisioned or blocked
+        if (file.size > 300 * 1024) { 
+           alert('File mp3 quá lớn (Vượt quá 300KB). Do tính năng Cloud Storage chưa được cấp quyền, hệ thống chỉ lưu tạm vào Database nên dung lượng bị giới hạn để không gây sập ứng dụng. Vui lòng cắt mp3 ngắn hơn (khoảng 3-5 giây) hoặc dùng file chất lượng thấp.');
+           return;
+        }
 
-const t2 = `export default function AudioUpload({ audioUrl, onAudioChange, className = '' }: AudioUploadProps) {`;
-const r2 = `export default function AudioUpload({ audioUrl, onAudioChange, className = '', onGenerateAI, isGenerating }: AudioUploadProps) {`;
-code = code.replace(t2, r2);
+        await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => { 
+             onAudioChange(reader.result as string); 
+             resolve(null);
+          };
+          reader.onerror = () => { 
+             alert('Lỗi đọc file âm thanh nội bộ.');
+             reject(new Error("Lỗi đọc file"));
+          };
+          reader.readAsDataURL(file);
+        });`;
 
-const t3 = `          <span className="text-theme-primary/30 text-xs">hoặc</span>
-          <button
-            type="button"
-            onClick={() => setShowUrlInput(true)}
-            className="flex items-center gap-1 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary opacity-70 hover:opacity-100"
-          >
-            <LinkIcon className="w-3 h-3" />
-            Link web
-          </button>
-        </div>`;
-        
-const r3 = `          <span className="text-theme-primary/30 text-xs">hoặc</span>
-          <button
-            type="button"
-            onClick={() => setShowUrlInput(true)}
-            className="flex items-center gap-1 bg-theme-base-alt border border-theme-subtle px-2 py-1 text-xs text-theme-primary opacity-70 hover:opacity-100"
-          >
-            <LinkIcon className="w-3 h-3" />
-            Link web
-          </button>
-          
-          {onGenerateAI && (
-            <>
-              <span className="text-theme-primary/30 text-xs">hoặc</span>
-              <button
-                type="button"
-                onClick={onGenerateAI}
-                disabled={isGenerating}
-                className="flex items-center gap-1 bg-theme-accent/10 border border-theme-accent/20 px-2 py-1 text-xs text-theme-accent opacity-90 hover:opacity-100 hover:bg-theme-accent/20 disabled:opacity-50"
-              >
-                <Music className="w-3 h-3" />
-                {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
-              </button>
-            </>
-          )}
-        </div>`;
+const replaceStr = `        // Fallback to saving Base64 string in Firestore 'audio' collection
+        if (file.size > 800 * 1024) { 
+           alert('File mp3 quá lớn (Vượt quá 800KB). Vui lòng cắt mp3 ngắn hơn hoặc dùng file chất lượng thấp.');
+           return;
+        }
 
-code = code.replace(t3, r3);
+        await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+             try {
+                const uid = auth.currentUser?.uid;
+                if (uid) {
+                   const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
+                   const audioDocRef = doc(db, 'users', uid, 'audio', audioId);
+                   await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
+                   onAudioChange('firestore:' + audioId);
+                } else {
+                   onAudioChange(reader.result as string);
+                }
+             } catch(e) {
+                console.error("Firestore fallback save failed:", e);
+                alert("Lỗi khi lưu audio. Vui lòng thử lại.");
+             }
+             resolve(null);
+          };
+          reader.onerror = () => { 
+             alert('Lỗi đọc file âm thanh nội bộ.');
+             reject(new Error("Lỗi đọc file"));
+          };
+          reader.readAsDataURL(file);
+        });`;
+
+if (code.includes(searchStr)) {
+  code = code.replace(searchStr, replaceStr);
+} else {
+  console.log("Fallback logic not found in AudioUpload.tsx");
+}
 
 fs.writeFileSync('src/components/AudioUpload.tsx', code);

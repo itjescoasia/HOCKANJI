@@ -1,28 +1,57 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/VocabList.tsx', 'utf8');
+let code = fs.readFileSync('src/utils/playTTS.ts', 'utf8');
 
-const t0 = `  const playAudio = (e: React.MouseEvent, text: string | undefined | null) => {
-    e.stopPropagation();
-    if (!text || !('speechSynthesis' in window)) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
-  };`;
-const r0 = `  const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
-    e.stopPropagation();
-    if (audioUrl) {
-      new Audio(audioUrl).play().catch(console.error);
-      return;
-    }
-    if (!text || !('speechSynthesis' in window)) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    window.speechSynthesis.speak(utterance);
-  };`;
-code = code.replace(t0, r0);
+// Replace playAudioUrl
+const playAudioUrlOld = `export const playAudioUrl = (url: string) => {
+  if (currentActiveAudio) {
+    currentActiveAudio.pause();
+    currentActiveAudio.currentTime = 0;
+  }
+  const audio = new Audio(url);
+  currentActiveAudio = audio;
+  audio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error("Audio playback error:", e);
+        }
+      });
+};`;
 
-code = code.replace(/onClick=\{\(e\) => playAudio\(e, ex\.sentence\)\}/g, 'onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}');
-code = code.replace(/onClick=\{\(e\) => playAudio\(e, card\.kanji \|\| card\.reading\)\}/g, 'onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}');
-code = code.replace(/onClick=\{\(e\) => playAudio\(e, card\.example!\)\}/g, 'onClick={(e) => playAudio(e, card.example!, card.audioUrl)}');
+const playAudioUrlNew = `import { getDoc } from 'firebase/firestore';\n\nexport const playAudioUrl = async (url: string) => {
+  if (!url) return;
+  
+  if (currentActiveAudio) {
+    currentActiveAudio.pause();
+    currentActiveAudio.currentTime = 0;
+  }
+  
+  let finalUrl = url;
+  if (url.startsWith('firestore:') && auth.currentUser) {
+     try {
+       const audioId = url.split(':')[1];
+       const docSnap = await getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+       if (docSnap.exists()) {
+          finalUrl = docSnap.data().data;
+       } else {
+          console.warn("Firestore audio not found");
+          return;
+       }
+     } catch(err) {
+       console.error("Error fetching audio from firestore", err);
+       return;
+     }
+  }
 
-fs.writeFileSync('src/components/VocabList.tsx', code);
+  const audio = new Audio(finalUrl);
+  currentActiveAudio = audio;
+  audio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error("Audio playback error:", e);
+        }
+      });
+};`;
+
+code = code.replace(/import \{ doc, deleteDoc, setDoc \} from 'firebase\/firestore';/, "import { doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';");
+
+code = code.replace(playAudioUrlOld, playAudioUrlNew.replace("import { getDoc } from 'firebase/firestore';\n\n", ""));
+
+fs.writeFileSync('src/utils/playTTS.ts', code);

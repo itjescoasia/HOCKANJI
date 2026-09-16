@@ -1,7 +1,7 @@
 import localforage from 'localforage';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, auth, db } from '../lib/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 
 const ttsCache = localforage.createInstance({
   name: 'tts-cache',
@@ -158,10 +158,22 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
           }
         } catch (uploadError) {
           console.warn("Bulk upload failed:", uploadError);
+          const uid = auth.currentUser?.uid;
+          if (uid) {
+             try {
+                const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
+                const audioDocRef = doc(db, 'users', uid, 'audio', audioId);
+                await setDoc(audioDocRef, { data: base64Url, createdAt: Date.now() });
+                console.log("Saved audio to firestore fallback collection.");
+                return 'firestore:' + audioId;
+             } catch (fsErr) {
+                console.warn("Firestore fallback failed:", fsErr);
+             }
+          }
         }
         
-        // Return base64Url as fallback so the UI still works even if cloud save fails
-        return base64Url;
+        // If all fails, just return null so we don't blow up the document limit
+        return null;
       }
     }
   } catch (error) {
@@ -170,12 +182,32 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
   return null;
 };
 
-export const playAudioUrl = (url: string) => {
+export const playAudioUrl = async (url: string) => {
+  if (!url) return;
+  
   if (currentActiveAudio) {
     currentActiveAudio.pause();
     currentActiveAudio.currentTime = 0;
   }
-  const audio = new Audio(url);
+  
+  let finalUrl = url;
+  if (url.startsWith('firestore:') && auth.currentUser) {
+     try {
+       const audioId = url.split(':')[1];
+       const docSnap = await getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+       if (docSnap.exists()) {
+          finalUrl = docSnap.data().data;
+       } else {
+          console.warn("Firestore audio not found");
+          return;
+       }
+     } catch(err) {
+       console.error("Error fetching audio from firestore", err);
+       return;
+     }
+  }
+
+  const audio = new Audio(finalUrl);
   currentActiveAudio = audio;
   audio.play().catch(e => {
         if (e.name !== 'AbortError') {

@@ -776,7 +776,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               onAudioChange={(url) => setEditForm(prev => ({...prev, audioUrl: url}))}
                               onGenerateAI={editForm.kanji && !editForm.audioUrl ? () => {
                                 handleGenerateSingle(editForm.kanji, (url) => {
-                                  setEditForm(prev => ({ ...prev, audioUrl: url }));
+                                  setEditForm(prev => {
+                                     if (editingId && onUpdate) onUpdate(editingId, { ...prev, audioUrl: url });
+                                     return { ...prev, audioUrl: url };
+                                  });
                                 }, 'main-kanji');
                               } : undefined}
                               isGenerating={generatingId === 'main-kanji'}
@@ -984,6 +987,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                               setEditForm(prev => {
                                                 const newForms = [...(prev.forms || [])];
                                                 newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
+                                                if (editingId && onUpdate) onUpdate(editingId, { ...prev, forms: newForms });
                                                 return { ...prev, forms: newForms };
                                               });
                                             }, `form-${index}`);
@@ -1035,7 +1039,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                       onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
                                       onGenerateAI={editForm.example && !editForm.audioUrl ? () => {
                                             handleGenerateSingle(editForm.example, (url) => {
-                                              setEditForm(prev => ({ ...prev, audioUrl: url }));
+                                              setEditForm(prev => {
+                                                 if (editingId && onUpdate) onUpdate(editingId, { ...prev, audioUrl: url });
+                                                 return { ...prev, audioUrl: url };
+                                              });
                                             }, `old-example`);
                                       } : undefined}
                                       isGenerating={generatingId === `old-example`}
@@ -1079,6 +1086,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                               setEditForm(prev => {
                                                 const newExamples = [...(prev.examples || [])];
                                                 newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                                
+                                                // Tự động lưu ngay lập tức vào DB
+                                                if (editingId && onUpdate) {
+                                                   onUpdate(editingId, { ...prev, examples: newExamples });
+                                                }
+                                                
                                                 return { ...prev, examples: newExamples };
                                               });
                                             }, `ex-${index}`);
