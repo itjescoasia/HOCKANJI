@@ -2,7 +2,7 @@ import { playTTS, generateAndUploadTTS , playAudioUrl} from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2 } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import React, { useState, useRef } from 'react';
@@ -449,6 +449,58 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       }
     }
   }, [editCardReq, initialEditId, deck]);
+
+  
+  // Đồng bộ Realtime (Thời gian thực) từ Firebase về UI cho thẻ đang xem/sửa
+  React.useEffect(() => {
+    if (viewingCard) {
+      const updatedCard = deck.find(c => c.id === viewingCard.id);
+      if (updatedCard) {
+         if (JSON.stringify(updatedCard) !== JSON.stringify(viewingCard)) {
+            setViewingCard(updatedCard);
+         }
+      }
+    }
+  }, [deck]);
+
+  React.useEffect(() => {
+    if (editingId) {
+       const updatedCard = deck.find(c => c.id === editingId);
+       if (updatedCard) {
+          setEditForm(prev => {
+             let changed = false;
+             let newForms = prev.forms ? [...prev.forms] : [];
+             let newExamples = prev.examples ? [...prev.examples] : [];
+             
+             if (updatedCard.forms) {
+                updatedCard.forms.forEach((cloudForm, idx) => {
+                   if (cloudForm.audioUrl && newForms[idx] && !newForms[idx].audioUrl) {
+                      newForms[idx].audioUrl = cloudForm.audioUrl;
+                      newForms[idx].hasAudio = true;
+                      changed = true;
+                   }
+                });
+             }
+             if (updatedCard.examples) {
+                updatedCard.examples.forEach((cloudEx, idx) => {
+                   if (cloudEx.audioUrl && newExamples[idx] && !newExamples[idx].audioUrl) {
+                      newExamples[idx].audioUrl = cloudEx.audioUrl;
+                      newExamples[idx].hasAudio = true;
+                      changed = true;
+                   }
+                });
+             }
+             if (updatedCard.audioUrl && !prev.audioUrl) {
+                return { ...prev, audioUrl: updatedCard.audioUrl, forms: newForms, examples: newExamples };
+             }
+             if (changed) {
+                return { ...prev, forms: newForms, examples: newExamples };
+             }
+             return prev;
+          });
+       }
+    }
+  }, [deck]);
 
   React.useEffect(() => {
     if (viewCardReq?.id) {
@@ -1096,18 +1148,18 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                        <button
                                           onClick={handleEditBulkGenerateAudio}
                                          disabled={isBulkGenerating}
-                                         className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium text-theme-accent bg-theme-accent/10 border border-theme-accent/20 hover:bg-theme-accent/20 rounded-md transition-colors disabled:opacity-50 min-w-[140px] justify-center"
+                                         className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-theme-inverted bg-theme-accent hover:bg-theme-accent-light rounded-md transition-colors disabled:opacity-50 min-w-[160px] justify-center shadow-sm"
                                          title="Tự động tạo và tải lên Cloud MP3 cho tất cả các Thể và Ví dụ chưa có âm thanh"
                                        >
                                          {isBulkGenerating ? (
-                                           <span className="flex items-center gap-1.5">
-                                             <div className="w-3 h-3 border-2 border-theme-accent border-t-transparent rounded-full animate-spin"></div>
+                                           <span className="flex items-center gap-2">
+                                             <div className="w-4 h-4 border-2 border-theme-inverted border-t-transparent rounded-full animate-spin"></div>
                                              {bulkProgress ? `${bulkProgress.current}/${bulkProgress.total}` : 'Đang xử lý...'}
                                            </span>
                                          ) : (
-                                           <span className="flex items-center gap-1">
-                                             <Volume2 className="w-3 h-3" />
-                                             Tải MP3 hàng loạt
+                                           <span className="flex items-center gap-1.5">
+                                             <Brain className="w-4 h-4" />
+                                             Tải MP3 Hàng Loạt (AI)
                                            </span>
                                          )}
                                        </button>
@@ -1360,18 +1412,18 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                              <button 
                                onClick={handleBulkGenerateAudio}
                                disabled={isBulkGenerating}
-                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-theme-accent bg-theme-accent/10 border border-theme-accent/20 hover:bg-theme-accent/20 rounded-md transition-colors disabled:opacity-50 min-w-[140px] justify-center"
+                               className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-theme-inverted bg-theme-accent hover:bg-theme-accent-light rounded-md transition-colors disabled:opacity-50 min-w-[160px] justify-center shadow-sm"
                                title="Tự động tạo và tải lên Cloud MP3 cho tất cả các Thể và Ví dụ chưa có âm thanh"
                              >
                                {isBulkGenerating ? (
-                                 <span className="flex items-center gap-1.5">
-                                   <div className="w-3 h-3 border-2 border-theme-accent border-t-transparent rounded-full animate-spin"></div>
+                                 <span className="flex items-center gap-2">
+                                   <div className="w-4 h-4 border-2 border-theme-inverted border-t-transparent rounded-full animate-spin"></div>
                                    {bulkProgress ? `${bulkProgress.current}/${bulkProgress.total}` : 'Đang xử lý...'}
                                  </span>
                                ) : (
-                                 <span className="flex items-center gap-1">
-                                   <Volume2 className="w-3.5 h-3.5" />
-                                   Tải MP3 hàng loạt
+                                 <span className="flex items-center gap-1.5">
+                                   <Brain className="w-4 h-4" />
+                                   Tải MP3 Hàng Loạt (AI)
                                  </span>
                                )}
                              </button>
