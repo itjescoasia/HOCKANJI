@@ -1256,7 +1256,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => onRemove(card.id)}
+                          onClick={() => { if (window.confirm("Bạn có chắc chắn muốn xóa thẻ này?")) onRemove(card.id); }}
                           className="p-2 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all rounded-xl inline-flex items-center justify-center"
                           title="Xóa thẻ"
                         >

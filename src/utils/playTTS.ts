@@ -23,7 +23,11 @@ export const playTTS = async (text: string) => {
       }
       const audio = new Audio(`data:audio/mp3;base64,${cachedAudio}`);
       currentActiveAudio = audio;
-      audio.play().catch(console.error);
+      audio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error("Audio playback error:", e);
+        }
+      });
       
       // If we are playing from cache, maybe it wasn't saved to cloud yet?
       // But let's assume it is, or it will be. We'll dispatch the base64 URL anyway
@@ -58,7 +62,11 @@ export const playTTS = async (text: string) => {
         }
         const audio = new Audio(base64Url);
         currentActiveAudio = audio;
-        audio.play().catch(console.error);
+        audio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error("Audio playback error:", e);
+        }
+      });
         
         // 3. Upload to Firebase Storage so it is saved in the cloud
         try {
@@ -169,7 +177,11 @@ export const playAudioUrl = (url: string) => {
   }
   const audio = new Audio(url);
   currentActiveAudio = audio;
-  audio.play().catch(console.error);
+  audio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error("Audio playback error:", e);
+        }
+      });
 };
 
 export const deleteCloudAudio = async (url?: string | null) => {

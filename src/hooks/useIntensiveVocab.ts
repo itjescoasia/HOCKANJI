@@ -118,6 +118,9 @@ export function useIntensiveVocab() {
       }
     }
 
+    // Optimistic UI update
+    setIntensiveDeck(prev => prev.filter(c => c.id !== id));
+    
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
@@ -125,8 +128,6 @@ export function useIntensiveVocab() {
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, path);
       }
-    } else {
-      setIntensiveDeck(prev => prev.filter(c => c.id !== id));
     }
   };
 

@@ -125,6 +125,22 @@ export function useConversations() {
 
   const updateConversation = async (id: string, updates: Partial<Conversation>) => {
     if (!id) return;
+    
+    const oldConv = conversations.find(c => c.id === id);
+    if (oldConv) {
+       if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldConv.audioUrl)) {
+          if (oldConv.audioUrl) await deleteCloudAudio(oldConv.audioUrl);
+       }
+       if (updates.dialogues) {
+          const newAudioUrls = new Set(updates.dialogues.map(d => d.audioUrl).filter(Boolean));
+          for (const dia of oldConv.dialogues || []) {
+             if (dia.audioUrl && !newAudioUrls.has(dia.audioUrl)) {
+                 await deleteCloudAudio(dia.audioUrl);
+             }
+          }
+       }
+    }
+    
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${id}`;
       try {

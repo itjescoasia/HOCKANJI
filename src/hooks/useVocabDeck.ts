@@ -159,14 +159,15 @@ export function useVocabDeck() {
       }
     }
 
+    // Optimistic UI update
+    setDeck(prev => prev.filter(c => c.id !== id));
+    
     if (auth.currentUser) {
       try {
         await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id));
       } catch (err) {
         console.error("Error removing card:", err);
       }
-    } else {
-      setDeck(prev => prev.filter(c => c.id !== id));
     }
   };
 
@@ -299,6 +300,23 @@ export function useVocabDeck() {
 
   const updateCard = async (id: string, updates: Partial<KanjiCard>) => {
     if (!id) return;
+    
+    // Check for deleted audio in examples or main word
+    const oldCard = deck.find(c => c.id === id);
+    if (oldCard) {
+       if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldCard.audioUrl)) {
+          if (oldCard.audioUrl) await deleteCloudAudio(oldCard.audioUrl);
+       }
+       if (updates.examples) {
+          const newAudioUrls = new Set(updates.examples.map(ex => ex.audioUrl).filter(Boolean));
+          for (const ex of oldCard.examples || []) {
+             if (ex.audioUrl && !newAudioUrls.has(ex.audioUrl)) {
+                 await deleteCloudAudio(ex.audioUrl);
+             }
+          }
+       }
+    }
+    
     if (auth.currentUser) {
       try {
         // Removed base64 cleanup so that MP3 audio from AI can be saved to Firestore
