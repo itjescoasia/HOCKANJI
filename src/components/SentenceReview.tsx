@@ -94,6 +94,23 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   });
 
   useEffect(() => {
+    const handleTTSGenerated = (e: any) => {
+      const { text, audioUrl } = e.detail;
+      if (!text || !audioUrl) return;
+      
+      setExamples(prev => prev.map(ex => {
+        if (ex.sentence === text && ex.audioUrl !== audioUrl) {
+          return { ...ex, audioUrl, hasAudio: true };
+        }
+        return ex;
+      }));
+    };
+    
+    window.addEventListener('tts-generated', handleTTSGenerated);
+    return () => window.removeEventListener('tts-generated', handleTTSGenerated);
+  }, []);
+
+  useEffect(() => {
     if (isInitialized) return;
 
     // Extract all examples from the deck

@@ -42,6 +42,43 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
   const [exerciseType, setExerciseType] = useState<'typing_reading' | 'mcq_meaning' | 'mcq_reading' | 'flip'>('flip');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
 
+  useEffect(() => {
+    const handleTTSGenerated = (e: any) => {
+      const { text, audioUrl } = e.detail;
+      if (!text || !audioUrl) return;
+      
+      setReviewQueue(prev => prev.map(card => {
+        let updated = false;
+        const newCard = { ...card };
+        
+        if (newCard.examples) {
+          newCard.examples = newCard.examples.map(ex => {
+            if (ex.sentence === text && ex.audioUrl !== audioUrl) {
+              updated = true;
+              return { ...ex, audioUrl, hasAudio: true };
+            }
+            return ex;
+          });
+        }
+        
+        if (newCard.forms) {
+          newCard.forms = newCard.forms.map(form => {
+            if (form.value === text && form.audioUrl !== audioUrl) {
+              updated = true;
+              return { ...form, audioUrl, hasAudio: true };
+            }
+            return form;
+          });
+        }
+        
+        return updated ? newCard : card;
+      }));
+    };
+    
+    window.addEventListener('tts-generated', handleTTSGenerated);
+    return () => window.removeEventListener('tts-generated', handleTTSGenerated);
+  }, []);
+
   const currentCard = reviewQueue[currentIndex];
 
   // Reset internal states when current index changes

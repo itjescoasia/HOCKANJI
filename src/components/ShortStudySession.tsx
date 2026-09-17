@@ -164,6 +164,43 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
   const [queue, setQueue] = useState<KanjiCard[]>(initialQueue);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  React.useEffect(() => {
+    const handleTTSGenerated = (e: any) => {
+      const { text, audioUrl } = e.detail;
+      if (!text || !audioUrl) return;
+      
+      setQueue(prev => prev.map(card => {
+        let updated = false;
+        const newCard = { ...card };
+        
+        if (newCard.examples) {
+          newCard.examples = newCard.examples.map(ex => {
+            if (ex.sentence === text && ex.audioUrl !== audioUrl) {
+              updated = true;
+              return { ...ex, audioUrl, hasAudio: true };
+            }
+            return ex;
+          });
+        }
+        
+        if (newCard.forms) {
+          newCard.forms = newCard.forms.map(form => {
+            if (form.value === text && form.audioUrl !== audioUrl) {
+              updated = true;
+              return { ...form, audioUrl, hasAudio: true };
+            }
+            return form;
+          });
+        }
+        
+        return updated ? newCard : card;
+      }));
+    };
+    
+    window.addEventListener('tts-generated', handleTTSGenerated);
+    return () => window.removeEventListener('tts-generated', handleTTSGenerated);
+  }, []);
+
   if (queue.length === 0) {
     return (
       <div className="max-w-3xl mx-auto py-10 sm:py-20 px-2 sm:px-4 w-full flex flex-col items-center justify-center min-h-[60vh] text-center">

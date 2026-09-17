@@ -1,18 +1,18 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/components/ReviewSession.tsx', 'utf8');
+let code = fs.readFileSync('src/components/ShortStudySession.tsx', 'utf8');
 
-const searchStr = `  const [mcqOptions, setMcqOptions] = useState<string[]>([]);
+const searchStr = `  const [queue, setQueue] = useState<KanjiCard[]>(initialQueue);
+  const [currentIndex, setCurrentIndex] = useState(0);`;
 
-  const currentCard = reviewQueue[currentIndex];`;
+const replaceStr = `  const [queue, setQueue] = useState<KanjiCard[]>(initialQueue);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-const replaceStr = `  const [mcqOptions, setMcqOptions] = useState<string[]>([]);
-
-  useEffect(() => {
+  React.useEffect(() => {
     const handleTTSGenerated = (e: any) => {
       const { text, audioUrl } = e.detail;
       if (!text || !audioUrl) return;
       
-      setReviewQueue(prev => prev.map(card => {
+      setQueue(prev => prev.map(card => {
         let updated = false;
         const newCard = { ...card };
         
@@ -42,14 +42,12 @@ const replaceStr = `  const [mcqOptions, setMcqOptions] = useState<string[]>([])
     
     window.addEventListener('tts-generated', handleTTSGenerated);
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
-  }, []);
-
-  const currentCard = reviewQueue[currentIndex];`;
+  }, []);`;
 
 if (code.includes(searchStr)) {
   code = code.replace(searchStr, replaceStr);
-  fs.writeFileSync('src/components/ReviewSession.tsx', code);
-  console.log("Patched ReviewSession successfully.");
+  fs.writeFileSync('src/components/ShortStudySession.tsx', code);
+  console.log("Patched ShortStudySession successfully.");
 } else {
-  console.log("String not found in ReviewSession");
+  console.log("String not found in ShortStudySession");
 }
