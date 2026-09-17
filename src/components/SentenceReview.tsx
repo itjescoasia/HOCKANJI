@@ -50,6 +50,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     
     // Check if we have an example with audio
     const currentExample = examples[currentIndex];
+    
     if (currentExample && (currentExample.audioUrl || currentExample.hasAudio)) {
         try {
             let urlToPlay = null;
