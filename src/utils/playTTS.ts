@@ -46,6 +46,8 @@ export const playTTS = async (text: string) => {
     if (!res.ok) {
       const err = await res.text();
       console.error("API error", res.status, err);
+      console.warn("Inworld TTS failed or missing, falling back to window.speechSynthesis");
+      fallbackTTS(text);
       return null;
     }
     if (res.ok) {
