@@ -1,3 +1,4 @@
+import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, generateAndUploadTTS , playAudioUrl} from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
@@ -103,10 +104,10 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null }: VocabListProps) {
-  const [search, setSearch] = useState(initialSearchQuery);
-  const [filterType, setFilterType] = useState('all');
-  const [audioFilter, setAudioFilter] = useState<'all' | 'has_audio' | 'no_audio'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = usePersistentState('app_vocablist_search', initialSearchQuery);
+  const [filterType, setFilterType] = usePersistentState('app_vocablist_filterType', 'all');
+  const [audioFilter, setAudioFilter] = usePersistentState<'all' | 'has_audio' | 'no_audio'>('app_vocablist_audioFilter', 'all');
+  const [currentPage, setCurrentPage] = usePersistentState('app_vocablist_currentPage', 1);
   const itemsPerPage = 10;
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

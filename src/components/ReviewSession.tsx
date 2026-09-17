@@ -1,3 +1,4 @@
+import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS , playAudioUrl} from '../utils/playTTS';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, Fragment } from 'react';
@@ -21,8 +22,9 @@ interface ReviewSessionProps {
 
 export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, onUpdateCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [flippedState, setFlippedState] = useState<Record<number, boolean>>({});
+  const [currentIndexRaw, setCurrentIndex] = usePersistentState('app_reviewsession_currentIndex', 0);
+  const [flippedState, setFlippedState] = usePersistentState<Record<number, boolean>>('app_reviewsession_flippedState', {});
+  const currentIndex = reviewQueue.length > 0 ? Math.min(currentIndexRaw, reviewQueue.length - 1) : 0;
   const showAnswer = flippedState[currentIndex] || false;
   const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
   const [successCounts, setSuccessCounts] = useState<Record<string, number>>({});

@@ -1,3 +1,4 @@
+import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, generateAndUploadTTS, playAudioUrl } from '../utils/playTTS';
 
 import localforage from 'localforage';
@@ -296,9 +297,9 @@ export default function IntensiveStudy({
   initialSearchQuery = "",
   initialSelectedWordId = null,
 }: IntensiveStudyProps) {
-  const [viewState, setViewState] = useState<"list" | "add" | "study">("list");
-  const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [viewState, setViewState] = usePersistentState<"list" | "add" | "study">("app_intensive_viewState", "list");
+  const [selectedWordId, setSelectedWordId] = usePersistentState<string | null>("app_intensive_selectedWordId", null);
+  const [searchQuery, setSearchQuery] = usePersistentState("app_intensive_searchQuery", "");
   const [targetExampleId, setTargetExampleId] = useState<string | null>(null);
   const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
@@ -313,6 +314,12 @@ export default function IntensiveStudy({
   });
 
   const selectedWord = deck.find((w) => w.id === selectedWordId);
+
+  useEffect(() => {
+    if (viewState === "study" && !selectedWord) {
+      setViewState("list");
+    }
+  }, [viewState, selectedWord, setViewState]);
 
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();

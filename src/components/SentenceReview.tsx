@@ -1,3 +1,4 @@
+import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, playAudioUrl } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -34,8 +35,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   onRecordReview,
 }) => {
   const [examples, setExamples] = useState<ExampleWithWord[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [flippedState, setFlippedState] = useState<Record<number, boolean>>({});
+  const [currentIndexRaw, setCurrentIndex] = usePersistentState('app_sentencereview_currentIndex', 0);
+  const [flippedState, setFlippedState] = usePersistentState<Record<number, boolean>>('app_sentencereview_flippedState', {});
+  const currentIndex = examples.length > 0 ? Math.min(currentIndexRaw, examples.length - 1) : 0;
   const showAnswer = flippedState[currentIndex] || false;
   const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
   const [isInitialized, setIsInitialized] = useState(false);
