@@ -226,10 +226,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           }
           
           alert(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
+       } else {
+          alert(`Không thể tạo MP3 cho ${targets.length} mục đã chọn. Vui lòng kiểm tra lại kết nối mạng hoặc API.`);
        }
-    } catch (e) {
+    } catch (e: any) {
        console.error("Bulk generate error:", e);
-       alert("Có lỗi xảy ra khi tạo MP3 hàng loạt.");
+       alert(`Có lỗi xảy ra khi tạo MP3 hàng loạt: ${e?.message || e}`);
     } finally {
        setIsBulkGenerating(false);
        setTimeout(() => setBulkProgress(null), 1200);
@@ -336,10 +338,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           }
           
           alert(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
+       } else {
+          alert(`Không thể tạo MP3 cho ${targets.length} mục đã chọn. Vui lòng kiểm tra lại kết nối mạng hoặc API.`);
        }
-    } catch (e) {
+    } catch (e: any) {
        console.error("Bulk generate error:", e);
-       alert("Có lỗi xảy ra khi tạo MP3 hàng loạt.");
+       alert(`Có lỗi xảy ra khi tạo MP3 hàng loạt: ${e?.message || e}`);
     } finally {
        setIsBulkGenerating(false);
        setTimeout(() => setBulkProgress(null), 1200);

@@ -12,17 +12,22 @@ let currentActiveAudio: HTMLAudioElement | null = null;
 
 /**
  * Resolves the backend API endpoint.
- * When the app is deployed on an external domain like Cloudflare Workers (kanjipro.it-740.workers.dev),
+ * When the app is deployed on an external static domain like Cloudflare Workers (kanjipro.it-740.workers.dev),
  * relative /api calls hit Cloudflare instead of the Node.js backend.
- * This resolves to the dedicated backend host when not running on localhost or Cloud Run directly.
+ * In AI Studio preview and standard hosting, returns the relative cleanPath.
  */
 export const getApiEndpoint = (endpoint: string): string => {
   const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   if (typeof window !== 'undefined') {
+    const metaEnv = (import.meta as any).env;
+    const customBackend = metaEnv?.VITE_BACKEND_URL as string;
+    if (customBackend) {
+      return `${customBackend.replace(/\/$/, '')}${cleanPath}`;
+    }
     const host = window.location.hostname;
-    if (host.includes('workers.dev') || (!host.includes('run.app') && host !== 'localhost' && host !== '127.0.0.1')) {
-      const metaEnv = (import.meta as any).env;
-      const backendBase = (metaEnv?.VITE_BACKEND_URL as string) || 'https://ais-pre-plx6rkv6vdw73yirw4ujmz-410594632954.asia-east1.run.app';
+    // When running on Cloudflare Workers / Pages external static host
+    if (host.includes('workers.dev') || host.includes('pages.dev')) {
+      const backendBase = 'https://ais-dev-plx6rkv6vdw73yirw4ujmz-410594632954.asia-east1.run.app';
       return `${backendBase.replace(/\/$/, '')}${cleanPath}`;
     }
   }
@@ -115,11 +120,24 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
   // 2. Call backend Inworld AI TTS API
   try {
     const apiUrl = getApiEndpoint('/api/tts');
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: cleanText })
-    });
+    let res: Response;
+    try {
+      res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText })
+      });
+    } catch (fetchErr) {
+      if (apiUrl !== '/api/tts') {
+        res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: cleanText })
+        });
+      } else {
+        throw fetchErr;
+      }
+    }
 
     if (!res.ok) {
       console.error('[TTS] Inworld TTS generation error status:', res.status);
@@ -180,11 +198,24 @@ export const playTTS = async (text: string) => {
   // 2. Call Inworld AI backend
   try {
     const apiUrl = getApiEndpoint('/api/tts');
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: cleanText })
-    });
+    let res: Response;
+    try {
+      res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText })
+      });
+    } catch (fetchErr) {
+      if (apiUrl !== '/api/tts') {
+        res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: cleanText })
+        });
+      } else {
+        throw fetchErr;
+      }
+    }
 
     if (!res.ok) {
       console.warn('[TTS] Inworld TTS API unavailable:', res.status);
