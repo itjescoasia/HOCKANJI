@@ -1,5 +1,4 @@
 import { playAudioUrl } from '../utils/playTTS';
-import { playAudioUrl } from '../utils/playTTS';
 import React, { useRef, useState } from 'react';
 import { Upload, X, Music, Link as LinkIcon, Check } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -64,7 +63,7 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '', o
                 const uid = auth.currentUser?.uid;
                 if (uid) {
                    const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
-                   const audioDocRef = doc(db, 'users', uid, 'audio', audioId);
+                   const audioDocRef = doc(db, 'global_audio', audioId);
                    await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
                    onAudioChange('firestore:' + audioId);
                 } else {

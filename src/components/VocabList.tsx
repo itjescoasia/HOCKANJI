@@ -3,9 +3,10 @@ import { playTTS, generateAndUploadTTS , playAudioUrl} from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { removeUndefined } from '../hooks/useVocabDeck';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { cleanTextForSearch } from '../utils/stringUtils';
@@ -41,7 +42,7 @@ export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasse
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms'>>) => void;
+  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>) => void;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
   initialSearchQuery?: string;
   initialEditId?: string | null;
@@ -104,6 +105,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
 }
 
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null }: VocabListProps) {
+  const isAdmin = auth.currentUser?.email === 'nguyenthetrung200126@gmail.com';
   const [search, setSearch] = usePersistentState('app_vocablist_search', initialSearchQuery);
   const [filterType, setFilterType] = usePersistentState('app_vocablist_filterType', 'all');
   const [audioFilter, setAudioFilter] = usePersistentState<'all' | 'has_audio' | 'no_audio'>('app_vocablist_audioFilter', 'all');
@@ -140,169 +142,207 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     setBulkProgress(null);
     let generatedCount = 0;
     try {
-       const textsToGenerate: string[] = [];
-       if (viewingCard.forms) {
-          viewingCard.forms.forEach(f => {
-             if (f.value && !f.audioUrl) textsToGenerate.push(f.value);
+       const targets: { type: 'form' | 'example'; index: number; text: string }[] = [];
+       if (viewingCard.forms && Array.isArray(viewingCard.forms)) {
+          viewingCard.forms.forEach((f, idx) => {
+             const val = f.value?.trim();
+             if (val && !f.audioUrl) {
+                targets.push({ type: 'form', index: idx, text: val });
+             }
           });
        }
-       if (viewingCard.examples) {
-          viewingCard.examples.forEach(ex => {
-             if (ex.sentence && !ex.audioUrl) textsToGenerate.push(ex.sentence);
+       if (viewingCard.examples && Array.isArray(viewingCard.examples)) {
+          viewingCard.examples.forEach((ex, idx) => {
+             const sentence = ex.sentence?.trim();
+             if (sentence && !ex.audioUrl) {
+                targets.push({ type: 'example', index: idx, text: sentence });
+             }
           });
        }
        
-       if (textsToGenerate.length === 0) {
+       if (targets.length === 0) {
           alert("Tất cả các thể và câu ví dụ đều đã có MP3!");
           setIsBulkGenerating(false);
           return;
        }
        
-       setBulkProgress({ current: 0, total: textsToGenerate.length });
+       setBulkProgress({ current: 0, total: targets.length });
        
-       // Bulk generate
-       let newForms = viewingCard.forms ? [...viewingCard.forms] : [];
-       let newExamples = viewingCard.examples ? [...viewingCard.examples] : [];
+       let newForms = viewingCard.forms ? JSON.parse(JSON.stringify(viewingCard.forms)) : [];
+       let newExamples = viewingCard.examples ? JSON.parse(JSON.stringify(viewingCard.examples)) : [];
        
-       for (let i = 0; i < textsToGenerate.length; i++) {
-          const text = textsToGenerate[i];
-          const url = await generateAndUploadTTS(text);
+       const generatedUrls = new Map<string, string>();
+       
+       for (let i = 0; i < targets.length; i++) {
+          const target = targets[i];
+          let url = generatedUrls.get(target.text);
+          if (!url) {
+             url = await generateAndUploadTTS(target.text) || undefined;
+             if (url) generatedUrls.set(target.text, url);
+          }
+          
           if (url) {
              generatedCount++;
-             // Update local copies
-             newForms = newForms.map(f => f.value === text ? { ...f, audioUrl: url, hasAudio: true } : f);
-             newExamples = newExamples.map(ex => ex.sentence === text ? { ...ex, audioUrl: url, hasAudio: true } : ex);
+             if (target.type === 'form' && newForms[target.index]) {
+                newForms[target.index].audioUrl = url;
+                newForms[target.index].hasAudio = true;
+             } else if (target.type === 'example' && newExamples[target.index]) {
+                newExamples[target.index].audioUrl = url;
+                newExamples[target.index].hasAudio = true;
+             }
+             
+             // Update viewingCard progressively so UI updates immediately
+             setViewingCard(prev => prev ? {
+                ...prev,
+                forms: [...newForms],
+                examples: [...newExamples]
+             } : prev);
           }
-          setBulkProgress({ current: i + 1, total: textsToGenerate.length });
+          setBulkProgress({ current: i + 1, total: targets.length });
        }
        
-       if (generatedCount > 0 && onUpdate) {
-          // Send a single update to the database with all arrays correctly populated
+       if (generatedCount > 0) {
           const updates: any = {};
-          if (viewingCard.forms && viewingCard.forms.length > 0) updates.forms = newForms;
-          if (viewingCard.examples && viewingCard.examples.length > 0) updates.examples = newExamples;
+          if (newForms.length > 0) updates.forms = newForms;
+          if (newExamples.length > 0) updates.examples = newExamples;
           
-          console.log("BULK UPLOAD COMPLETED. Sending updates:", updates);
-          
-          // Bỏ qua onUpdate thông thường để force ghi trực tiếp lên Firebase cho chắc chắn
-          try {
-             if (auth.currentUser) {
-                const cardRef = doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', viewingCard.id);
-                
-                // Loại bỏ undefined
-                const cleanArray = (arr) => {
-                   if (!arr) return arr;
-                   return arr.map(item => {
-                      const cleanItem = {};
-                      for (const key in item) {
-                         if (item[key] !== undefined) cleanItem[key] = item[key];
-                      }
-                      return cleanItem;
-                   });
-                };
-                
-                const finalUpdates = {};
-                if (updates.forms) finalUpdates.forms = cleanArray(updates.forms);
-                if (updates.examples) finalUpdates.examples = cleanArray(updates.examples);
-                
-                await setDoc(cardRef, finalUpdates, { merge: true });
-                console.log("Forced Firebase update success!");
-             }
-          } catch (forceErr) {
-             console.error("Force update err:", forceErr);
+          if (onUpdate) {
              await onUpdate(viewingCard.id, updates);
           }
           
-          // Also update the local viewingCard state so UI reflects changes instantly
-          setViewingCard(prev => prev ? { ...prev, ...updates } : prev);
-          
-          // CRITICAL: If the user has the Edit Form open for this same card, inject the audio URLs 
-          // into the editForm state so they don't get erased if the user clicks "Lưu" (Save).
-          if (editingId === viewingCard.id) {
-             setEditForm(prev => {
-                const updatedForms = prev.forms ? [...prev.forms] : [];
-                if (updates.forms) {
-                   updates.forms.forEach((newF, idx) => {
-                      if (updatedForms[idx]) {
-                         updatedForms[idx].audioUrl = newF.audioUrl;
-                         updatedForms[idx].hasAudio = newF.hasAudio;
-                      }
-                   });
-                }
-                const updatedExamples = prev.examples ? [...prev.examples] : [];
-                if (updates.examples) {
-                   updates.examples.forEach((newEx, idx) => {
-                      if (updatedExamples[idx]) {
-                         updatedExamples[idx].audioUrl = newEx.audioUrl;
-                         updatedExamples[idx].hasAudio = newEx.hasAudio;
-                      }
-                   });
-                }
-                return { ...prev, forms: updatedForms, examples: updatedExamples };
-             });
+          if (auth.currentUser) {
+             try {
+                const cardRef = doc(db, 'global_kanjiDeck', viewingCard.id);
+                const cleaned = removeUndefined(JSON.parse(JSON.stringify(updates)));
+                await setDoc(cardRef, cleaned, { merge: true });
+                console.log("Forced global_kanjiDeck update success!");
+             } catch (forceErr) {
+                console.error("Force update err:", forceErr);
+             }
           }
+          
+          if (editingId === viewingCard.id) {
+             setEditForm(prev => ({ ...prev, ...updates }));
+          }
+          
+          alert(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
        }
-       
-       alert(`Đã tự động tạo và tải lên thành công ${generatedCount}/${textsToGenerate.length} MP3.`);
     } catch (e) {
        console.error("Bulk generate error:", e);
        alert("Có lỗi xảy ra khi tạo MP3 hàng loạt.");
     } finally {
        setIsBulkGenerating(false);
-       setTimeout(() => setBulkProgress(null), 1000);
+       setTimeout(() => setBulkProgress(null), 1200);
     }
   };
 
   const handleEditBulkGenerateAudio = async () => {
-    if (!editForm) return;
+    if (!editForm || !editingId) return;
     setIsBulkGenerating(true);
     setBulkProgress(null);
     let generatedCount = 0;
     try {
-       const textsToGenerate = [];
-       if (editForm.forms) {
-          editForm.forms.forEach(f => {
-             if (f.value && !f.audioUrl) textsToGenerate.push(f.value);
+       const targets: { type: 'form' | 'example' | 'legacyExample'; index?: number; text: string }[] = [];
+       if (editForm.forms && Array.isArray(editForm.forms)) {
+          editForm.forms.forEach((f, idx) => {
+             const val = f.value?.trim();
+             if (val && !f.audioUrl) {
+                targets.push({ type: 'form', index: idx, text: val });
+             }
           });
        }
-       if (editForm.examples) {
-          editForm.examples.forEach(ex => {
-             if (ex.sentence && !ex.audioUrl) textsToGenerate.push(ex.sentence);
+       if (editForm.examples && Array.isArray(editForm.examples)) {
+          editForm.examples.forEach((ex, idx) => {
+             const sentence = ex.sentence?.trim();
+             if (sentence && !ex.audioUrl) {
+                targets.push({ type: 'example', index: idx, text: sentence });
+             }
           });
+       }
+       if (editForm.example && !editForm.audioUrl && (!editForm.examples || editForm.examples.length === 0)) {
+          targets.push({ type: 'legacyExample', text: editForm.example.trim() });
        }
        
-       if (textsToGenerate.length === 0) {
+       if (targets.length === 0) {
+          alert("Tất cả các thể và câu ví dụ đều đã có MP3!");
           setIsBulkGenerating(false);
           return;
        }
        
-       setBulkProgress({ current: 0, total: textsToGenerate.length });
+       setBulkProgress({ current: 0, total: targets.length });
        
-       let newForms = editForm.forms ? [...editForm.forms] : [];
-       let newExamples = editForm.examples ? [...editForm.examples] : [];
+       let newForms = editForm.forms ? JSON.parse(JSON.stringify(editForm.forms)) : [];
+       let newExamples = editForm.examples ? JSON.parse(JSON.stringify(editForm.examples)) : [];
+       let newLegacyAudioUrl = editForm.audioUrl;
        
-       for (let i = 0; i < textsToGenerate.length; i++) {
-          const text = textsToGenerate[i];
-          const url = await generateAndUploadTTS(text);
+       const generatedUrls = new Map<string, string>();
+       
+       for (let i = 0; i < targets.length; i++) {
+          const target = targets[i];
+          let url = generatedUrls.get(target.text);
+          if (!url) {
+             url = await generateAndUploadTTS(target.text) || undefined;
+             if (url) generatedUrls.set(target.text, url);
+          }
+          
           if (url) {
              generatedCount++;
-             newForms = newForms.map(f => f.value === text ? { ...f, audioUrl: url, hasAudio: true } : f);
-             newExamples = newExamples.map(ex => ex.sentence === text ? { ...ex, audioUrl: url, hasAudio: true } : ex);
+             if (target.type === 'form' && target.index !== undefined && newForms[target.index]) {
+                newForms[target.index].audioUrl = url;
+                newForms[target.index].hasAudio = true;
+             } else if (target.type === 'example' && target.index !== undefined && newExamples[target.index]) {
+                newExamples[target.index].audioUrl = url;
+                newExamples[target.index].hasAudio = true;
+             } else if (target.type === 'legacyExample') {
+                newLegacyAudioUrl = url;
+             }
+             
+             // Update editForm progressively so UI shows the green sound badge immediately!
+             setEditForm(prev => ({
+                ...prev,
+                forms: [...newForms],
+                examples: [...newExamples],
+                ...(newLegacyAudioUrl ? { audioUrl: newLegacyAudioUrl, hasAudio: true } : {})
+             }));
           }
-          setBulkProgress({ current: i + 1, total: textsToGenerate.length });
+          setBulkProgress({ current: i + 1, total: targets.length });
        }
        
        if (generatedCount > 0) {
-          setEditForm(prev => ({ ...prev, forms: newForms, examples: newExamples }));
+          const updatesToSave: any = {
+             forms: newForms,
+             examples: newExamples,
+             ...(newLegacyAudioUrl ? { audioUrl: newLegacyAudioUrl, hasAudio: true } : {})
+          };
+          
+          // CRITICAL: Auto-save directly to Database immediately!
+          if (onUpdate) {
+             await onUpdate(editingId, updatesToSave);
+          }
+          
+          if (auth.currentUser) {
+             try {
+                const cardRef = doc(db, 'global_kanjiDeck', editingId);
+                const cleaned = removeUndefined(JSON.parse(JSON.stringify(updatesToSave)));
+                await setDoc(cardRef, cleaned, { merge: true });
+                console.log("Bulk generate auto-saved directly to global_kanjiDeck:", editingId);
+             } catch (dbErr) {
+                console.error("Direct Firestore update error:", dbErr);
+             }
+          }
+          
+          if (viewingCard && viewingCard.id === editingId) {
+             setViewingCard(prev => prev ? { ...prev, ...updatesToSave } : prev);
+          }
+          
+          alert(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
        }
-       
-       alert(`Đã tạo thành công ${generatedCount}/${textsToGenerate.length} MP3. Vui lòng nhấn "Lưu" để lưu lại vào Database.`);
     } catch (e) {
        console.error("Bulk generate error:", e);
        alert("Có lỗi xảy ra khi tạo MP3 hàng loạt.");
     } finally {
        setIsBulkGenerating(false);
-       setTimeout(() => setBulkProgress(null), 1000);
+       setTimeout(() => setBulkProgress(null), 1200);
     }
   };
 
@@ -678,13 +718,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             >
               <Download className="w-3 h-3" /> Xuất Excel
             </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
+            {isAdmin && <button
+          onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
               className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm"
             >
               <Upload className="w-3 h-3" /> {isImporting ? 'Đang Import...' : 'Nhập Excel'}
-            </button>
+            </button>}
             <input
               type="file"
               accept=".xlsx, .xls"
@@ -1139,51 +1179,53 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             </div>
                             
                             {/* BULK AUDIO BUTTON IN EDIT MODE */}
-                            {((editForm.forms && editForm.forms.length > 0) || (editForm.examples && editForm.examples.length > 0)) && (
+                            {((editForm.forms && editForm.forms.length > 0) || (editForm.examples && editForm.examples.length > 0) || editForm.example) && (
                                <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-theme-subtle items-end">
                                  {(() => {
-                                    const hasMissingMp3s = (editForm.forms?.some(f => f.value && !f.audioUrl)) || (editForm.examples?.some(ex => ex.sentence && !ex.audioUrl));
+                                    const hasMissingMp3s = (editForm.forms?.some(f => f.value && !f.audioUrl)) || 
+                                                           (editForm.examples?.some(ex => ex.sentence && !ex.audioUrl)) ||
+                                                           (editForm.example && !editForm.audioUrl && (!editForm.examples || editForm.examples.length === 0));
                                     
                                     if (!hasMissingMp3s && !isBulkGenerating) {
                                        return (
                                          <button
-                                            disabled
-                                           className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium text-green-500 bg-green-500/10 border border-green-500/20 rounded-md transition-colors min-w-[140px] justify-center cursor-default"
-                                           title="Tất cả các thể và câu ví dụ đều đã có MP3 trên Cloud"
+                                           type="button"
+                                           disabled
+                                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-md transition-colors min-w-[140px] justify-center cursor-default shadow-xs"
+                                           title="Tất cả các thể và câu ví dụ đều đã có MP3"
                                          >
-                                           <span className="flex items-center gap-1">
-                                             <Check className="w-3 h-3" />
-                                             Đã đủ MP3
-                                           </span>
+                                           <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                           <span>Đã đủ MP3</span>
                                          </button>
                                        );
                                     }
                                     return (
                                        <button
+                                          type="button"
                                           onClick={handleEditBulkGenerateAudio}
-                                         disabled={isBulkGenerating}
-                                         className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider text-theme-inverted bg-theme-accent hover:bg-theme-accent-light rounded-md transition-colors disabled:opacity-50 min-w-[160px] justify-center shadow-sm"
-                                         title="Tự động tạo và tải lên Cloud MP3 cho tất cả các Thể và Ví dụ chưa có âm thanh"
+                                          disabled={isBulkGenerating}
+                                          className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 rounded-md transition-all disabled:opacity-50 min-w-[170px] justify-center shadow-md hover:shadow-lg cursor-pointer"
+                                          title="Tự động tạo MP3 bằng AI và lưu vào Database cho tất cả các Thể và Ví dụ chưa có âm thanh"
                                        >
                                          {isBulkGenerating ? (
                                            <span className="flex items-center gap-2">
-                                             <div className="w-4 h-4 border-2 border-theme-inverted border-t-transparent rounded-full animate-spin"></div>
-                                             {bulkProgress ? `${bulkProgress.current}/${bulkProgress.total}` : 'Đang xử lý...'}
+                                             <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                             <span>{bulkProgress ? `Tạo MP3 (${bulkProgress.current}/${bulkProgress.total})...` : 'Đang xử lý...'}</span>
                                            </span>
                                          ) : (
                                            <span className="flex items-center gap-1.5">
                                              <Brain className="w-4 h-4" />
-                                             Tải MP3 Hàng Loạt (AI)
+                                             <span>Tải MP3 Hàng Loạt (AI)</span>
                                            </span>
                                          )}
                                        </button>
                                     );
                                  })()}
                                  {isBulkGenerating && bulkProgress && (
-                                   <div className="w-full max-w-[140px] bg-theme-accent/10 rounded-full h-1 overflow-hidden relative">
+                                   <div className="w-full max-w-[170px] bg-theme-subtle/40 rounded-full h-1.5 overflow-hidden relative mt-0.5">
                                       <div 
-                                        className="bg-theme-accent h-1 transition-all duration-300 absolute left-0 top-0 bottom-0" 
-                                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                                        className="bg-indigo-600 dark:bg-indigo-500 h-1.5 transition-all duration-300 rounded-full" 
+                                        style={{ width: `${Math.round((bulkProgress.current / bulkProgress.total) * 100)}%` }}
                                       ></div>
                                    </div>
                                  )}
@@ -1314,20 +1356,21 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button 
+                        {isAdmin && <button 
                           onClick={() => startEdit(card)}
                           className="p-2 hover:bg-theme-accent/10 text-theme-primary/40 hover:text-theme-accent transition-all rounded-xl inline-flex items-center justify-center mr-1"
                           title="Sửa thẻ"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => { if (window.confirm("Bạn có chắc chắn muốn xóa thẻ này?")) onRemove(card.id); }}
+                        </button>}
+                        {isAdmin && <button
+                        onClick={() => {
+                          if (window.confirm("Bạn có chắc chắn muốn xóa thẻ này?")) onRemove(card.id); }}
                           className="p-2 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all rounded-xl inline-flex items-center justify-center"
                           title="Xóa thẻ"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   )
@@ -1410,44 +1453,44 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           if (!hasMissingMp3s && !isBulkGenerating) {
                              return (
                                <button 
+                                 type="button"
                                  disabled
-                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-500 bg-green-500/10 border border-green-500/20 rounded-md transition-colors min-w-[140px] justify-center cursor-default"
-                                 title="Tất cả các thể và câu ví dụ đều đã có MP3 trên Cloud"
+                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-md transition-colors min-w-[140px] justify-center cursor-default shadow-xs"
+                                 title="Tất cả các thể và câu ví dụ đều đã có MP3"
                                >
-                                 <span className="flex items-center gap-1">
-                                   <Check className="w-3.5 h-3.5" />
-                                   Đã đủ MP3
-                                 </span>
+                                 <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                 <span>Đã đủ MP3</span>
                                </button>
                              );
                           }
 
                           return (
                              <button 
+                               type="button"
                                onClick={handleBulkGenerateAudio}
                                disabled={isBulkGenerating}
-                               className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-theme-inverted bg-theme-accent hover:bg-theme-accent-light rounded-md transition-colors disabled:opacity-50 min-w-[160px] justify-center shadow-sm"
-                               title="Tự động tạo và tải lên Cloud MP3 cho tất cả các Thể và Ví dụ chưa có âm thanh"
+                               className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 rounded-md transition-all disabled:opacity-50 min-w-[170px] justify-center shadow-md hover:shadow-lg cursor-pointer"
+                               title="Tự động tạo MP3 bằng AI và lưu vào Database cho tất cả các Thể và Ví dụ chưa có âm thanh"
                              >
                                {isBulkGenerating ? (
                                  <span className="flex items-center gap-2">
-                                   <div className="w-4 h-4 border-2 border-theme-inverted border-t-transparent rounded-full animate-spin"></div>
-                                   {bulkProgress ? `${bulkProgress.current}/${bulkProgress.total}` : 'Đang xử lý...'}
+                                   <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                   <span>{bulkProgress ? `Tạo MP3 (${bulkProgress.current}/${bulkProgress.total})...` : 'Đang xử lý...'}</span>
                                  </span>
                                ) : (
                                  <span className="flex items-center gap-1.5">
                                    <Brain className="w-4 h-4" />
-                                   Tải MP3 Hàng Loạt (AI)
+                                   <span>Tải MP3 Hàng Loạt (AI)</span>
                                  </span>
                                )}
                              </button>
                           );
                        })()}
                        {isBulkGenerating && bulkProgress && (
-                         <div className="w-full bg-theme-accent/10 rounded-full h-1 overflow-hidden relative">
+                         <div className="w-full bg-theme-subtle/40 rounded-full h-1.5 overflow-hidden relative mt-0.5">
                             <div 
-                              className="bg-theme-accent h-1 transition-all duration-300 absolute left-0 top-0 bottom-0" 
-                              style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                              className="bg-indigo-600 dark:bg-indigo-500 h-1.5 transition-all duration-300 rounded-full" 
+                              style={{ width: `${Math.round((bulkProgress.current / bulkProgress.total) * 100)}%` }}
                             ></div>
                          </div>
                        )}

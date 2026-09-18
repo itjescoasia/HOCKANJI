@@ -5,7 +5,7 @@ import { db, auth } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 import { getEndOfTodayTimestamp } from '../lib/dateUtils';
 import { deleteCloudAudio } from '../utils/playTTS';
-const removeUndefined = (obj: any): any => {
+export const removeUndefined = (obj: any): any => {
   if (Array.isArray(obj)) {
     return obj.map(removeUndefined);
   } else if (obj !== null && typeof obj === "object") {
@@ -36,7 +36,7 @@ export function useVocabDeck() {
 
       if (user) {
         // User logged in, fetch from Firestore
-        const q = query(collection(db, 'users', user.uid, 'kanjiDeck'));
+        const q = query(collection(db, 'global_kanjiDeck'));
         
         // Listen to changes
         unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
@@ -133,7 +133,7 @@ export function useVocabDeck() {
 
     if (auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', newCard.id), removeUndefined(newCard));
+        await setDoc(doc(db, 'global_kanjiDeck', newCard.id), removeUndefined(newCard));
       } catch (err: any) {
         console.error("Error adding card:", err);
         if (err.message && err.message.includes("exceeds the limit")) {
@@ -164,7 +164,7 @@ export function useVocabDeck() {
     
     if (auth.currentUser) {
       try {
-        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id));
+        await deleteDoc(doc(db, 'global_kanjiDeck', id));
       } catch (err) {
         console.error("Error removing card:", err);
       }
@@ -187,7 +187,7 @@ export function useVocabDeck() {
 
     if (auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', updatedCard.id), removeUndefined(updatedCard));
+        await setDoc(doc(db, 'global_kanjiDeck', updatedCard.id), removeUndefined(updatedCard));
       } catch (err) {
         console.error("Error updating card:", err);
       }
@@ -272,7 +272,7 @@ export function useVocabDeck() {
                 const batch = writeBatch(db);
                 const chunk = allOps.slice(i, i + 400);
                 for (const card of chunk) {
-                    const cardRef = doc(db, 'users', auth.currentUser!.uid, 'kanjiDeck', card.id);
+                    const cardRef = doc(db, 'global_kanjiDeck', card.id);
                     batch.set(cardRef, removeUndefined(card), { merge: true });
                 }
                 await batch.commit();
@@ -327,7 +327,7 @@ export function useVocabDeck() {
         console.log("Raw updates:", updates);
         console.log("Cleaned updates ready for Firestore:", cleanedUpdates);
 
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'kanjiDeck', id), cleanedUpdates, { merge: true });
+        await setDoc(doc(db, 'global_kanjiDeck', id), cleanedUpdates, { merge: true });
       } catch (err: any) {
         console.error("Error updating card:", err);
         if (err.message && err.message.includes("exceeds the limit")) {

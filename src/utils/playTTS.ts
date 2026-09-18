@@ -70,33 +70,12 @@ export const playTTS = async (text: string) => {
         }
       });
         
-        // 3. Upload to Firebase Storage so it is saved in the cloud
-        try {
-          const uid = auth.currentUser?.uid;
-          if (uid) {
-             const resBlob = await fetch(base64Url);
-             const blob = await resBlob.blob();
-             const filename = `users/${uid}/audio/${Date.now()}_${Math.random().toString(36).substring(7)}_TTS.mp3`;
-             const storageRef = ref(storage, filename);
-             
-             await Promise.race([
-                uploadBytes(storageRef, blob),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 15000))
-             ]);
-             
-             const downloadUrl = await getDownloadURL(storageRef);
-             
-             // Dispatch event to update the card in the database
-             window.dispatchEvent(new CustomEvent('tts-generated', { 
-               detail: { text, audioUrl: downloadUrl } 
-             }));
-             return;
-          }
-        } catch (uploadError) {
-          console.warn("Failed to upload TTS to cloud storage:", uploadError);
+        // 3. Dispatch event with direct server audioUrl so card can update in background
+        if (data.audioUrl) {
+          window.dispatchEvent(new CustomEvent('tts-generated', { 
+            detail: { text, audioUrl: data.audioUrl } 
+          }));
         }
-        
-        // Bỏ lưu base64 vào DB để tránh lỗi vượt quá 1MB
         
         return; // Success
       }
@@ -125,58 +104,33 @@ const fallbackTTS = (text: string) => {
 }
 
 export const generateAndUploadTTS = async (text: string): Promise<string | null> => {
-  if (!text) return null;
+  if (!text || !text.trim()) return null;
+  const cleanText = text.trim();
   try {
     const res = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text: cleanText })
     });
     
     if (res.ok) {
       const data = await res.json();
       if (data.audioContent) {
-        await ttsCache.setItem(text, data.audioContent);
-        console.log("Bulk generated & saved to TTS Cache:", text);
-        
-        const base64Url = `data:audio/mp3;base64,${data.audioContent}`;
-        
-        try {
-          const uid = auth.currentUser?.uid;
-          if (uid) {
-             const resBlob = await fetch(base64Url);
-             const blob = await resBlob.blob();
-             const filename = `users/${uid}/audio/${Date.now()}_${Math.random().toString(36).substring(7)}_TTS.mp3`;
-             const storageRef = ref(storage, filename);
-             
-             await Promise.race([
-                uploadBytes(storageRef, blob),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 15000))
-             ]);
-             
-             const downloadUrl = await getDownloadURL(storageRef);
-             
-             return downloadUrl;
-          }
-        } catch (uploadError) {
-          console.warn("Bulk upload failed:", uploadError);
-          const uid = auth.currentUser?.uid;
-          if (uid) {
-             try {
-                const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
-                const audioDocRef = doc(db, 'users', uid, 'audio', audioId);
-                await setDoc(audioDocRef, { data: base64Url, createdAt: Date.now() });
-                console.log("Saved audio to firestore fallback collection.");
-                return 'firestore:' + audioId;
-             } catch (fsErr) {
-                console.warn("Firestore fallback failed:", fsErr);
-             }
-          }
-        }
-        
-        // If all fails, just return null so we don't blow up the document limit
-        return null;
+        // Cache to local indexedDB for zero-latency instant offline playback
+        await ttsCache.setItem(cleanText, data.audioContent);
+        console.log("Bulk generated & saved to TTS Cache:", cleanText);
       }
+      
+      // Server returned permanent direct audio URL
+      if (data.audioUrl) {
+        return data.audioUrl;
+      }
+      
+      if (data.audioContent) {
+        return `data:audio/mp3;base64,${data.audioContent}`;
+      }
+    } else {
+      console.error("TTS API error status:", res.status);
     }
   } catch (error) {
     console.error("Error bulk generating TTS:", error);
@@ -196,7 +150,7 @@ export const playAudioUrl = async (url: string) => {
   if (url.startsWith('firestore:') && auth.currentUser) {
      try {
        const audioId = url.split(':')[1];
-       const docSnap = await getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+       const docSnap = await getDoc(doc(db, 'global_audio', audioId));
        if (docSnap.exists()) {
           finalUrl = docSnap.data().data;
        } else {
@@ -224,7 +178,7 @@ export const deleteCloudAudio = async (url?: string | null) => {
   try {
     if (url.startsWith('firestore:') && auth.currentUser) {
        const audioId = url.split(':')[1];
-       await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+       await deleteDoc(doc(db, 'global_audio', audioId));
        console.log("Deleted old audio from firestore:", url);
        return;
     }

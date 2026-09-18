@@ -69,6 +69,8 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
+      
+      
     });
     return () => unsubscribe();
   }, []);
@@ -336,13 +338,14 @@ export default function App() {
     });
   };
 
+  const isAdmin = user?.email === 'nguyenthetrung200126@gmail.com';
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
     { id: 'intensive_vocab', label: 'Chuyên đề', icon: Lightbulb },
     { id: 'conversation', label: 'Hội thoại', icon: MessageSquare },
-    { id: 'add', label: 'Thêm thẻ', icon: PlusCircle },
-  ] as const;
+    ...(isAdmin ? [{ id: 'add', label: 'Thêm thẻ', icon: PlusCircle }] : []),
+  ];
 
   return (
     <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex flex-col">
@@ -409,7 +412,7 @@ export default function App() {
             onStartDifficultReview={handleStartDifficultReview}
             onStartShortStudy={handleStartShortStudy}
             onStartSentenceReview={handleStartSentenceReview}
-            onNavigateAdd={() => handleNavigate('add')} 
+            onNavigateAdd={isAdmin ? () => handleNavigate('add') : undefined} 
             onRecordWordOfTheDay={recordWordOfTheDay}
             onNavigateToWord={(word, isIntensive, id) => {
               if (isIntensive) {

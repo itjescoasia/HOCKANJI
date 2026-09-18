@@ -19,7 +19,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const [meaning, setMeaning] = useState('');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [examples, setExamples] = useState<{sentence: string, reading: string, romaji: string, translation: string}[]>([{ sentence: '', reading: '', romaji: '', translation: '' }]);
-  const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string, meaning: string}[]>([]);
+  const [forms, setForms] = useState<{name: string, value: string, reading: string, romaji: string, meaning: string, audioUrl?: string | null, hasAudio?: boolean}[]>([]);
   const [wordType, setWordType] = useState('');
   
   const [duplicateWarning, setDuplicateWarning] = useState(false);

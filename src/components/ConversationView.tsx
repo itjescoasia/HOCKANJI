@@ -44,6 +44,15 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+const playAudio = (e?: React.MouseEvent, text?: string | null, audioUrl?: string | null) => {
+  if (e) e.stopPropagation();
+  if (audioUrl) {
+    playAudioUrl(audioUrl);
+  } else if (text) {
+    playTTS(text);
+  }
+};
+
 export default function ConversationView({
   conversations,
   onAddConversation,
@@ -548,6 +557,7 @@ function ConversationDetail({
   onRemoveConversation: (id: string) => void;
   onAddIntensiveWord?: (word: any) => void;
 }) {
+  const isAdmin = auth.currentUser?.email === 'nguyenthetrung200126@gmail.com';
   const [newJp, setNewJp] = useState("");
   const [newHira, setNewHira] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
@@ -624,7 +634,7 @@ function ConversationDetail({
     if (conversation.audioUrl) {
       if (conversation.audioUrl.startsWith('firestore:') && auth.currentUser) {
         const audioId = conversation.audioUrl.split(':')[1];
-        getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId)).then((docSnap) => {
+        getDoc(doc(db, 'global_audio', audioId)).then((docSnap) => {
            if (docSnap.exists() && active) {
               setAudioUrl(docSnap.data().data);
            }
@@ -654,7 +664,7 @@ function ConversationDetail({
           try {
             const base64 = await fileToBase64(file);
             // Save to Firestore instead of Storage
-            const audioDocRef = doc(db, 'users', auth.currentUser.uid, 'audio', conversation.id);
+            const audioDocRef = doc(db, 'global_audio', conversation.id);
             await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
             onUpdate(conversation.id, { hasAudio: true, audioUrl: 'firestore:' + conversation.id });
             setAudioUrl(base64);
@@ -685,7 +695,7 @@ function ConversationDetail({
       try {
         if (conversation.audioUrl.startsWith('firestore:')) {
            const audioId = conversation.audioUrl.split(':')[1];
-           await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+           await deleteDoc(doc(db, 'global_audio', audioId));
         } else {
            const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversation.id}/audio.mp3`);
            await deleteObject(storageRef);
@@ -2069,7 +2079,7 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
     if (dialogue.audioUrl) {
       if (dialogue.audioUrl.startsWith('firestore:') && auth.currentUser) {
         const audioId = dialogue.audioUrl.split(':')[1];
-        getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId)).then((docSnap) => {
+        getDoc(doc(db, 'global_audio', audioId)).then((docSnap) => {
            if (docSnap.exists() && active) {
               setAudioUrl(docSnap.data().data);
            }
@@ -2100,7 +2110,7 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
           try {
             const base64 = await fileToBase64(file);
             const audioId = `${conversationId}_${dialogue.id}`;
-            const audioDocRef = doc(db, 'users', auth.currentUser.uid, 'audio', audioId);
+            const audioDocRef = doc(db, 'global_audio', audioId);
             await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
             onUpdateDialogue(dialogue.id, { hasAudio: true, audioUrl: 'firestore:' + audioId });
             setAudioUrl(base64);
@@ -2131,7 +2141,7 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
       try {
         if (dialogue.audioUrl.startsWith('firestore:')) {
            const audioId = dialogue.audioUrl.split(':')[1];
-           await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+           await deleteDoc(doc(db, 'global_audio', audioId));
         } else {
            const storageRef = ref(storage, `users/${auth.currentUser.uid}/conversations/${conversationId}/audio_${dialogue.id}.mp3`);
            await deleteObject(storageRef);

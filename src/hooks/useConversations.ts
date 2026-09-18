@@ -52,7 +52,7 @@ export function useConversations() {
 
       if (user) {
         const basePath = `users/${user.uid}/conversations`;
-        const q = query(collection(db, 'users', user.uid, 'conversations'));
+        const q = query(collection(db, 'global_conversations'));
         unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
           const loadedConversations: Conversation[] = [];
           snapshot.forEach((docSnap) => {
@@ -91,7 +91,7 @@ export function useConversations() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${conversation.id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', conversation.id), removeUndefined(conversation));
+        await setDoc(doc(db, 'global_conversations', conversation.id), removeUndefined(conversation));
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, path);
       }
@@ -114,7 +114,7 @@ export function useConversations() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${id}`;
       try {
-        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', id));
+        await deleteDoc(doc(db, 'global_conversations', id));
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, path);
       }
@@ -144,7 +144,7 @@ export function useConversations() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/conversations/${id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'conversations', id), removeUndefined(updates), { merge: true });
+        await setDoc(doc(db, 'global_conversations', id), removeUndefined(updates), { merge: true });
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, path);
       }

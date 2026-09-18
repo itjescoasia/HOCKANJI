@@ -1,46 +1,54 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/App.tsx', 'utf8');
 
-const searchStr = `  const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [view, setView] = useState<any>(() => {
-    return localStorage.getItem('currentView') || 'dashboard';
-  });
-  
-  useEffect(() => {
-    localStorage.setItem('currentView', view);
-  }, [view]);
-  const [isFreeStudyMode, setIsFreeStudyMode] = useState(false);
-  const [isDifficultReviewMode, setIsDifficultReviewMode] = useState(false);
-  const [shortStudyQueue, setShortStudyQueue] = useState<any[]>([]);
-  const [sentenceReviewMode, setSentenceReviewMode] = useState<'JA_TO_VI' | 'VI_TO_JA'>('JA_TO_VI');
-  const [sentenceReviewTargetDeck, setSentenceReviewTargetDeck] = useState<any[] | null>(null);
-  const [sentenceReviewForceAll, setSentenceReviewForceAll] = useState(false);
-  const [isSentenceReviewOpen, setIsSentenceReviewOpen] = useState(false);
+const searchStr = `  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);`;
 
-  const [listSearchQuery, setListSearchQuery] = useState('');
-  const [intensiveSearchQuery, setIntensiveSearchQuery] = useState('');
-  const [intensiveSelectedWordId, setIntensiveSelectedWordId] = useState<string | null>(null);`;
-
-const replaceStr = `  const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
-  
-  const [isAddModalOpen, setIsAddModalOpen] = usePersistentState('app_isAddModalOpen', false);
-  const [view, setView] = usePersistentState<any>('app_currentView_v2', 'dashboard');
-  const [isFreeStudyMode, setIsFreeStudyMode] = usePersistentState('app_isFreeStudyMode', false);
-  const [isDifficultReviewMode, setIsDifficultReviewMode] = usePersistentState('app_isDifficultReviewMode', false);
-  const [shortStudyQueue, setShortStudyQueue] = usePersistentState<any[]>('app_shortStudyQueue', []);
-  const [sentenceReviewMode, setSentenceReviewMode] = usePersistentState<'JA_TO_VI' | 'VI_TO_JA'>('app_sentenceReviewMode', 'JA_TO_VI');
-  const [sentenceReviewTargetDeck, setSentenceReviewTargetDeck] = usePersistentState<any[] | null>('app_sentenceReviewTargetDeck', null);
-  const [sentenceReviewForceAll, setSentenceReviewForceAll] = usePersistentState('app_sentenceReviewForceAll', false);
-  const [isSentenceReviewOpen, setIsSentenceReviewOpen] = usePersistentState('app_isSentenceReviewOpen', false);
-
-  const [listSearchQuery, setListSearchQuery] = usePersistentState('app_listSearchQuery', '');
-  const [intensiveSearchQuery, setIntensiveSearchQuery] = usePersistentState('app_intensiveSearchQuery', '');
-  const [intensiveSelectedWordId, setIntensiveSelectedWordId] = usePersistentState<string | null>('app_intensiveSelectedWordId', null);`;
+const replaceStr = `  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+      
+      if (currentUser?.email === 'nguyenthetrung200126@gmail.com') {
+        const migrate = async () => {
+          try {
+             const { doc, getDoc, getDocs, collection, setDoc } = await import('firebase/firestore');
+             const { db } = await import('./lib/firebase');
+             const migratedDoc = await getDoc(doc(db, 'system', 'migrated'));
+             if (!migratedDoc.exists()) {
+               console.log("Migrating Admin data to global collections...");
+               const kanjiSnap = await getDocs(collection(db, 'users', currentUser.uid, 'kanjiDeck'));
+               for (const d of kanjiSnap.docs) { await setDoc(doc(db, 'global_kanjiDeck', d.id), d.data()); }
+               
+               const intSnap = await getDocs(collection(db, 'users', currentUser.uid, 'intensiveVocab'));
+               for (const d of intSnap.docs) { await setDoc(doc(db, 'global_intensiveVocab', d.id), d.data()); }
+               
+               const convSnap = await getDocs(collection(db, 'users', currentUser.uid, 'conversations'));
+               for (const d of convSnap.docs) { await setDoc(doc(db, 'global_conversations', d.id), d.data()); }
+               
+               const audioSnap = await getDocs(collection(db, 'users', currentUser.uid, 'audio'));
+               for (const d of audioSnap.docs) { await setDoc(doc(db, 'global_audio', d.id), d.data()); }
+               
+               await setDoc(doc(db, 'system', 'migrated'), { done: true });
+               console.log("Migration complete!");
+             }
+          } catch(e) {
+             console.error("Migration failed:", e);
+          }
+        };
+        migrate();
+      }
+    });
+    return () => unsubscribe();
+  }, []);`;
 
 if (code.includes(searchStr)) {
   code = code.replace(searchStr, replaceStr);
-  code = "import { usePersistentState } from './hooks/usePersistentState';\n" + code;
   fs.writeFileSync('src/App.tsx', code);
   console.log("Patched App.tsx successfully.");
 } else {

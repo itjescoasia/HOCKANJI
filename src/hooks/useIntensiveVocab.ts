@@ -52,7 +52,7 @@ export function useIntensiveVocab() {
 
       if (user) {
         const basePath = `users/${user.uid}/intensiveVocab`;
-        const q = query(collection(db, 'users', user.uid, 'intensiveVocab'));
+        const q = query(collection(db, 'global_intensiveVocab'));
         unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
           const loadedDeck: IntensiveWord[] = [];
           snapshot.forEach((docSnap) => {
@@ -98,7 +98,7 @@ export function useIntensiveVocab() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${word.id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', word.id), removeUndefined(word));
+        await setDoc(doc(db, 'global_intensiveVocab', word.id), removeUndefined(word));
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, path);
       }
@@ -124,7 +124,7 @@ export function useIntensiveVocab() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
-        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id));
+        await deleteDoc(doc(db, 'global_intensiveVocab', id));
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, path);
       }
@@ -153,7 +153,7 @@ export function useIntensiveVocab() {
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid, 'intensiveVocab', id), removeUndefined(updates), { merge: true });
+        await setDoc(doc(db, 'global_intensiveVocab', id), removeUndefined(updates), { merge: true });
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, path);
       }
@@ -167,7 +167,7 @@ export function useIntensiveVocab() {
       try {
         const batch = writeBatch(db);
         reorderedWords.forEach((word) => {
-          const ref = doc(db, 'users', auth.currentUser!.uid, 'intensiveVocab', word.id);
+          const ref = doc(db, 'global_intensiveVocab', word.id);
           batch.set(ref, { order: word.order }, { merge: true });
         });
         await batch.commit();

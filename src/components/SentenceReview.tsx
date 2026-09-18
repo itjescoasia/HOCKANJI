@@ -59,7 +59,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             if (currentExample.audioUrl) {
                 if (currentExample.audioUrl.startsWith('firestore:') && auth.currentUser) {
                     const audioId = currentExample.audioUrl.split(':')[1];
-                    const docSnap = await getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+                    const docSnap = await getDoc(doc(db, 'global_audio', audioId));
                     if (docSnap.exists()) {
                         urlToPlay = docSnap.data().data;
                     }

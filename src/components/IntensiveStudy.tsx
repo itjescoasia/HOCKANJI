@@ -297,6 +297,7 @@ export default function IntensiveStudy({
   initialSearchQuery = "",
   initialSelectedWordId = null,
 }: IntensiveStudyProps) {
+  const isAdmin = auth.currentUser?.email === 'nguyenthetrung200126@gmail.com';
   const [viewState, setViewState] = usePersistentState<"list" | "add" | "study">("app_intensive_viewState", "list");
   const [selectedWordId, setSelectedWordId] = usePersistentState<string | null>("app_intensive_selectedWordId", null);
   const [searchQuery, setSearchQuery] = usePersistentState("app_intensive_searchQuery", "");
@@ -1480,7 +1481,7 @@ function StudyView({
               >
                 <Plus className="w-4 h-4" />
                 <span>Thêm mới</span>
-              </button>
+            </button>
             )}
           </div>
         </div>
@@ -2093,7 +2094,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
     if (example.audioUrl) {
       if (example.audioUrl.startsWith('firestore:') && auth.currentUser) {
         const audioId = example.audioUrl.split(':')[1];
-        getDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId)).then((docSnap) => {
+        getDoc(doc(db, 'global_audio', audioId)).then((docSnap) => {
            if (docSnap.exists() && active) {
               setAudioUrl(docSnap.data().data);
            }
@@ -2125,7 +2126,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
           try {
             const base64 = await fileToBase64(file);
             const audioId = `intensive_${wordId}_${example.id}`;
-            const audioDocRef = doc(db, 'users', auth.currentUser.uid, 'audio', audioId);
+            const audioDocRef = doc(db, 'global_audio', audioId);
             await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
             onUpdateExample(example.id, { hasAudio: true, audioUrl: 'firestore:' + audioId });
             setAudioUrl(base64);
@@ -2156,7 +2157,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
       try {
         if (example.audioUrl.startsWith('firestore:')) {
            const audioId = example.audioUrl.split(':')[1];
-           await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'audio', audioId));
+           await deleteDoc(doc(db, 'global_audio', audioId));
         } else {
            // local storage
         }

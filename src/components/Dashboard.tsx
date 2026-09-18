@@ -44,7 +44,7 @@ interface DashboardProps {
   onStartDifficultReview?: () => void;
   onStartShortStudy?: () => void;
   onStartSentenceReview?: (mode: "JA_TO_VI" | "VI_TO_JA") => void;
-  onNavigateAdd: () => void;
+  onNavigateAdd?: () => void;
   onRecordWordOfTheDay?: (id: string) => void;
   onNavigateToWord?: (word: string, isIntensive: boolean, id: string) => void;
 }

@@ -1,5 +1,7 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -13,7 +15,23 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  // Setup uploads/audio directory
+  const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
+  if (!fs.existsSync(AUDIO_DIR)) {
+    fs.mkdirSync(AUDIO_DIR, { recursive: true });
+  }
+
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+  // Serve static audio files
+  app.use('/api/audio', express.static(AUDIO_DIR, {
+    maxAge: '30d',
+    setHeaders: (res) => {
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=2592000');
+    }
+  }));
 
   app.post('/api/generate-vocab', async (req, res) => {
     try {
@@ -192,18 +210,36 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
   
   app.post('/api/tts', async (req, res) => {
     try {
-      const { text } = req.body;
-      if (!text) {
+      const { text, voiceId = "Hina", speakingRate = 0.85 } = req.body;
+      if (!text || !String(text).trim()) {
         return res.status(400).json({ error: 'Text is required' });
       }
       
+      const cleanText = String(text).trim();
+      const hash = crypto.createHash('md5').update(`${cleanText}_${voiceId}_${speakingRate}`).digest('hex');
+      const audioFilename = `tts_${hash}.mp3`;
+      const audioFilePath = path.join(AUDIO_DIR, audioFilename);
+      const audioUrl = `/api/audio/${audioFilename}`;
+
+      // Check server disk cache first
+      if (fs.existsSync(audioFilePath)) {
+        try {
+          const fileBuffer = fs.readFileSync(audioFilePath);
+          return res.json({ 
+            audioContent: fileBuffer.toString('base64'),
+            audioUrl,
+            cached: true 
+          });
+        } catch (readErr) {
+          console.warn("Could not read cached audio file, regenerating:", readErr);
+        }
+      }
+
       const apiKey = process.env.INWORLD_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: 'INWORLD_API_KEY is not set' });
       }
 
-      // We use the non-streaming endpoint as it is simpler for short text
-      // and returns a single base64 string that can be easily played in browser.
       const response = await fetch('https://api.inworld.ai/tts/v1/voice', {
         method: 'POST',
         headers: {
@@ -211,11 +247,11 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           'Authorization': `Basic ${apiKey}`
         },
         body: JSON.stringify({
-          text: text,
-          voiceId: "Hina",
+          text: cleanText,
+          voiceId: voiceId,
           modelId: "inworld-tts-1.5-max",
           audioConfig: {
-            speakingRate: 0.85
+            speakingRate: speakingRate
           },
           temperature: 1
         })
@@ -228,10 +264,98 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       }
 
       const data = await response.json();
-      res.json({ audioContent: data.audioContent });
-    } catch (error) {
+      if (data.audioContent) {
+        try {
+          const audioBuffer = Buffer.from(data.audioContent, 'base64');
+          fs.writeFileSync(audioFilePath, audioBuffer);
+        } catch (writeErr) {
+          console.warn("Failed to write audio cache file to disk:", writeErr);
+        }
+      }
+
+      res.json({ 
+        audioContent: data.audioContent,
+        audioUrl 
+      });
+    } catch (error: any) {
       console.error('Error in /api/tts:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Internal server error: ' + error.message });
+    }
+  });
+
+  // Direct audio streaming for any browser or HTML5 audio
+  app.get('/api/tts', async (req, res) => {
+    try {
+      const text = String(req.query.text || '').trim();
+      if (!text) return res.status(400).send('Text is required');
+      
+      const voiceId = String(req.query.voiceId || 'Hina');
+      const speakingRate = 0.85;
+      const hash = crypto.createHash('md5').update(`${text}_${voiceId}_${speakingRate}`).digest('hex');
+      const audioFilename = `tts_${hash}.mp3`;
+      const audioFilePath = path.join(AUDIO_DIR, audioFilename);
+
+      if (fs.existsSync(audioFilePath)) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=2592000');
+        return fs.createReadStream(audioFilePath).pipe(res);
+      }
+
+      const apiKey = process.env.INWORLD_API_KEY;
+      if (!apiKey) return res.status(500).send('INWORLD_API_KEY is not set');
+
+      const response = await fetch('https://api.inworld.ai/tts/v1/voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${apiKey}`
+        },
+        body: JSON.stringify({
+          text,
+          voiceId,
+          modelId: "inworld-tts-1.5-max",
+          audioConfig: { speakingRate },
+          temperature: 1
+        })
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).send('TTS API error');
+      }
+
+      const data = await response.json();
+      if (data.audioContent) {
+        const audioBuffer = Buffer.from(data.audioContent, 'base64');
+        fs.writeFileSync(audioFilePath, audioBuffer);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'public, max-age=2592000');
+        return res.send(audioBuffer);
+      }
+      res.status(500).send('No audio content');
+    } catch (err: any) {
+      res.status(500).send('Server error: ' + err.message);
+    }
+  });
+
+  // Endpoint to upload custom user audio files
+  app.post('/api/upload-audio', async (req, res) => {
+    try {
+      const { base64Data, filename } = req.body;
+      if (!base64Data) {
+        return res.status(400).json({ error: 'base64Data is required' });
+      }
+      const cleanBase64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      const safeName = (filename || 'custom_audio').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40);
+      const uniqueFilename = `custom_${Date.now()}_${safeName}.mp3`;
+      const filePath = path.join(AUDIO_DIR, uniqueFilename);
+      fs.writeFileSync(filePath, buffer);
+      
+      const audioUrl = `/api/audio/${uniqueFilename}`;
+      res.json({ audioUrl });
+    } catch (err: any) {
+      console.error('Error in /api/upload-audio:', err);
+      res.status(500).json({ error: 'Failed to upload audio: ' + err.message });
     }
   });
 

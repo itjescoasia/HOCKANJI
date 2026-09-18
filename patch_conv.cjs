@@ -1,14 +1,30 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/ConversationView.tsx', 'utf8');
 
-code = code.replace(
-  "const playAudio = (e: React.MouseEvent, text: string) => {\n    e.stopPropagation();\n    if (!text || !('speechSynthesis' in window)) return;\n    const utterance = new SpeechSynthesisUtterance(text);\n    utterance.lang = 'ja-JP';\n    window.speechSynthesis.speak(utterance);\n  };",
-  "const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {\n    e.stopPropagation();\n    if (audioUrl) {\n      const audio = new Audio(audioUrl);\n      audio.play().catch(console.error);\n      return;\n    }\n    if (!text || !('speechSynthesis' in window)) return;\n    window.speechSynthesis.cancel();\n    const utterance = new SpeechSynthesisUtterance(text);\n    utterance.lang = 'ja-JP';\n    window.speechSynthesis.speak(utterance);\n  };"
-);
+const searchStr = `export default function ConversationView({
+  conversations,
+  onAddConversation,
+  onRemoveConversation,`;
 
-code = code.replace(
-  "onClick={(e) => playAudio(e, dialogue.japanese)}",
-  "onClick={(e) => playAudio(e, dialogue.japanese, dialogue.audioUrl)}"
-);
+const replaceStr = `export default function ConversationView({
+  conversations,
+  onAddConversation,
+  onRemoveConversation,`;
+
+// We inject isAdmin at the top of the component
+code = code.replace(/const \[viewMode, setViewMode\] = useState<\'list\' \| \'add\' \| \'edit\' \| \'study\'\>\(\'list\'\);/, `const [viewMode, setViewMode] = useState<'list' | 'add' | 'edit' | 'study'>('list');
+  const isAdmin = auth.currentUser?.email === 'nguyenthetrung200126@gmail.com';`);
+
+// Hide Thêm hội thoại
+code = code.replace(/<button\s+onClick=\{\(\) => setViewMode\('add'\)\}/, `{isAdmin && <button\n              onClick={() => setViewMode('add')}`);
+code = code.replace(/Thêm hội thoại\s+<\/button>/, `Thêm hội thoại\n            </button>}`);
+
+// Hide Sửa and Xóa
+code = code.replace(/<button\s+onClick=\{\(\) => setViewMode\('edit'\)\}/, `{isAdmin && <button\n                    onClick={() => setViewMode('edit')}`);
+code = code.replace(/title="Sửa"\s+>\s+<Edit2 className="w-4 h-4" \/>\s+<\/button>/, `title="Sửa"\n                  >\n                    <Edit2 className="w-4 h-4" />\n                  </button>}`);
+
+code = code.replace(/<button\s+onClick=\{handleDelete\}/, `{isAdmin && <button\n                    onClick={handleDelete}`);
+code = code.replace(/title="Xóa"\s+>\s+<Trash2 className="w-4 h-4" \/>\s+<\/button>/, `title="Xóa"\n                  >\n                    <Trash2 className="w-4 h-4" />\n                  </button>}`);
 
 fs.writeFileSync('src/components/ConversationView.tsx', code);
+console.log("Patched ConversationView successfully.");
