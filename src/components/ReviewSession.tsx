@@ -228,10 +228,10 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
   const handleSpeak = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, text);
       return;
     }
-    playTTS(text);
+    if (text) playTTS(text);
   };
 
   const renderExampleWithHighlight = (example: string, kanji: string | undefined, reading: string | undefined) => {

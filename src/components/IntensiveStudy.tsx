@@ -325,11 +325,11 @@ export default function IntensiveStudy({
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, text);
       return;
     }
     
-    playTTS(text);
+    if (text) playTTS(text);
   };
 
   const fuse = React.useMemo(
@@ -1069,11 +1069,11 @@ function StudyView({
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, text);
       return;
     }
     
-    playTTS(text);
+    if (text) playTTS(text);
   };
 
   const toggleAllMeanings = () => {

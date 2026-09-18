@@ -352,10 +352,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, text);
       return;
     }
-    playTTS(text);
+    if (text) playTTS(text);
   };
 
   const [isFetchingOjad, setIsFetchingOjad] = useState(false);

@@ -15,6 +15,17 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Enable CORS for external hosts (e.g. Cloudflare Workers, custom domains)
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   // Setup uploads/audio directory
   const AUDIO_DIR = path.join(process.cwd(), 'uploads', 'audio');
   if (!fs.existsSync(AUDIO_DIR)) {

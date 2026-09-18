@@ -25,10 +25,10 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
   const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, text);
       return;
     }
-    playTTS(text);
+    if (text) playTTS(text);
   };
 
   const handleFlip = () => {

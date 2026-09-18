@@ -92,10 +92,10 @@ export default function Dashboard({
   const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, text);
       return;
     }
-    playTTS(text);
+    if (text) playTTS(text);
   };
 
   const isDue = dueCards.length > 0;

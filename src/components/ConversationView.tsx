@@ -47,7 +47,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 const playAudio = (e?: React.MouseEvent, text?: string | null, audioUrl?: string | null) => {
   if (e) e.stopPropagation();
   if (audioUrl) {
-    playAudioUrl(audioUrl);
+    playAudioUrl(audioUrl, text);
   } else if (text) {
     playTTS(text);
   }

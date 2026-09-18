@@ -201,7 +201,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   const playAudio = (e: React.MouseEvent, textToSpeak: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {
-      playAudioUrl(audioUrl);
+      playAudioUrl(audioUrl, textToSpeak);
       return;
     }
     playTTS(textToSpeak);

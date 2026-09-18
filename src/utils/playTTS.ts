@@ -92,16 +92,39 @@ export const playTTS = async (text: string) => {
   }
 };
 
-const fallbackTTS = (text: string) => {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'ja-JP';
-  const voices = window.speechSynthesis.getVoices();
-  const jpVoice = voices.find(v => v.lang === 'ja-JP');
-  if (jpVoice) utterance.voice = jpVoice;
-  window.speechSynthesis.speak(utterance);
-}
+export const fallbackTTS = (text: string) => {
+  if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.88;
+
+    const pickVoiceAndSpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const jpVoice = voices.find(v => v.lang === 'ja-JP' || v.lang === 'ja_JP' || v.lang.startsWith('ja'));
+      if (jpVoice) utterance.voice = jpVoice;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      pickVoiceAndSpeak();
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        pickVoiceAndSpeak();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+      setTimeout(() => {
+        if (!window.speechSynthesis.speaking) {
+          window.speechSynthesis.speak(utterance);
+        }
+      }, 60);
+    }
+  } catch (err) {
+    console.warn("speechSynthesis error:", err);
+  }
+};
 
 export const generateAndUploadTTS = async (text: string): Promise<string | null> => {
   if (!text || !text.trim()) return null;
@@ -138,13 +161,27 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
   return null;
 };
 
-export const playAudioUrl = async (url: string) => {
-  if (!url) return;
+export const playAudioUrl = async (url: string, fallbackText?: string | null) => {
+  if (!url) {
+    if (fallbackText) fallbackTTS(fallbackText);
+    return;
+  }
   
   if (currentActiveAudio) {
-    currentActiveAudio.pause();
-    currentActiveAudio.currentTime = 0;
+    try {
+      currentActiveAudio.pause();
+      currentActiveAudio.currentTime = 0;
+    } catch (e) {}
   }
+
+  let hasFallbackTriggered = false;
+  const triggerFallback = () => {
+    if (!hasFallbackTriggered && fallbackText) {
+      hasFallbackTriggered = true;
+      console.warn("Audio file failed or missing on this host, playing via Web Speech TTS:", fallbackText);
+      fallbackTTS(fallbackText);
+    }
+  };
   
   let finalUrl = url;
   if (url.startsWith('firestore:') && auth.currentUser) {
@@ -155,21 +192,37 @@ export const playAudioUrl = async (url: string) => {
           finalUrl = docSnap.data().data;
        } else {
           console.warn("Firestore audio not found");
+          triggerFallback();
           return;
        }
      } catch(err) {
        console.error("Error fetching audio from firestore", err);
+       triggerFallback();
        return;
      }
   }
 
-  const audio = new Audio(finalUrl);
-  currentActiveAudio = audio;
-  audio.play().catch(e => {
+  try {
+    const audio = new Audio(finalUrl);
+    currentActiveAudio = audio;
+
+    audio.onerror = () => {
+      triggerFallback();
+    };
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(e => {
         if (e.name !== 'AbortError') {
-          console.error("Audio playback error:", e);
+          console.warn("Audio playback error, falling back to Web Speech:", e);
+          triggerFallback();
         }
       });
+    }
+  } catch (err) {
+    console.error("Audio initialization error:", err);
+    triggerFallback();
+  }
 };
 
 export const deleteCloudAudio = async (url?: string | null) => {

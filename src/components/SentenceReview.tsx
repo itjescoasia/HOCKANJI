@@ -74,7 +74,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             }
             
             if (urlToPlay) {
-                playAudioUrl(urlToPlay);
+                playAudioUrl(urlToPlay, text || currentExample?.sentence);
                 return;
             }
         } catch (err) {
