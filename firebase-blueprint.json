@@ -1,0 +1,63 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and role permissions",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "id": { "type": "string", "description": "Custom or primary unique account ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "Account permission role" },
+        "photoURL": { "type": "string", "description": "Avatar image URL" },
+        "phoneNumber": { "type": "string", "description": "User phone number" },
+        "bio": { "type": "string", "description": "User biography or personal note" },
+        "createdAt": { "type": "number", "description": "Timestamp when account was registered" },
+        "updatedAt": { "type": "number", "description": "Timestamp when account was last updated" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "KanjiCard": {
+      "title": "KanjiCard",
+      "description": "Vocabulary and Kanji flashcard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "kanji": { "type": "string" },
+        "reading": { "type": "string" },
+        "meaning": { "type": "string" }
+      },
+      "required": ["id", "meaning"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Conversation topic containing dialogues",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user profile with unique ID and role"
+    },
+    "/global_kanjiDeck/{docId}": {
+      "schema": "KanjiCard",
+      "description": "Global Kanji deck collection"
+    },
+    "/global_intensiveVocab/{docId}": {
+      "schema": "KanjiCard",
+      "description": "Intensive vocabulary collection"
+    },
+    "/global_conversations/{docId}": {
+      "schema": "Conversation",
+      "description": "Global conversation topics collection"
+    }
+  }
+}

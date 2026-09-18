@@ -14,13 +14,18 @@ import ConversationView from './components/ConversationView';
 import ShortStudySession from './components/ShortStudySession';
 import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon } from 'lucide-react';
-import { auth } from './lib/firebase';
+import AccountSettingsModal from './components/AccountSettingsModal';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings } from 'lucide-react';
+import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useConversations } from './hooks/useConversations';
+import { UserProfile } from './types';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [dayTrigger, setDayTrigger] = useState(getLocalDateString());
   
@@ -66,13 +71,54 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    let unsubProfile: (() => void) | null = null;
+
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
       
-      
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = null;
+      }
+
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        unsubProfile = onSnapshot(userDocRef, async (snap) => {
+          if (snap.exists()) {
+            setUserProfile(snap.data() as UserProfile);
+          } else {
+            const isInitialAdmin = currentUser.email === 'it@jescoasia.vn' || currentUser.email === 'nguyenthetrung200126@gmail.com';
+            const initialProfile: UserProfile = {
+              uid: currentUser.uid,
+              id: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Người dùng',
+              photoURL: currentUser.photoURL || undefined,
+              role: isInitialAdmin ? 'admin' : 'user',
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            };
+            try {
+              await setDoc(userDocRef, initialProfile);
+              setUserProfile(initialProfile);
+            } catch (err) {
+              console.warn('Could not auto-create user profile in Firestore:', err);
+              setUserProfile(initialProfile);
+            }
+          }
+        }, (err) => {
+          console.error('User profile listener error:', err);
+        });
+      } else {
+        setUserProfile(null);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+      if (unsubProfile) unsubProfile();
+    };
   }, []);
 
   const { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded } = useVocabDeck();
@@ -338,7 +384,7 @@ export default function App() {
     });
   };
 
-  const isAdmin = user?.email === 'nguyenthetrung200126@gmail.com';
+  const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
@@ -359,7 +405,7 @@ export default function App() {
             <h1 className="text-lg sm:text-xl font-serif tracking-widest text-theme-accent hidden md:block" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
           </div>
           
-          <nav className="flex items-center gap-1 sm:gap-4 overflow-x-auto no-scrollbar">
+          <nav className="flex items-center gap-1 sm:gap-3 overflow-x-auto no-scrollbar">
             <button
               onClick={() => {
                 if (theme === 'dark') setTheme('light');
@@ -372,6 +418,21 @@ export default function App() {
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : theme === 'light' ? <Coffee className="w-4 h-4" /> : theme === 'sepia' ? <Moon className="w-4 h-4" /> : <CloudMoon className="w-4 h-4" />}
             </button>
+
+            {/* Logo Bánh răng: Cài đặt tài khoản & Phân quyền Admin/User */}
+            <button
+              onClick={() => setIsAccountModalOpen(true)}
+              className="p-2 text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded transition-all relative flex items-center justify-center group"
+              title={`Cài đặt tài khoản & Phân quyền (${isAdmin ? 'Admin' : 'User'})`}
+            >
+              <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
+              {isAdmin ? (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-theme-panel" title="Quản trị viên (Admin)" />
+              ) : (
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-theme-primary/30 rounded-full" />
+              )}
+            </button>
+
             {navItems.map(item => (
               <button
                 key={item.id}
@@ -556,6 +617,16 @@ export default function App() {
             />
           </div>
         )}
+
+      {/* Modal Cài đặt thông tin tài khoản & Phân quyền */}
+      <AccountSettingsModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        currentUser={user}
+        userProfile={userProfile}
+        isAdmin={isAdmin}
+        onProfileUpdated={(updated) => setUserProfile(updated)}
+      />
     </div>
   );
 }

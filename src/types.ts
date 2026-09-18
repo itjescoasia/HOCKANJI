@@ -111,3 +111,18 @@ export interface Conversation {
 }
 
 export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation';
+
+export type UserRole = 'admin' | 'user';
+
+export interface UserProfile {
+  uid: string;
+  id?: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  role: UserRole;
+  phoneNumber?: string;
+  bio?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
