@@ -206,25 +206,6 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
     }
   };
 
-  useEffect(() => {
-    // Triggers speech synthesis voices to load on mount
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
-      };
-    }
-  }, []);
-
-  const getJapaneseVoice = () => {
-    if (!('speechSynthesis' in window)) return null;
-    const voices = window.speechSynthesis.getVoices();
-    // Prioritize high quality/native voices if available on the user's OS/Browser
-    return voices.find(v => v.lang === 'ja-JP' && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Natural') || v.name.includes('Kyoko') || v.name.includes('Otoya') || v.name.includes('Ayumi'))) 
-        || voices.find(v => v.lang === 'ja-JP')
-        || voices.find(v => v.lang.startsWith('ja'));
-  };
-
   const handleSpeak = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
     if (audioUrl) {

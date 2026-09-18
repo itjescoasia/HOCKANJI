@@ -1,5 +1,5 @@
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, generateAndUploadTTS , playAudioUrl} from '../utils/playTTS';
+import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
@@ -369,7 +369,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     
     try {
       setIsGeneratingAI(true);
-      const res = await fetch('/api/generate-vocab', {
+      const res = await fetch(getApiEndpoint('/api/generate-vocab'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: editForm.kanji.trim() })

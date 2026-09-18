@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { KanjiExample, KanjiCard } from '../types';
 import { Plus, X, AlertTriangle } from 'lucide-react';
 import { toRomaji } from 'wanakana';
+import { getApiEndpoint } from '../utils/playTTS';
 
 interface AddVocabProps {
   deck?: KanjiCard[];
@@ -42,7 +43,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     
     try {
       setIsGeneratingAI(true);
-      const res = await fetch('/api/generate-vocab', {
+      const res = await fetch(getApiEndpoint('/api/generate-vocab'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: kanji.trim() })

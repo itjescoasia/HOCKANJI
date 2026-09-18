@@ -3,20 +3,165 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { storage, auth, db } from '../lib/firebase';
 import { doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 
-const ttsCache = localforage.createInstance({
+export const ttsCache = localforage.createInstance({
   name: 'tts-cache',
   storeName: 'audio_cache'
 });
 
 let currentActiveAudio: HTMLAudioElement | null = null;
 
-export const playTTS = async (text: string) => {
-  if (!text) return;
+/**
+ * Resolves the backend API endpoint.
+ * When the app is deployed on an external domain like Cloudflare Workers (kanjipro.it-740.workers.dev),
+ * relative /api calls hit Cloudflare instead of the Node.js backend.
+ * This resolves to the dedicated backend host when not running on localhost or Cloud Run directly.
+ */
+export const getApiEndpoint = (endpoint: string): string => {
+  const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('workers.dev') || (!host.includes('run.app') && host !== 'localhost' && host !== '127.0.0.1')) {
+      const metaEnv = (import.meta as any).env;
+      const backendBase = (metaEnv?.VITE_BACKEND_URL as string) || 'https://ais-pre-plx6rkv6vdw73yirw4ujmz-410594632954.asia-east1.run.app';
+      return `${backendBase.replace(/\/$/, '')}${cleanPath}`;
+    }
+  }
+  return cleanPath;
+};
+
+/**
+ * Convert base64 audio data into an MP3 Blob for Cloud Storage upload
+ */
+export const base64ToBlob = (base64Data: string, mimeType = 'audio/mp3'): Blob => {
+  const cleanBase64 = base64Data.replace(/^data:audio\/[^;]+;base64,/, '');
+  const byteCharacters = atob(cleanBase64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: mimeType });
+};
+
+/**
+ * Upload audio file (base64 or Blob) to Firebase Cloud (Storage or Firestore global_audio)
+ * Returns a permanent, accessible Cloud URL
+ */
+export const uploadAudioToCloud = async (base64Data: string, identifier?: string): Promise<string> => {
+  const cleanBase64 = base64Data.replace(/^data:audio\/[^;]+;base64,/, '');
+  const safeId = (identifier || Date.now().toString()).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50);
+
+  // Strategy 1: Firebase Storage (preferred for MP3 files)
   try {
-    // 1. Check local cache first for instant playback
-    const cachedAudio = await ttsCache.getItem<string>(text);
+    const blob = base64ToBlob(cleanBase64, 'audio/mp3');
+    const storagePath = `audio/inworld_${Date.now()}_${safeId}.mp3`;
+    const storageRef = ref(storage, storagePath);
+
+    await Promise.race([
+      uploadBytes(storageRef, blob, { contentType: 'audio/mp3' }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Storage upload timeout')), 10000))
+    ]);
+
+    const downloadUrl = await getDownloadURL(storageRef);
+    console.log('[TTS] Uploaded to Firebase Storage:', downloadUrl);
+    return downloadUrl;
+  } catch (storageErr) {
+    console.warn('[TTS] Firebase Storage upload failed, falling back to Firestore global_audio:', storageErr);
+  }
+
+  // Strategy 2: Firestore global_audio collection (always reliable Cloud document storage)
+  try {
+    const audioDocId = `tts_${Date.now()}_${safeId}`;
+    const audioDocRef = doc(db, 'global_audio', audioDocId);
+    await setDoc(audioDocRef, {
+      data: `data:audio/mp3;base64,${cleanBase64}`,
+      createdAt: Date.now(),
+      identifier: safeId
+    });
+    console.log('[TTS] Saved to Firestore global_audio:', audioDocId);
+    return `firestore:${audioDocId}`;
+  } catch (firestoreErr) {
+    console.error('[TTS] Firestore global_audio upload failed:', firestoreErr);
+  }
+
+  // Strategy 3: Inline data URL if cloud upload fails
+  return `data:audio/mp3;base64,${cleanBase64}`;
+};
+
+/**
+ * Generate audio via Inworld AI and permanently upload it to Cloud (Firebase Storage / Firestore)
+ */
+export const generateAndUploadTTS = async (text: string): Promise<string | null> => {
+  if (!text || !text.trim()) return null;
+  const cleanText = text.trim();
+
+  // 1. Check local indexedDB cache
+  try {
+    const cached = await ttsCache.getItem<string>(cleanText);
+    if (cached) {
+      console.log('[TTS] Found in local cache, uploading to Cloud:', cleanText);
+      const cloudUrl = await uploadAudioToCloud(cached, cleanText);
+      if (cloudUrl) {
+        window.dispatchEvent(new CustomEvent('tts-generated', {
+          detail: { text: cleanText, audioUrl: cloudUrl }
+        }));
+        return cloudUrl;
+      }
+    }
+  } catch (e) {
+    console.warn('[TTS] Cache check error:', e);
+  }
+
+  // 2. Call backend Inworld AI TTS API
+  try {
+    const apiUrl = getApiEndpoint('/api/tts');
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: cleanText })
+    });
+
+    if (!res.ok) {
+      console.error('[TTS] Inworld TTS generation error status:', res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    if (data.audioContent) {
+      // Cache base64 locally for instant offline playback
+      await ttsCache.setItem(cleanText, data.audioContent);
+
+      // Upload to Firebase Cloud (Storage or Firestore)
+      const cloudUrl = await uploadAudioToCloud(data.audioContent, cleanText);
+
+      // Notify cards and decks of the permanent Cloud URL
+      if (cloudUrl) {
+        window.dispatchEvent(new CustomEvent('tts-generated', {
+          detail: { text: cleanText, audioUrl: cloudUrl }
+        }));
+      }
+
+      return cloudUrl;
+    }
+  } catch (error) {
+    console.error('[TTS] Error generating and uploading Inworld TTS:', error);
+  }
+  return null;
+};
+
+/**
+ * Play audio from text using Inworld AI voice.
+ * Strictly uses Inworld AI audio. NO Google SpeechSynthesis fallback.
+ */
+export const playTTS = async (text: string) => {
+  if (!text || !text.trim()) return;
+  const cleanText = text.trim();
+
+  // 1. Check local IndexedDB cache first for instant 0ms playback
+  try {
+    const cachedAudio = await ttsCache.getItem<string>(cleanText);
     if (cachedAudio) {
-      console.log("Playing from TTS Cache:", text);
+      console.log('[TTS] Playing Inworld AI from local cache:', cleanText);
       if (currentActiveAudio) {
         currentActiveAudio.pause();
         currentActiveAudio.currentTime = 0;
@@ -24,149 +169,71 @@ export const playTTS = async (text: string) => {
       const audio = new Audio(`data:audio/mp3;base64,${cachedAudio}`);
       currentActiveAudio = audio;
       audio.play().catch(e => {
-        if (e.name !== 'AbortError') {
-          console.error("Audio playback error:", e);
-        }
+        if (e.name !== 'AbortError') console.error('[TTS] Playback error:', e);
       });
-      
-      // If we are playing from cache, maybe it wasn't saved to cloud yet?
-      // But let's assume it is, or it will be. We'll dispatch the base64 URL anyway
-      // just in case the DB needs it, though it might hit the 1MB limit.
-      // Better to only dispatch the event when we generate and upload it.
       return;
     }
-
-    // 2. Generate new audio via API
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("API error", res.status, err);
-      console.warn("Inworld TTS failed or missing, falling back to window.speechSynthesis");
-      fallbackTTS(text);
-      return null;
-    }
-    if (res.ok) {
-      const data = await res.json();
-      if (data.audioContent) {
-        // Save to local cache for instant future plays on this device
-        await ttsCache.setItem(text, data.audioContent);
-        console.log("Saved to TTS Cache:", text);
-        
-        const base64Url = `data:audio/mp3;base64,${data.audioContent}`;
-        if (currentActiveAudio) {
-          currentActiveAudio.pause();
-          currentActiveAudio.currentTime = 0;
-        }
-        const audio = new Audio(base64Url);
-        currentActiveAudio = audio;
-        audio.play().catch(e => {
-        if (e.name !== 'AbortError') {
-          console.error("Audio playback error:", e);
-        }
-      });
-        
-        // 3. Dispatch event with direct server audioUrl so card can update in background
-        if (data.audioUrl) {
-          window.dispatchEvent(new CustomEvent('tts-generated', { 
-            detail: { text, audioUrl: data.audioUrl } 
-          }));
-        }
-        
-        return; // Success
-      }
-    } else {
-       console.error("TTS API returned", res.status);
-    }
-    
-    // Fallback if API fails or isn't configured
-    console.warn("Inworld TTS failed or missing, falling back to window.speechSynthesis");
-    fallbackTTS(text);
-  } catch (error) {
-    console.error("Error playing TTS:", error);
-    fallbackTTS(text);
+  } catch (cacheErr) {
+    console.warn('[TTS] Cache read error:', cacheErr);
   }
-};
 
-export const fallbackTTS = (text: string) => {
-  if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  // 2. Call Inworld AI backend
   try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.88;
-
-    const pickVoiceAndSpeak = () => {
-      const voices = window.speechSynthesis.getVoices();
-      const jpVoice = voices.find(v => v.lang === 'ja-JP' || v.lang === 'ja_JP' || v.lang.startsWith('ja'));
-      if (jpVoice) utterance.voice = jpVoice;
-      window.speechSynthesis.speak(utterance);
-    };
-
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      pickVoiceAndSpeak();
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        pickVoiceAndSpeak();
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-      setTimeout(() => {
-        if (!window.speechSynthesis.speaking) {
-          window.speechSynthesis.speak(utterance);
-        }
-      }, 60);
-    }
-  } catch (err) {
-    console.warn("speechSynthesis error:", err);
-  }
-};
-
-export const generateAndUploadTTS = async (text: string): Promise<string | null> => {
-  if (!text || !text.trim()) return null;
-  const cleanText = text.trim();
-  try {
-    const res = await fetch('/api/tts', {
+    const apiUrl = getApiEndpoint('/api/tts');
+    const res = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: cleanText })
     });
-    
-    if (res.ok) {
-      const data = await res.json();
-      if (data.audioContent) {
-        // Cache to local indexedDB for zero-latency instant offline playback
-        await ttsCache.setItem(cleanText, data.audioContent);
-        console.log("Bulk generated & saved to TTS Cache:", cleanText);
+
+    if (!res.ok) {
+      console.warn('[TTS] Inworld TTS API unavailable:', res.status);
+      return;
+    }
+
+    const data = await res.json();
+    if (data.audioContent) {
+      // Save to local cache
+      await ttsCache.setItem(cleanText, data.audioContent);
+
+      // Play immediately
+      if (currentActiveAudio) {
+        currentActiveAudio.pause();
+        currentActiveAudio.currentTime = 0;
       }
-      
-      // Server returned permanent direct audio URL
-      if (data.audioUrl) {
-        return data.audioUrl;
-      }
-      
-      if (data.audioContent) {
-        return `data:audio/mp3;base64,${data.audioContent}`;
-      }
-    } else {
-      console.error("TTS API error status:", res.status);
+      const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+      currentActiveAudio = audio;
+      audio.play().catch(e => {
+        if (e.name !== 'AbortError') console.error('[TTS] Playback error:', e);
+      });
+
+      // Upload to Cloud in background
+      uploadAudioToCloud(data.audioContent, cleanText).then(cloudUrl => {
+        if (cloudUrl) {
+          window.dispatchEvent(new CustomEvent('tts-generated', {
+            detail: { text: cleanText, audioUrl: cloudUrl }
+          }));
+        }
+      }).catch(err => console.warn('[TTS] Background cloud upload error:', err));
     }
   } catch (error) {
-    console.error("Error bulk generating TTS:", error);
+    console.error('[TTS] Error playing Inworld TTS:', error);
   }
-  return null;
 };
 
+/**
+ * Play audio from a URL (Firebase Storage, Firestore, base64 data, or server audio)
+ * Strictly does NOT use Google SpeechSynthesis.
+ */
 export const playAudioUrl = async (url: string, fallbackText?: string | null) => {
   if (!url) {
-    if (fallbackText) fallbackTTS(fallbackText);
+    if (fallbackText) {
+      // Generate or play Inworld AI voice for this text
+      playTTS(fallbackText);
+    }
     return;
   }
-  
+
   if (currentActiveAudio) {
     try {
       currentActiveAudio.pause();
@@ -174,32 +241,49 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null) =>
     } catch (e) {}
   }
 
-  let hasFallbackTriggered = false;
-  const triggerFallback = () => {
-    if (!hasFallbackTriggered && fallbackText) {
-      hasFallbackTriggered = true;
-      console.warn("Audio file failed or missing on this host, playing via Web Speech TTS:", fallbackText);
-      fallbackTTS(fallbackText);
-    }
-  };
-  
   let finalUrl = url;
-  if (url.startsWith('firestore:') && auth.currentUser) {
-     try {
-       const audioId = url.split(':')[1];
-       const docSnap = await getDoc(doc(db, 'global_audio', audioId));
-       if (docSnap.exists()) {
+
+  // Handle Firestore Cloud audio
+  if (url.startsWith('firestore:')) {
+    const audioId = url.replace('firestore:', '');
+    try {
+      // Check cache first
+      const cached = await ttsCache.getItem<string>(audioId);
+      if (cached) {
+        finalUrl = cached.startsWith('data:') ? cached : `data:audio/mp3;base64,${cached}`;
+      } else {
+        const docSnap = await getDoc(doc(db, 'global_audio', audioId));
+        if (docSnap.exists()) {
           finalUrl = docSnap.data().data;
-       } else {
-          console.warn("Firestore audio not found");
-          triggerFallback();
+          // Cache locally
+          if (finalUrl) {
+            await ttsCache.setItem(audioId, finalUrl);
+          }
+        } else {
+          console.warn('[TTS] Firestore audio not found for ID:', audioId);
+          if (fallbackText) playTTS(fallbackText);
           return;
-       }
-     } catch(err) {
-       console.error("Error fetching audio from firestore", err);
-       triggerFallback();
-       return;
-     }
+        }
+      }
+    } catch (err) {
+      console.error('[TTS] Error fetching audio from firestore:', err);
+      if (fallbackText) playTTS(fallbackText);
+      return;
+    }
+  } else if (url.startsWith('/api/audio/') || url.startsWith('/')) {
+    // If running on external host (e.g., Cloudflare Workers kanjipro.it-740.workers.dev)
+    // First, check if fallbackText is in local cache
+    if (fallbackText) {
+      const cached = await ttsCache.getItem<string>(fallbackText.trim());
+      if (cached) {
+        finalUrl = cached.startsWith('data:') ? cached : `data:audio/mp3;base64,${cached}`;
+      }
+    }
+
+    // Check if the URL is relative and we are on an external host
+    if (finalUrl.startsWith('/')) {
+      finalUrl = getApiEndpoint(finalUrl);
+    }
   }
 
   try {
@@ -207,41 +291,60 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null) =>
     currentActiveAudio = audio;
 
     audio.onerror = () => {
-      triggerFallback();
+      console.warn('[TTS] Audio failed to load from URL:', finalUrl);
+      if (fallbackText) {
+        // Retry with Inworld AI TTS generation (NEVER Google voice)
+        playTTS(fallbackText);
+      }
     };
 
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch(e => {
         if (e.name !== 'AbortError') {
-          console.warn("Audio playback error, falling back to Web Speech:", e);
-          triggerFallback();
+          console.warn('[TTS] Audio playback error:', e);
+          if (fallbackText) {
+            playTTS(fallbackText);
+          }
         }
       });
     }
   } catch (err) {
-    console.error("Audio initialization error:", err);
-    triggerFallback();
+    console.error('[TTS] Audio initialization error:', err);
+    if (fallbackText) {
+      playTTS(fallbackText);
+    }
   }
 };
 
+/**
+ * Delete audio from Cloud (Storage or Firestore)
+ */
 export const deleteCloudAudio = async (url?: string | null) => {
   if (!url || typeof url !== 'string') return;
-  
+
   try {
-    if (url.startsWith('firestore:') && auth.currentUser) {
-       const audioId = url.split(':')[1];
-       await deleteDoc(doc(db, 'global_audio', audioId));
-       console.log("Deleted old audio from firestore:", url);
-       return;
+    if (url.startsWith('firestore:')) {
+      const audioId = url.replace('firestore:', '');
+      await deleteDoc(doc(db, 'global_audio', audioId));
+      console.log('[TTS] Deleted audio from firestore:', url);
+      return;
     }
-    
+
     if (url.includes('firebasestorage.googleapis.com')) {
       const storageRef = ref(storage, url);
       await deleteObject(storageRef);
-      console.log("Deleted old audio from cloud storage:", url);
+      console.log('[TTS] Deleted audio from cloud storage:', url);
     }
   } catch (err) {
-    console.warn("Failed to delete cloud audio:", err);
+    console.warn('[TTS] Failed to delete cloud audio:', err);
   }
+};
+
+/**
+ * Deprecated dummy export to avoid breaking any legacy imports.
+ * Strictly does nothing - Web Speech / Google TTS is permanently disabled.
+ */
+export const fallbackTTS = (_text: string) => {
+  // Google TTS is disabled as requested by user.
 };

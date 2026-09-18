@@ -1,6 +1,7 @@
 import React from 'react';
 import { KanjiCard } from '../types';
 import { Plus, X, Check } from 'lucide-react';
+import { getApiEndpoint } from '../utils/playTTS';
 
 interface ReviewEditFormProps {
   editForm: Partial<KanjiCard>;
@@ -20,7 +21,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
     
     try {
       setIsGeneratingAI(true);
-      const res = await fetch('/api/generate-vocab', {
+      const res = await fetch(getApiEndpoint('/api/generate-vocab'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: editForm.kanji.trim() })
