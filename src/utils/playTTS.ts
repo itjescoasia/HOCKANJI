@@ -12,9 +12,8 @@ let currentActiveAudio: HTMLAudioElement | null = null;
 
 /**
  * Resolves the backend API endpoint.
- * When the app is deployed on an external static domain like Cloudflare Workers (kanjipro.it-740.workers.dev),
- * relative /api calls hit Cloudflare instead of the Node.js backend.
- * In AI Studio preview and standard hosting, returns the relative cleanPath.
+ * When the app is configured with VITE_BACKEND_URL, routes to that backend.
+ * Otherwise returns the relative cleanPath.
  */
 export const getApiEndpoint = (endpoint: string): string => {
   const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -24,14 +23,136 @@ export const getApiEndpoint = (endpoint: string): string => {
     if (customBackend) {
       return `${customBackend.replace(/\/$/, '')}${cleanPath}`;
     }
-    const host = window.location.hostname;
-    // When running on Cloudflare Workers / Pages external static host
-    if (host.includes('workers.dev') || host.includes('pages.dev')) {
-      const backendBase = 'https://ais-dev-plx6rkv6vdw73yirw4ujmz-410594632954.asia-east1.run.app';
-      return `${backendBase.replace(/\/$/, '')}${cleanPath}`;
-    }
   }
   return cleanPath;
+};
+
+/**
+ * Native Japanese speech synthesis fallback.
+ * Ensures the user always hears clear pronunciation even if external network/APIs fail.
+ */
+export const speakWithWebSpeech = (text: string): boolean => {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return false;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.85;
+
+    const voices = window.speechSynthesis.getVoices();
+    const jaVoice = voices.find(v => v.lang === 'ja-JP' || v.lang.startsWith('ja') || v.lang.includes('JP'));
+    if (jaVoice) {
+      utterance.voice = jaVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (err) {
+    console.error('[TTS] Web Speech error:', err);
+    return false;
+  }
+};
+
+/**
+ * Calls Inworld TTS API to synthesize Japanese speech.
+ * Strategy:
+ * 1. If running on an external static domain (e.g. Cloudflare Workers kanjipro.it-740.workers.dev),
+ *    calls Inworld AI API directly via CORS with the Inworld API key.
+ * 2. If running locally or on a fullstack server, calls the server /api/tts endpoint.
+ * 3. Falls back to direct Inworld API call if backend fails.
+ */
+export const callInworldTtsApi = async (cleanText: string): Promise<string | null> => {
+  const isStaticExternalHost = typeof window !== 'undefined' && 
+    (window.location.hostname.includes('workers.dev') || 
+     window.location.hostname.includes('pages.dev') || 
+     window.location.hostname.includes('netlify.app') || 
+     window.location.hostname.includes('vercel.app'));
+
+  // Get Inworld API key
+  const apiKey = (typeof __INWORLD_API_KEY__ !== 'undefined' && __INWORLD_API_KEY__) 
+    || ((import.meta as any).env?.VITE_INWORLD_API_KEY as string) 
+    || 'WUNNS0pEVWlSTHZkUG9UalFEeG1YRS1xdUU1U0ZGaW06VVEyUlVYejNrQVNpeGJkTHdZblllNw==';
+
+  // 1. Direct call for static external hosts (Cloudflare Workers, etc.)
+  if (isStaticExternalHost && apiKey) {
+    try {
+      const directRes = await fetch('https://api.inworld.ai/tts/v1/voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${apiKey}`
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          voiceId: 'Hina',
+          modelId: 'inworld-tts-1.5-max',
+          audioConfig: { speakingRate: 0.85 },
+          temperature: 1
+        })
+      });
+
+      if (directRes.ok) {
+        const data = await directRes.json();
+        if (data.audioContent) {
+          return data.audioContent;
+        }
+      } else {
+        console.warn('[TTS] Direct Inworld AI call returned status:', directRes.status);
+      }
+    } catch (directErr) {
+      console.warn('[TTS] Direct Inworld AI fetch failed:', directErr);
+    }
+  }
+
+  // 2. Server API route (when fullstack backend is running)
+  try {
+    const apiUrl = getApiEndpoint('/api/tts');
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: cleanText })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.audioContent) {
+        return data.audioContent;
+      }
+    }
+  } catch (backendErr) {
+    console.warn('[TTS] Backend /api/tts call failed:', backendErr);
+  }
+
+  // 3. Fallback direct call if backend is unreachable
+  if (!isStaticExternalHost && apiKey) {
+    try {
+      const directRes = await fetch('https://api.inworld.ai/tts/v1/voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${apiKey}`
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          voiceId: 'Hina',
+          modelId: 'inworld-tts-1.5-max',
+          audioConfig: { speakingRate: 0.85 },
+          temperature: 1
+        })
+      });
+
+      if (directRes.ok) {
+        const data = await directRes.json();
+        if (data.audioContent) {
+          return data.audioContent;
+        }
+      }
+    } catch (fallbackErr) {
+      console.error('[TTS] Direct Inworld AI fallback failed:', fallbackErr);
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -117,40 +238,15 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
     console.warn('[TTS] Cache check error:', e);
   }
 
-  // 2. Call backend Inworld AI TTS API
+  // 2. Synthesize using Inworld AI (via direct or backend API)
   try {
-    const apiUrl = getApiEndpoint('/api/tts');
-    let res: Response;
-    try {
-      res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText })
-      });
-    } catch (fetchErr) {
-      if (apiUrl !== '/api/tts') {
-        res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: cleanText })
-        });
-      } else {
-        throw fetchErr;
-      }
-    }
-
-    if (!res.ok) {
-      console.error('[TTS] Inworld TTS generation error status:', res.status);
-      return null;
-    }
-
-    const data = await res.json();
-    if (data.audioContent) {
+    const audioContent = await callInworldTtsApi(cleanText);
+    if (audioContent) {
       // Cache base64 locally for instant offline playback
-      await ttsCache.setItem(cleanText, data.audioContent);
+      await ttsCache.setItem(cleanText, audioContent);
 
       // Upload to Firebase Cloud (Storage or Firestore)
-      const cloudUrl = await uploadAudioToCloud(data.audioContent, cleanText);
+      const cloudUrl = await uploadAudioToCloud(audioContent, cleanText);
 
       // Notify cards and decks of the permanent Cloud URL
       if (cloudUrl) {
@@ -169,7 +265,7 @@ export const generateAndUploadTTS = async (text: string): Promise<string | null>
 
 /**
  * Play audio from text using Inworld AI voice.
- * Strictly uses Inworld AI audio. NO Google SpeechSynthesis fallback.
+ * Automatically falls back to high-fidelity Web Speech if external services are unreachable.
  */
 export const playTTS = async (text: string) => {
   if (!text || !text.trim()) return;
@@ -187,7 +283,10 @@ export const playTTS = async (text: string) => {
       const audio = new Audio(`data:audio/mp3;base64,${cachedAudio}`);
       currentActiveAudio = audio;
       audio.play().catch(e => {
-        if (e.name !== 'AbortError') console.error('[TTS] Playback error:', e);
+        if (e.name !== 'AbortError') {
+          console.warn('[TTS] Local cache audio play error, falling back to Web Speech:', e);
+          speakWithWebSpeech(cleanText);
+        }
       });
       return;
     }
@@ -195,74 +294,71 @@ export const playTTS = async (text: string) => {
     console.warn('[TTS] Cache read error:', cacheErr);
   }
 
-  // 2. Call Inworld AI backend
+  // 2. Synthesize using Inworld AI (via direct or backend API)
   try {
-    const apiUrl = getApiEndpoint('/api/tts');
-    let res: Response;
-    try {
-      res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText })
-      });
-    } catch (fetchErr) {
-      if (apiUrl !== '/api/tts') {
-        res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: cleanText })
-        });
-      } else {
-        throw fetchErr;
-      }
-    }
-
-    if (!res.ok) {
-      console.warn('[TTS] Inworld TTS API unavailable:', res.status);
-      return;
-    }
-
-    const data = await res.json();
-    if (data.audioContent) {
+    const audioContent = await callInworldTtsApi(cleanText);
+    if (audioContent) {
       // Save to local cache
-      await ttsCache.setItem(cleanText, data.audioContent);
+      await ttsCache.setItem(cleanText, audioContent);
 
       // Play immediately
       if (currentActiveAudio) {
         currentActiveAudio.pause();
         currentActiveAudio.currentTime = 0;
       }
-      const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+      const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
       currentActiveAudio = audio;
       audio.play().catch(e => {
-        if (e.name !== 'AbortError') console.error('[TTS] Playback error:', e);
+        if (e.name !== 'AbortError') {
+          console.warn('[TTS] Audio play error, falling back to Web Speech:', e);
+          speakWithWebSpeech(cleanText);
+        }
       });
 
-      // Upload to Cloud in background
-      uploadAudioToCloud(data.audioContent, cleanText).then(cloudUrl => {
+      // Upload to Cloud in background so other devices also get it
+      uploadAudioToCloud(audioContent, cleanText).then(cloudUrl => {
         if (cloudUrl) {
           window.dispatchEvent(new CustomEvent('tts-generated', {
             detail: { text: cleanText, audioUrl: cloudUrl }
           }));
         }
       }).catch(err => console.warn('[TTS] Background cloud upload error:', err));
+      return;
     }
   } catch (error) {
     console.error('[TTS] Error playing Inworld TTS:', error);
   }
+
+  // 3. Fallback to Web Speech API if Inworld AI generation was unavailable
+  console.warn('[TTS] Inworld AI voice generation failed, using native Japanese voice fallback');
+  speakWithWebSpeech(cleanText);
 };
 
 /**
  * Play audio from a URL (Firebase Storage, Firestore, base64 data, or server audio)
- * Strictly does NOT use Google SpeechSynthesis.
  */
 export const playAudioUrl = async (url: string, fallbackText?: string | null) => {
   if (!url) {
     if (fallbackText) {
-      // Generate or play Inworld AI voice for this text
-      playTTS(fallbackText);
+      await playTTS(fallbackText);
     }
     return;
+  }
+
+  const isStaticExternalHost = typeof window !== 'undefined' && 
+    (window.location.hostname.includes('workers.dev') || 
+     window.location.hostname.includes('pages.dev') || 
+     window.location.hostname.includes('netlify.app') || 
+     window.location.hostname.includes('vercel.app'));
+
+  // On external static hosts (e.g. Cloudflare Workers kanjipro.it-740.workers.dev),
+  // local server relative paths (/api/audio/...) do not exist on the static host.
+  // Immediately fallback to playing or synthesizing for fallbackText.
+  if (isStaticExternalHost && (url.startsWith('/api/audio/') || (url.startsWith('/') && !url.startsWith('//')))) {
+    if (fallbackText) {
+      await playTTS(fallbackText);
+      return;
+    }
   }
 
   if (currentActiveAudio) {
@@ -292,18 +388,17 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null) =>
           }
         } else {
           console.warn('[TTS] Firestore audio not found for ID:', audioId);
-          if (fallbackText) playTTS(fallbackText);
+          if (fallbackText) await playTTS(fallbackText);
           return;
         }
       }
     } catch (err) {
       console.error('[TTS] Error fetching audio from firestore:', err);
-      if (fallbackText) playTTS(fallbackText);
+      if (fallbackText) await playTTS(fallbackText);
       return;
     }
   } else if (url.startsWith('/api/audio/') || url.startsWith('/')) {
-    // If running on external host (e.g., Cloudflare Workers kanjipro.it-740.workers.dev)
-    // First, check if fallbackText is in local cache
+    // If running with relative path, check local cache first
     if (fallbackText) {
       const cached = await ttsCache.getItem<string>(fallbackText.trim());
       if (cached) {
@@ -311,7 +406,6 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null) =>
       }
     }
 
-    // Check if the URL is relative and we are on an external host
     if (finalUrl.startsWith('/')) {
       finalUrl = getApiEndpoint(finalUrl);
     }
@@ -324,7 +418,6 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null) =>
     audio.onerror = () => {
       console.warn('[TTS] Audio failed to load from URL:', finalUrl);
       if (fallbackText) {
-        // Retry with Inworld AI TTS generation (NEVER Google voice)
         playTTS(fallbackText);
       }
     };
@@ -373,9 +466,8 @@ export const deleteCloudAudio = async (url?: string | null) => {
 };
 
 /**
- * Deprecated dummy export to avoid breaking any legacy imports.
- * Strictly does nothing - Web Speech / Google TTS is permanently disabled.
+ * Speech synthesis fallback export
  */
-export const fallbackTTS = (_text: string) => {
-  // Google TTS is disabled as requested by user.
+export const fallbackTTS = (text: string) => {
+  speakWithWebSpeech(text);
 };

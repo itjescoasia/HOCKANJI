@@ -352,14 +352,23 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeAudioText, setActiveAudioText] = useState<string | null>(null);
 
-  const playAudio = (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
+  const playAudio = async (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => {
     e.stopPropagation();
-    if (audioUrl) {
-      playAudioUrl(audioUrl, text);
-      return;
+    const clean = text?.trim() || '';
+    if (clean) setActiveAudioText(clean);
+    try {
+      if (audioUrl) {
+        await playAudioUrl(audioUrl, text);
+      } else if (clean) {
+        await playTTS(clean);
+      }
+    } catch (err) {
+      console.warn('Audio playback issue:', err);
+    } finally {
+      setTimeout(() => setActiveAudioText(null), 1200);
     }
-    if (text) playTTS(text);
   };
 
   const [isFetchingOjad, setIsFetchingOjad] = useState(false);
@@ -1271,11 +1280,18 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           <div className="text-3xl font-serif text-theme-primary bg-theme-base-alt px-3 py-1.5 rounded-xl shadow-sm border border-theme-subtle/50 inline-block">{card.kanji}</div>
                           <div className="flex flex-col items-center gap-0.5">
     <button
+      id={`audio-btn-${card.id}`}
       onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
-      className={`p-1.5 rounded-full transition-colors opacity-100 ${card.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
-      title={card.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
+      className={`p-1.5 rounded-full transition-all duration-200 opacity-100 ${
+        activeAudioText === (card.kanji || card.reading)?.trim()
+          ? 'scale-110 text-theme-accent bg-theme-accent/25 ring-2 ring-theme-accent/50 animate-pulse'
+          : card.audioUrl 
+            ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 hover:scale-105 active:scale-95' 
+            : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover hover:scale-105 active:scale-95'
+      }`}
+      title={card.audioUrl ? "Nghe file âm thanh MP3 (Inworld AI)" : "Nghe phát âm"}
     >
-      <Volume2 className="w-4 h-4" />
+      <Volume2 className={`w-4 h-4 ${activeAudioText === (card.kanji || card.reading)?.trim() ? 'animate-pulse' : ''}`} />
     </button>
     {card.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
   </div>

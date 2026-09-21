@@ -126,3 +126,7 @@ export interface UserProfile {
   createdAt?: number;
   updatedAt?: number;
 }
+
+declare global {
+  const __INWORLD_API_KEY__: string;
+}

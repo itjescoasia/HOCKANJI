@@ -12,6 +12,9 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    define: {
+      '__INWORLD_API_KEY__': JSON.stringify(process.env.INWORLD_API_KEY || 'WUNNS0pEVWlSTHZkUG9UalFEeG1YRS1xdUU1U0ZGaW06VVEyUlVYejNrQVNpeGJkTHdZblllNw=='),
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
