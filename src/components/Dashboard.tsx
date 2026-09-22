@@ -1,9 +1,11 @@
 import { playTTS , playAudioUrl} from '../utils/playTTS';
 import React, { useMemo, useEffect, Fragment } from "react";
-import { KanjiCard, IntensiveWord, IntensiveExample } from "../types";
+import { KanjiCard, IntensiveWord, IntensiveExample, FuriganaMode } from "../types";
 import { UserStats } from "../hooks/useStudyStats";
 import { getLocalDateString, getVietnamDate } from "../lib/dateUtils";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
+import { usePersistentState } from "../hooks/usePersistentState";
 import {
   BookOpen,
   Brain,
@@ -68,6 +70,7 @@ export default function Dashboard({
   onNavigateToWord,
 }: DashboardProps) {
 
+  const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const searchResults = React.useMemo(() => {
@@ -343,20 +346,33 @@ export default function Dashboard({
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex justify-between items-start">
               <div className="w-full">
-                <h2 className="text-[10px] uppercase tracking-widest text-theme-accent mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-theme-accent rounded-full inline-block"></span>
-                  Mỗi ngày 1 câu
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[10px] uppercase tracking-widest text-theme-accent flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-theme-accent rounded-full inline-block"></span>
+                    Mỗi ngày 1 câu
+                  </h2>
+                  <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
+                </div>
                 
                 <HighlightProvider><>
-                <div className="flex items-start gap-2 mt-4">
-                  <p className="text-xl sm:text-2xl text-theme-primary leading-relaxed font-serif whitespace-pre-wrap">
-                    {renderExampleHighlight(
-                      sentenceOfTheDay.example.sentence,
-                      sentenceOfTheDay.word.word,
-                      deck,
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="text-xl sm:text-2xl text-theme-primary leading-relaxed font-serif whitespace-pre-wrap">
+                    {furiganaMode === 'off' ? (
+                      renderExampleHighlight(
+                        sentenceOfTheDay.example.sentence,
+                        sentenceOfTheDay.word.word,
+                        deck,
+                      )
+                    ) : (
+                      <FuriganaSentence
+                        sentence={sentenceOfTheDay.example.sentence}
+                        furigana={sentenceOfTheDay.example.furigana}
+                        mode={furiganaMode}
+                        deck={deck}
+                        autoFetch={true}
+                      />
                     )}
-                  </p>
+                  </div>
                   <button
                     onClick={(e) => playAudio(e, sentenceOfTheDay.example.sentence, sentenceOfTheDay.example.audioUrl)}
                     className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors shrink-0 mt-1"
@@ -366,18 +382,20 @@ export default function Dashboard({
                   </button>
                 </div>
 
-                <div className="flex gap-3 mt-2">
-                  {sentenceOfTheDay.example.reading && (
-                    <span className="text-sm text-theme-primary opacity-70 italic">
-                      <RelatedHighlight text={sentenceOfTheDay.example.reading} type="hiragana" />
-                    </span>
-                  )}
-                  {sentenceOfTheDay.example.romaji && (
-                    <span className="text-sm text-theme-primary opacity-50 font-serif italic">
-                      <RelatedHighlight text={sentenceOfTheDay.example.romaji} type="romaji" />
-                    </span>
-                  )}
-                </div>
+                {furiganaMode === 'off' && (
+                  <div className="flex gap-3 mt-2">
+                    {sentenceOfTheDay.example.reading && (
+                      <span className="text-sm text-theme-primary opacity-70 italic">
+                        <RelatedHighlight text={sentenceOfTheDay.example.reading} type="hiragana" />
+                      </span>
+                    )}
+                    {sentenceOfTheDay.example.romaji && (
+                      <span className="text-sm text-theme-primary opacity-50 font-serif italic">
+                        <RelatedHighlight text={sentenceOfTheDay.example.romaji} type="romaji" />
+                      </span>
+                    )}
+                  </div>
+                )}
                 <p className="text-base text-theme-primary/80 mt-3 leading-relaxed">
                   <HighlightVietnamese text={sentenceOfTheDay.example.translation || ""} />
                 </p></></HighlightProvider>

@@ -6,9 +6,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw } from "lucide-react";
-import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles } from "lucide-react";
+import { IntensiveExample, IntensiveWord, KanjiCard, FuriganaMode } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
+import { fetchFuriganaWithGemini } from "../utils/furigana";
 
 interface SentenceReviewProps {
   deck: IntensiveWord[];
@@ -104,13 +106,35 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     playTTS(text);
   };
   
+  const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [isEditing, setIsEditing] = useState(false);
+  const [isGeneratingFurigana, setIsGeneratingFurigana] = useState(false);
   const [editData, setEditData] = useState({
     sentence: "",
+    furigana: "",
     reading: "",
     romaji: "",
     translation: "",
   });
+
+  const handleGenerateAIFurigana = async () => {
+    if (!editData.sentence.trim()) return;
+    try {
+      setIsGeneratingFurigana(true);
+      const res = await fetchFuriganaWithGemini(editData.sentence);
+      if (res.furigana) {
+        setEditData(prev => ({
+          ...prev,
+          furigana: res.furigana,
+          reading: (!prev.reading && res.reading) ? res.reading : prev.reading
+        }));
+      }
+    } catch (err: any) {
+      alert('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi mạng'));
+    } finally {
+      setIsGeneratingFurigana(false);
+    }
+  };
 
   useEffect(() => {
     const handleTTSGenerated = (e: any) => {
@@ -429,6 +453,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     const currentExample = examples[currentIndex];
     setEditData({
       sentence: currentExample.sentence,
+      furigana: currentExample.furigana || "",
       reading: currentExample.reading || "",
       romaji: currentExample.romaji || "",
       translation: currentExample.translation || "",
@@ -454,6 +479,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             return {
               ...ex,
               sentence: String(editData.sentence || "").trim(),
+              furigana: String(editData.furigana || "").trim(),
               reading: String(editData.reading || "").trim(),
               romaji: String(editData.romaji || "").trim(),
               translation: String(editData.translation || "").trim(),
@@ -471,6 +497,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           return {
             ...ex,
             sentence: String(editData.sentence || "").trim(),
+            furigana: String(editData.furigana || "").trim(),
             reading: String(editData.reading || "").trim(),
             romaji: String(editData.romaji || "").trim(),
             translation: String(editData.translation || "").trim(),
@@ -655,6 +682,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
+
           {isRandom && sessionStats.total > 0 && (
             <div className="hidden sm:flex items-center gap-2 text-xs font-medium px-3 py-1 bg-theme-panel border border-theme-subtle rounded-md">
               <span className="text-emerald-500 font-bold">Đúng: {sessionStats.correct}</span>
@@ -695,15 +724,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   
   <div className="w-full relative min-h-[400px] mb-8" style={{ perspective: "1000px" }}>
     <motion.div
-      className="w-full h-full absolute inset-0 cursor-pointer"
-      onClick={(e) => {
-        // Prevent click if clicking on a button or link or form inside
-        if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('form')) {
-           return;
-        }
-        if (showAnswer) return;
-        setShowAnswer(true);
-      }}
+      className="w-full h-full absolute inset-0"
       style={{ transformStyle: "preserve-3d" }}
       animate={{ rotateY: showAnswer ? 180 : 0 }}
       transition={{ duration: 0.6, type: 'spring', stiffness: 220, damping: 20 }}
@@ -731,8 +752,33 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           <form onSubmit={handleSaveEdit} className="w-full text-left space-y-4 mt-8">
             <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">Chỉnh sửa câu ví dụ</h4>
             <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ (Nhật) *</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ (Nhật) *</label>
+                <button
+                  type="button"
+                  onClick={handleGenerateAIFurigana}
+                  disabled={isGeneratingFurigana || !editData.sentence.trim()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 rounded border border-theme-accent/30 transition-all disabled:opacity-50 cursor-pointer"
+                  title="Dùng Gemini AI để phân tích và tự động điền Furigana theo ngữ cảnh"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />
+                  <span>{isGeneratingFurigana ? "Đang tạo Furigana..." : "✨ Tạo Furigana bằng AI"}</span>
+                </button>
+              </div>
               <textarea required rows={2} value={editData.sentence} onChange={(e) => setEditData({ ...editData, sentence: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif resize-none" placeholder="Nhập câu tiếng Nhật..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium flex items-center justify-between">
+                <span>Furigana (Định dạng: 漢字[かんじ])</span>
+                <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động sinh hoặc gõ thủ công</span>
+              </label>
+              <input
+                type="text"
+                value={editData.furigana || ""}
+                onChange={(e) => setEditData({ ...editData, furigana: e.target.value })}
+                className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif"
+                placeholder="VD: 彼女[かのじょ]は日本[にほん]に行[い]きます..."
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -758,17 +804,29 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             <div className="flex-1 shrink-0 min-h-0" />
             <HighlightProvider>
               <div className="w-full shrink-0 my-3">
-                <p
+                <div
                   className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
                 >
                   {mode === "JA_TO_VI"
-                    ? renderExampleHighlight(
-                        currentExample.sentence,
-                        currentExample.word,
-                        mainDeck,
-                      )
+                    ? (
+                      furiganaMode === 'off'
+                        ? renderExampleHighlight(
+                            currentExample.sentence,
+                            currentExample.word,
+                            mainDeck,
+                          )
+                        : (
+                          <FuriganaSentence
+                            sentence={currentExample.sentence}
+                            furigana={currentExample.furigana}
+                            mode={furiganaMode}
+                            deck={mainDeck}
+                            autoFetch={true}
+                          />
+                        )
+                    )
                     : <HighlightVietnamese text={questionText} />}
-                </p>
+                </div>
                 {mode === "JA_TO_VI" && currentExample.reading && (
                   <p className="text-theme-accent opacity-80 mt-3 text-sm">
                     <RelatedHighlight text={currentExample.reading} type="hiragana" />
@@ -885,11 +943,23 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               <span className="text-[10px] uppercase tracking-wider block opacity-70 mb-0.5">
                 {mode === "JA_TO_VI" ? "Câu tiếng Nhật:" : "Câu tiếng Việt:"}
               </span>
-              <p className={mode === "JA_TO_VI" ? "text-theme-japanese font-medium" : "font-medium"}>
+              <div className={mode === "JA_TO_VI" ? "text-theme-japanese font-medium" : "font-medium"}>
                 {mode === "JA_TO_VI"
-                  ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)
+                  ? (
+                    furiganaMode === 'off'
+                      ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)
+                      : (
+                        <FuriganaSentence
+                          sentence={currentExample.sentence}
+                          furigana={currentExample.furigana}
+                          mode={furiganaMode}
+                          deck={mainDeck}
+                          autoFetch={true}
+                        />
+                      )
+                  )
                   : currentExample.translation}
-              </p>
+              </div>
             </div>
 
             {/* Bản dịch đối chiếu nếu người dùng đã gõ */}
@@ -909,11 +979,23 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 dark:text-emerald-400 block mb-1.5">
                 Đáp án chuẩn:
               </span>
-              <p className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-xl sm:text-2xl" : "text-theme-primary text-lg sm:text-xl font-medium"}`}>
+              <div className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-xl sm:text-2xl" : "text-theme-primary text-lg sm:text-xl font-medium"}`}>
                 {mode === "VI_TO_JA"
-                  ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)
+                  ? (
+                    furiganaMode === 'off'
+                      ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)
+                      : (
+                        <FuriganaSentence
+                          sentence={currentExample.sentence}
+                          furigana={currentExample.furigana}
+                          mode={furiganaMode}
+                          deck={mainDeck}
+                          autoFetch={true}
+                        />
+                      )
+                  )
                   : <HighlightVietnamese text={answerText} />}
-              </p>
+              </div>
               {mode === "VI_TO_JA" && currentExample.reading && (
                 <p className="text-theme-accent opacity-80 mt-2 text-xs">
                   <RelatedHighlight text={currentExample.reading} type="hiragana" />

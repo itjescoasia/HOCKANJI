@@ -1,6 +1,9 @@
+export type FuriganaMode = 'always' | 'hover' | 'off';
+
 export interface KanjiExample {
   id: string;
   sentence: string;
+  furigana?: string;
   reading?: string;
   romaji?: string;
   translation: string;
@@ -37,6 +40,7 @@ export type WordCategory = 'Danh từ' | 'Động từ nhóm I' | 'Động từ 
 export interface IntensiveExample {
   id: string;
   sentence: string;
+  furigana?: string;
   reading?: string;
   romaji?: string;
   translation: string;

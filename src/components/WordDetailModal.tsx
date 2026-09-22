@@ -13,10 +13,12 @@ import {
   Sparkles
 } from 'lucide-react';
 import Markdown from 'react-markdown';
-import { IntensiveWord, IntensiveExample, KanjiCard } from '../types';
+import { IntensiveWord, IntensiveExample, KanjiCard, FuriganaMode } from '../types';
 import { getCategoryBadgeStyle, calculateMasteryPercent } from './IntensiveStudy';
 import { playTTS, playAudioUrl } from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
+import { FuriganaSentence, FuriganaToggle } from './FuriganaSentence';
+import { usePersistentState } from '../hooks/usePersistentState';
 
 interface WordDetailModalProps {
   word: IntensiveWord;
@@ -37,6 +39,7 @@ export default function WordDetailModal({
   onEdit,
   renderHighlight,
 }: WordDetailModalProps) {
+  const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [copied, setCopied] = useState(false);
   const [searchExampleText, setSearchExampleText] = useState('');
   const [activeAudioText, setActiveAudioText] = useState<string | null>(null);
@@ -335,10 +338,11 @@ export default function WordDetailModal({
           {/* Section 5: Examples List */}
           <div className="space-y-4 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-theme-subtle pb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold uppercase tracking-wider text-theme-primary font-serif">
                   Danh Sách Câu Ví Dụ Minh Họa ({word.examples.length})
                 </span>
+                <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
               </div>
 
               {/* Quick filter within modal */}
@@ -385,11 +389,21 @@ export default function WordDetailModal({
                           </span>
                           <div className="flex-1 space-y-1">
                             <div className="text-base sm:text-lg text-theme-primary font-medium leading-relaxed">
-                              {renderHighlight
-                                ? renderHighlight(ex.sentence, word.word || word.reading)
-                                : ex.sentence}
+                              {furiganaMode === 'off' ? (
+                                renderHighlight
+                                  ? renderHighlight(ex.sentence, word.word || word.reading)
+                                  : ex.sentence
+                              ) : (
+                                <FuriganaSentence
+                                  sentence={ex.sentence}
+                                  furigana={ex.furigana}
+                                  mode={furiganaMode}
+                                  deck={matchedCard ? [matchedCard] : undefined}
+                                  autoFetch={true}
+                                />
+                              )}
                             </div>
-                            {ex.reading && (
+                            {ex.reading && furiganaMode === 'off' && (
                               <div className="text-xs sm:text-sm text-theme-accent font-medium">
                                 {ex.reading}
                               </div>

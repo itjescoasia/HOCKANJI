@@ -14,6 +14,7 @@ import {
   IntensiveExample,
   WordCategory,
   KanjiCard,
+  FuriganaMode,
 } from "../types";
 import {
   Search,
@@ -42,6 +43,8 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import WordDetailModal from "./WordDetailModal";
 import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
+import { fetchFuriganaWithGemini } from "../utils/furigana";
 
 
 export function calculateMasteryPercent(word: IntensiveWord): number {
@@ -1055,12 +1058,15 @@ function StudyView({
     );
   };
 
+  const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [isAddingExample, setIsAddingExample] = useState(!word.examples.length);
   const [copyingExample, setCopyingExample] = useState<IntensiveExample | null>(null);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const [duplicateWarningId, setDuplicateWarningId] = useState<string | null>(null);
   const [highlightedExampleId, setHighlightedExampleId] = useState<string | null>(null);
   const [newSentence, setNewSentence] = useState("");
+  const [newFurigana, setNewFurigana] = useState("");
+  const [isGeneratingFurigana, setIsGeneratingFurigana] = useState(false);
   const [newReading, setNewReading] = useState("");
   const [newRomaji, setNewRomaji] = useState("");
   const [newTranslation, setNewTranslation] = useState("");
@@ -1158,11 +1164,49 @@ function StudyView({
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleData, setEditExampleData] = useState({
     sentence: "",
+    furigana: "",
     reading: "",
     romaji: "",
     translation: "",
     specialNote: "",
   });
+
+  const handleGenerateAINewFurigana = async () => {
+    if (!newSentence.trim()) return;
+    try {
+      setIsGeneratingFurigana(true);
+      const res = await fetchFuriganaWithGemini(newSentence);
+      if (res.furigana) {
+        setNewFurigana(res.furigana);
+        if (!newReading && res.reading) {
+          setNewReading(res.reading);
+        }
+      }
+    } catch (err: any) {
+      alert('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi'));
+    } finally {
+      setIsGeneratingFurigana(false);
+    }
+  };
+
+  const handleGenerateAIEditFurigana = async () => {
+    if (!editExampleData.sentence.trim()) return;
+    try {
+      setIsGeneratingFurigana(true);
+      const res = await fetchFuriganaWithGemini(editExampleData.sentence);
+      if (res.furigana) {
+        setEditExampleData(prev => ({
+          ...prev,
+          furigana: res.furigana,
+          reading: (!prev.reading && res.reading) ? res.reading : prev.reading
+        }));
+      }
+    } catch (err: any) {
+      alert('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi'));
+    } finally {
+      setIsGeneratingFurigana(false);
+    }
+  };
 
   // Real-time duplicate detection for editing
   useEffect(() => {
@@ -1182,6 +1226,7 @@ function StudyView({
     setEditingExampleId(ex.id);
     setEditExampleData({
       sentence: ex.sentence,
+      furigana: ex.furigana || "",
       reading: ex.reading || "",
       romaji: ex.romaji || "",
       translation: ex.translation || "",
@@ -1213,6 +1258,7 @@ function StudyView({
         return {
           ...ex,
           sentence: String(editExampleData.sentence || "").trim(),
+          furigana: String(editExampleData.furigana || "").trim(),
           reading: String(editExampleData.reading || "").trim(),
           romaji: String(editExampleData.romaji || "").trim(),
           translation: String(editExampleData.translation || "").trim(),
@@ -1256,6 +1302,7 @@ function StudyView({
     const newExample: IntensiveExample = {
       id: crypto.randomUUID(),
       sentence: String(newSentence || "").trim(),
+      furigana: String(newFurigana || "").trim(),
       reading: String(newReading || "").trim(),
       romaji: String(newRomaji || "").trim(),
       translation: String(newTranslation || "").trim(),
@@ -1267,6 +1314,7 @@ function StudyView({
     });
 
     setNewSentence("");
+    setNewFurigana("");
     setNewReading("");
     setNewRomaji("");
     setNewTranslation("");
@@ -1525,7 +1573,8 @@ function StudyView({
           <h3 className="text-lg font-serif text-theme-primary tracking-widest uppercase">
             Các Câu Ví Dụ ({filteredExamples.length}{exampleSearchQuery.trim() ? ` / ${word.examples.length}` : ""})
           </h3>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+            <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
             {word.examples.length > 0 && (
               <>
                 <button
@@ -1595,9 +1644,21 @@ function StudyView({
             )}
             <form onSubmit={handleAddExample} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                  Câu ví dụ (nên có chứa từ "{word.word}") *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                    Câu ví dụ (nên có chứa từ "{word.word}") *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateAINewFurigana}
+                    disabled={isGeneratingFurigana || !newSentence.trim()}
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded transition-all disabled:opacity-50 cursor-pointer"
+                    title="Dùng Gemini AI để tạo Furigana tự động theo ngữ cảnh"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />
+                    <span>{isGeneratingFurigana ? 'Đang tạo...' : 'Tạo Furigana AI'}</span>
+                  </button>
+                </div>
                 <textarea
                   required
                   rows={2}
@@ -1608,6 +1669,19 @@ function StudyView({
                   }}
                   className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-primary/40"
                   placeholder="e.g. この情報は大切です。"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium flex items-center justify-between">
+                  <span>Furigana 漢字[かんじ] (Tự động hoặc tùy chỉnh)</span>
+                  <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động gắn phiên âm chữ Hán</span>
+                </label>
+                <input
+                  type="text"
+                  value={newFurigana}
+                  onChange={(e) => setNewFurigana(e.target.value)}
+                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-2.5 text-theme-primary focus:outline-none focus:border-theme-accent font-mono text-sm transition-colors placeholder:text-theme-primary/40"
+                  placeholder="e.g. この情報[じょうほう]は大切[たいせつ]です。"
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -1755,9 +1829,21 @@ function StudyView({
                                 </div>
                               )}
                               <div className="space-y-2">
-                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                                  Câu ví dụ *
-                                </label>
+                                <div className="flex items-center justify-between">
+                                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                                    Câu ví dụ *
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={handleGenerateAIEditFurigana}
+                                    disabled={isGeneratingFurigana || !editExampleData.sentence.trim()}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded transition-all disabled:opacity-50 cursor-pointer"
+                                    title="Dùng Gemini AI để tạo Furigana tự động theo ngữ cảnh"
+                                  >
+                                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />
+                                    <span>{isGeneratingFurigana ? 'Đang tạo...' : 'Tạo Furigana AI'}</span>
+                                  </button>
+                                </div>
                                 <textarea
                                   required
                                   rows={2}
@@ -1770,6 +1856,24 @@ function StudyView({
                                     setDuplicateWarningId(null);
                                   }}
                                   className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-3 text-theme-primary focus:outline-none focus:border-theme-accent font-serif text-lg transition-colors placeholder:text-theme-primary/40"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium flex items-center justify-between">
+                                  <span>Furigana 漢字[かんじ] (Tự động hoặc tùy chỉnh)</span>
+                                  <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động gắn phiên âm chữ Hán</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editExampleData.furigana}
+                                  onChange={(e) =>
+                                    setEditExampleData({
+                                      ...editExampleData,
+                                      furigana: e.target.value,
+                                    })
+                                  }
+                                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-2.5 text-theme-primary focus:outline-none focus:border-theme-accent font-mono text-sm transition-colors placeholder:text-theme-primary/40"
+                                  placeholder="e.g. この情報[じょうほう]は大切[たいせつ]です。"
                                 />
                               </div>
                               <div className="flex flex-col sm:flex-row gap-4">
@@ -1972,13 +2076,24 @@ function StudyView({
                                 </div>
                                 <HighlightProvider><div className="flex-1 pt-1">
                                   {ex.reading &&
-                                    !hiddenMeaningIds.includes(ex.id) && (
+                                    !hiddenMeaningIds.includes(ex.id) &&
+                                    furiganaMode === 'off' && (
                                       <p className="text-xl sm:text-2xl text-theme-accent opacity-80 mb-1 font-serif">
                                         <RelatedHighlight text={ex.reading} type="hiragana" />
                                       </p>
                                     )}
-                                  <p className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
-                                    {renderHighlight(ex.sentence, word.word)}
+                                  <div className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
+                                    {furiganaMode === 'off' ? (
+                                      renderHighlight(ex.sentence, word.word)
+                                    ) : (
+                                      <FuriganaSentence
+                                        sentence={ex.sentence}
+                                        furigana={ex.furigana}
+                                        mode={furiganaMode}
+                                        deck={mainDeck}
+                                        autoFetch={true}
+                                      />
+                                    )}
                                     {!ex.hasAudio && !ex.audioUrl && (
                                     <span className="inline-flex flex-col items-center ml-3 gap-0.5 align-middle">
                                     <button
@@ -1992,7 +2107,7 @@ function StudyView({
                                     </span>
                                     )}
 
-                                  </p>
+                                  </div>
                                   {ex.romaji &&
                                     !hiddenMeaningIds.includes(ex.id) && (
                                       <p className="text-sm text-theme-primary/60 mb-1">

@@ -90,6 +90,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
     // BẮT BUỘC TẠO CHÍNH XÁC 10 VÍ DỤ ĐA DẠNG CHO TỪ VỰNG NÀY, ĐI TỪ DỄ ĐẾN KHÓ (Bao gồm từ gốc và một số thể thường gặp). ĐẶC BIỆT NẾU LÀ TÍNH TỪ ĐUÔI い (i) THÌ PHẢI CÓ 1 VÍ DỤ SỬ DỤNG "thể て". ĐỐI VỚI ĐỘNG TỪ THÌ CẦN 1 VÍ DỤ THỂ MUỐN (~たい) NẾU CÓ. CHÚ Ý: CÂU VÍ DỤ PHẢI CÓ CHỦ NGỮ RÕ RÀNG VÀ CHÍNH XÁC 100% (vd: 林さんが本をくれました thay vì 本をくれました).
     {
       "sentence": "câu ví dụ tiếng Nhật chứa từ vựng hoặc thể của từ",
+      "furigana": "câu ví dụ tiếng Nhật gắn Furigana cho chữ Hán dạng 漢字[かんじ], vd: 食[た]べる",
       "reading": "cách đọc hiragana của cả câu ví dụ (cách nhau bởi khoảng trắng hoặc dấu phẩy)",
       "romaji": "cách đọc romaji của cả câu",
       "translation": "nghĩa tiếng Việt của câu ví dụ"
@@ -106,7 +107,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           let response;
           try {
             response = await ai.models.generateContent({
-              model: 'gemini-3.5-flash',
+              model: 'gemini-3.8-flash',
               contents: prompt,
               config: { responseMimeType: 'application/json' }
             });
@@ -114,7 +115,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
             const errorMsg = error.message || '';
             if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE') || error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota exceeded')) {
                response = await ai.models.generateContent({
-                 model: 'gemini-3.5-flash-lite',
+                 model: 'gemini-3.1-flash-lite',
                  contents: prompt,
                  config: { responseMimeType: 'application/json' }
             });
@@ -214,6 +215,137 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
          } catch(e) {}
       }
       res.status(500).json({ error: errorMsg });
+    }
+  });
+
+  // Furigana In-memory Cache
+  const furiganaCache = new Map<string, string>();
+
+  app.post('/api/generate-furigana', async (req, res) => {
+    try {
+      const { sentence } = req.body;
+      if (!sentence || !String(sentence).trim()) {
+        return res.status(400).json({ error: 'Sentence is required' });
+      }
+
+      const cleanSentence = String(sentence).trim();
+      
+      // If there are no Kanji characters, return immediately
+      if (!/[\u4e00-\u9faf々]/.test(cleanSentence)) {
+        return res.json({ furigana: cleanSentence, reading: cleanSentence });
+      }
+
+      if (furiganaCache.has(cleanSentence)) {
+        return res.json({ furigana: furiganaCache.get(cleanSentence) });
+      }
+
+      if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+        return res.status(500).json({ error: 'Chưa cấu hình API Key trên server.' });
+      }
+
+      const prompt = `Bạn là chuyên gia ngôn ngữ tiếng Nhật. Nhiệm vụ của bạn là thêm Furigana (cách đọc Hiragana) chính xác 100% theo ngữ cảnh cho các chữ Hán (Kanji) trong câu tiếng Nhật sau.
+
+Câu tiếng Nhật:
+"${cleanSentence}"
+
+QUY TẮC BẮT BUỘC:
+1. Giữ nguyên toàn bộ câu gốc (kể cả trợ từ は, が, を, dấu câu, số, chữ Katakana, Hiragana).
+2. Với mỗi chữ Hán (Kanji) hoặc cụm từ Hán ghép, gắn cách đọc Hiragana ngay sau chữ Hán đó trong cặp ngoặc vuông [ ]. Ví dụ: 漢字[かんじ], 勉強[べんきょう]する, 散歩[さんぽ]する.
+3. Đối với động từ, tính từ có okurigana, CHỈ đặt Furigana cho chữ Hán:
+   - 食[た]べる (thay vì 食べる[たべる])
+   - 行[い]く (thay vì 行く[いく])
+   - 新[あたら]しい (thay vì 新しい[あたらしい])
+   - 楽[たの]しい (thay vì 楽しい[たのしい])
+4. Đảm bảo cách đọc CHÍNH XÁC theo ngữ cảnh câu:
+   - Phân biệt âm Kun/On và từ nhiều cách đọc (Ví dụ: 行く là 行[い]く hay 行[おこな]う; 一日 là 一日[ついたち] hay 一日[いちにち]; 方 là 方[かた] hay 方[ほう]; 今朝 là 今朝[けさ]; 明日 là 明日[あした] hay 明日[あす]).
+5. Trả về đúng định dạng JSON:
+{
+  "furigana": "câu hoàn chỉnh dạng 漢字[かんじ]",
+  "reading": "cách đọc hiragana của toàn bộ câu"
+}`;
+
+      let text = '';
+      let success = false;
+      let lastError: any = null;
+
+      if (process.env.GEMINI_API_KEY && !success) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          let response;
+          try {
+            response = await ai.models.generateContent({
+              model: 'gemini-3.8-flash',
+              contents: prompt,
+              config: { responseMimeType: 'application/json' }
+            });
+          } catch (error: any) {
+            const errorMsg = error.message || '';
+            if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE') || error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota exceeded')) {
+              response = await ai.models.generateContent({
+                model: 'gemini-3.1-flash-lite',
+                contents: prompt,
+                config: { responseMimeType: 'application/json' }
+              });
+            } else {
+              throw error;
+            }
+          }
+          text = response.text || '';
+          success = true;
+        } catch (e: any) {
+          e.provider = 'Gemini';
+          lastError = e;
+          if (!e.message.includes('429') && !e.message.includes('503')) console.error('Gemini furigana failed:', e.message);
+        }
+      }
+
+      if (process.env.OPENAI_API_KEY && !success) {
+        try {
+          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            response_format: { type: 'json_object' }
+          });
+          text = response.choices[0].message.content || '';
+          success = true;
+        } catch (e: any) {
+          e.provider = 'OpenAI';
+          lastError = e;
+        }
+      }
+
+      if (process.env.GROQ_API_KEY && !success) {
+        try {
+          const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+          const response = await groq.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            response_format: { type: 'json_object' }
+          });
+          text = response.choices[0].message.content || '';
+          success = true;
+        } catch (e: any) {
+          e.provider = 'Groq';
+          lastError = e;
+        }
+      }
+
+      if (!success) {
+        throw lastError || new Error('Không thể tạo Furigana bằng AI.');
+      }
+
+      const parsed = JSON.parse(text);
+      const furiganaResult = parsed.furigana || cleanSentence;
+      furiganaCache.set(cleanSentence, furiganaResult);
+
+      res.json({
+        furigana: furiganaResult,
+        reading: parsed.reading || ''
+      });
+    } catch (error: any) {
+      console.error('Error generating furigana:', error);
+      res.status(500).json({ error: error.message || 'Lỗi khi tạo Furigana từ AI' });
     }
   });
 
