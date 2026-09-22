@@ -134,6 +134,7 @@ export default function App() {
   const [sentenceReviewMode, setSentenceReviewMode] = usePersistentState<'JA_TO_VI' | 'VI_TO_JA'>('app_sentenceReviewMode', 'JA_TO_VI');
   const [sentenceReviewTargetDeck, setSentenceReviewTargetDeck] = usePersistentState<any[] | null>('app_sentenceReviewTargetDeck', null);
   const [sentenceReviewForceAll, setSentenceReviewForceAll] = usePersistentState('app_sentenceReviewForceAll', false);
+  const [sentenceReviewIsRandom, setSentenceReviewIsRandom] = usePersistentState('app_sentenceReviewIsRandom', false);
   const [isSentenceReviewOpen, setIsSentenceReviewOpen] = usePersistentState('app_isSentenceReviewOpen', false);
 
   const [listSearchQuery, setListSearchQuery] = usePersistentState('app_listSearchQuery', '');
@@ -279,10 +280,11 @@ export default function App() {
     setView('short_study');
   };
 
-  const handleStartSentenceReview = (mode: 'JA_TO_VI' | 'VI_TO_JA', targetDeck: any[] | null = null, forceAll: boolean = false) => {
+  const handleStartSentenceReview = (mode: 'JA_TO_VI' | 'VI_TO_JA', targetDeck: any[] | null = null, forceAll: boolean = false, isRandom: boolean = false) => {
     setSentenceReviewMode(mode);
     setSentenceReviewTargetDeck(targetDeck);
     setSentenceReviewForceAll(forceAll);
+    setSentenceReviewIsRandom(isRandom);
     setIsSentenceReviewOpen(true);
   };
 
@@ -583,6 +585,7 @@ export default function App() {
               mainDeck={deck}
               mode={sentenceReviewMode}
               forceAll={sentenceReviewForceAll}
+              isRandom={sentenceReviewIsRandom}
               onClose={() => setIsSentenceReviewOpen(false)}
               onUpdateWord={(id, updates) => {
                 const conv = conversations.find(c => c.id === id);

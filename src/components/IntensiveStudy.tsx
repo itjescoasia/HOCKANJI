@@ -34,9 +34,13 @@ import {
   BookOpen,
   MessageCircle,
   ArrowRight,
-  PlusCircle
+  PlusCircle,
+  X,
+  FileText,
+  Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import WordDetailModal from "./WordDetailModal";
 import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 
 
@@ -304,6 +308,7 @@ export default function IntensiveStudy({
   const [targetExampleId, setTargetExampleId] = useState<string | null>(null);
   const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [detailModalWord, setDetailModalWord] = useState<IntensiveWord | null>(null);
 
   // Add Form State
   const [newWordData, setNewWordData] = useState({
@@ -482,7 +487,8 @@ export default function IntensiveStudy({
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <>
+      <AnimatePresence mode="wait">
       {viewState === "add" && (
         <motion.div
           key="add"
@@ -594,6 +600,7 @@ export default function IntensiveStudy({
         >
           <StudyView
             deck={deck}
+            mainDeck={mainDeck}
             word={selectedWord}
             searchQuery={searchQuery}
             targetExampleId={targetExampleId || undefined}
@@ -905,6 +912,17 @@ export default function IntensiveStudy({
                                   </div>
                                   
                                   <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDetailModalWord(word);
+                                      }}
+                                      className="px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded-md transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                      title="Xem toàn bộ chi tiết từ vựng"
+                                    >
+                                      <BookOpen className="w-3.5 h-3.5" />
+                                      <span>Chi tiết</span>
+                                    </button>
                                     {isDeleteUnlocked && (
                                       <button
                                         onClick={(e) => {
@@ -959,6 +977,30 @@ export default function IntensiveStudy({
         </motion.div>
       )}
     </AnimatePresence>
+    {detailModalWord && (
+      <WordDetailModal
+        word={detailModalWord}
+        matchedCard={mainDeck?.find(c => 
+          (c.kanji && c.kanji === detailModalWord.word?.trim()) ||
+          (c.reading && c.reading === detailModalWord.reading?.trim())
+        ) || null}
+        isOpen={!!detailModalWord}
+        onClose={() => setDetailModalWord(null)}
+        onStartReview={onStartTopicReview && detailModalWord.examples.length > 0 ? () => {
+          const w = detailModalWord;
+          setDetailModalWord(null);
+          onStartTopicReview([w]);
+        } : undefined}
+        onEdit={() => {
+          const w = detailModalWord;
+          setDetailModalWord(null);
+          setSelectedWordId(w.id);
+          setViewState("study");
+        }}
+        renderHighlight={renderExampleHighlight}
+      />
+    )}
+    </>
   );
 }
 
@@ -966,6 +1008,7 @@ export default function IntensiveStudy({
 
 function StudyView({
   deck,
+  mainDeck,
   word,
   targetExampleId,
   searchQuery,
@@ -976,6 +1019,7 @@ function StudyView({
   onStartTopicReview,
 }: {
   deck: IntensiveWord[];
+  mainDeck?: KanjiCard[];
   word: IntensiveWord;
   targetExampleId?: string | null;
   searchQuery?: string;
@@ -985,6 +1029,19 @@ function StudyView({
   renderHighlight: (text: string | undefined | null, kanji: string) => React.ReactNode;
   onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
 }) {
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  const matchedCard = React.useMemo(() => {
+    if (!mainDeck || mainDeck.length === 0) return null;
+    const cleanWord = (word.word || "").trim();
+    const cleanReading = (word.reading || "").trim();
+    return mainDeck.find(c => 
+      (c.kanji && c.kanji === cleanWord) ||
+      (c.reading && c.reading === cleanWord) ||
+      (cleanReading && (c.reading === cleanReading || c.kanji === cleanReading))
+    ) || null;
+  }, [mainDeck, word.word, word.reading]);
+
   const highlightSearchTerm = (text: string | undefined | null, highlight?: string) => {
     if (!text) return "";
     if (!highlight || !highlight.trim()) return text;
@@ -1386,16 +1443,27 @@ function StudyView({
               <span className={`font-serif text-theme-primary text-center break-words mb-2 ${word.word.length > 20 ? 'text-lg sm:text-xl' : word.word.length > 10 ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl'}`}>
                 {word.word}
               </span>
-              {onStartTopicReview && word.examples.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+                {onStartTopicReview && word.examples.length > 0 && (
+                  <button
+                    onClick={() => onStartTopicReview([word])}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary text-theme-base rounded-md text-xs font-bold uppercase tracking-wider hover:bg-theme-accent transition-colors shadow-sm cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Ôn câu</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => onStartTopicReview([word])}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary text-theme-base rounded-md text-xs font-bold uppercase tracking-wider hover:bg-theme-accent transition-colors"
+                  id={`btn-detail-modal-${word.id}`}
+                  onClick={() => setShowDetailModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/15 border border-theme-accent/30 text-theme-accent hover:bg-theme-accent hover:text-white rounded-md text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                  title="Xem toàn bộ chi tiết từ vựng này"
                 >
-                  <Eye className="w-3 h-3" />
-                  <span>Ôn câu</span>
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Chi tiết</span>
                 </button>
-              )}
-              <div className="absolute -right-2 -bottom-2 flex flex-col items-center gap-0.5 opacity-0 group-hover/speaker:opacity-100 transition-all">
+              </div>
+              <div className="absolute -right-2 -bottom-2 flex flex-col items-center gap-0.5 opacity-90 sm:opacity-0 group-hover/speaker:opacity-100 transition-all">
               <button
                 onClick={(e) => playAudio(e, word.word || word.reading, word.audioUrl)}
                 className={`p-2 border border-theme-subtle rounded-full shadow-md transition-colors ${word.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'bg-theme-panel text-theme-primary/50 hover:text-theme-accent hover:bg-theme-panel'}`}
@@ -1408,7 +1476,7 @@ function StudyView({
             </div>
 
             <div className="flex-1 flex flex-col justify-center text-center sm:text-left h-full pr-8">
-              <div className="flex flex-col sm:flex-row items-center gap-3 mb-2">
+              <div className="flex flex-col sm:flex-row items-center gap-3 mb-2 flex-wrap">
                 <span className="text-2xl text-theme-accent font-medium">
                   {word.reading}
                 </span>
@@ -1420,6 +1488,14 @@ function StudyView({
                 <span className="bg-theme-hover text-theme-primary/60 px-2 py-1 rounded text-[10px] uppercase border border-theme-subtle tracking-wider">
                   {word.category}
                 </span>
+                <button
+                  onClick={() => setShowDetailModal(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 rounded-md border border-theme-accent/30 transition-all cursor-pointer shadow-xs"
+                  title="Xem toàn bộ chi tiết từ vựng"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Xem chi tiết</span>
+                </button>
               </div>
               { (word.explanation || word.category) && (
                 <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body whitespace-pre-wrap">
@@ -2050,10 +2126,20 @@ function StudyView({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Word Detail Modal */}
+      <WordDetailModal
+        word={word}
+        matchedCard={matchedCard}
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        onStartReview={onStartTopicReview && word.examples.length > 0 ? () => onStartTopicReview([word]) : undefined}
+        onEdit={() => setIsEditing(true)}
+        renderHighlight={renderHighlight}
+      />
     </div>
   );
 }
-
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {

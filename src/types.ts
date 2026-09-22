@@ -43,6 +43,7 @@ export interface IntensiveExample {
   audioUrl?: string | null;
   hasAudio?: boolean;
   specialNote?: string;
+  memo?: string;
   mastered?: boolean; // legacy
   jaToViMastered?: boolean;
   viToJaMastered?: boolean;

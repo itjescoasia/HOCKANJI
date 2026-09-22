@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Volume2,
+  Shuffle,
 } from "lucide-react";
 import {
   PieChart,
@@ -43,7 +44,7 @@ interface DashboardProps {
   onStartFreeStudy?: () => void;
   onStartDifficultReview?: () => void;
   onStartShortStudy?: () => void;
-  onStartSentenceReview?: (mode: "JA_TO_VI" | "VI_TO_JA") => void;
+  onStartSentenceReview?: (mode: "JA_TO_VI" | "VI_TO_JA", targetDeck?: any[] | null, forceAll?: boolean, isRandom?: boolean) => void;
   onNavigateAdd?: () => void;
   onRecordWordOfTheDay?: (id: string) => void;
   onNavigateToWord?: (word: string, isIntensive: boolean, id: string) => void;
@@ -774,6 +775,28 @@ export default function Dashboard({
                 Ôn câu (Việt → Nhật)
               </button>
             )}
+            {onStartSentenceReview && (
+              <button
+                id="btn-random-sentence-ja-vi"
+                onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
+                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
+                title="Ôn tập ngẫu nhiên câu ví dụ (Nhật → Việt)"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                <span>Ôn ngẫu nhiên (Nhật → Việt)</span>
+              </button>
+            )}
+            {onStartSentenceReview && (
+              <button
+                id="btn-random-sentence-vi-ja"
+                onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
+                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
+                title="Ôn tập ngẫu nhiên câu ví dụ (Việt → Nhật)"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                <span>Ôn ngẫu nhiên (Việt → Nhật)</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
@@ -821,6 +844,28 @@ export default function Dashboard({
                 className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
               >
                 Ôn câu (Việt → Nhật)
+              </button>
+            )}
+            {onStartSentenceReview && (
+              <button
+                id="btn-random-sentence-ja-vi-notdue"
+                onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
+                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
+                title="Ôn tập ngẫu nhiên câu ví dụ (Nhật → Việt)"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                <span>Ôn ngẫu nhiên (Nhật → Việt)</span>
+              </button>
+            )}
+            {onStartSentenceReview && (
+              <button
+                id="btn-random-sentence-vi-ja-notdue"
+                onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
+                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
+                title="Ôn tập ngẫu nhiên câu ví dụ (Việt → Nhật)"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                <span>Ôn ngẫu nhiên (Việt → Nhật)</span>
               </button>
             )}
           </div>

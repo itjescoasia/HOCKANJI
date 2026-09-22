@@ -4,9 +4,9 @@ import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 
@@ -15,6 +15,7 @@ interface SentenceReviewProps {
   mainDeck?: KanjiCard[];
   mode: "JA_TO_VI" | "VI_TO_JA";
   forceAll?: boolean;
+  isRandom?: boolean;
   onClose: () => void;
   onUpdateWord?: (id: string, updates: Partial<IntensiveWord>) => void;
   onRecordReview?: (isCorrect: boolean) => void;
@@ -30,6 +31,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   mainDeck,
   mode,
   forceAll,
+  isRandom = false,
   onClose,
   onUpdateWord,
   onRecordReview,
@@ -37,9 +39,26 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const [examples, setExamples] = useState<ExampleWithWord[]>([]);
   const [currentIndexRaw, setCurrentIndex] = usePersistentState('app_sentencereview_currentIndex', 0);
   const [flippedState, setFlippedState] = usePersistentState<Record<number, boolean>>('app_sentencereview_flippedState', {});
-  const currentIndex = examples.length > 0 ? Math.min(currentIndexRaw, examples.length - 1) : 0;
-  const showAnswer = flippedState[currentIndex] || false;
-  const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
+  
+  // Dedicated state for random review session so it does not collide with persistent SRS progress
+  const [randomCurrentIndex, setRandomCurrentIndex] = useState(0);
+  const [randomFlipped, setRandomFlipped] = useState(false);
+  const [userTranslation, setUserTranslation] = useState("");
+  const [sessionStats, setSessionStats] = useState({ correct: 0, wrong: 0, total: 0 });
+  const [isSessionFinished, setIsSessionFinished] = useState(false);
+
+  const currentIndex = isRandom
+    ? (examples.length > 0 ? Math.min(randomCurrentIndex, examples.length - 1) : 0)
+    : (examples.length > 0 ? Math.min(currentIndexRaw, examples.length - 1) : 0);
+
+  const showAnswer = isRandom ? randomFlipped : (flippedState[currentIndex] || false);
+  const setShowAnswer = (val: boolean) => {
+    if (isRandom) {
+      setRandomFlipped(val);
+    } else {
+      setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
+    }
+  };
   const [isInitialized, setIsInitialized] = useState(false);
 
 
@@ -110,18 +129,68 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
   }, []);
 
-  useEffect(() => {
-    if (isInitialized) return;
-
+  const initExamples = useCallback(() => {
     // Extract all examples from the deck
     const allExamples: ExampleWithWord[] = [];
     deck.forEach((word) => {
-      word.examples.forEach((ex) => {
+      (word.examples || []).forEach((ex) => {
         if (ex.sentence && ex.translation) {
           allExamples.push({ ...ex, word: word.word, wordId: word.id });
         }
       });
     });
+
+    // If reviewing generally without a specific single-word restriction, also pull examples from mainDeck
+    if (mainDeck && deck.length > 1) {
+      mainDeck.forEach((card) => {
+        if (card.examples && Array.isArray(card.examples)) {
+          card.examples.forEach((ex) => {
+            if (ex.sentence && ex.translation && !allExamples.some(e => e.sentence === ex.sentence)) {
+              allExamples.push({
+                id: ex.id || crypto.randomUUID(),
+                sentence: ex.sentence,
+                reading: ex.reading || '',
+                romaji: ex.romaji || '',
+                translation: ex.translation,
+                audioUrl: ex.audioUrl,
+                hasAudio: ex.hasAudio,
+                word: card.kanji || card.reading,
+                wordId: card.id,
+              });
+            }
+          });
+        } else if (card.example && card.exampleTranslation && !allExamples.some(e => e.sentence === card.example)) {
+          allExamples.push({
+            id: `card_${card.id}`,
+            sentence: card.example,
+            reading: card.reading || '',
+            romaji: card.romaji || '',
+            translation: card.exampleTranslation,
+            audioUrl: card.audioUrl,
+            hasAudio: card.hasAudio,
+            word: card.kanji || card.reading,
+            wordId: card.id,
+          });
+        }
+      });
+    }
+
+    if (isRandom) {
+      // Pure random shuffle across all available example sentences
+      const shuffled = [...allExamples];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      setExamples(shuffled);
+      setRandomCurrentIndex(0);
+      setRandomFlipped(false);
+      setUserTranslation("");
+      setSessionStats({ correct: 0, wrong: 0, total: 0 });
+      setIsSessionFinished(false);
+      setIsInitialized(true);
+      return;
+    }
 
     const now = Date.now();
     const dueExamples = forceAll ? allExamples : allExamples.filter((ex) => {
@@ -154,32 +223,25 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
     setExamples(dueExamples);
     setIsInitialized(true);
-  }, [deck, mode, isInitialized]);
+  }, [deck, mainDeck, mode, forceAll, isRandom]);
 
-  if (examples.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh]">
-        <p className="text-theme-primary/60 mb-6 font-serif text-lg">
-          {deck.some((word) => word.examples.length > 0) ? "Tuyệt vời, bạn đã ôn hết các câu đến hạn!" : "Chưa có câu ví dụ nào."}
-        </p>
-        <button
-          onClick={onClose}
-          className="border border-theme-subtle hover:border-theme-accent text-theme-accent bg-theme-panel px-8 py-3 rounded-none uppercase tracking-[0.2em] text-xs transition-colors"
-        >
-          Quay lại
-        </button>
-      </div>
-    );
-  }
-
-  const currentExample = examples[currentIndex];
-
-  const questionText =
-    mode === "JA_TO_VI" ? currentExample.sentence : currentExample.translation;
-  const answerText =
-    mode === "JA_TO_VI" ? currentExample.translation : currentExample.sentence;
+  useEffect(() => {
+    if (!isInitialized) {
+      initExamples();
+    }
+  }, [isInitialized, initExamples]);
 
   const handleNext = () => {
+    if (isRandom) {
+      if (randomCurrentIndex < examples.length - 1) {
+        setRandomFlipped(false);
+        setRandomCurrentIndex(prev => prev + 1);
+        setUserTranslation("");
+      } else {
+        setIsSessionFinished(true);
+      }
+      return;
+    }
     // do not mutate the old index so it stays flipped during exit
     if (currentIndex < examples.length - 1) {
       setCurrentIndex((prev) => { setFlippedState(fs => ({ ...fs, [prev + 1]: false })); return prev + 1; });
@@ -190,9 +252,26 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
   const handlePrev = () => {
     setShowAnswer(false);
+    if (isRandom) {
+      if (randomCurrentIndex > 0) {
+        setRandomCurrentIndex(prev => prev - 1);
+        setUserTranslation("");
+      }
+      return;
+    }
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     }
+  };
+
+  const handleConfirmResult = (isCorrect: boolean) => {
+    setSessionStats(prev => ({
+      ...prev,
+      correct: isCorrect ? prev.correct + 1 : prev.correct,
+      wrong: !isCorrect ? prev.wrong + 1 : prev.wrong,
+      total: prev.total + 1
+    }));
+    handleGrade(isCorrect ? 'good' : 'forgot');
   };
 
   const handleGrade = (grade: 'forgot' | 'hard' | 'good') => {
@@ -404,28 +483,196 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     setIsEditing(false);
   };
 
+  // Keyboard navigation & shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditing) return;
+
+      const activeEl = document.activeElement;
+      const isInputActive = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+      // If user is inside the textarea and presses Ctrl+Enter or Cmd+Enter: flip card
+      if (isInputActive && (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        setShowAnswer(true);
+        (activeEl as HTMLElement).blur();
+        return;
+      }
+
+      // If typing normally in textarea/input, don't trigger global review hotkeys
+      if (isInputActive) return;
+
+      if (!showAnswer) {
+        // Front face: Space or Enter flips to back
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          setShowAnswer(true);
+        }
+      } else {
+        // Back face:
+        if (isRandom) {
+          if (e.key === '1' || e.key === 'ArrowLeft') {
+            e.preventDefault();
+            handleConfirmResult(false);
+          } else if (e.key === '2' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            handleConfirmResult(true);
+          }
+        } else {
+          if (e.key === '1') {
+            e.preventDefault();
+            handleGrade('forgot');
+          } else if (e.key === '2') {
+            e.preventDefault();
+            handleGrade('hard');
+          } else if (e.key === '3') {
+            e.preventDefault();
+            handleGrade('good');
+          }
+        }
+      }
+
+      // Press 'r' or 'R' to play audio
+      if (e.key === 'r' || e.key === 'R') {
+        const cur = examples[currentIndex];
+        if (cur) {
+          handleTTS(cur.sentence);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAnswer, isEditing, currentIndex, examples, isRandom]);
+
+  if (isSessionFinished) {
+    const accuracy = sessionStats.total > 0 ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0;
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[70vh] p-6 max-w-lg mx-auto text-center">
+        <div className="w-16 h-16 rounded-full bg-theme-accent/15 border border-theme-accent/30 flex items-center justify-center mb-6 text-theme-accent shadow-sm">
+          <Trophy className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-serif text-theme-primary mb-2">
+          Hoàn thành phiên ôn tập!
+        </h2>
+        <p className="text-theme-primary/60 text-sm mb-6 uppercase tracking-wider font-medium">
+          {mode === "JA_TO_VI" ? "Ngẫu nhiên: Nhật → Việt" : "Ngẫu nhiên: Việt → Nhật"}
+        </p>
+
+        <div className="grid grid-cols-3 gap-3 w-full bg-theme-panel border border-theme-subtle p-6 rounded-xl mb-8 shadow-sm">
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-theme-primary">{sessionStats.total}</span>
+            <span className="text-[11px] text-theme-primary/60 uppercase tracking-wider mt-1">Đã ôn</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-emerald-500">{sessionStats.correct}</span>
+            <span className="text-[11px] text-emerald-500/80 uppercase tracking-wider mt-1">Dịch đúng</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-red-500">{sessionStats.wrong}</span>
+            <span className="text-[11px] text-red-500/80 uppercase tracking-wider mt-1">Dịch sai</span>
+          </div>
+        </div>
+
+        <div className="text-sm text-theme-primary/80 mb-8 font-medium">
+          Độ chính xác: <span className="text-theme-accent text-xl font-bold ml-1">{accuracy}%</span>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
+          <button
+            onClick={initExamples}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-theme-accent-hover transition-colors shadow-sm cursor-pointer"
+          >
+            <Shuffle className="w-4 h-4" />
+            <span>Ôn lại ngẫu nhiên</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 py-3.5 px-6 border border-theme-subtle text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover font-bold uppercase tracking-widest text-xs rounded-lg transition-colors cursor-pointer"
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (examples.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-6">
+        <p className="text-theme-primary/60 mb-6 font-serif text-lg">
+          {deck.some((word) => (word.examples || []).length > 0)
+            ? "Tuyệt vời, bạn đã hoàn thành hết các câu đến hạn!"
+            : "Chưa có câu ví dụ nào trong dữ liệu để ôn tập."}
+        </p>
+        <button
+          onClick={onClose}
+          className="border border-theme-subtle hover:border-theme-accent text-theme-accent bg-theme-panel px-8 py-3 rounded-none uppercase tracking-[0.2em] text-xs transition-colors"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
+
+  const currentExample = examples[currentIndex];
+  const questionText =
+    mode === "JA_TO_VI" ? currentExample.sentence : currentExample.translation;
+  const answerText =
+    mode === "JA_TO_VI" ? currentExample.translation : currentExample.sentence;
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-2 sm:px-4">
       <div className="flex items-center justify-between p-4 border-b border-theme-subtle">
         <div className="flex items-center gap-4">
           <button
             onClick={onClose}
-            className="p-2 text-theme-primary/60 hover:text-theme-primary transition-colors"
+            className="p-2 text-theme-primary/60 hover:text-theme-primary transition-colors cursor-pointer"
+            title="Đóng ôn tập"
           >
             <X className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-sm font-bold tracking-widest uppercase text-theme-accent">
-              Ôn tập câu:{" "}
-              {mode === "JA_TO_VI" ? "Nhật -> Việt" : "Việt -> Nhật"}
-            </h2>
-            <p className="text-xs text-theme-primary/50 mt-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold tracking-widest uppercase text-theme-accent">
+                {isRandom ? "Ôn tập ngẫu nhiên: " : "Ôn tập câu: "}
+                {mode === "JA_TO_VI" ? "Nhật → Việt" : "Việt → Nhật"}
+              </h2>
+              {isRandom && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-theme-accent/15 text-theme-accent border border-theme-accent/30 flex items-center gap-1">
+                  <Shuffle className="w-2.5 h-2.5" />
+                  Ngẫu nhiên
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-theme-primary/50 mt-0.5">
               Câu {currentIndex + 1} / {examples.length}{" "}
               <span className="opacity-70">
-                ({examples.length - currentIndex - 1} câu nữa)
+                ({examples.length - currentIndex - 1} câu còn lại)
               </span>
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {isRandom && sessionStats.total > 0 && (
+            <div className="hidden sm:flex items-center gap-2 text-xs font-medium px-3 py-1 bg-theme-panel border border-theme-subtle rounded-md">
+              <span className="text-emerald-500 font-bold">Đúng: {sessionStats.correct}</span>
+              <span className="text-theme-primary/30">|</span>
+              <span className="text-red-500 font-bold">Sai: {sessionStats.wrong}</span>
+            </div>
+          )}
+
+          {isRandom && (
+            <button
+              onClick={initExamples}
+              title="Xáo trộn lại toàn bộ câu ngẫu nhiên"
+              className="px-2.5 py-1.5 text-xs text-theme-primary/70 hover:text-theme-accent border border-theme-subtle hover:border-theme-accent bg-theme-panel rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[11px] uppercase tracking-wider">Xáo trộn lại</span>
+            </button>
+          )}
         </div>
       </div>
       <div className="w-full h-1 bg-theme-subtle">
@@ -507,67 +754,117 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             </div>
           </form>
         ) : (
-          <> <div className="flex-1 shrink-0 min-h-0" /> <HighlightProvider>
-            <div className="w-full shrink-0 my-4">
-              <p
-                className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
-              >
-                {mode === "JA_TO_VI"
-                  ? renderExampleHighlight(
-                      currentExample.sentence,
-                      currentExample.word,
-                      mainDeck,
-                    )
-                  : <HighlightVietnamese text={questionText} />}
-              </p>
-              {mode === "JA_TO_VI" && currentExample.reading && (
-                <p className="text-theme-accent opacity-80 mt-4 text-sm">
-                  <RelatedHighlight text={currentExample.reading} type="hiragana" />
+          <>
+            <div className="flex-1 shrink-0 min-h-0" />
+            <HighlightProvider>
+              <div className="w-full shrink-0 my-3">
+                <p
+                  className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
+                >
+                  {mode === "JA_TO_VI"
+                    ? renderExampleHighlight(
+                        currentExample.sentence,
+                        currentExample.word,
+                        mainDeck,
+                      )
+                    : <HighlightVietnamese text={questionText} />}
                 </p>
-              )}
-              {mode === "JA_TO_VI" && (
-                <div className="flex items-center justify-center gap-2 mt-4">
-                  <div className="flex flex-col items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                {mode === "JA_TO_VI" && currentExample.reading && (
+                  <p className="text-theme-accent opacity-80 mt-3 text-sm">
+                    <RelatedHighlight text={currentExample.reading} type="hiragana" />
+                  </p>
+                )}
+                {mode === "JA_TO_VI" && (
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={(e) => handleTTS(currentExample.sentence, e)}
+                        className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+                        title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                      {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                    </div>
+                    
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(currentExample.sentence);
+                        const btn = e.currentTarget;
+                        const originalHTML = btn.innerHTML;
+                        btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                      }}
+                      className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                      title="Copy câu tiếng Nhật"
+                    >
+                      <Copy className="w-5 h-5" />
+                    </button>
                   </div>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(currentExample.sentence);
-                      const btn = e.currentTarget;
-                      const originalHTML = btn.innerHTML;
-                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-                    }}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                    title="Copy câu tiếng Nhật"
-                  >
-                    <Copy className="w-5 h-5" />
-                  </button>
+                )}
 
+                {/* Translation input scratchpad */}
+                <div
+                  className="w-full max-w-lg mx-auto mt-5 text-left"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-1.5 px-0.5">
+                    <label className="text-[11px] uppercase tracking-wider text-theme-primary/60 font-semibold">
+                      {mode === "JA_TO_VI" ? "Dịch câu trên sang tiếng Việt:" : "Dịch câu trên sang tiếng Nhật:"}
+                    </label>
+                    {userTranslation && (
+                      <button
+                        type="button"
+                        onClick={() => setUserTranslation("")}
+                        className="text-[10px] text-theme-primary/40 hover:text-red-500 uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        Xóa
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={userTranslation}
+                    onChange={(e) => setUserTranslation(e.target.value)}
+                    placeholder={
+                      mode === "JA_TO_VI"
+                        ? "Gõ bản dịch tiếng Việt của bạn (hoặc dịch nhẩm)..."
+                        : "Gõ câu tiếng Nhật của bạn (hoặc dịch nhẩm)..."
+                    }
+                    rows={2}
+                    className="w-full bg-theme-base/80 border border-theme-subtle focus:border-theme-accent rounded-lg p-3 text-sm text-theme-primary placeholder:text-theme-primary/30 outline-none transition-all resize-none shadow-xs"
+                  />
+                  <p className="text-[10px] text-theme-primary/40 mt-1 text-right">
+                    Nhấn <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Enter</kbd> hoặc nút Lật thẻ bên dưới
+                  </p>
                 </div>
-              )}
-            </div>
-          </HighlightProvider> <div className="flex-1 shrink-0 min-h-0" /> </>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAnswer(true);
+                  }}
+                  className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-md shadow-xs hover:bg-theme-accent-hover transition-all cursor-pointer"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Lật thẻ xem đáp án</span>
+                </button>
+              </div>
+            </HighlightProvider>
+            <div className="flex-1 shrink-0 min-h-0" />
+          </>
         )}
       </div>
 
       {/* Back */}
       <div 
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center group overflow-y-auto ${!showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto rounded-xl shadow-xs ${!showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
       >
-        <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/30">
-          {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
+        <span className="absolute top-4 left-4 text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
+          {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
         </span>
         
         {!isEditing && (
@@ -580,248 +877,195 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           </button>
         )}
         
-        {isEditing ? (
-          <form onSubmit={handleSaveEdit} className="w-full text-left space-y-4 mt-8">
-            <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">Chỉnh sửa câu ví dụ</h4>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ (Nhật) *</label>
-              <textarea required rows={2} value={editData.sentence} onChange={(e) => setEditData({ ...editData, sentence: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif resize-none" placeholder="Nhập câu tiếng Nhật..." />
+        <div className="flex-1 shrink-0 min-h-0" />
+        <HighlightProvider>
+          <div className="w-full shrink-0 flex flex-col items-center justify-center my-3">
+            {/* Câu hỏi gốc phía trên */}
+            <div className="mb-4 text-theme-primary/60 text-xs sm:text-sm font-serif">
+              <span className="text-[10px] uppercase tracking-wider block opacity-70 mb-0.5">
+                {mode === "JA_TO_VI" ? "Câu tiếng Nhật:" : "Câu tiếng Việt:"}
+              </span>
+              <p className={mode === "JA_TO_VI" ? "text-theme-japanese font-medium" : "font-medium"}>
+                {mode === "JA_TO_VI"
+                  ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)
+                  : currentExample.translation}
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Cách đọc (Hiragana)</label>
-                <input type="text" value={editData.reading} onChange={(e) => setEditData({ ...editData, reading: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent" placeholder="VD: わたし..." />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Romaji</label>
-                <input type="text" value={editData.romaji} onChange={(e) => setEditData({ ...editData, romaji: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent font-mono" placeholder="VD: watashi..." />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
-              <textarea rows={2} value={editData.translation} onChange={(e) => setEditData({ ...editData, translation: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent resize-none" placeholder="Nhập nghĩa tiếng Việt..." />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <button type="button" onClick={handleCancelEdit} className="flex-1 px-4 py-3 text-xs tracking-widest uppercase font-bold border border-theme-subtle text-theme-primary/60 hover:bg-theme-subtle/50 transition-colors">Hủy</button>
-              <button type="submit" className="flex-1 px-4 py-3 text-xs tracking-widest uppercase font-bold bg-theme-accent text-theme-inverted hover:bg-theme-accent-hover transition-colors">Lưu thay đổi</button>
-            </div>
-          </form>
-        ) : (
-        <> <div className="flex-1 shrink-0 min-h-0" /> <HighlightProvider>
-          <div className="w-full shrink-0 flex flex-col items-center justify-center min-h-[150px] my-4">
-            {mode === "JA_TO_VI" && (
-              <div className="mb-6 text-theme-primary/70">
-                <p className="font-serif text-theme-japanese text-lg sm:text-xl mb-2">
-                  {renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)}
-                </p>
-                {currentExample.reading && (
-                  <p className="text-theme-primary/80 text-sm">
-                    <RelatedHighlight text={currentExample.reading} type="hiragana" />
-                  </p>
-                )}
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <div className="flex flex-col items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
-                  </div>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(currentExample.sentence);
-                      const btn = e.currentTarget;
-                      const originalHTML = btn.innerHTML;
-                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-                    }}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                    title="Copy câu tiếng Nhật"
-                  >
-                    <Copy className="w-5 h-5" />
-                  </button>
 
-                </div>
-              </div>
-            )}
-            {mode === "VI_TO_JA" && (
-              <div className="mb-6 text-theme-primary/70">
-                <p className="font-serif text-theme-primary text-lg sm:text-xl mb-2">
-                  {currentExample.translation}
+            {/* Bản dịch đối chiếu nếu người dùng đã gõ */}
+            {userTranslation && (
+              <div className="w-full max-w-lg mx-auto bg-theme-base/60 border border-theme-subtle rounded-lg p-3.5 mb-4 text-left shadow-xs">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-theme-primary/50 block mb-1">
+                  Bản dịch của bạn:
+                </span>
+                <p className="text-sm font-medium text-theme-primary whitespace-pre-wrap">
+                  {userTranslation}
                 </p>
               </div>
             )}
-            <span className="text-xs font-mono text-theme-accent/30 mb-4 block uppercase">
-              {mode === "JA_TO_VI" ? "VIỆT" : "NHẬT"}
-            </span>
-            <div className="flex flex-col items-center gap-3">
-              <p
-                className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-accent text-xl sm:text-2xl"}`}
-              >
+
+            {/* Đáp án chuẩn */}
+            <div className="w-full max-w-lg mx-auto bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-3 text-left">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 dark:text-emerald-400 block mb-1.5">
+                Đáp án chuẩn:
+              </span>
+              <p className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-xl sm:text-2xl" : "text-theme-primary text-lg sm:text-xl font-medium"}`}>
                 {mode === "VI_TO_JA"
-                  ? renderExampleHighlight(
-                      currentExample.sentence,
-                      currentExample.word,
-                      mainDeck,
-                    )
+                  ? renderExampleHighlight(currentExample.sentence, currentExample.word, mainDeck)
                   : <HighlightVietnamese text={answerText} />}
               </p>
-              {mode === "VI_TO_JA" && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex flex-col items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
-                  </div>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(currentExample.sentence);
-                      const btn = e.currentTarget;
-                      const originalHTML = btn.innerHTML;
-                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-                    }}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                    title="Copy câu tiếng Nhật"
-                  >
-                    <Copy className="w-5 h-5" />
-                  </button>
-
-                </div>
+              {mode === "VI_TO_JA" && currentExample.reading && (
+                <p className="text-theme-accent opacity-80 mt-2 text-xs">
+                  <RelatedHighlight text={currentExample.reading} type="hiragana" />
+                </p>
               )}
+              {mode === "VI_TO_JA" && currentExample.romaji && (
+                <p className="text-theme-primary/40 mt-1 text-xs">
+                  <RelatedHighlight text={currentExample.romaji} type="romaji" />
+                </p>
+              )}
+              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-emerald-500/20">
+                <button
+                  type="button"
+                  onClick={(e) => handleTTS(currentExample.sentence, e)}
+                  className="p-1.5 rounded-full text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1 text-xs cursor-pointer"
+                  title="Nghe phát âm"
+                >
+                  <Volume2 className="w-4 h-4" />
+                  <span className="text-[10px] uppercase tracking-wider font-semibold">Phát âm</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(currentExample.sentence);
+                    const btn = e.currentTarget;
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<span class="text-xs text-green-500 font-semibold">Đã copy!</span>';
+                    setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                  }}
+                  className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors flex items-center gap-1 text-xs cursor-pointer"
+                  title="Copy câu tiếng Nhật"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="text-[10px] uppercase tracking-wider">Copy</span>
+                </button>
+              </div>
             </div>
-            {mode === "VI_TO_JA" && currentExample.reading && (
-              <p className="text-theme-primary/60 mt-4 text-sm">
-                <RelatedHighlight text={currentExample.reading} type="hiragana" />
-              </p>
-            )}
-            {currentExample.romaji && (
-              <p className="text-theme-primary/40 mt-2 text-xs">
-                <RelatedHighlight text={currentExample.romaji} type="romaji" />
-              </p>
-            )}
+
+            {/* Lưu ý hoặc ghi chú nếu có */}
             {currentExample.specialNote && (
-              <div className="mt-6 mx-auto max-w-lg p-5 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative text-left w-full">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <Lightbulb className="w-12 h-12 text-theme-accent" />
-                </div>
-                <div className="flex items-center gap-2 mb-3 relative z-10">
+              <div className="mt-3 mx-auto max-w-lg p-4 bg-theme-accent/5 border-l-4 border-theme-accent rounded-r-lg relative text-left w-full">
+                <div className="flex items-center gap-2 mb-2">
                   <Lightbulb className="w-4 h-4 text-theme-accent" />
                   <h4 className="text-xs font-bold uppercase tracking-widest text-theme-accent">
                     Lưu ý đặc biệt
                   </h4>
                 </div>
-                <div className="relative z-10 text-[15px] text-theme-primary/80 leading-relaxed font-serif markdown-body whitespace-pre-wrap">
+                <div className="text-sm text-theme-primary/80 leading-relaxed font-serif markdown-body whitespace-pre-wrap">
                   <Markdown>{currentExample.specialNote}</Markdown>
                 </div>
               </div>
             )}
-            <div className="mt-6 pt-6 border-t border-theme-subtle/50 text-xs text-theme-primary/40 flex gap-2 items-center justify-center w-full">
+            {currentExample.memo && (
+              <div className="mt-3 p-3 bg-theme-hover border border-theme-subtle text-left max-w-lg w-full text-xs text-theme-primary/80 rounded">
+                <span className="font-bold text-theme-accent uppercase tracking-wider block mb-1">Ghi chú:</span>
+                <Markdown>{currentExample.memo}</Markdown>
+              </div>
+            )}
+            
+            <div className="mt-4 pt-3 border-t border-theme-subtle/50 text-xs text-theme-primary/40 flex gap-2 items-center justify-center w-full">
               <span>Từ vựng gốc:</span>
               <strong className="text-theme-primary/70 font-serif text-sm">
                 {currentExample.word}
               </strong>
-              {(() => {
-                const isMastered =
-                  mode === "VI_TO_JA"
-                    ? currentExample.viToJaMastered
-                    : currentExample.jaToViMastered;
-                const finalIsMastered =
-                  isMastered !== undefined
-                    ? isMastered
-                    : currentExample.mastered;
-
-                if (finalIsMastered !== undefined) {
-                  return (
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded text-[10px] uppercase font-bold ${finalIsMastered ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}
-                    >
-                      {finalIsMastered
-                        ? mode === "VI_TO_JA"
-                          ? "Nói được"
-                          : "Đã nhớ"
-                        : mode === "VI_TO_JA"
-                          ? "Chưa nói được"
-                          : "Chưa nhớ"}
-                    </span>
-                  );
-                }
-                return null;
-              })()}
             </div>
           </div>
-        </HighlightProvider> <div className="flex-1 shrink-0 min-h-0" /> </>
-        )}
+        </HighlightProvider>
+        <div className="flex-1 shrink-0 min-h-0" />
       </div>
     </motion.div>
   </div>
 </motion.div>
 </AnimatePresence>
 {!isEditing && (
-<div className="mt-12 flex items-center justify-center gap-4 w-full max-w-2xl">
-{showAnswer ? (
-              <div className="flex-1 grid grid-cols-3 gap-2 sm:gap-4 max-w-[500px]">
-                <button
-                  onClick={() => handleGrade('forgot')}
-                  className="border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
-                >
-                  <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Quên sạch" : "Quên sạch"}</span>
-                  <span className="text-xs">Lại từ đầu</span>
-                </button>
-                <button
-                  onClick={() => handleGrade('hard')}
-                  className="border border-orange-500/50 text-orange-500 bg-theme-panel hover:bg-orange-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
-                >
-                  <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Đã học" : "Đã học"}</span>
-                  <span className="text-xs">{mode === "VI_TO_JA" ? "Chưa nói được" : "Chưa nhớ"}</span>
-                </button>
-                <button
-                  onClick={() => handleGrade('good')}
-                  className="border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1"
-                >
-                  <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Trôi chảy" : "Ghi nhớ"}</span>
-                  <span className="text-xs">{mode === "VI_TO_JA" ? "Nói được" : "Đã nhớ"}</span>
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={showAnswer ? handleNext : handleReveal}
-                className="flex-1 max-w-[200px] border border-theme-accent text-theme-inverted bg-theme-accent hover:bg-theme-accent-hover font-bold py-4 transition-colors uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-2"
-              >
-                {showAnswer ? (
-                  <>
-                    Tiếp theo <ArrowRight className="w-4 h-4" />
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" /> Xem đáp án
-                  </>
-                )}
-              </button>
-            )}
+  <div className="mt-6 flex items-center justify-center gap-3 w-full max-w-2xl">
+    {showAnswer ? (
+      isRandom ? (
+        /* 2 Confirmation buttons: Dịch sai & Dịch đúng */
+        <div className="flex-1 grid grid-cols-2 gap-3 sm:gap-6 max-w-[440px]">
+          <button
+            id="btn-sentence-wrong"
+            onClick={() => handleConfirmResult(false)}
+            className="border-2 border-red-500/60 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold py-3.5 sm:py-4 transition-all flex items-center justify-center gap-2 rounded-xl shadow-xs uppercase tracking-wider text-xs sm:text-sm cursor-pointer"
+            title="Phím tắt: 1 hoặc Mũi tên trái"
+          >
+            <X className="w-5 h-5 stroke-[2.5]" />
+            <span>Dịch sai (1)</span>
+          </button>
+          <button
+            id="btn-sentence-correct"
+            onClick={() => handleConfirmResult(true)}
+            className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 sm:py-4 transition-all flex items-center justify-center gap-2 rounded-xl shadow-md uppercase tracking-wider text-xs sm:text-sm cursor-pointer"
+            title="Phím tắt: 2 hoặc Mũi tên phải"
+          >
+            <Check className="w-5 h-5 stroke-[2.5]" />
+            <span>Dịch đúng (2)</span>
+          </button>
+        </div>
+      ) : (
+        /* Regular SM-2 3 grading buttons */
+        <div className="flex-1 grid grid-cols-3 gap-2 sm:gap-4 max-w-[500px]">
+          <button
+            onClick={() => handleGrade('forgot')}
+            className="border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1 rounded"
+          >
+            <span className="uppercase tracking-widest text-[9px] opacity-70">Quên sạch</span>
+            <span className="text-xs">Lại từ đầu (1)</span>
+          </button>
+          <button
+            onClick={() => handleGrade('hard')}
+            className="border border-orange-500/50 text-orange-500 bg-theme-panel hover:bg-orange-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1 rounded"
+          >
+            <span className="uppercase tracking-widest text-[9px] opacity-70">Đã học</span>
+            <span className="text-xs">{mode === "VI_TO_JA" ? "Chưa nói được (2)" : "Chưa nhớ (2)"}</span>
+          </button>
+          <button
+            onClick={() => handleGrade('good')}
+            className="border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1 rounded"
+          >
+            <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Trôi chảy" : "Ghi nhớ"}</span>
+            <span className="text-xs">{mode === "VI_TO_JA" ? "Nói được (3)" : "Đã nhớ (3)"}</span>
+          </button>
+        </div>
+      )
+    ) : (
+      <button
+        id="btn-flip-card"
+        onClick={handleReveal}
+        className="flex-1 max-w-[260px] border border-theme-accent text-theme-inverted bg-theme-accent hover:bg-theme-accent-hover font-bold py-4 transition-colors uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 rounded-lg shadow-sm cursor-pointer"
+      >
+        <Eye className="w-4 h-4" />
+        <span>Lật thẻ xem đáp án</span>
+      </button>
+    )}
 
-            <button
-              onClick={handleNext}
-              className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel"
-            >
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
+    <button
+      onClick={handlePrev}
+      disabled={isRandom ? randomCurrentIndex === 0 : currentIndex === 0}
+      className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel disabled:opacity-30 disabled:cursor-not-allowed rounded cursor-pointer"
+      title="Câu trước"
+    >
+      <ArrowLeft className="w-5 h-5" />
+    </button>
+    <button
+      onClick={handleNext}
+      className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel rounded cursor-pointer"
+      title="Câu tiếp theo"
+    >
+      <ArrowRight className="w-5 h-5" />
+    </button>
+  </div>
+)}
       </div>
     </div>
   );
