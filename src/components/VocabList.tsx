@@ -3,7 +3,7 @@ import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2 } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { removeUndefined } from '../hooks/useVocabDeck';
@@ -42,7 +42,7 @@ export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasse
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>) => void;
+  onUpdate?: (id: string, updates: Partial<KanjiCard>) => void;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
   initialSearchQuery?: string;
   initialEditId?: string | null;

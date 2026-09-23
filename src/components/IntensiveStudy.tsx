@@ -31,6 +31,8 @@ import {
   Volume2,
   CopyPlus, Copy, Music,
   CheckCircle,
+  CheckCircle2,
+  Circle,
   Info,
   BookOpen,
   MessageCircle,
@@ -48,6 +50,7 @@ import { fetchFuriganaWithGemini } from "../utils/furigana";
 
 
 export function calculateMasteryPercent(word: IntensiveWord): number {
+  if (word.manualStatus === 'mastered') return 100;
   if (!word.examples || word.examples.length === 0) return 0;
   const targetScore = Math.max(1, word.examples.length * 3);
   let currentScore = word.reviewScore || 0;
@@ -58,7 +61,17 @@ export function calculateMasteryPercent(word: IntensiveWord): number {
     }
   });
   const finalScore = Math.max(currentScore, legacyScore);
-  return Math.max(0, Math.min(100, Math.round((finalScore / targetScore) * 100)));
+  const calculated = Math.max(0, Math.min(100, Math.round((finalScore / targetScore) * 100)));
+  if (word.manualStatus === 'learning' && calculated >= 100) {
+    return 95;
+  }
+  return calculated;
+}
+
+export function isWordMastered(word: IntensiveWord): boolean {
+  if (word.manualStatus === 'mastered') return true;
+  if (word.manualStatus === 'learning') return false;
+  return calculateMasteryPercent(word) >= 100;
 }
 
 export function getCategoryBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
@@ -308,10 +321,14 @@ export default function IntensiveStudy({
   const [viewState, setViewState] = usePersistentState<"list" | "add" | "study">("app_intensive_viewState", "list");
   const [selectedWordId, setSelectedWordId] = usePersistentState<string | null>("app_intensive_selectedWordId", null);
   const [searchQuery, setSearchQuery] = usePersistentState("app_intensive_searchQuery", "");
+  const [statusFilter, setStatusFilter] = usePersistentState<"all" | "learning" | "mastered">("app_intensive_statusFilter", "all");
   const [targetExampleId, setTargetExampleId] = useState<string | null>(null);
   const [isDeleteUnlocked, setIsDeleteUnlocked] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [detailModalWord, setDetailModalWord] = useState<IntensiveWord | null>(null);
+
+  const masteredWordsCount = React.useMemo(() => deck.filter(isWordMastered).length, [deck]);
+  const learningWordsCount = deck.length - masteredWordsCount;
 
   // Add Form State
   const [newWordData, setNewWordData] = useState({
@@ -417,15 +434,21 @@ export default function IntensiveStudy({
     return results;
   }, [searchQuery, deck, fuse]);
 
-  
+  const displayedDeck = React.useMemo(() => {
+    if (statusFilter === 'all') return filteredDeck;
+    return filteredDeck.filter((item) => {
+      const isMastered = isWordMastered(item);
+      return statusFilter === 'mastered' ? isMastered : !isMastered;
+    });
+  }, [filteredDeck, statusFilter]);
 
   const handleDragEnd = (result: any) => {
     if (!result.destination) return;
     if (result.source.index === result.destination.index) return;
-    if (String(searchQuery || "").trim()) return;
+    if (String(searchQuery || "").trim() || statusFilter !== 'all') return;
     if (!onReorderDeck) return;
 
-    const items = Array.from(filteredDeck);
+    const items = Array.from(displayedDeck);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
@@ -711,11 +734,66 @@ export default function IntensiveStudy({
               </div>
             )}
             
-            <div className="mb-4">
-              <div className="flex items-center gap-3">
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              {/* Filter Tabs */}
+              <div className="inline-flex p-1 bg-theme-panel border border-theme-subtle rounded-xl gap-1 shrink-0 overflow-x-auto max-w-full">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    statusFilter === 'all'
+                      ? 'bg-theme-accent text-white shadow-xs'
+                      : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
+                  }`}
+                >
+                  <span>Tất cả</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                    statusFilter === 'all' ? 'bg-white/25 text-white' : 'bg-theme-hover text-theme-primary/60'
+                  }`}>
+                    {deck.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('learning')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    statusFilter === 'learning'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+                  }`}
+                >
+                  <Circle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Chưa thuộc</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                    statusFilter === 'learning' ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {learningWordsCount}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('mastered')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    statusFilter === 'mastered'
+                      ? 'bg-green-600 text-white shadow-xs'
+                      : 'text-green-600 dark:text-green-400 hover:bg-green-500/10'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Đã thuộc</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                    statusFilter === 'mastered' ? 'bg-white/25 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                  }`}>
+                    {masteredWordsCount}
+                  </span>
+                </button>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-3 shrink-0">
                 <button
                   onClick={() => setIsDeleteUnlocked(!isDeleteUnlocked)}
-                  className={`flex items-center justify-center p-2.5 transition-colors border ${
+                  className={`flex items-center justify-center p-2.5 transition-colors border rounded-md ${
                     isDeleteUnlocked 
                       ? "bg-red-500/10 border-red-500/50 text-red-500" 
                       : "bg-theme-panel border-theme-subtle text-theme-primary/40 hover:text-theme-accent hover:border-theme-accent"
@@ -726,7 +804,7 @@ export default function IntensiveStudy({
                 </button>
                 <button
                   onClick={() => setViewState("add")}
-                  className="flex items-center gap-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-2.5 font-bold uppercase tracking-widest text-xs transition-colors shrink-0"
+                  className="flex items-center gap-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-5 py-2.5 rounded-md font-bold uppercase tracking-widest text-xs transition-colors shrink-0"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Thêm chủ đề
@@ -742,15 +820,27 @@ export default function IntensiveStudy({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-4 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-sm"
-                placeholder="Tìm kiếm chuyên đề, từ vựng..."
+                className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-4 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-sm rounded-lg"
+                placeholder={
+                  statusFilter === 'learning'
+                    ? "Tìm kiếm trong các từ chưa thuộc..."
+                    : statusFilter === 'mastered'
+                      ? "Tìm kiếm trong các từ đã thuộc..."
+                      : "Tìm kiếm chuyên đề, từ vựng..."
+                }
               />
             </div>
 
-            {filteredDeck.length === 0 ? (
-              <div className="text-center py-20 bg-theme-panel border border-theme-subtle border-dashed">
+            {displayedDeck.length === 0 ? (
+              <div className="text-center py-20 bg-theme-panel border border-theme-subtle border-dashed rounded-xl">
                 <p className="text-theme-primary/50 text-sm uppercase tracking-wider">
-                  {searchQuery ? "Không tìm thấy kết quả nào." : "Chưa có chuyên đề nào."}
+                  {searchQuery
+                    ? "Không tìm thấy kết quả nào."
+                    : statusFilter === 'mastered'
+                      ? "Chưa có từ vựng nào được gắn cờ Đã thuộc."
+                      : statusFilter === 'learning'
+                        ? "Tuyệt vời! Không còn từ vựng nào chưa thuộc."
+                        : "Chưa có chuyên đề nào."}
                 </p>
               </div>
             ) : (
@@ -763,12 +853,12 @@ export default function IntensiveStudy({
                       className="flex flex-col gap-4 relative"
                     >
                       <AnimatePresence>
-                        {filteredDeck.map((word, index) => (
+                        {displayedDeck.map((word, index) => (
                           <Draggable
                             key={word.id}
                             draggableId={word.id}
                             index={index}
-                            isDragDisabled={!!searchQuery.trim()}
+                            isDragDisabled={!!searchQuery.trim() || statusFilter !== 'all'}
                           >
                             {(provided, snapshot) => (
                               <div
@@ -792,7 +882,7 @@ export default function IntensiveStudy({
 
                                 <div className="flex items-start justify-between gap-4 mb-4">
                                   <div className="flex items-center gap-3">
-                                    {!searchQuery.trim() && (
+                                    {!searchQuery.trim() && statusFilter === 'all' && (
                                       <div 
                                         {...provided.dragHandleProps}
                                         className="text-theme-primary/20 hover:text-theme-accent transition-colors p-1 -ml-2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
@@ -806,11 +896,44 @@ export default function IntensiveStudy({
                                       {word.word}
                                     </h3>
                                   </div>
-                                  {word.category && (
-                                    <span className={getCategoryBadgeStyle(word.category, "text-[10px] font-bold text-theme-accent/80 bg-theme-accent/5 px-2 py-1 rounded-sm uppercase tracking-wider border border-theme-accent/10 whitespace-nowrap")}>
-                                      {word.category}
-                                    </span>
-                                  )}
+                                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                                    {/* Gắn cờ Đã thuộc / Chưa thuộc */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentMastered = isWordMastered(word);
+                                        const newStatus = currentMastered ? 'learning' : 'mastered';
+                                        onUpdateWord(word.id, {
+                                          manualStatus: newStatus,
+                                          statusUpdatedAt: Date.now(),
+                                        });
+                                      }}
+                                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-xs select-none ${
+                                        isWordMastered(word)
+                                          ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
+                                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/35 hover:bg-amber-500/25'
+                                      }`}
+                                      title={isWordMastered(word) ? "Đang là: ĐÃ THUỘC (Bấm để đổi thành Chưa thuộc)" : "Đang là: CHƯA THUỘC (Bấm để đánh dấu Đã thuộc)"}
+                                    >
+                                      {isWordMastered(word) ? (
+                                        <>
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                                          <span>Đã thuộc</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Circle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                          <span>Chưa thuộc</span>
+                                        </>
+                                      )}
+                                    </button>
+                                    {word.category && (
+                                      <span className={getCategoryBadgeStyle(word.category, "text-[10px] font-bold text-theme-accent/80 bg-theme-accent/5 px-2 py-1 rounded-sm uppercase tracking-wider border border-theme-accent/10 whitespace-nowrap")}>
+                                        {word.category}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 
                                 {word.reading && (
@@ -1001,6 +1124,10 @@ export default function IntensiveStudy({
           setViewState("study");
         }}
         renderHighlight={renderExampleHighlight}
+        onToggleStatus={(id, newStatus) => {
+          onUpdateWord(id, { manualStatus: newStatus, statusUpdatedAt: Date.now() });
+          setDetailModalWord(prev => prev && prev.id === id ? { ...prev, manualStatus: newStatus, statusUpdatedAt: Date.now() } : prev);
+        }}
       />
     )}
     </>
@@ -1536,6 +1663,35 @@ function StudyView({
                 <span className="bg-theme-hover text-theme-primary/60 px-2 py-1 rounded text-[10px] uppercase border border-theme-subtle tracking-wider">
                   {word.category}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentMastered = isWordMastered(word);
+                    const newStatus = currentMastered ? 'learning' : 'mastered';
+                    onUpdateWord(word.id, {
+                      manualStatus: newStatus,
+                      statusUpdatedAt: Date.now(),
+                    });
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-xs select-none ${
+                    isWordMastered(word)
+                      ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/35 hover:bg-amber-500/25'
+                  }`}
+                  title={isWordMastered(word) ? "Đang là: ĐÃ THUỘC (Bấm để đổi thành Chưa thuộc)" : "Đang là: CHƯA THUỘC (Bấm để đánh dấu Đã thuộc)"}
+                >
+                  {isWordMastered(word) ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <span>Đã thuộc</span>
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>Chưa thuộc</span>
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={() => setShowDetailModal(true)}
                   className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 rounded-md border border-theme-accent/30 transition-all cursor-pointer shadow-xs"
@@ -2251,6 +2407,9 @@ function StudyView({
         onStartReview={onStartTopicReview && word.examples.length > 0 ? () => onStartTopicReview([word]) : undefined}
         onEdit={() => setIsEditing(true)}
         renderHighlight={renderHighlight}
+        onToggleStatus={(id, newStatus) => {
+          onUpdateWord(id, { manualStatus: newStatus, statusUpdatedAt: Date.now() });
+        }}
       />
     </div>
   );

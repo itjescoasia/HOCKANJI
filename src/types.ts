@@ -28,6 +28,8 @@ export interface KanjiCard {
   wordType?: string;
   freeStudyScore?: number;
   difficultScore?: number;
+  manualStatus?: 'mastered' | 'learning';
+  statusUpdatedAt?: number;
   interval: number;
   repetition: number;
   easeFactor: number;
@@ -76,6 +78,8 @@ export interface IntensiveWord {
   order?: number;
   hasAudio?: boolean;
   audioUrl?: string | null;
+  manualStatus?: 'mastered' | 'learning';
+  statusUpdatedAt?: number;
 }
 
 export type ReviewGrade = 'forgot' | 'hard' | 'good' | 'easy';

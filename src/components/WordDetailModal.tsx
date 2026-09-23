@@ -4,6 +4,8 @@ import {
   Volume2,
   Copy,
   CheckCircle,
+  CheckCircle2,
+  Circle,
   BookOpen,
   Eye,
   Edit2,
@@ -14,7 +16,7 @@ import {
 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { IntensiveWord, IntensiveExample, KanjiCard, FuriganaMode } from '../types';
-import { getCategoryBadgeStyle, calculateMasteryPercent } from './IntensiveStudy';
+import { getCategoryBadgeStyle, calculateMasteryPercent, isWordMastered } from './IntensiveStudy';
 import { playTTS, playAudioUrl } from '../utils/playTTS';
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import { FuriganaSentence, FuriganaToggle } from './FuriganaSentence';
@@ -28,6 +30,7 @@ interface WordDetailModalProps {
   onStartReview?: () => void;
   onEdit?: () => void;
   renderHighlight?: (text: string | undefined | null, kanji: string) => React.ReactNode;
+  onToggleStatus?: (wordId: string, newStatus: 'mastered' | 'learning') => void;
 }
 
 export default function WordDetailModal({
@@ -38,6 +41,7 @@ export default function WordDetailModal({
   onStartReview,
   onEdit,
   renderHighlight,
+  onToggleStatus,
 }: WordDetailModalProps) {
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [copied, setCopied] = useState(false);
@@ -147,6 +151,33 @@ export default function WordDetailModal({
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-theme-accent/30 bg-theme-accent/10 text-theme-accent">
                 {matchedCard.wordType}
               </span>
+            )}
+            {onToggleStatus && (
+              <button
+                type="button"
+                onClick={() => {
+                  const currentMastered = isWordMastered(word);
+                  onToggleStatus(word.id, currentMastered ? 'learning' : 'mastered');
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer shadow-xs select-none ${
+                  isWordMastered(word)
+                    ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
+                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/35 hover:bg-amber-500/25'
+                }`}
+                title={isWordMastered(word) ? "Đang là ĐÃ THUỘC (Bấm để đổi thành Chưa thuộc)" : "Đang là CHƯA THUỘC (Bấm để đánh dấu Đã thuộc)"}
+              >
+                {isWordMastered(word) ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                    <span>Đã thuộc</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>Chưa thuộc</span>
+                  </>
+                )}
+              </button>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -259,6 +290,33 @@ export default function WordDetailModal({
               <div className="text-[11px] text-theme-primary/60 font-medium">
                 {masteredExamplesCount} / {word.examples.length} câu đã nhớ
               </div>
+              {onToggleStatus && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentMastered = isWordMastered(word);
+                    onToggleStatus(word.id, currentMastered ? 'learning' : 'mastered');
+                  }}
+                  className={`mt-2.5 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs select-none ${
+                    isWordMastered(word)
+                      ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30 hover:bg-green-500/25'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
+                  }`}
+                  title={isWordMastered(word) ? "Bấm để chuyển về Chưa thuộc" : "Bấm để gắn cờ Đã thuộc"}
+                >
+                  {isWordMastered(word) ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <span>Đã thuộc</span>
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>Chưa thuộc</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
