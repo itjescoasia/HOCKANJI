@@ -54,12 +54,48 @@ export const speakWithWebSpeech = (text: string): boolean => {
 };
 
 /**
- * Calls Inworld TTS API to synthesize Japanese speech.
+ * Convert an ArrayBuffer into a base64 string
+ */
+export const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+/**
+ * Client-side fallback to fetch Japanese audio via Google TTS
+ */
+export const fetchGoogleTtsBase64 = async (cleanText: string): Promise<string | null> => {
+  try {
+    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(cleanText) + '&tl=ja&client=tw-ob';
+    const res = await fetch(url);
+    if (res.ok) {
+      const buffer = await res.arrayBuffer();
+      if (buffer.byteLength > 0) {
+        return arrayBufferToBase64(buffer);
+      }
+    }
+  } catch (err) {
+    console.warn('[TTS] Client Google TTS fetch failed:', err);
+  }
+  return null;
+};
+
+// Client-side quota exhaustion timestamp to avoid repeated 402 error calls to Inworld AI
+// Automatically re-tests after 10 minutes to seamlessly resume Inworld TTS when credits are restored
+let clientInworldQuotaExhaustedUntil = 0;
+const isClientInworldAvailable = () => Date.now() > clientInworldQuotaExhaustedUntil;
+
+/**
+ * Calls TTS API to synthesize Japanese speech.
  * Strategy:
- * 1. If running on an external static domain (e.g. Cloudflare Workers kanjipro.it-740.workers.dev),
- *    calls Inworld AI API directly via CORS with the Inworld API key.
- * 2. If running locally or on a fullstack server, calls the server /api/tts endpoint.
- * 3. Falls back to direct Inworld API call if backend fails.
+ * 1. Calls the server /api/tts endpoint (which supports Inworld AI and automatically falls back to Google TTS).
+ * 2. If running on external static hosts or server fails, attempts direct Inworld AI call.
+ * 3. If Inworld credits are exhausted, falls back to direct Google TTS.
  */
 export const callInworldTtsApi = async (cleanText: string): Promise<string | null> => {
   const isStaticExternalHost = typeof window !== 'undefined' && 
@@ -68,43 +104,7 @@ export const callInworldTtsApi = async (cleanText: string): Promise<string | nul
      window.location.hostname.includes('netlify.app') || 
      window.location.hostname.includes('vercel.app'));
 
-  // Get Inworld API key
-  const apiKey = (typeof __INWORLD_API_KEY__ !== 'undefined' && __INWORLD_API_KEY__) 
-    || ((import.meta as any).env?.VITE_INWORLD_API_KEY as string) 
-    || 'WUNNS0pEVWlSTHZkUG9UalFEeG1YRS1xdUU1U0ZGaW06VVEyUlVYejNrQVNpeGJkTHdZblllNw==';
-
-  // 1. Direct call for static external hosts (Cloudflare Workers, etc.)
-  if (isStaticExternalHost && apiKey) {
-    try {
-      const directRes = await fetch('https://api.inworld.ai/tts/v1/voice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${apiKey}`
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          voiceId: 'Hina',
-          modelId: 'inworld-tts-1.5-max',
-          audioConfig: { speakingRate: 0.85 },
-          temperature: 1
-        })
-      });
-
-      if (directRes.ok) {
-        const data = await directRes.json();
-        if (data.audioContent) {
-          return data.audioContent;
-        }
-      } else {
-        console.warn('[TTS] Direct Inworld AI call returned status:', directRes.status);
-      }
-    } catch (directErr) {
-      console.warn('[TTS] Direct Inworld AI fetch failed:', directErr);
-    }
-  }
-
-  // 2. Server API route (when fullstack backend is running)
+  // 1. Server API route (when fullstack backend is running)
   try {
     const apiUrl = getApiEndpoint('/api/tts');
     const res = await fetch(apiUrl, {
@@ -118,13 +118,20 @@ export const callInworldTtsApi = async (cleanText: string): Promise<string | nul
       if (data.audioContent) {
         return data.audioContent;
       }
+    } else {
+      console.warn('[TTS] Backend /api/tts returned non-ok status:', res.status);
     }
   } catch (backendErr) {
     console.warn('[TTS] Backend /api/tts call failed:', backendErr);
   }
 
-  // 3. Fallback direct call if backend is unreachable
-  if (!isStaticExternalHost && apiKey) {
+  // Get Inworld API key
+  const apiKey = (typeof __INWORLD_API_KEY__ !== 'undefined' && __INWORLD_API_KEY__) 
+    || ((import.meta as any).env?.VITE_INWORLD_API_KEY as string) 
+    || 'WUNNS0pEVWlSTHZkUG9UalFEeG1YRS1xdUU1U0ZGaW06VVEyUlVYejNrQVNpeGJkTHdZblllNw==';
+
+  // 2. Direct Inworld AI call (only if not temporarily out of credits)
+  if (apiKey && isClientInworldAvailable()) {
     try {
       const directRes = await fetch('https://api.inworld.ai/tts/v1/voice', {
         method: 'POST',
@@ -144,12 +151,23 @@ export const callInworldTtsApi = async (cleanText: string): Promise<string | nul
       if (directRes.ok) {
         const data = await directRes.json();
         if (data.audioContent) {
+          clientInworldQuotaExhaustedUntil = 0; // recovered
           return data.audioContent;
         }
+      } else {
+        if (directRes.status === 402 || directRes.status === 429) {
+          clientInworldQuotaExhaustedUntil = Date.now() + 10 * 60 * 1000;
+        }
       }
-    } catch (fallbackErr) {
-      console.error('[TTS] Direct Inworld AI fallback failed:', fallbackErr);
+    } catch (directErr) {
+      // ignore and fallback to Google TTS
     }
+  }
+
+  // 3. Fallback: Google TTS
+  const googleAudio = await fetchGoogleTtsBase64(cleanText);
+  if (googleAudio) {
+    return googleAudio;
   }
 
   return null;

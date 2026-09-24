@@ -351,6 +351,26 @@ QUY TẮC BẮT BUỘC:
 
   
   
+  // Track if Inworld TTS is out of credits to avoid unnecessary failed calls and noisy error logs
+  // When exhausted, will automatically test again after 10 minutes to see if credits are replenished.
+  let inworldQuotaExhaustedUntil = 0;
+  const isServerInworldAvailable = () => Date.now() > inworldQuotaExhaustedUntil;
+
+  // Helper function to synthesize audio via Google Translate TTS
+  async function synthesizeGoogleTTS(text: string): Promise<Buffer> {
+    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(text) + '&tl=ja&client=tw-ob';
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Google TTS failed with status: ${response.status}`);
+    }
+    const arrayBuf = await response.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  }
+
   app.post('/api/tts', async (req, res) => {
     try {
       const { text, voiceId = "Hina", speakingRate = 0.85 } = req.body;
@@ -378,46 +398,68 @@ QUY TẮC BẮT BUỘC:
         }
       }
 
+      // Try Inworld TTS only if not temporarily suspended due to credit exhaustion
       const apiKey = process.env.INWORLD_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: 'INWORLD_API_KEY is not set' });
-      }
+      let audioBuffer: Buffer | null = null;
 
-      const response = await fetch('https://api.inworld.ai/tts/v1/voice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${apiKey}`
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          voiceId: voiceId,
-          modelId: "inworld-tts-1.5-max",
-          audioConfig: {
-            speakingRate: speakingRate
-          },
-          temperature: 1
-        })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('Inworld TTS API Error:', response.status, errText);
-        return res.status(response.status).json({ error: 'Failed to synthesize speech', details: errText });
-      }
-
-      const data = await response.json();
-      if (data.audioContent) {
+      if (apiKey && isServerInworldAvailable()) {
         try {
-          const audioBuffer = Buffer.from(data.audioContent, 'base64');
-          fs.writeFileSync(audioFilePath, audioBuffer);
-        } catch (writeErr) {
-          console.warn("Failed to write audio cache file to disk:", writeErr);
+          const response = await fetch('https://api.inworld.ai/tts/v1/voice', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${apiKey}`
+            },
+            body: JSON.stringify({
+              text: cleanText,
+              voiceId: voiceId,
+              modelId: "inworld-tts-1.5-max",
+              audioConfig: {
+                speakingRate: speakingRate
+              },
+              temperature: 1
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.audioContent) {
+              audioBuffer = Buffer.from(data.audioContent, 'base64');
+              inworldQuotaExhaustedUntil = 0; // successfully recovered!
+            }
+          } else {
+            if (response.status === 402 || response.status === 429) {
+              // Pause Inworld attempts for 10 minutes, then auto-retry
+              inworldQuotaExhaustedUntil = Date.now() + 10 * 60 * 1000;
+            }
+          }
+        } catch (inworldErr) {
+          // silently fallback
         }
       }
 
-      res.json({ 
-        audioContent: data.audioContent,
+      // Fallback: Google TTS
+      if (!audioBuffer) {
+        try {
+          audioBuffer = await synthesizeGoogleTTS(cleanText);
+        } catch (fallbackErr) {
+          console.error('Google TTS fallback also failed:', fallbackErr);
+        }
+      }
+
+      if (!audioBuffer) {
+        return res.status(500).json({ error: 'Không thể tạo âm thanh AI vào lúc này.' });
+      }
+
+      // Save to disk cache
+      try {
+        fs.writeFileSync(audioFilePath, audioBuffer);
+      } catch (writeErr) {
+        console.warn("Failed to write audio cache file to disk:", writeErr);
+      }
+
+      return res.json({ 
+        audioContent: audioBuffer.toString('base64'),
         audioUrl 
       });
     } catch (error: any) {
@@ -445,31 +487,51 @@ QUY TẮC BẮT BUỘC:
       }
 
       const apiKey = process.env.INWORLD_API_KEY;
-      if (!apiKey) return res.status(500).send('INWORLD_API_KEY is not set');
+      let audioBuffer: Buffer | null = null;
 
-      const response = await fetch('https://api.inworld.ai/tts/v1/voice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${apiKey}`
-        },
-        body: JSON.stringify({
-          text,
-          voiceId,
-          modelId: "inworld-tts-1.5-max",
-          audioConfig: { speakingRate },
-          temperature: 1
-        })
-      });
+      if (apiKey && isServerInworldAvailable()) {
+        try {
+          const response = await fetch('https://api.inworld.ai/tts/v1/voice', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${apiKey}`
+            },
+            body: JSON.stringify({
+              text,
+              voiceId,
+              modelId: "inworld-tts-1.5-max",
+              audioConfig: { speakingRate },
+              temperature: 1
+            })
+          });
 
-      if (!response.ok) {
-        return res.status(response.status).send('TTS API error');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.audioContent) {
+              audioBuffer = Buffer.from(data.audioContent, 'base64');
+              inworldQuotaExhaustedUntil = 0;
+            }
+          } else {
+            if (response.status === 402 || response.status === 429) {
+              inworldQuotaExhaustedUntil = Date.now() + 10 * 60 * 1000;
+            }
+          }
+        } catch (e) {
+          // ignore and fallback
+        }
       }
 
-      const data = await response.json();
-      if (data.audioContent) {
-        const audioBuffer = Buffer.from(data.audioContent, 'base64');
-        fs.writeFileSync(audioFilePath, audioBuffer);
+      if (!audioBuffer) {
+        try {
+          audioBuffer = await synthesizeGoogleTTS(text);
+        } catch (e) {}
+      }
+
+      if (audioBuffer) {
+        try {
+          fs.writeFileSync(audioFilePath, audioBuffer);
+        } catch (writeErr) {}
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Cache-Control', 'public, max-age=2592000');
         return res.send(audioBuffer);

@@ -2438,12 +2438,28 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
       if (url) {
         onUpdateExample(example.id, { hasAudio: true, audioUrl: url });
         setAudioUrl(url);
-        playAudioUrl(url);
+        try {
+          if (auth.currentUser) {
+            const cardRef = doc(db, 'global_intensive_words', wordId);
+            const currentDoc = await getDoc(cardRef);
+            if (currentDoc.exists()) {
+              const currentData = currentDoc.data();
+              const updatedExs = (currentData.examples || []).map((exItem: any) => 
+                exItem.id === example.id ? { ...exItem, hasAudio: true, audioUrl: url } : exItem
+              );
+              await setDoc(cardRef, { examples: updatedExs }, { merge: true });
+            }
+          }
+        } catch (dbErr) {
+          console.warn("Direct Firestore save warning in IntensiveStudy:", dbErr);
+        }
+        playAudioUrl(url, example.sentence);
       } else {
-        alert("Có lỗi khi tạo âm thanh.");
+        alert("Không thể tạo file âm thanh AI lúc này. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.");
       }
-    } catch(err) {
-      alert("Lỗi khi gọi AI tạo âm thanh");
+    } catch(err: any) {
+      console.error("AI TTS error:", err);
+      alert("Lỗi khi gọi AI tạo âm thanh: " + (err?.message || "Vui lòng thử lại."));
     } finally {
       setIsGenerating(false);
     }
@@ -2452,7 +2468,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
   useEffect(() => {
     let active = true;
     if (example.audioUrl) {
-      if (example.audioUrl.startsWith('firestore:') && auth.currentUser) {
+      if (example.audioUrl.startsWith('firestore:')) {
         const audioId = example.audioUrl.split(':')[1];
         getDoc(doc(db, 'global_audio', audioId)).then((docSnap) => {
            if (docSnap.exists() && active) {
