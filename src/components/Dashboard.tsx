@@ -835,10 +835,10 @@ export default function Dashboard({
                 id="btn-random-sentence-ja-vi"
                 onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
                 className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên câu ví dụ (Nhật → Việt)"
+                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Nhật → Việt)"
               >
                 <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên (Nhật → Việt)</span>
+                <span>Ôn ngẫu nhiên MP3 (Nhật → Việt)</span>
               </button>
             )}
             {onStartSentenceReview && (
@@ -846,10 +846,10 @@ export default function Dashboard({
                 id="btn-random-sentence-vi-ja"
                 onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
                 className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên câu ví dụ (Việt → Nhật)"
+                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Việt → Nhật)"
               >
                 <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên (Việt → Nhật)</span>
+                <span>Ôn ngẫu nhiên MP3 (Việt → Nhật)</span>
               </button>
             )}
             {onNavigateToQuiz && (
@@ -916,10 +916,10 @@ export default function Dashboard({
                 id="btn-random-sentence-ja-vi-notdue"
                 onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
                 className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên câu ví dụ (Nhật → Việt)"
+                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Nhật → Việt)"
               >
                 <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên (Nhật → Việt)</span>
+                <span>Ôn ngẫu nhiên MP3 (Nhật → Việt)</span>
               </button>
             )}
             {onStartSentenceReview && (
@@ -927,10 +927,10 @@ export default function Dashboard({
                 id="btn-random-sentence-vi-ja-notdue"
                 onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
                 className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên câu ví dụ (Việt → Nhật)"
+                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Việt → Nhật)"
               >
                 <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên (Việt → Nhật)</span>
+                <span>Ôn ngẫu nhiên MP3 (Việt → Nhật)</span>
               </button>
             )}
             {onNavigateToQuiz && (

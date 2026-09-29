@@ -159,13 +159,20 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     deck.forEach((word) => {
       (word.examples || []).forEach((ex) => {
         if (ex.sentence && ex.translation) {
-          allExamples.push({ ...ex, word: word.word, wordId: word.id });
+          allExamples.push({
+            ...ex,
+            audioUrl: ex.audioUrl || null,
+            hasAudio: !!ex.audioUrl || !!ex.hasAudio,
+            word: word.word,
+            wordId: word.id
+          });
         }
       });
     });
 
-    // If reviewing generally without a specific single-word restriction, also pull examples from mainDeck
-    if (mainDeck && deck.length > 1) {
+    // If reviewing generally without a specific single-word restriction, or in isRandom mode, also pull examples from mainDeck
+    const isSingleWordReview = deck.length === 1 && !isRandom;
+    if (mainDeck && !isSingleWordReview) {
       mainDeck.forEach((card) => {
         if (card.examples && Array.isArray(card.examples)) {
           card.examples.forEach((ex) => {
@@ -176,8 +183,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 reading: ex.reading || '',
                 romaji: ex.romaji || '',
                 translation: ex.translation,
-                audioUrl: ex.audioUrl,
-                hasAudio: ex.hasAudio,
+                audioUrl: ex.audioUrl || null,
+                hasAudio: !!ex.audioUrl || !!ex.hasAudio,
                 word: card.kanji || card.reading,
                 wordId: card.id,
               });
@@ -190,8 +197,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             reading: card.reading || '',
             romaji: card.romaji || '',
             translation: card.exampleTranslation,
-            audioUrl: card.audioUrl,
-            hasAudio: card.hasAudio,
+            audioUrl: card.audioUrl || null,
+            hasAudio: !!card.audioUrl || !!card.hasAudio,
             word: card.kanji || card.reading,
             wordId: card.id,
           });
@@ -200,8 +207,14 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     }
 
     if (isRandom) {
-      // Pure random shuffle across all available example sentences
-      const shuffled = [...allExamples];
+      // ONLY take example sentences that have an uploaded mp3 audio file successfully
+      const audioOnlyExamples = allExamples.filter((ex) => {
+        const hasUrl = typeof ex.audioUrl === 'string' && ex.audioUrl.trim().length > 0;
+        return Boolean(hasUrl || ex.hasAudio);
+      });
+
+      // Pure random shuffle across all available audio-only example sentences
+      const shuffled = [...audioOnlyExamples];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -628,13 +641,15 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-6">
         <p className="text-theme-primary/60 mb-6 font-serif text-lg">
-          {deck.some((word) => (word.examples || []).length > 0)
-            ? "Tuyệt vời, bạn đã hoàn thành hết các câu đến hạn!"
-            : "Chưa có câu ví dụ nào trong dữ liệu để ôn tập."}
+          {isRandom
+            ? "Chưa có câu ví dụ nào có file MP3 âm thanh upload thành công để ôn tập ngẫu nhiên. Vui lòng upload file âm thanh MP3 cho các câu ví dụ trước nhé!"
+            : (deck.some((word) => (word.examples || []).length > 0)
+              ? "Tuyệt vời, bạn đã hoàn thành hết các câu đến hạn!"
+              : "Chưa có câu ví dụ nào trong dữ liệu để ôn tập.")}
         </p>
         <button
           onClick={onClose}
-          className="border border-theme-subtle hover:border-theme-accent text-theme-accent bg-theme-panel px-8 py-3 rounded-none uppercase tracking-[0.2em] text-xs transition-colors"
+          className="border border-theme-subtle hover:border-theme-accent text-theme-accent bg-theme-panel px-8 py-3 rounded-none uppercase tracking-[0.2em] text-xs transition-colors cursor-pointer"
         >
           Quay lại
         </button>
@@ -662,13 +677,13 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold tracking-widest uppercase text-theme-accent">
-                {isRandom ? "Ôn tập ngẫu nhiên: " : "Ôn tập câu: "}
+                {isRandom ? "Ôn tập ngẫu nhiên MP3: " : "Ôn tập câu: "}
                 {mode === "JA_TO_VI" ? "Nhật → Việt" : "Việt → Nhật"}
               </h2>
               {isRandom && (
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-theme-accent/15 text-theme-accent border border-theme-accent/30 flex items-center gap-1">
                   <Shuffle className="w-2.5 h-2.5" />
-                  Ngẫu nhiên
+                  MP3 Audio Only
                 </span>
               )}
             </div>
