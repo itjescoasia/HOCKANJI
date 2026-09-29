@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Volume2,
   Shuffle,
+  CheckSquare,
 } from "lucide-react";
 import {
   PieChart,
@@ -50,6 +51,7 @@ interface DashboardProps {
   onNavigateAdd?: () => void;
   onRecordWordOfTheDay?: (id: string) => void;
   onNavigateToWord?: (word: string, isIntensive: boolean, id: string) => void;
+  onNavigateToQuiz?: () => void;
 }
 
 import { cleanTextForSearch } from "../utils/stringUtils";
@@ -68,6 +70,7 @@ export default function Dashboard({
   onNavigateAdd,
   onRecordWordOfTheDay,
   onNavigateToWord,
+  onNavigateToQuiz,
 }: DashboardProps) {
 
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
@@ -335,7 +338,41 @@ export default function Dashboard({
         </p>
       </div>
 
-            {/* Sentence of the Day */}
+      {/* N4 Quiz Quick Launch Banner */}
+      {onNavigateToQuiz && (
+        <div 
+          onClick={onNavigateToQuiz}
+          className="bg-gradient-to-r from-emerald-950/40 via-theme-panel to-emerald-950/30 border border-emerald-500/40 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-emerald-500 transition-all rounded-sm group shadow-sm"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
+              <CheckSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">
+                  Chức năng mới
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-emerald-400 transition-colors">
+                  Trắc Nghiệm Tiếng Nhật N4 (Đề thi &amp; Giải thích chi tiết)
+                </h3>
+              </div>
+              <p className="text-xs text-theme-primary/70 mt-1">
+                Luyện tập thể khả năng (Bài 27), trợ từ (が, しか), tự/tha động từ, ý chí, bị động, sai khiến kèm bảng từ vựng và audio chuẩn.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onNavigateToQuiz(); }}
+            className="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end sm:self-auto flex items-center gap-1.5 cursor-pointer shadow"
+          >
+            Làm bài test
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Sentence of the Day */}
       {sentenceOfTheDay && (
         <div className="bg-theme-panel border border-theme-accent p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none hidden sm:block">
@@ -815,6 +852,16 @@ export default function Dashboard({
                 <span>Ôn ngẫu nhiên (Việt → Nhật)</span>
               </button>
             )}
+            {onNavigateToQuiz && (
+              <button
+                onClick={onNavigateToQuiz}
+                className="border border-emerald-500/80 text-emerald-400 bg-emerald-950/30 hover:bg-emerald-600 hover:text-white font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer shadow-sm rounded-sm"
+                title="Làm bài test trắc nghiệm ngữ pháp &amp; từ vựng N4"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>Trắc nghiệm N4 (Mới)</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
@@ -884,6 +931,16 @@ export default function Dashboard({
               >
                 <Shuffle className="w-3.5 h-3.5" />
                 <span>Ôn ngẫu nhiên (Việt → Nhật)</span>
+              </button>
+            )}
+            {onNavigateToQuiz && (
+              <button
+                onClick={onNavigateToQuiz}
+                className="border border-emerald-500/80 text-emerald-400 bg-emerald-950/30 hover:bg-emerald-600 hover:text-white font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer shadow-sm rounded-sm"
+                title="Làm bài test trắc nghiệm ngữ pháp &amp; từ vựng N4"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>Trắc nghiệm N4 (Mới)</span>
               </button>
             )}
           </div>

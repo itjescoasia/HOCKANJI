@@ -119,7 +119,37 @@ export interface Conversation {
   audioUrl?: string | null;
 }
 
-export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation';
+export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation' | 'quiz';
+
+export interface QuizVocabItem {
+  kanji: string;
+  hira: string;
+  romaji: string;
+  type: string;
+  meaning: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  fullSentence: string;
+  plainSentence?: string;
+  translation: string;
+  vocab: QuizVocabItem[];
+  grammar: string;
+  lesson?: string;
+  level?: string;
+}
+
+export interface QuizTopic {
+  id: string;
+  title: string;
+  subtitle: string;
+  level: string;
+  questions: QuizQuestion[];
+}
 
 export type UserRole = 'admin' | 'user';
 

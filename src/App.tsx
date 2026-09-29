@@ -15,7 +15,8 @@ import ShortStudySession from './components/ShortStudySession';
 import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
 import AccountSettingsModal from './components/AccountSettingsModal';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings } from 'lucide-react';
+import N4QuizView from './components/N4QuizView';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -389,6 +390,7 @@ export default function App() {
   const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
+    { id: 'quiz', label: 'Trắc nghiệm N4', icon: CheckSquare },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
     { id: 'intensive_vocab', label: 'Chuyên đề', icon: Lightbulb },
     { id: 'conversation', label: 'Hội thoại', icon: MessageSquare },
@@ -477,6 +479,7 @@ export default function App() {
             onStartSentenceReview={handleStartSentenceReview}
             onNavigateAdd={isAdmin ? () => handleNavigate('add') : undefined} 
             onRecordWordOfTheDay={recordWordOfTheDay}
+            onNavigateToQuiz={() => handleNavigate('quiz')}
             onNavigateToWord={(word, isIntensive, id) => {
               if (isIntensive) {
                 setIntensiveSearchQuery(word);
@@ -560,6 +563,16 @@ export default function App() {
             mainDeck={deck}
             onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
             onAddIntensiveWord={addIntensiveWord}
+          />
+        )}
+
+        {view === 'quiz' && (
+          <N4QuizView
+            onBackToDashboard={() => handleNavigate('dashboard')}
+            onNavigateToWord={(word) => {
+              setListSearchQuery(word);
+              handleNavigate('list');
+            }}
           />
         )}
       </main>
