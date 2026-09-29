@@ -197,8 +197,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             reading: card.reading || '',
             romaji: card.romaji || '',
             translation: card.exampleTranslation,
-            audioUrl: card.audioUrl || null,
-            hasAudio: !!card.audioUrl || !!card.hasAudio,
+            audioUrl: null, // Card's audioUrl belongs to the vocabulary word, NOT to this example sentence
+            hasAudio: false,
             word: card.kanji || card.reading,
             wordId: card.id,
           });
@@ -209,8 +209,16 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     if (isRandom) {
       // ONLY take example sentences that have an uploaded mp3 audio file successfully
       const audioOnlyExamples = allExamples.filter((ex) => {
-        const hasUrl = typeof ex.audioUrl === 'string' && ex.audioUrl.trim().length > 0;
-        return Boolean(hasUrl || ex.hasAudio);
+        if (!ex.audioUrl || typeof ex.audioUrl !== 'string') return false;
+        const trimmed = ex.audioUrl.trim();
+        if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return false;
+        return (
+          trimmed.startsWith('http://') ||
+          trimmed.startsWith('https://') ||
+          trimmed.startsWith('firestore:') ||
+          trimmed.startsWith('blob:') ||
+          trimmed.startsWith('data:audio')
+        );
       });
 
       // Pure random shuffle across all available audio-only example sentences
@@ -263,10 +271,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   }, [deck, mainDeck, mode, forceAll, isRandom]);
 
   useEffect(() => {
-    if (!isInitialized) {
-      initExamples();
-    }
-  }, [isInitialized, initExamples]);
+    initExamples();
+  }, [initExamples]);
 
   const handleNext = () => {
     if (isRandom) {

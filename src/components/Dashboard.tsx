@@ -83,7 +83,10 @@ export default function Dashboard({
     const normalMatches = deck.filter(c => 
       cleanTextForSearch(c.kanji).includes(query) || 
       cleanTextForSearch(c.reading).includes(query) || 
-      cleanTextForSearch(c.meaning).includes(query)
+      cleanTextForSearch(c.meaning).includes(query) ||
+      (c.examples || []).some(ex => cleanTextForSearch(ex.sentence || '').includes(query) || cleanTextForSearch(ex.translation || '').includes(query)) ||
+      (c.example && cleanTextForSearch(c.example).includes(query)) ||
+      (c.exampleTranslation && cleanTextForSearch(c.exampleTranslation).includes(query))
     ).map(c => ({ type: 'normal', word: c.kanji, reading: c.reading, meaning: c.meaning, id: c.id, item: c }));
 
     const intensiveMatches = intensiveDeck.filter(c =>

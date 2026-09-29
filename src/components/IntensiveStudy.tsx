@@ -2440,7 +2440,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
         setAudioUrl(url);
         try {
           if (auth.currentUser) {
-            const cardRef = doc(db, 'global_intensive_words', wordId);
+            const cardRef = doc(db, 'global_intensiveVocab', wordId);
             const currentDoc = await getDoc(cardRef);
             if (currentDoc.exists()) {
               const currentData = currentDoc.data();

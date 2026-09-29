@@ -636,6 +636,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       if (!matchesSearch && c.forms) {
           matchesSearch = c.forms.some(f => f.value && cleanTextForSearch(f.value).includes(cleanQ));
       }
+
+      if (!matchesSearch) {
+          if (c.examples && Array.isArray(c.examples)) {
+              matchesSearch = c.examples.some(ex => 
+                (ex.sentence && cleanTextForSearch(ex.sentence).includes(cleanQ)) ||
+                (ex.translation && cleanTextForSearch(ex.translation).includes(cleanQ))
+              );
+          }
+          if (!matchesSearch && c.example) {
+              matchesSearch = cleanTextForSearch(c.example).includes(cleanQ) || 
+                              Boolean(c.exampleTranslation && cleanTextForSearch(c.exampleTranslation).includes(cleanQ));
+          }
+      }
                             
       const matchesFilter = filterType === 'all' || c.wordType === filterType;
       
