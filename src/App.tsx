@@ -592,7 +592,7 @@ export default function App() {
       )}
 
         {isSentenceReviewOpen && (
-          <div className="fixed inset-0 z-[99999] bg-theme-base-alt overflow-y-auto w-full h-full">
+          <div id="sentence-review-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full">
             <SentenceReview
               deck={sentenceReviewTargetDeck || intensiveDeck}
               mainDeck={deck}
@@ -626,7 +626,12 @@ export default function App() {
                   });
                   updateConversation(id, { dialogues: updatedDialogues });
                 } else {
-                  updateIntensiveWord(id, updates);
+                  const card = deck.find(c => c.id === id);
+                  if (card) {
+                    updateCard(id, updates);
+                  } else {
+                    updateIntensiveWord(id, updates);
+                  }
                 }
               }}
               onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}

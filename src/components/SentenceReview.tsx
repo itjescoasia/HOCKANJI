@@ -1,16 +1,25 @@
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, playAudioUrl } from '../utils/playTTS';
+import { playTTS, playAudioUrl, generateAndUploadTTS } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles, Upload, Trash2, Music, Play, Loader2 } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard, FuriganaMode } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
 import { fetchFuriganaWithGemini } from "../utils/furigana";
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
 
 interface SentenceReviewProps {
   deck: IntensiveWord[];
@@ -109,12 +118,27 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [isEditing, setIsEditing] = useState(false);
   const [isGeneratingFurigana, setIsGeneratingFurigana] = useState(false);
-  const [editData, setEditData] = useState({
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [previewAudioBlobUrl, setPreviewAudioBlobUrl] = useState<string | null>(null);
+  const editAudioInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [editData, setEditData] = useState<{
+    sentence: string;
+    furigana: string;
+    reading: string;
+    romaji: string;
+    translation: string;
+    audioUrl: string | null;
+    hasAudio: boolean;
+  }>({
     sentence: "",
     furigana: "",
     reading: "",
     romaji: "",
     translation: "",
+    audioUrl: null,
+    hasAudio: false,
   });
 
   const handleGenerateAIFurigana = async () => {
@@ -468,15 +492,50 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     setShowAnswer(true);
   };
 
-  const handleStartEdit = () => {
+  const handleStartEdit = async () => {
     const currentExample = examples[currentIndex];
+    if (!currentExample) return;
     setEditData({
       sentence: currentExample.sentence,
       furigana: currentExample.furigana || "",
       reading: currentExample.reading || "",
       romaji: currentExample.romaji || "",
       translation: currentExample.translation || "",
+      audioUrl: currentExample.audioUrl || null,
+      hasAudio: !!currentExample.hasAudio || !!currentExample.audioUrl,
     });
+
+    if (currentExample.audioUrl) {
+      if (currentExample.audioUrl.startsWith('firestore:')) {
+        const audioId = currentExample.audioUrl.split(':')[1];
+        try {
+          const docSnap = await getDoc(doc(db, 'global_audio', audioId));
+          if (docSnap.exists()) {
+            setPreviewAudioBlobUrl(docSnap.data().data);
+          } else {
+            setPreviewAudioBlobUrl(null);
+          }
+        } catch {
+          setPreviewAudioBlobUrl(null);
+        }
+      } else {
+        setPreviewAudioBlobUrl(currentExample.audioUrl);
+      }
+    } else if (currentExample.hasAudio) {
+      try {
+        const blob = await localforage.getItem<Blob>(`audio_intensive_${currentExample.wordId}_${currentExample.id}`);
+        if (blob) {
+          setPreviewAudioBlobUrl(URL.createObjectURL(blob));
+        } else {
+          setPreviewAudioBlobUrl(null);
+        }
+      } catch {
+        setPreviewAudioBlobUrl(null);
+      }
+    } else {
+      setPreviewAudioBlobUrl(null);
+    }
+
     setIsEditing(true);
   };
 
@@ -484,16 +543,107 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     setIsEditing(false);
   };
 
+  const handleUploadEditAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAudio(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const audioId = `sentence_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      if (auth.currentUser) {
+        try {
+          await setDoc(doc(db, 'global_audio', audioId), {
+            data: base64,
+            createdAt: Date.now(),
+            filename: file.name
+          });
+          const firestoreUrl = `firestore:${audioId}`;
+          setEditData(prev => ({ ...prev, audioUrl: firestoreUrl, hasAudio: true }));
+          setPreviewAudioBlobUrl(base64);
+        } catch (storageErr) {
+          console.warn("Firestore audio upload failed, falling back to data URL:", storageErr);
+          setEditData(prev => ({ ...prev, audioUrl: base64, hasAudio: true }));
+          setPreviewAudioBlobUrl(base64);
+        }
+      } else {
+        setEditData(prev => ({ ...prev, audioUrl: base64, hasAudio: true }));
+        setPreviewAudioBlobUrl(base64);
+      }
+    } catch (err: any) {
+      console.error("Audio upload error:", err);
+      alert("Lỗi khi tải file âm thanh lên: " + (err.message || "Vui lòng thử lại"));
+    } finally {
+      setIsUploadingAudio(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleGenerateAIAudio = async () => {
+    const textToSpeak = editData.sentence.trim();
+    if (!textToSpeak) {
+      alert("Vui lòng nhập câu tiếng Nhật trước khi tạo âm thanh AI.");
+      return;
+    }
+    setIsGeneratingAudio(true);
+    try {
+      const cloudUrl = await generateAndUploadTTS(textToSpeak);
+      if (cloudUrl) {
+        setEditData(prev => ({ ...prev, audioUrl: cloudUrl, hasAudio: true }));
+        if (cloudUrl.startsWith('firestore:')) {
+          const audioId = cloudUrl.split(':')[1];
+          try {
+            const docSnap = await getDoc(doc(db, 'global_audio', audioId));
+            if (docSnap.exists()) {
+              setPreviewAudioBlobUrl(docSnap.data().data);
+            } else {
+              setPreviewAudioBlobUrl(cloudUrl);
+            }
+          } catch {
+            setPreviewAudioBlobUrl(cloudUrl);
+          }
+        } else {
+          setPreviewAudioBlobUrl(cloudUrl);
+        }
+        playAudioUrl(cloudUrl, textToSpeak);
+      } else {
+        alert("Không thể tạo file âm thanh AI lúc này. Vui lòng thử lại sau.");
+      }
+    } catch (err: any) {
+      console.error("AI TTS error:", err);
+      alert("Lỗi khi tạo âm thanh AI: " + (err?.message || "Vui lòng thử lại."));
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const handleRemoveEditAudio = () => {
+    setEditData(prev => ({ ...prev, audioUrl: null, hasAudio: false }));
+    setPreviewAudioBlobUrl(null);
+  };
+
+  const handlePlayPreviewAudio = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (previewAudioBlobUrl) {
+      playAudioUrl(previewAudioBlobUrl, editData.sentence);
+    } else if (editData.audioUrl) {
+      playAudioUrl(editData.audioUrl, editData.sentence);
+    } else if (editData.sentence) {
+      playTTS(editData.sentence);
+    }
+  };
+
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!String(editData.sentence || "").trim()) return;
 
     const currentExample = examples[currentIndex];
+    if (!currentExample) return;
 
     if (onUpdateWord) {
-      const word = deck.find((w) => w.id === currentExample.wordId);
+      const targetId = currentExample.wordId;
+      const word = deck.find((w) => w.id === targetId);
       if (word) {
-        const updatedExamples = word.examples.map((ex) => {
+        const updatedExamples = (word.examples || []).map((ex) => {
           if (ex.id === currentExample.id) {
             return {
               ...ex,
@@ -502,11 +652,41 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               reading: String(editData.reading || "").trim(),
               romaji: String(editData.romaji || "").trim(),
               translation: String(editData.translation || "").trim(),
+              audioUrl: editData.audioUrl,
+              hasAudio: editData.hasAudio,
             };
           }
           return ex;
         });
         onUpdateWord(word.id, { examples: updatedExamples });
+      } else if (mainDeck) {
+        const card = mainDeck.find((c) => c.id === targetId);
+        if (card) {
+          if (card.examples && Array.isArray(card.examples)) {
+            const updatedExamples = card.examples.map((ex) => {
+              if (ex.id === currentExample.id) {
+                return {
+                  ...ex,
+                  sentence: String(editData.sentence || "").trim(),
+                  furigana: String(editData.furigana || "").trim(),
+                  reading: String(editData.reading || "").trim(),
+                  romaji: String(editData.romaji || "").trim(),
+                  translation: String(editData.translation || "").trim(),
+                  audioUrl: editData.audioUrl,
+                  hasAudio: editData.hasAudio,
+                };
+              }
+              return ex;
+            });
+            onUpdateWord(card.id, { examples: updatedExamples });
+          } else {
+            onUpdateWord(card.id, {
+              example: String(editData.sentence || "").trim(),
+              exampleTranslation: String(editData.translation || "").trim(),
+              exampleAudioUrl: editData.audioUrl,
+            } as any);
+          }
+        }
       }
     }
 
@@ -520,6 +700,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             reading: String(editData.reading || "").trim(),
             romaji: String(editData.romaji || "").trim(),
             translation: String(editData.translation || "").trim(),
+            audioUrl: editData.audioUrl,
+            hasAudio: editData.hasAudio,
           };
         }
         return ex;
@@ -752,189 +934,141 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     >
       {/* Front */}
       <div 
+        id="sentence-review-card-front"
         className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center group overflow-y-auto ${showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
       >
-        <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/30">
-          {mode === "JA_TO_VI" ? "NHẬT" : "VIỆT"}
+        <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/50 font-bold uppercase tracking-wider">
+          {mode === "JA_TO_VI" ? "CÂU HỎI (TIẾNG NHẬT)" : "CÂU HỎI (TIẾNG VIỆT)"}
         </span>
         
-        {!isEditing && (
-          <button
-            onClick={handleStartEdit}
-            className="absolute top-4 right-4 text-theme-primary/40 hover:text-theme-accent transition-colors p-2"
-            title="Sửa ví dụ"
-          >
-            <Pen className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          id="btn-edit-sentence-front"
+          type="button"
+          onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
+          className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-theme-subtle text-theme-primary/70 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-xs z-30 cursor-pointer shadow-xs"
+          title="Chỉnh sửa câu ví dụ này (Chế độ bút sửa)"
+        >
+          <Pen className="w-3.5 h-3.5 text-theme-accent" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">Sửa câu</span>
+        </button>
 
-        {isEditing ? (
-          <form onSubmit={handleSaveEdit} className="w-full text-left space-y-4 mt-8">
-            <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">Chỉnh sửa câu ví dụ</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Câu ví dụ (Nhật) *</label>
-                <button
-                  type="button"
-                  onClick={handleGenerateAIFurigana}
-                  disabled={isGeneratingFurigana || !editData.sentence.trim()}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 rounded border border-theme-accent/30 transition-all disabled:opacity-50 cursor-pointer"
-                  title="Dùng Gemini AI để phân tích và tự động điền Furigana theo ngữ cảnh"
-                >
-                  <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />
-                  <span>{isGeneratingFurigana ? "Đang tạo Furigana..." : "✨ Tạo Furigana bằng AI"}</span>
-                </button>
-              </div>
-              <textarea required rows={2} value={editData.sentence} onChange={(e) => setEditData({ ...editData, sentence: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif resize-none" placeholder="Nhập câu tiếng Nhật..." />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium flex items-center justify-between">
-                <span>Furigana (Định dạng: 漢字[かんじ])</span>
-                <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động sinh hoặc gõ thủ công</span>
-              </label>
-              <input
-                type="text"
-                value={editData.furigana || ""}
-                onChange={(e) => setEditData({ ...editData, furigana: e.target.value })}
-                className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif"
-                placeholder="VD: 彼女[かのじょ]は日本[にほん]に行[い]きます..."
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Cách đọc (Hiragana)</label>
-                <input type="text" value={editData.reading} onChange={(e) => setEditData({ ...editData, reading: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent" placeholder="VD: わたし..." />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Romaji</label>
-                <input type="text" value={editData.romaji} onChange={(e) => setEditData({ ...editData, romaji: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent font-mono" placeholder="VD: watashi..." />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">Nghĩa tiếng Việt</label>
-              <textarea rows={2} value={editData.translation} onChange={(e) => setEditData({ ...editData, translation: e.target.value })} className="w-full bg-theme-base border border-theme-subtle rounded p-3 text-sm focus:outline-none focus:border-theme-accent resize-none" placeholder="Nhập nghĩa tiếng Việt..." />
-            </div>
-            <div className="flex gap-2 pt-4">
-              <button type="button" onClick={handleCancelEdit} className="flex-1 px-4 py-3 text-xs tracking-widest uppercase font-bold border border-theme-subtle text-theme-primary/60 hover:bg-theme-subtle/50 transition-colors">Hủy</button>
-              <button type="submit" className="flex-1 px-4 py-3 text-xs tracking-widest uppercase font-bold bg-theme-accent text-theme-inverted hover:bg-theme-accent-hover transition-colors">Lưu thay đổi</button>
-            </div>
-          </form>
-        ) : (
-          <>
-            <div className="flex-1 shrink-0 min-h-0" />
-            <HighlightProvider>
-              <div className="w-full shrink-0 my-3">
-                <div
-                  className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
-                >
-                  {mode === "JA_TO_VI"
-                    ? (
-                      furiganaMode === 'off'
-                        ? renderExampleHighlight(
-                            currentExample.sentence,
-                            currentExample.word,
-                            mainDeck,
-                          )
-                        : (
-                          <FuriganaSentence
-                            sentence={currentExample.sentence}
-                            furigana={currentExample.furigana}
-                            mode={furiganaMode}
-                            deck={mainDeck}
-                            autoFetch={true}
-                          />
-                        )
+        <div className="flex-1 shrink-0 min-h-0" />
+        <HighlightProvider>
+          <div className="w-full shrink-0 my-3">
+            <div
+              id="sentence-review-question-text"
+              className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
+            >
+              {mode === "JA_TO_VI"
+                ? (
+                  furiganaMode === 'off'
+                    ? renderExampleHighlight(
+                        currentExample.sentence,
+                        currentExample.word,
+                        mainDeck,
+                      )
+                    : (
+                      <FuriganaSentence
+                        sentence={currentExample.sentence}
+                        furigana={currentExample.furigana}
+                        mode={furiganaMode}
+                        deck={mainDeck}
+                        autoFetch={true}
+                      />
                     )
-                    : <HighlightVietnamese text={questionText} />}
+                )
+                : <HighlightVietnamese text={questionText} />}
+            </div>
+            {mode === "JA_TO_VI" && currentExample.reading && (
+              <p className="text-theme-accent opacity-80 mt-3 text-sm">
+                <RelatedHighlight text={currentExample.reading} type="hiragana" />
+              </p>
+            )}
+            {mode === "JA_TO_VI" && (
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <div className="flex flex-col items-center gap-0.5">
+                  <button
+                    id="btn-sentence-audio"
+                    type="button"
+                    onClick={(e) => handleTTS(currentExample.sentence, e)}
+                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
+                  >
+                    <Volume2 className="w-5 h-5" />
+                  </button>
+                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
                 </div>
-                {mode === "JA_TO_VI" && currentExample.reading && (
-                  <p className="text-theme-accent opacity-80 mt-3 text-sm">
-                    <RelatedHighlight text={currentExample.reading} type="hiragana" />
-                  </p>
-                )}
-                {mode === "JA_TO_VI" && (
-                  <div className="flex items-center justify-center gap-2 mt-3">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={(e) => handleTTS(currentExample.sentence, e)}
-                        className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-                        title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                      >
-                        <Volume2 className="w-5 h-5" />
-                      </button>
-                      {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
-                    </div>
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(currentExample.sentence);
-                        const btn = e.currentTarget;
-                        const originalHTML = btn.innerHTML;
-                        btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-                      }}
-                      className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                      title="Copy câu tiếng Nhật"
-                    >
-                      <Copy className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Translation input scratchpad */}
-                <div
-                  className="w-full max-w-lg mx-auto mt-5 text-left"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center justify-between mb-1.5 px-0.5">
-                    <label className="text-[11px] uppercase tracking-wider text-theme-primary/60 font-semibold">
-                      {mode === "JA_TO_VI" ? "Dịch câu trên sang tiếng Việt:" : "Dịch câu trên sang tiếng Nhật:"}
-                    </label>
-                    {userTranslation && (
-                      <button
-                        type="button"
-                        onClick={() => setUserTranslation("")}
-                        className="text-[10px] text-theme-primary/40 hover:text-red-500 uppercase tracking-wider transition-colors cursor-pointer"
-                      >
-                        Xóa
-                      </button>
-                    )}
-                  </div>
-                  <textarea
-                    value={userTranslation}
-                    onChange={(e) => setUserTranslation(e.target.value)}
-                    placeholder={
-                      mode === "JA_TO_VI"
-                        ? "Gõ bản dịch tiếng Việt của bạn (hoặc dịch nhẩm)..."
-                        : "Gõ câu tiếng Nhật của bạn (hoặc dịch nhẩm)..."
-                    }
-                    rows={2}
-                    className="w-full bg-theme-base/80 border border-theme-subtle focus:border-theme-accent rounded-lg p-3 text-sm text-theme-primary placeholder:text-theme-primary/30 outline-none transition-all resize-none shadow-xs"
-                  />
-                  <p className="text-[10px] text-theme-primary/40 mt-1 text-right">
-                    Nhấn <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Enter</kbd> hoặc nút Lật thẻ bên dưới
-                  </p>
-                </div>
-
+                
                 <button
-                  type="button"
+                  id="btn-copy-sentence"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowAnswer(true);
+                    navigator.clipboard.writeText(currentExample.sentence);
+                    const btn = e.currentTarget;
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                    setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
                   }}
-                  className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-md shadow-xs hover:bg-theme-accent-hover transition-all cursor-pointer"
+                  className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                  title="Copy câu tiếng Nhật"
                 >
-                  <Eye className="w-4 h-4" />
-                  <span>Lật thẻ xem đáp án</span>
+                  <Copy className="w-5 h-5" />
                 </button>
               </div>
-            </HighlightProvider>
-            <div className="flex-1 shrink-0 min-h-0" />
-          </>
-        )}
+            )}
+
+            {/* Translation input scratchpad */}
+            <div
+              className="w-full max-w-lg mx-auto mt-5 text-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <label className="text-[11px] uppercase tracking-wider text-theme-primary/60 font-semibold">
+                  {mode === "JA_TO_VI" ? "Dịch câu trên sang tiếng Việt:" : "Dịch câu trên sang tiếng Nhật:"}
+                </label>
+                {userTranslation && (
+                  <button
+                    type="button"
+                    onClick={() => setUserTranslation("")}
+                    className="text-[10px] text-theme-primary/40 hover:text-red-500 uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Xóa
+                  </button>
+                )}
+              </div>
+              <textarea
+                id="sentence-review-user-translation-input"
+                value={userTranslation}
+                onChange={(e) => setUserTranslation(e.target.value)}
+                placeholder={
+                  mode === "JA_TO_VI"
+                    ? "Gõ bản dịch tiếng Việt của bạn (hoặc dịch nhẩm)..."
+                    : "Gõ câu tiếng Nhật của bạn (hoặc dịch nhẩm)..."
+                }
+                rows={2}
+                className="w-full bg-theme-base/80 border border-theme-subtle focus:border-theme-accent rounded-lg p-3 text-sm text-theme-primary placeholder:text-theme-primary/30 outline-none transition-all resize-none shadow-xs"
+              />
+              <p className="text-[10px] text-theme-primary/40 mt-1 text-right">
+                Nhấn <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Enter</kbd> hoặc nút Lật thẻ bên dưới
+              </p>
+            </div>
+
+            <button
+              id="btn-flip-card-front"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAnswer(true);
+              }}
+              className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-md shadow-xs hover:bg-theme-accent-hover transition-all cursor-pointer"
+            >
+              <Eye className="w-4 h-4" />
+              <span>Lật thẻ xem đáp án</span>
+            </button>
+          </div>
+        </HighlightProvider>
+        <div className="flex-1 shrink-0 min-h-0" />
       </div>
 
       {/* Back */}
@@ -946,15 +1080,16 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
         </span>
         
-        {!isEditing && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
-            className="absolute top-4 right-4 text-theme-primary/40 hover:text-theme-accent transition-colors p-2 z-[100]"
-            title="Sửa ví dụ"
-          >
-            <Pen className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          id="btn-edit-sentence-back"
+          type="button"
+          onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
+          className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-theme-subtle text-theme-primary/70 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-xs z-30 cursor-pointer shadow-xs"
+          title="Chỉnh sửa câu ví dụ này (Chế độ bút sửa)"
+        >
+          <Pen className="w-3.5 h-3.5 text-theme-accent" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">Sửa câu</span>
+        </button>
         
         <div className="flex-1 shrink-0 min-h-0" />
         <HighlightProvider>
@@ -1170,6 +1305,251 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   </div>
 )}
       </div>
+
+      {/* Modal Chế độ Bút Sửa Chữa Câu Ví Dụ */}
+      <AnimatePresence>
+        {isEditing && (
+          <div 
+            id="sentence-review-edit-modal-overlay"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={handleCancelEdit}
+          >
+            <motion.div
+              id="sentence-review-edit-modal"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-theme-panel border border-theme-subtle rounded-xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-auto"
+            >
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-theme-subtle">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-theme-accent/10 text-theme-accent">
+                    <Pen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-theme-primary">Chế độ sửa câu ví dụ</h3>
+                    <p className="text-xs text-theme-primary/50">Chỉnh sửa câu tiếng Nhật, Furigana và nghĩa tiếng Việt</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="p-1.5 text-theme-primary/50 hover:text-theme-primary transition-colors rounded-lg hover:bg-theme-hover cursor-pointer"
+                  title="Đóng"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEdit} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold">
+                      Câu ví dụ (Nhật) *
+                    </label>
+                    <button
+                      id="btn-ai-furigana"
+                      type="button"
+                      onClick={handleGenerateAIFurigana}
+                      disabled={isGeneratingFurigana || !editData.sentence.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 rounded-md border border-theme-accent/30 transition-all disabled:opacity-50 cursor-pointer"
+                      title="Dùng Gemini AI để phân tích và tự động điền Furigana theo ngữ cảnh"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />
+                      <span>{isGeneratingFurigana ? "Đang tạo Furigana..." : "✨ Tạo Furigana bằng AI"}</span>
+                    </button>
+                  </div>
+                  <textarea 
+                    id="edit-sentence-input"
+                    required 
+                    rows={2} 
+                    value={editData.sentence} 
+                    onChange={(e) => setEditData({ ...editData, sentence: e.target.value })} 
+                    className="w-full bg-theme-base border border-theme-subtle rounded-lg p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif resize-none" 
+                    placeholder="Nhập câu tiếng Nhật..." 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold flex items-center justify-between">
+                    <span>Furigana (Định dạng: 漢字[かんじ])</span>
+                    <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động sinh hoặc gõ thủ công</span>
+                  </label>
+                  <input
+                    id="edit-furigana-input"
+                    type="text"
+                    value={editData.furigana || ""}
+                    onChange={(e) => setEditData({ ...editData, furigana: e.target.value })}
+                    className="w-full bg-theme-base border border-theme-subtle rounded-lg p-3 text-sm focus:outline-none focus:border-theme-accent text-theme-japanese font-serif"
+                    placeholder="VD: 彼女[かのじょ]は日本[にほん]に行[い]きます..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold">Cách đọc (Hiragana)</label>
+                    <input 
+                      id="edit-reading-input"
+                      type="text" 
+                      value={editData.reading} 
+                      onChange={(e) => setEditData({ ...editData, reading: e.target.value })} 
+                      className="w-full bg-theme-base border border-theme-subtle rounded-lg p-3 text-sm focus:outline-none focus:border-theme-accent" 
+                      placeholder="VD: にほんりょうり..." 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold">Romaji</label>
+                    <input 
+                      id="edit-romaji-input"
+                      type="text" 
+                      value={editData.romaji} 
+                      onChange={(e) => setEditData({ ...editData, romaji: e.target.value })} 
+                      className="w-full bg-theme-base border border-theme-subtle rounded-lg p-3 text-sm focus:outline-none focus:border-theme-accent font-mono" 
+                      placeholder="VD: nihonryouri..." 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold">Nghĩa tiếng Việt *</label>
+                  <textarea 
+                    id="edit-translation-input"
+                    required
+                    rows={2} 
+                    value={editData.translation} 
+                    onChange={(e) => setEditData({ ...editData, translation: e.target.value })} 
+                    className="w-full bg-theme-base border border-theme-subtle rounded-lg p-3 text-sm focus:outline-none focus:border-theme-accent resize-none" 
+                    placeholder="Nhập bản dịch tiếng Việt..." 
+                  />
+                </div>
+
+                {/* Audio MP3 section */}
+                <div id="edit-sentence-audio-section" className="space-y-2 pt-3 border-t border-theme-subtle">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
+                      <span>File âm thanh MP3 phát âm</span>
+                    </label>
+                    {editData.audioUrl && (
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                        Đã có MP3
+                      </span>
+                    )}
+                  </div>
+
+                  <input
+                    id="edit-sentence-audio-file-input"
+                    type="file"
+                    accept="audio/*,.mp3,.wav,.m4a"
+                    ref={editAudioInputRef}
+                    onChange={handleUploadEditAudio}
+                    className="hidden"
+                  />
+
+                  {previewAudioBlobUrl || editData.audioUrl ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-theme-base rounded-lg border border-theme-subtle">
+                      <div className="flex items-center gap-2">
+                        <button
+                          id="btn-play-preview-audio"
+                          type="button"
+                          onClick={handlePlayPreviewAudio}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent text-theme-inverted hover:bg-theme-accent-hover rounded-md text-xs font-bold transition-all shadow-xs cursor-pointer"
+                          title="Nghe thử file âm thanh này"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          <span>Nghe thử MP3</span>
+                        </button>
+                        <span className="text-[11px] text-theme-primary/60 font-mono truncate max-w-[140px] sm:max-w-[200px]">
+                          {editData.audioUrl?.startsWith('firestore:') ? 'Firebase Cloud Audio' : 'Audio MP3'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          id="btn-replace-audio"
+                          type="button"
+                          onClick={() => editAudioInputRef.current?.click()}
+                          disabled={isUploadingAudio || isGeneratingAudio}
+                          className="text-xs text-theme-primary/70 hover:text-theme-accent px-2.5 py-1 rounded border border-theme-subtle hover:border-theme-accent transition-all cursor-pointer disabled:opacity-50"
+                          title="Thay thế file MP3 khác"
+                        >
+                          {isUploadingAudio ? 'Đang tải...' : 'Đổi file...'}
+                        </button>
+                        <button
+                          id="btn-delete-audio"
+                          type="button"
+                          onClick={handleRemoveEditAudio}
+                          className="p-1.5 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors cursor-pointer"
+                          title="Xóa file âm thanh này"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-theme-base/60 border border-dashed border-theme-subtle rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-theme-primary/60 font-medium">Chưa có file âm thanh MP3 cho câu này.</p>
+                        <p className="text-[11px] text-theme-primary/40">Tải file MP3 của bạn lên hoặc để AI tự động đọc và tạo file.</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          id="btn-upload-audio-modal"
+                          type="button"
+                          onClick={() => editAudioInputRef.current?.click()}
+                          disabled={isUploadingAudio || isGeneratingAudio}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-panel border border-theme-subtle hover:border-theme-accent text-theme-primary/80 hover:text-theme-accent rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>{isUploadingAudio ? 'Đang tải...' : 'Tải file MP3'}</span>
+                        </button>
+                        <button
+                          id="btn-generate-ai-audio-modal"
+                          type="button"
+                          onClick={handleGenerateAIAudio}
+                          disabled={isGeneratingAudio || isUploadingAudio || !editData.sentence.trim()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 border border-theme-accent/30 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+                          title="Dùng AI (Inworld/Gemini) để tự động tạo file MP3 giọng chuẩn"
+                        >
+                          {isGeneratingAudio ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Đang tạo AI...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Music className="w-3.5 h-3.5" />
+                              <span>Tải âm thanh (AI)</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 pt-4 border-t border-theme-subtle">
+                  <button 
+                    id="btn-cancel-edit-sentence"
+                    type="button" 
+                    onClick={handleCancelEdit} 
+                    className="flex-1 px-4 py-2.5 text-xs tracking-widest uppercase font-bold border border-theme-subtle text-theme-primary/70 hover:bg-theme-hover rounded-lg transition-colors cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    id="btn-save-edit-sentence"
+                    type="submit" 
+                    className="flex-1 px-4 py-2.5 text-xs tracking-widest uppercase font-bold bg-theme-accent text-theme-inverted hover:bg-theme-accent-hover rounded-lg transition-colors cursor-pointer shadow-sm"
+                  >
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
