@@ -79,6 +79,226 @@
   --accent-light: #d6b16a;
 }
 
+.theme-matcha {
+  --badge-blue-bg: #e0f2fe;
+  --badge-blue-text: #0369a1;
+  --badge-blue-border: #bae6fd;
+  
+  --badge-purple-bg: #f3e8ff;
+  --badge-purple-text: #7e22ce;
+  --badge-purple-border: #e9d5ff;
+  
+  --badge-pink-bg: #fce7f3;
+  --badge-pink-text: #be185d;
+  --badge-pink-border: #fbcfe8;
+  
+  --badge-emerald-bg: #dcfce7;
+  --badge-emerald-text: #15803d;
+  --badge-emerald-border: #bbf7d0;
+  
+  --badge-amber-bg: #fef3c7;
+  --badge-amber-text: #b45309;
+  --badge-amber-border: #fde68a;
+  
+  --badge-orange-bg: #ffedd5;
+  --badge-orange-text: #c2410c;
+  --badge-orange-border: #fed7aa;
+  
+  --badge-cyan-bg: #e0f2fe;
+  --badge-cyan-text: #0284c7;
+  --badge-cyan-border: #bae6fd;
+  
+  --badge-indigo-bg: #e0e7ff;
+  --badge-indigo-text: #4338ca;
+  --badge-indigo-border: #c7d2fe;
+
+  /* Ergonomic Matcha Sage: Optimal green wavelength to relax retina muscles */
+  --bg-base: #f3f6f3;
+  --bg-base-alt: #e9efe9;
+  --bg-panel: #ffffff;
+  --bg-hover: #dfe7df;
+  --bg-active: #d1ded1;
+  --bg-active-alt: #c2d3c2;
+  
+  --border-subtle: #d7e2d7;
+  --border-strong: #bfd0bf;
+  
+  --text-primary: #1a2e22;
+  --text-muted: #546b5d;
+  --text-accent-dark: #225c3c;
+  --text-inverted: #ffffff;
+  --text-japanese: #15452b;
+  
+  --accent: #2e7a51;
+  --accent-hover: #246341;
+  --accent-light: #449769;
+}
+
+.theme-washi {
+  --badge-blue-bg: #e2e8f0;
+  --badge-blue-text: #334155;
+  --badge-blue-border: #cbd5e1;
+  
+  --badge-purple-bg: #ede9fe;
+  --badge-purple-text: #6d28d9;
+  --badge-purple-border: #ddd6fe;
+  
+  --badge-pink-bg: #ffe4e6;
+  --badge-pink-text: #be123c;
+  --badge-pink-border: #fecdd3;
+  
+  --badge-emerald-bg: #e6f4ea;
+  --badge-emerald-text: #137333;
+  --badge-emerald-border: #ceead6;
+  
+  --badge-amber-bg: #fef3c7;
+  --badge-amber-text: #b45309;
+  --badge-amber-border: #fde68a;
+  
+  --badge-orange-bg: #ffedd5;
+  --badge-orange-text: #c2410c;
+  --badge-orange-border: #fed7aa;
+  
+  --badge-cyan-bg: #e0f2fe;
+  --badge-cyan-text: #0284c7;
+  --badge-cyan-border: #bae6fd;
+  
+  --badge-indigo-bg: #e0e7ff;
+  --badge-indigo-text: #4338ca;
+  --badge-indigo-border: #c7d2fe;
+
+  /* Traditional Japanese Washi Paper: Warm soothing cream */
+  --bg-base: #f7f4ed;
+  --bg-base-alt: #efeae0;
+  --bg-panel: #fdfbf7;
+  --bg-hover: #e5ded2;
+  --bg-active: #d7cdbe;
+  --bg-active-alt: #c7bca9;
+  
+  --border-subtle: #e2d9ca;
+  --border-strong: #c8bdab;
+  
+  --text-primary: #2d2823;
+  --text-muted: #736b62;
+  --text-accent-dark: #8c3b24;
+  --text-inverted: #ffffff;
+  --text-japanese: #8c3b24;
+  
+  --accent: #b25833;
+  --accent-hover: #964727;
+  --accent-light: #c86e49;
+}
+
+.theme-charcoal {
+  --badge-blue-bg: rgba(30, 58, 138, 0.35);
+  --badge-blue-text: #93c5fd;
+  --badge-blue-border: rgba(30, 64, 175, 0.5);
+  
+  --badge-purple-bg: rgba(88, 28, 135, 0.35);
+  --badge-purple-text: #d8b4fe;
+  --badge-purple-border: rgba(107, 33, 168, 0.5);
+  
+  --badge-pink-bg: rgba(131, 24, 67, 0.35);
+  --badge-pink-text: #f9a8d4;
+  --badge-pink-border: rgba(157, 23, 77, 0.5);
+  
+  --badge-emerald-bg: rgba(6, 78, 59, 0.35);
+  --badge-emerald-text: #6ee7b7;
+  --badge-emerald-border: rgba(6, 95, 70, 0.5);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.35);
+  --badge-amber-text: #fcd34d;
+  --badge-amber-border: rgba(146, 64, 14, 0.5);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.35);
+  --badge-orange-text: #fdba74;
+  --badge-orange-border: rgba(154, 52, 18, 0.5);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.35);
+  --badge-cyan-text: #7dd3fc;
+  --badge-cyan-border: rgba(7, 89, 133, 0.5);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.35);
+  --badge-indigo-text: #a5b4fc;
+  --badge-indigo-border: rgba(55, 48, 163, 0.5);
+
+  /* Soft Warm Charcoal Dark: No harsh black, eliminates astigmatism halos */
+  --bg-base: #1c1e20;
+  --bg-base-alt: #232629;
+  --bg-panel: #292d31;
+  --bg-hover: #33383d;
+  --bg-active: #40464d;
+  --bg-active-alt: #505760;
+  
+  --border-subtle: #363b41;
+  --border-strong: #4d545d;
+  
+  --text-primary: #e3e4e6;
+  --text-muted: #9ba1a8;
+  --text-accent-dark: #b8864a;
+  --text-inverted: #1c1e20;
+  --text-japanese: #93c5fd;
+  
+  --accent: #dca35a;
+  --accent-hover: #c48e48;
+  --accent-light: #e8b674;
+}
+
+.theme-ocean {
+  --badge-blue-bg: rgba(30, 58, 138, 0.4);
+  --badge-blue-text: #93c5fd;
+  --badge-blue-border: rgba(30, 64, 175, 0.6);
+  
+  --badge-purple-bg: rgba(88, 28, 135, 0.4);
+  --badge-purple-text: #d8b4fe;
+  --badge-purple-border: rgba(107, 33, 168, 0.6);
+  
+  --badge-pink-bg: rgba(131, 24, 67, 0.4);
+  --badge-pink-text: #f9a8d4;
+  --badge-pink-border: rgba(157, 23, 77, 0.6);
+  
+  --badge-emerald-bg: rgba(6, 78, 59, 0.4);
+  --badge-emerald-text: #6ee7b7;
+  --badge-emerald-border: rgba(6, 95, 70, 0.6);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.4);
+  --badge-amber-text: #fcd34d;
+  --badge-amber-border: rgba(146, 64, 14, 0.6);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.4);
+  --badge-orange-text: #fdba74;
+  --badge-orange-border: rgba(154, 52, 18, 0.6);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.4);
+  --badge-cyan-text: #7dd3fc;
+  --badge-cyan-border: rgba(7, 89, 133, 0.6);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.4);
+  --badge-indigo-text: #a5b4fc;
+  --badge-indigo-border: rgba(55, 48, 163, 0.6);
+
+  /* Midnight Ocean: Calming deep indigo blue for night study */
+  --bg-base: #0c1222;
+  --bg-base-alt: #111a30;
+  --bg-panel: #16223e;
+  --bg-hover: #1f2f54;
+  --bg-active: #2b3f70;
+  --bg-active-alt: #3a5391;
+  
+  --border-subtle: #213257;
+  --border-strong: #324a7e;
+  
+  --text-primary: #e2e8f7;
+  --text-muted: #8d9bb8;
+  --text-accent-dark: #38bdf8;
+  --text-inverted: #0c1222;
+  --text-japanese: #7dd3fc;
+  
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --accent-light: #7dd3fc;
+}
+
 .theme-light {
   --badge-blue-bg: #dbeafe;
   --badge-blue-text: #1d4ed8;
@@ -168,27 +388,27 @@
   --badge-indigo-text: #4b4b9c;
   --badge-indigo-border: #c7c7e0;
 
-  /* Ergonomic Sepia: Optimized warm tones */
-  --bg-base: #fbf0d9;
-  --bg-base-alt: #f3e6c8;
-  --bg-panel: #fffaf0;
-  --bg-hover: #eaddbc;
-  --bg-active: #dbc69d;
-  --bg-active-alt: #c4b087;
+  /* Gentle Warm Coffee: Soft warm tones, no harsh mustard yellow */
+  --bg-base: #f5ede1;
+  --bg-base-alt: #ece1d1;
+  --bg-panel: #faf5ee;
+  --bg-hover: #e3d4c0;
+  --bg-active: #d6c3ac;
+  --bg-active-alt: #c4ae95;
   
-  --border-subtle: #eaddbc;
-  --border-strong: #dbc69d;
+  --border-subtle: #e0d0bc;
+  --border-strong: #c9b49c;
   
   /* Text colors: deep warm brown */
-  --text-primary: #5f4b32;
-  --text-muted: #8c775d;
-  --text-accent-dark: #8c5620;
-  --text-inverted: #fbf0d9;
-  --text-japanese: #4a3620;
+  --text-primary: #443627;
+  --text-muted: #796652;
+  --text-accent-dark: #8c4e1a;
+  --text-inverted: #f5ede1;
+  --text-japanese: #443627;
   
-  --accent: #a66a2b;
-  --accent-hover: #8c5620;
-  --accent-light: #c28243;
+  --accent: #9f5b24;
+  --accent-hover: #864a1c;
+  --accent-light: #bb7133;
 }
 
 .theme-dim {
