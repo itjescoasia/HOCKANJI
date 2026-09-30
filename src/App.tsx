@@ -400,24 +400,26 @@ export default function App() {
   return (
     <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex flex-col">
       {/* Header / Nav */}
-      <header className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-[10000]">
-        <div className="max-w-5xl mx-auto px-2 sm:px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
+      <header id="app-header" className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-30">
+        <div id="app-header-container" className="max-w-5xl mx-auto px-2 sm:px-4 h-16 flex items-center justify-between">
+          <div id="app-header-logo" className="flex items-center gap-2 sm:gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent shrink-0">
               <span className="text-white font-serif text-xl sm:text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
             </div>
             <h1 className="text-lg sm:text-xl font-serif tracking-widest text-theme-accent hidden md:block" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
           </div>
           
-          <nav className="flex items-center gap-1 sm:gap-3 overflow-x-auto no-scrollbar">
+          <nav id="app-navbar" className="flex items-center gap-1 sm:gap-3 overflow-x-auto no-scrollbar">
             <button
+              id="btn-theme-toggle"
+              type="button"
               onClick={() => {
                 if (theme === 'dark') setTheme('light');
                 else if (theme === 'light') setTheme('sepia');
                 else if (theme === 'sepia') setTheme('dim');
                 else setTheme('dark');
               }}
-              className="p-2 text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover rounded transition-all"
+              className="p-2 text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover rounded transition-all cursor-pointer"
               title="Đổi màu nền"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : theme === 'light' ? <Coffee className="w-4 h-4" /> : theme === 'sepia' ? <Moon className="w-4 h-4" /> : <CloudMoon className="w-4 h-4" />}
@@ -425,8 +427,10 @@ export default function App() {
 
             {/* Logo Bánh răng: Cài đặt tài khoản & Phân quyền Admin/User */}
             <button
+              id="btn-account-settings"
+              type="button"
               onClick={() => setIsAccountModalOpen(true)}
-              className="p-2 text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded transition-all relative flex items-center justify-center group"
+              className="p-2 text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded transition-all relative flex items-center justify-center group cursor-pointer"
               title={`Cài đặt tài khoản & Phân quyền (${isAdmin ? 'Admin' : 'User'})`}
             >
               <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
@@ -440,8 +444,10 @@ export default function App() {
             {navItems.map(item => (
               <button
                 key={item.id}
+                id={`nav-item-${item.id}`}
+                type="button"
                 onClick={() => handleNavigate(item.id)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded ${
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded cursor-pointer ${
                   view === item.id 
                     ? 'bg-theme-hover text-theme-accent border border-theme-subtle' 
                     : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
@@ -453,8 +459,10 @@ export default function App() {
             ))}
 
             <button
+              id="btn-logout"
+              type="button"
               onClick={() => signOut(auth)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-theme-primary/60 hover:text-red-500 hover:bg-theme-hover"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-theme-primary/60 hover:text-red-500 hover:bg-theme-hover cursor-pointer"
               title={`Đăng xuất (${user?.email})`}
             >
               <LogOut className="w-4 h-4" />
@@ -499,11 +507,12 @@ export default function App() {
         
         {/* Modals */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-[20000] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div id="add-vocab-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <div className="relative bg-theme-panel w-full max-w-2xl my-auto rounded-xl shadow-2xl border border-theme-subtle">
               <button
+                id="btn-close-add-modal"
                 onClick={() => setIsAddModalOpen(false)}
-                className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[20001] p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -541,7 +550,7 @@ export default function App() {
         )}
         
         {view === 'short_study' && (
-          <div className="fixed inset-0 z-[99999] bg-theme-base-alt overflow-y-auto w-full h-full">
+          <div id="short-study-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full">
             <ShortStudySession
               queue={shortStudyQueue}
               onExit={() => setView('dashboard')}

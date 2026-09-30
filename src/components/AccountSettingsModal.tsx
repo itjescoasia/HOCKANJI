@@ -246,8 +246,9 @@ export default function AccountSettingsModal({
   });
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[20000] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div id="account-settings-modal-overlay" className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
       <div 
+        id="account-settings-modal"
         className="bg-theme-panel border border-theme-subtle w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >

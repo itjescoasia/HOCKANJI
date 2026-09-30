@@ -217,7 +217,7 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   }
 
   return (
-    <span className={`relative inline-block ${isOpen ? "z-[9999]" : ""}`} ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}>
+    <span className={`relative inline-block ${isOpen ? "z-30" : ""}`} ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}>
       <span 
         className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current`}
         onClick={(e) => {
