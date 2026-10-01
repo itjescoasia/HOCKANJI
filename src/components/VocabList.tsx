@@ -5,7 +5,8 @@ import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
 import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db, auth, storage } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { removeUndefined } from '../hooks/useVocabDeck';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
@@ -368,6 +369,127 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       console.warn('Audio playback issue:', err);
     } finally {
       setTimeout(() => setActiveAudioText(null), 1200);
+    }
+  };
+
+  const [uploadingMainAudio, setUploadingMainAudio] = useState(false);
+  const [uploadingExIdx, setUploadingExIdx] = useState<number | null>(null);
+  const [uploadingFormIdx, setUploadingFormIdx] = useState<number | null>(null);
+
+  const uploadAudioFile = async (file: File): Promise<string> => {
+    if (!file.type.startsWith('audio/')) {
+      throw new Error('Vui lòng chọn file âm thanh (mp3, m4a, wav, v.v.)');
+    }
+    const uid = auth.currentUser?.uid;
+    try {
+      if (!uid) throw new Error("Chưa đăng nhập");
+      const filename = `users/${uid}/audio/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, filename);
+      await Promise.race([
+        uploadBytes(storageRef, file),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 8000))
+      ]);
+      return await getDownloadURL(storageRef);
+    } catch (err) {
+      console.warn("Storage upload failed, falling back to Firestore", err);
+      if (file.size > 800 * 1024) {
+        throw new Error('File mp3 quá lớn (Vượt quá 800KB). Vui lòng dùng file nhẹ hơn.');
+      }
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            if (uid) {
+              const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
+              const audioDocRef = doc(db, 'global_audio', audioId);
+              await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
+              resolve('firestore:' + audioId);
+            } else {
+              resolve(reader.result as string);
+            }
+          } catch (e) {
+            reject(e);
+          }
+        };
+        reader.onerror = () => reject(new Error("Lỗi đọc file âm thanh"));
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleUploadViewingCardMainAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewingCard) return;
+    try {
+      setUploadingMainAudio(true);
+      const url = await uploadAudioFile(file);
+      const updates = { audioUrl: url, hasAudio: true };
+      if (onUpdate) await onUpdate(viewingCard.id, updates);
+      setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh');
+    } finally {
+      setUploadingMainAudio(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadViewingCardExampleAudio = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewingCard) return;
+    try {
+      setUploadingExIdx(index);
+      const url = await uploadAudioFile(file);
+      const updatedExamples = [...(viewingCard.examples || [])];
+      if (updatedExamples[index]) {
+        updatedExamples[index] = { ...updatedExamples[index], audioUrl: url, hasAudio: true };
+        const updates = { examples: updatedExamples };
+        if (onUpdate) await onUpdate(viewingCard.id, updates);
+        setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh');
+    } finally {
+      setUploadingExIdx(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadViewingCardSingleExampleAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewingCard) return;
+    try {
+      setUploadingExIdx(9999);
+      const url = await uploadAudioFile(file);
+      const updates = { audioUrl: url, hasAudio: true };
+      if (onUpdate) await onUpdate(viewingCard.id, updates);
+      setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh');
+    } finally {
+      setUploadingExIdx(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadViewingCardFormAudio = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewingCard) return;
+    try {
+      setUploadingFormIdx(index);
+      const url = await uploadAudioFile(file);
+      const updatedForms = [...(viewingCard.forms || [])];
+      if (updatedForms[index]) {
+        updatedForms[index] = { ...updatedForms[index], audioUrl: url, hasAudio: true };
+        const updates = { forms: updatedForms };
+        if (onUpdate) await onUpdate(viewingCard.id, updates);
+        setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh');
+    } finally {
+      setUploadingFormIdx(null);
+      e.target.value = '';
     }
   };
 
@@ -1438,23 +1560,48 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         </div>
       )}
       {viewingCard && (
-        <div id="view-card-modal-overlay" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-theme-base w-full max-w-4xl max-h-[90vh] overflow-y-auto sm:rounded-[24px] rounded-2xl shadow-2xl flex flex-col relative custom-scrollbar border border-theme-subtle/50" onClick={e => e.stopPropagation()}>
+        <div id="view-card-modal-overlay" className="fixed inset-0 bg-theme-base z-50 flex flex-col w-full h-full overflow-hidden">
+          <div className="bg-theme-base w-full h-full flex flex-col relative overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
             {/* Header / Main Vocab */}
-            <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-10 border-b border-theme-subtle px-6 py-4 flex justify-between items-start">
+            <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-20 border-b border-theme-subtle px-4 sm:px-8 py-4 flex justify-between items-start shrink-0 shadow-sm">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-1">
                   <h2 className="text-4xl md:text-5xl font-serif text-theme-accent">{viewingCard.kanji || viewingCard.reading}</h2>
-                  <div className="flex flex-col items-center gap-0.5">
-    <button
-      onClick={(e) => playAudio(e, viewingCard.kanji || viewingCard.reading, viewingCard.audioUrl)}
-      className="p-2 bg-theme-accent/10 text-theme-accent rounded-full hover:bg-theme-accent hover:text-theme-inverted transition-colors"
-      title={viewingCard.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
-    >
-      <Volume2 className="w-5 h-5" />
-    </button>
-    {viewingCard.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest mt-1">MP3</span>}
-  </div>
+                  
+                  {/* Audio Controls for Main Word */}
+                  <div className="flex items-center gap-1.5 bg-theme-base-alt/80 p-1 rounded-full border border-theme-subtle shadow-xs">
+                    <button
+                      onClick={(e) => playAudio(e, viewingCard.kanji || viewingCard.reading, viewingCard.audioUrl)}
+                      className="p-2 bg-theme-accent/10 text-theme-accent rounded-full hover:bg-theme-accent hover:text-theme-inverted transition-colors cursor-pointer"
+                      title={viewingCard.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </button>
+                    {viewingCard.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest px-1">MP3</span>}
+
+                    {/* Nút Upload MP3 cho từ vựng chính */}
+                    <label
+                      className={`p-2 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                        viewingCard.audioUrl
+                          ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                      }`}
+                      title={viewingCard.audioUrl ? "Đổi file MP3 cho từ này" : "Tải lên file MP3 phát âm cho từ này"}
+                    >
+                      {uploadingMainAudio ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-theme-accent" />
+                      ) : (
+                        <Upload className="w-5 h-5" />
+                      )}
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        disabled={uploadingMainAudio}
+                        onChange={handleUploadViewingCardMainAudio}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mt-2">
                   {viewingCard.kanji && viewingCard.reading && viewingCard.kanji !== viewingCard.reading && (
@@ -1540,7 +1687,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             </div>
 
             {/* Content Body */}
-            <div className="p-6 flex flex-col gap-8">
+            <div className="max-w-5xl mx-auto w-full p-4 sm:p-8 flex flex-col gap-8">
               
               {/* Kanji Explanation */}
               {viewingCard.kanjiExplanation && (
@@ -1568,15 +1715,37 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div className="text-[10px] font-bold uppercase tracking-widest text-theme-accent/70 bg-theme-panel inline-block w-max px-2 py-0.5 rounded-sm mb-1">{f.name}</div>
                         <div className="flex items-center justify-between mt-1">
                           <span className="text-xl font-serif text-theme-primary">{f.value}</span>
-                          <div className="flex flex-col items-center gap-0.5">
-                          <button
-                            onClick={(e) => playAudio(e, f.value, f.audioUrl)}
-                            className={`p-1.5 rounded-full transition-colors ${f.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel bg-theme-base'}`}
-                            title={f.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
-                          >
-                            <Volume2 className="w-4 h-4" />
-                          </button>
-                          {f.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                          <div className="flex items-center gap-1 bg-theme-panel/90 p-0.5 rounded-full border border-theme-subtle">
+                            <button
+                              onClick={(e) => playAudio(e, f.value, f.audioUrl)}
+                              className={`p-1.5 rounded-full transition-colors cursor-pointer ${f.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel bg-theme-base'}`}
+                              title={f.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                            </button>
+                            {f.audioUrl && <span className="text-[7px] font-bold text-theme-accent uppercase leading-none tracking-widest px-0.5">MP3</span>}
+
+                            <label
+                              className={`p-1 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                                f.audioUrl
+                                  ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                              }`}
+                              title={f.audioUrl ? "Đổi file MP3 cho thể này" : "Tải lên file MP3 cho thể này"}
+                            >
+                              {uploadingFormIdx === idx ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                className="hidden"
+                                disabled={uploadingFormIdx !== null}
+                                onChange={(e) => handleUploadViewingCardFormAudio(e, idx)}
+                              />
+                            </label>
                           </div>
                         </div>
                         {(f.reading || f.romaji) && (
@@ -1607,7 +1776,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                     {viewingCard.examples && viewingCard.examples.length > 0 ? (
                       viewingCard.examples.map((ex, idx) => (
                         <div key={idx} className="bg-theme-hover p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm">
-                          <div className="pr-10 text-lg text-theme-primary mb-3 flex flex-col gap-1.5">
+                          <div className="pr-24 text-lg text-theme-primary mb-3 flex flex-col gap-1.5">
                             <span className="font-serif leading-relaxed">
                               <HighlightProvider>
                                 {renderExampleHighlight(ex.sentence, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
@@ -1625,21 +1794,44 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               <HighlightVietnamese text={ex.translation || ""} />
                             </HighlightProvider>
                           </div>
-                          <div className="absolute top-4 right-4 flex flex-col items-center gap-1">
-                          <button
-                            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-                            className={`p-2.5 rounded-full transition-colors shadow-sm ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel'}`}
-                            title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
-                          >
-                            <Volume2 className="w-5 h-5" />
-                          </button>
-                          {ex.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest">MP3</span>}
+                          <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-theme-panel/90 p-1 rounded-full border border-theme-subtle shadow-xs">
+                            <button
+                              onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
+                              className={`p-2 rounded-full transition-colors cursor-pointer shadow-xs ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+                              title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+                            >
+                              <Volume2 className="w-4 h-4" />
+                            </button>
+                            {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase tracking-widest px-0.5">MP3</span>}
+
+                            {/* Nút Upload MP3 cho câu ví dụ */}
+                            <label
+                              className={`p-1.5 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                                ex.audioUrl
+                                  ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                              }`}
+                              title={ex.audioUrl ? "Đổi file MP3 cho ví dụ này" : "Tải lên file MP3 cho câu ví dụ này"}
+                            >
+                              {uploadingExIdx === idx ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                              ) : (
+                                <Upload className="w-4 h-4" />
+                              )}
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                className="hidden"
+                                disabled={uploadingExIdx !== null}
+                                onChange={(e) => handleUploadViewingCardExampleAudio(e, idx)}
+                              />
+                            </label>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="bg-theme-hover p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm">
-                        <div className="pr-10 text-lg text-theme-primary mb-3 font-serif leading-relaxed">
+                        <div className="pr-24 text-lg text-theme-primary mb-3 font-serif leading-relaxed">
                           <HighlightProvider>
                             {renderExampleHighlight(viewingCard.example!, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
                           </HighlightProvider>
@@ -1651,13 +1843,38 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             </HighlightProvider>
                           </div>
                         )}
-                        <button
-                          onClick={(e) => playAudio(e, viewingCard.example!, viewingCard.audioUrl)}
-                          className="absolute top-4 right-4 p-2.5 text-theme-primary/40 hover:text-theme-accent bg-theme-panel/80 hover:bg-theme-panel rounded-full transition-colors opacity-100 shadow-sm"
-                          title="Nghe phát âm"
-                        >
-                          <Volume2 className="w-5 h-5" />
-                        </button>
+                        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-theme-panel/90 p-1 rounded-full border border-theme-subtle shadow-xs">
+                          <button
+                            onClick={(e) => playAudio(e, viewingCard.example!, viewingCard.audioUrl)}
+                            className={`p-2 rounded-full transition-colors cursor-pointer shadow-xs ${viewingCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+                            title={viewingCard.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                          {viewingCard.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase tracking-widest px-0.5">MP3</span>}
+
+                          <label
+                            className={`p-1.5 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                              viewingCard.audioUrl
+                                ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                            }`}
+                            title={viewingCard.audioUrl ? "Đổi file MP3 cho ví dụ này" : "Tải lên file MP3 cho ví dụ này"}
+                          >
+                            {uploadingExIdx === 9999 ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
+                            <input
+                              type="file"
+                              accept="audio/*"
+                              className="hidden"
+                              disabled={uploadingExIdx !== null}
+                              onChange={handleUploadViewingCardSingleExampleAudio}
+                            />
+                          </label>
+                        </div>
                       </div>
                     )}
                   </div>

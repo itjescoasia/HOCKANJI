@@ -48,12 +48,11 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   onRecordReview,
 }) => {
   const [examples, setExamples] = useState<ExampleWithWord[]>([]);
-  const [currentIndexRaw, setCurrentIndex] = usePersistentState('app_sentencereview_currentIndex', 0);
-  const [flippedState, setFlippedState] = usePersistentState<Record<number, boolean>>('app_sentencereview_flippedState', {});
+  const [currentIndexRaw, setCurrentIndex] = usePersistentState(`app_sentencereview_currentIndex_${mode}`, 0);
   
-  // Dedicated state for random review session so it does not collide with persistent SRS progress
+  // Dedicated state for card flipping - ALWAYS starts false (Front card first!)
+  const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [randomCurrentIndex, setRandomCurrentIndex] = useState(0);
-  const [randomFlipped, setRandomFlipped] = useState(false);
   const [userTranslation, setUserTranslation] = useState("");
   const [sessionStats, setSessionStats] = useState({ correct: 0, wrong: 0, total: 0 });
   const [isSessionFinished, setIsSessionFinished] = useState(false);
@@ -62,15 +61,24 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     ? (examples.length > 0 ? Math.min(randomCurrentIndex, examples.length - 1) : 0)
     : (examples.length > 0 ? Math.min(currentIndexRaw, examples.length - 1) : 0);
 
-  const showAnswer = isRandom ? randomFlipped : (flippedState[currentIndex] || false);
+  const showAnswer = isCardFlipped;
   const setShowAnswer = (val: boolean) => {
-    if (isRandom) {
-      setRandomFlipped(val);
-    } else {
-      setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
-    }
+    setIsCardFlipped(val);
   };
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Clear any legacy persistent flipped state on mount
+  useEffect(() => {
+    try {
+      localStorage.removeItem('app_sentencereview_flippedState');
+    } catch (_) {}
+  }, []);
+
+  // When index or mode changes, reset flip and translation so front card is ALWAYS displayed first
+  useEffect(() => {
+    setIsCardFlipped(false);
+    setUserTranslation("");
+  }, [currentIndex, mode]);
 
 
 
@@ -253,7 +261,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       }
       setExamples(shuffled);
       setRandomCurrentIndex(0);
-      setRandomFlipped(false);
+      setIsCardFlipped(false);
       setUserTranslation("");
       setSessionStats({ correct: 0, wrong: 0, total: 0 });
       setIsSessionFinished(false);
@@ -299,30 +307,29 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   }, [initExamples]);
 
   const handleNext = () => {
+    setIsCardFlipped(false);
+    setUserTranslation("");
     if (isRandom) {
       if (randomCurrentIndex < examples.length - 1) {
-        setRandomFlipped(false);
         setRandomCurrentIndex(prev => prev + 1);
-        setUserTranslation("");
       } else {
         setIsSessionFinished(true);
       }
       return;
     }
-    // do not mutate the old index so it stays flipped during exit
     if (currentIndex < examples.length - 1) {
-      setCurrentIndex((prev) => { setFlippedState(fs => ({ ...fs, [prev + 1]: false })); return prev + 1; });
+      setCurrentIndex((prev) => prev + 1);
     } else {
-      setFlippedState(fs => ({ ...fs, [0]: false })); setCurrentIndex(0);
+      setCurrentIndex(0);
     }
   };
 
   const handlePrev = () => {
-    setShowAnswer(false);
+    setIsCardFlipped(false);
+    setUserTranslation("");
     if (isRandom) {
       if (randomCurrentIndex > 0) {
         setRandomCurrentIndex(prev => prev - 1);
-        setUserTranslation("");
       }
       return;
     }
@@ -1064,7 +1071,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-md shadow-xs hover:bg-theme-accent-hover transition-all cursor-pointer"
             >
               <Eye className="w-4 h-4" />
-              <span>Lật thẻ xem đáp án</span>
+              <span>{mode === "JA_TO_VI" ? "Lật thẻ xem dịch nghĩa (Tiếng Việt)" : "Lật thẻ xem đáp án câu (Tiếng Nhật)"}</span>
             </button>
           </div>
         </HighlightProvider>
