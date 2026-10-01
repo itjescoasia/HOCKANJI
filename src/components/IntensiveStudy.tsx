@@ -40,7 +40,9 @@ import {
   PlusCircle,
   X,
   FileText,
-  Sparkles
+  Sparkles,
+  AlertTriangle,
+  ArrowRightLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import WordDetailModal from "./WordDetailModal";
@@ -93,7 +95,7 @@ export function getCategoryBadgeStyle(typeStr: string | undefined, defaultClasse
   return defaultClasses;
 }
 
-import { normalizeSentence, cleanTextForSearch, cleanMarkdownForDisplay } from "../utils/stringUtils";
+import { normalizeSentence, cleanTextForSearch, cleanMarkdownForDisplay, calculateSimilarity } from "../utils/stringUtils";
 import {
   DragDropContext,
   Droppable,
@@ -1199,17 +1201,68 @@ function StudyView({
   const [newTranslation, setNewTranslation] = useState("");
   const [newSpecialNote, setNewSpecialNote] = useState("");
   const [exampleSearchQuery, setExampleSearchQuery] = useState("");
-    const filteredExamples = React.useMemo(() => {
-    if (!exampleSearchQuery.trim()) return word.examples;
+  const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
+
+  // Map of duplicate examples in this topic
+  const duplicateExampleMap = React.useMemo(() => {
+    const map = new Map<string, { reason: string; otherId: string; otherIndex: number }>();
+    const examples = word.examples || [];
+    
+    for (let i = 0; i < examples.length; i++) {
+      const ex1 = examples[i];
+      const normJp1 = normalizeSentence(ex1.sentence);
+      const normVi1 = cleanTextForSearch(ex1.translation || '');
+      const normReading1 = normalizeSentence(ex1.reading || '');
+
+      for (let j = i + 1; j < examples.length; j++) {
+        const ex2 = examples[j];
+        const normJp2 = normalizeSentence(ex2.sentence);
+        const normVi2 = cleanTextForSearch(ex2.translation || '');
+        const normReading2 = normalizeSentence(ex2.reading || '');
+
+        let matchReason = '';
+        if (normJp1 && normJp2 && normJp1 === normJp2) {
+          matchReason = 'Trùng 100% câu tiếng Nhật';
+        } else if (normReading1 && normReading2 && normReading1 === normReading2 && normReading1.length >= 3) {
+          matchReason = 'Trùng cách đọc phiên âm';
+        } else if (normVi1 && normVi2 && normVi1 === normVi2 && normVi1.length >= 2) {
+          matchReason = 'Trùng bản dịch tiếng Việt';
+        } else if (normJp1 && normJp2 && normJp1.length >= 6 && normJp2.length >= 6) {
+          const sim = calculateSimilarity(normJp1, normJp2);
+          if (sim >= 0.88) {
+            matchReason = `Tương đồng ${Math.round(sim * 100)}% tiếng Nhật`;
+          }
+        }
+
+        if (matchReason) {
+          if (!map.has(ex1.id)) {
+            map.set(ex1.id, { reason: matchReason, otherId: ex2.id, otherIndex: j + 1 });
+          }
+          if (!map.has(ex2.id)) {
+            map.set(ex2.id, { reason: matchReason, otherId: ex1.id, otherIndex: i + 1 });
+          }
+        }
+      }
+    }
+
+    return map;
+  }, [word.examples]);
+
+  const filteredExamples = React.useMemo(() => {
+    let list = word.examples || [];
+    if (showOnlyDuplicates) {
+      list = list.filter(ex => duplicateExampleMap.has(ex.id));
+    }
+    if (!exampleSearchQuery.trim()) return list;
     const q = exampleSearchQuery.toLowerCase();
-    return word.examples.filter(ex => 
+    return list.filter(ex => 
       ex.sentence?.toLowerCase().includes(q) ||
       ex.translation?.toLowerCase().includes(q) ||
       ex.reading?.toLowerCase().includes(q) ||
       ex.romaji?.toLowerCase().includes(q) ||
       ex.specialNote?.toLowerCase().includes(q)
     );
-  }, [word.examples, exampleSearchQuery]);
+  }, [word.examples, exampleSearchQuery, showOnlyDuplicates, duplicateExampleMap]);
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
     word: word.word || "",
@@ -1222,8 +1275,9 @@ function StudyView({
   // Real-time duplicate detection for adding
   useEffect(() => {
     if (String(newSentence || "").trim()) {
+      const normInput = normalizeSentence(newSentence);
       const existing = word.examples.find(
-        (ex) => normalizeSentence(ex.sentence) === normalizeSentence(newSentence)
+        (ex) => normalizeSentence(ex.sentence) === normInput
       );
       setDuplicateWarningId(existing ? existing.id : null);
     } else {
@@ -1462,6 +1516,76 @@ function StudyView({
     onUpdateWord(word.id, {
       examples: word.examples.filter((e) => e.id !== exId),
     });
+  };
+
+  const handleTransferAudio = async (
+    sourceId: string,
+    targetId: string,
+    mode: 'move' | 'copy'
+  ) => {
+    const sourceEx = (word.examples || []).find((e) => e.id === sourceId);
+    const targetEx = (word.examples || []).find((e) => e.id === targetId);
+    if (!sourceEx || !targetEx) return;
+
+    try {
+      // 1. If localforage blob exists for source:
+      const localBlob = await localforage.getItem<Blob>(`audio_intensive_${word.id}_${sourceId}`);
+      if (localBlob) {
+        await localforage.setItem(`audio_intensive_${word.id}_${targetId}`, localBlob);
+        if (mode === 'move') {
+          await localforage.removeItem(`audio_intensive_${word.id}_${sourceId}`);
+        }
+      }
+
+      // 2. Compute updated examples array
+      const updatedExamples = (word.examples || []).map((e) => {
+        if (e.id === targetId) {
+          return {
+            ...e,
+            hasAudio: sourceEx.hasAudio,
+            audioUrl: sourceEx.audioUrl,
+          };
+        }
+        if (mode === 'move' && e.id === sourceId) {
+          return {
+            ...e,
+            hasAudio: false,
+            audioUrl: null,
+          };
+        }
+        return e;
+      });
+
+      // 3. Update state
+      onUpdateWord(word.id, { examples: updatedExamples });
+
+      // 4. Update Firestore if logged in
+      if (auth.currentUser) {
+        try {
+          const cardRef = doc(db, 'global_intensiveVocab', word.id);
+          await setDoc(cardRef, { examples: updatedExamples }, { merge: true });
+        } catch (dbErr) {
+          console.warn('Firestore update warning in handleTransferAudio:', dbErr);
+        }
+      }
+
+      // 5. Highlight and scroll to target example
+      const targetIndex = (word.examples || []).findIndex((e) => e.id === targetId);
+      setTimeout(() => {
+        const el = document.getElementById(`example-${targetId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightedExampleId(targetId);
+          setTimeout(() => setHighlightedExampleId(null), 3000);
+        }
+      }, 100);
+
+      const actionText = mode === 'move' ? 'Chuyển' : 'Sao chép';
+      alert(`Đã ${actionText.toLowerCase()} âm thanh sang Câu #${targetIndex + 1} thành công!`);
+    } catch (err: any) {
+      console.error('Error transferring audio:', err);
+      alert('Có lỗi xảy ra khi chuyển âm thanh: ' + (err?.message || 'Vui lòng thử lại.'));
+    }
   };
 
   return (
@@ -1740,6 +1864,21 @@ function StudyView({
           </h3>
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
+            {duplicateExampleMap.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowOnlyDuplicates(!showOnlyDuplicates)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-bold transition-all border rounded-lg cursor-pointer ${
+                  showOnlyDuplicates
+                    ? "bg-amber-600 text-white border-amber-600 shadow-md ring-2 ring-amber-400 animate-pulse"
+                    : "bg-amber-500/15 border-2 border-amber-500/60 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25"
+                }`}
+                title="Bấm để lọc chỉ xem các câu bị trùng nội dung"
+              >
+                <AlertTriangle className={`w-3.5 h-3.5 ${showOnlyDuplicates ? 'text-white' : 'text-amber-500'}`} />
+                <span>{showOnlyDuplicates ? "Xem tất cả" : `Có ${duplicateExampleMap.size} câu trùng`}</span>
+              </button>
+            )}
             {word.examples.length > 0 && (
               <>
                 <button
@@ -1960,9 +2099,24 @@ function StudyView({
                         id={`example-${ex.id}`}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative overflow-hidden rounded-lg border transition-all duration-300 ease-out ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50 scale-[1.02]" : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"} ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
+                        className={`relative overflow-hidden rounded-lg border transition-all duration-300 ease-out ${
+                          duplicateExampleMap.has(ex.id)
+                            ? "border-amber-500/90 border-l-[10px] border-l-amber-500 bg-amber-500/[0.06] ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
+                            : snapshot.isDragging
+                              ? "border-theme-accent shadow-2xl z-50 scale-[1.02]"
+                              : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"
+                        } ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
+                        {/* Corner Ribbon for Duplicate - Nhận biết ngay lập tức */}
+                        {duplicateExampleMap.has(ex.id) && (
+                          <div className="absolute top-0 right-0 z-20 pointer-events-none">
+                            <div className="bg-gradient-to-r from-amber-500 to-red-500 text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 shadow-md flex items-center gap-1 rounded-bl-lg">
+                              <AlertTriangle className="w-3 h-3 stroke-[2.5]" />
+                              <span>TRÙNG NỘI DUNG</span>
+                            </div>
+                          </div>
+                        )}
                         <div
                           className={`bg-theme-hover p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? "pl-14" : ""}`}
                         >
@@ -2248,9 +2402,114 @@ function StudyView({
                                   )}
                                 </div>
                               </div>
+
+                              {duplicateExampleMap.has(ex.id) && (() => {
+                                const dup = duplicateExampleMap.get(ex.id)!;
+                                const otherEx = (word.examples || []).find(e => e.id === dup.otherId);
+                                const thisHasAudio = !!(ex.audioUrl || ex.hasAudio);
+                                const otherHasAudio = !!(otherEx?.audioUrl || otherEx?.hasAudio);
+                                return (
+                                  <div className="p-3.5 mb-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-red-500/15 to-amber-500/10 border-2 border-amber-500/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="p-2 bg-gradient-to-br from-amber-500 to-red-500 text-white rounded-lg shadow-sm shrink-0">
+                                        <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-amber-900 dark:text-amber-100 bg-amber-500/30 px-2 py-0.5 rounded border border-amber-500/40">
+                                            ⚠️ CÂU TRÙNG LẶP
+                                          </span>
+                                          <span className="text-xs font-bold text-amber-900 dark:text-amber-100">
+                                            {dup.reason}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-1">
+                                          Trùng nội dung với <strong>Câu #{dup.otherIndex}</strong> trong chuyên đề
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                                      {/* Chuyển / Lấy âm thanh thông minh giữa 2 câu trùng */}
+                                      {thisHasAudio && !otherHasAudio && (
+                                        <button
+                                          type="button"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            await handleTransferAudio(ex.id, dup.otherId, 'copy');
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                          title={`Sao chép file MP3 này sang Câu #${dup.otherIndex}`}
+                                        >
+                                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                                          <span>Chép MP3 sang câu #{dup.otherIndex}</span>
+                                        </button>
+                                      )}
+
+                                      {!thisHasAudio && otherHasAudio && (
+                                        <button
+                                          type="button"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            await handleTransferAudio(dup.otherId, ex.id, 'copy');
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                          title={`Lấy file MP3 từ Câu #${dup.otherIndex}`}
+                                        >
+                                          <Volume2 className="w-3.5 h-3.5" />
+                                          <span>Lấy MP3 từ câu #{dup.otherIndex}</span>
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const el = document.getElementById(`example-${dup.otherId}`);
+                                          if (el) {
+                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            setHighlightedExampleId(dup.otherId);
+                                            setTimeout(() => setHighlightedExampleId(null), 3000);
+                                          }
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/60 text-amber-900 dark:text-amber-100 font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                        title={`Bấm để cuộn và xem câu #${dup.otherIndex}`}
+                                      >
+                                        <Eye className="w-3.5 h-3.5 text-amber-600" />
+                                        <span>Đối chiếu câu #{dup.otherIndex}</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRemoveExample(ex.id);
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                        title="Xóa câu trùng lặp này khỏi chuyên đề"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Xóa câu này</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
                               <div className="flex gap-4 pr-16">
-                                <div className="w-8 h-8 shrink-0 bg-theme-base-alt border border-theme-subtle flex items-center justify-center rounded-full text-theme-accent font-serif text-sm">
-                                  {index + 1}
+                                <div className="relative">
+                                  <div className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full font-serif text-sm font-bold shadow-xs ${
+                                    duplicateExampleMap.has(ex.id)
+                                      ? "bg-amber-500 text-white border-2 border-amber-600"
+                                      : "bg-theme-base-alt border border-theme-subtle text-theme-accent"
+                                  }`}>
+                                    {index + 1}
+                                  </div>
+                                  {duplicateExampleMap.has(ex.id) && (
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border border-white"></span>
+                                    </span>
+                                  )}
                                 </div>
                                 <HighlightProvider><div className="flex-1 pt-1">
                                   {ex.reading &&
@@ -2305,10 +2564,14 @@ function StudyView({
                                   <IntensiveExampleAudio 
                                     wordId={word.id} 
                                     example={ex} 
+                                    allExamples={word.examples || []}
+                                    currentIndex={index}
+                                    duplicateInfo={duplicateExampleMap.get(ex.id)}
                                     onUpdateExample={(exId, updates) => {
                                       const updatedExamples = word.examples.map(e => e.id === exId ? { ...e, ...updates } : e);
                                       onUpdateWord(word.id, { examples: updatedExamples });
                                     }} 
+                                    onTransferAudio={handleTransferAudio}
                                   />
                                   
                                   <AnimatePresence>
@@ -2470,10 +2733,43 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: string, example: IntensiveExample, onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void }) {
+function IntensiveExampleAudio({ 
+  wordId, 
+  example, 
+  allExamples = [],
+  currentIndex = 0,
+  duplicateInfo,
+  onUpdateExample,
+  onTransferAudio
+}: { 
+  wordId: string; 
+  example: IntensiveExample; 
+  allExamples?: IntensiveExample[];
+  currentIndex?: number;
+  duplicateInfo?: { reason: string; otherId: string; otherIndex: number };
+  onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void;
+  onTransferAudio?: (sourceId: string, targetId: string, mode: 'move' | 'copy') => Promise<void>;
+}) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Transfer Modals
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedTargetId, setSelectedTargetId] = useState<string>('');
+  const [transferMode, setTransferMode] = useState<'move' | 'copy'>('copy');
+  const [isTransferring, setIsTransferring] = useState(false);
+
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [selectedSourceId, setSelectedSourceId] = useState<string>('');
+
+  const otherExamplesWithAudio = React.useMemo(() => {
+    return allExamples.filter(e => e.id !== example.id && (e.audioUrl || e.hasAudio));
+  }, [allExamples, example.id]);
+
+  const counterpart = duplicateInfo?.otherId ? allExamples.find(e => e.id === duplicateInfo.otherId) : null;
+  const counterpartHasAudio = !!(counterpart?.audioUrl || counterpart?.hasAudio);
 
   const handleGenerateAI = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2530,13 +2826,13 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
           setAudioUrl(URL.createObjectURL(blob));
         }
       });
+    } else {
+      setAudioUrl(null);
     }
     return () => {
       active = false;
     };
   }, [wordId, example.id, example.hasAudio, example.audioUrl]);
-
-  const [isUploading, setIsUploading] = useState(false);
 
   const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2607,7 +2903,7 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
         <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={(e) => { e.stopPropagation(); audioInputRef.current?.click(); }} 
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary/10 text-theme-primary/70 rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider cursor-pointer"
           >
             <Volume2 className="w-3 h-3" />
             {isUploading ? 'Đang tải...' : 'Thêm MP3'}
@@ -2615,22 +2911,317 @@ function IntensiveExampleAudio({ wordId, example, onUpdateExample }: { wordId: s
           <button 
             onClick={handleGenerateAI}
             disabled={isGenerating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 text-theme-accent rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 text-theme-accent rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider disabled:opacity-50 cursor-pointer"
           >
             <Music className="w-3 h-3" />
             {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
           </button>
+
+          {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp */}
+          {counterpart && counterpartHasAudio && onTransferAudio && (
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation();
+                await onTransferAudio(counterpart.id, example.id, 'copy');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+              title={`Lấy trực tiếp file MP3 từ câu trùng #${duplicateInfo?.otherIndex}`}
+            >
+              <Volume2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Lấy MP3 từ câu #{duplicateInfo?.otherIndex}</span>
+            </button>
+          )}
+
+          {/* Lấy âm thanh từ câu bất kỳ khác */}
+          {otherExamplesWithAudio.length > 0 && onTransferAudio && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedSourceId(otherExamplesWithAudio[0]?.id || '');
+                setShowReceiveModal(true);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+              title="Lấy âm thanh từ một câu khác trong danh sách"
+            >
+              <ArrowRightLeft className="w-3 h-3" />
+              <span>Lấy MP3 từ câu khác...</span>
+            </button>
+          )}
         </div>
       ) : (
-        <div className="flex items-center gap-2 w-full">
+        <div className="flex flex-wrap items-center gap-2 w-full">
           <audio controls src={audioUrl} className="h-8 w-full max-w-[240px]" />
+          
+          {/* Nút nhanh chuyển/sao chép sang câu trùng lặp */}
+          {counterpart && onTransferAudio && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await onTransferAudio(example.id, counterpart.id, 'copy');
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-700 dark:text-blue-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                title={`Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`}
+              >
+                <Copy className="w-3 h-3" />
+                <span>Chép sang câu #{duplicateInfo?.otherIndex}</span>
+              </button>
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} (và gỡ khỏi câu này)?`)) {
+                    await onTransferAudio(example.id, counterpart.id, 'move');
+                  }
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-700 dark:text-amber-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                title={`Chuyển hẳn file MP3 này sang Câu #${duplicateInfo?.otherIndex} (gỡ khỏi câu này)`}
+              >
+                <ArrowRightLeft className="w-3 h-3" />
+                <span>Chuyển sang câu #{duplicateInfo?.otherIndex}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Nút mở hộp thoại chuyển sang câu bất kỳ */}
+          {allExamples.length > 1 && onTransferAudio && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedTargetId(duplicateInfo?.otherId || allExamples.find(e => e.id !== example.id)?.id || '');
+                setShowTransferModal(true);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-theme-primary/10 hover:bg-theme-accent hover:text-theme-inverted text-theme-primary/70 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+              title="Chuyển hoặc sao chép âm thanh sang một câu khác trong chuyên đề"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>Chuyển âm thanh...</span>
+            </button>
+          )}
+
           <button 
             onClick={(e) => { e.stopPropagation(); handleRemoveAudio(); }}
-            className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
+            className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors ml-auto cursor-pointer"
             title="Xóa MP3"
           >
             <Trash2 className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Modal Chuyển/Sao chép âm thanh đi câu khác */}
+      {showTransferModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowTransferModal(false)}
+        >
+          <div 
+            className="bg-theme-panel border border-theme-subtle rounded-xl p-6 max-w-lg w-full shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-theme-subtle mb-4">
+              <h3 className="font-serif text-base font-bold text-theme-primary flex items-center gap-2">
+                <ArrowRightLeft className="w-5 h-5 text-theme-accent" />
+                <span>Chuyển / Sao chép âm thanh (MP3)</span>
+              </h3>
+              <button 
+                onClick={() => setShowTransferModal(false)}
+                className="p-1 text-theme-primary/50 hover:text-theme-primary rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-theme-primary/60 font-semibold mb-1 uppercase tracking-wider">
+                  Câu gốc hiện tại (Câu #{currentIndex + 1}):
+                </p>
+                <p className="text-sm font-serif font-bold text-theme-primary bg-theme-base-alt p-2.5 rounded border border-theme-subtle">
+                  {example.sentence}
+                </p>
+                {audioUrl && (
+                  <audio controls src={audioUrl} className="h-8 w-full mt-2" />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-theme-primary/60 font-semibold mb-1 uppercase tracking-wider">
+                  Hình thức chuyển:
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${transferMode === 'copy' ? 'bg-theme-accent/10 border-theme-accent text-theme-primary' : 'bg-theme-base border-theme-subtle text-theme-primary/60'}`}>
+                    <input 
+                      type="radio" 
+                      name="transferMode" 
+                      value="copy" 
+                      checked={transferMode === 'copy'} 
+                      onChange={() => setTransferMode('copy')}
+                      className="mt-0.5 text-theme-accent"
+                    />
+                    <div>
+                      <span className="text-xs font-bold block">Sao chép (Copy)</span>
+                      <span className="text-[10px] opacity-75">Giữ âm thanh ở câu này và gán thêm cho câu mới</span>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition-all ${transferMode === 'move' ? 'bg-theme-accent/10 border-theme-accent text-theme-primary' : 'bg-theme-base border-theme-subtle text-theme-primary/60'}`}>
+                    <input 
+                      type="radio" 
+                      name="transferMode" 
+                      value="move" 
+                      checked={transferMode === 'move'} 
+                      onChange={() => setTransferMode('move')}
+                      className="mt-0.5 text-theme-accent"
+                    />
+                    <div>
+                      <span className="text-xs font-bold block">Di chuyển (Move)</span>
+                      <span className="text-[10px] opacity-75">Chuyển sang câu mới và gỡ khỏi câu này</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-theme-primary/60 font-semibold mb-1 uppercase tracking-wider">
+                  Chọn câu ví dụ nhận âm thanh:
+                </label>
+                <select
+                  value={selectedTargetId}
+                  onChange={(e) => setSelectedTargetId(e.target.value)}
+                  className="w-full bg-theme-base-alt border border-theme-subtle rounded-lg px-3 py-2 text-sm text-theme-primary focus:outline-none focus:border-theme-accent"
+                >
+                  <option value="">-- Chọn câu ví dụ đích --</option>
+                  {allExamples.filter(e => e.id !== example.id).map((e) => {
+                    const idx = allExamples.findIndex(x => x.id === e.id);
+                    const isDup = duplicateInfo?.otherId === e.id;
+                    const hasAud = !!(e.hasAudio || e.audioUrl);
+                    return (
+                      <option key={e.id} value={e.id}>
+                        {`Câu #${idx + 1}: ${e.sentence.slice(0, 40)}${e.sentence.length > 40 ? '...' : ''} ${isDup ? '⚠️ [CÂU TRÙNG NỘI DUNG]' : ''} ${hasAud ? '🔊 [ĐÃ CÓ MP3]' : ''}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-theme-subtle">
+                <button
+                  type="button"
+                  onClick={() => setShowTransferModal(false)}
+                  className="px-4 py-2 text-xs uppercase font-semibold text-theme-primary/60 hover:text-theme-primary rounded cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedTargetId || isTransferring}
+                  onClick={async () => {
+                    if (!selectedTargetId || !onTransferAudio) return;
+                    setIsTransferring(true);
+                    try {
+                      await onTransferAudio(example.id, selectedTargetId, transferMode);
+                      setShowTransferModal(false);
+                    } finally {
+                      setIsTransferring(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted text-xs uppercase font-bold tracking-wider rounded-lg transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  {isTransferring ? 'Đang chuyển...' : 'Xác nhận chuyển'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Lấy âm thanh từ câu khác */}
+      {showReceiveModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowReceiveModal(false)}
+        >
+          <div 
+            className="bg-theme-panel border border-theme-subtle rounded-xl p-6 max-w-lg w-full shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-theme-subtle mb-4">
+              <h3 className="font-serif text-base font-bold text-theme-primary flex items-center gap-2">
+                <Volume2 className="w-5 h-5 text-theme-accent" />
+                <span>Lấy âm thanh từ câu khác</span>
+              </h3>
+              <button 
+                onClick={() => setShowReceiveModal(false)}
+                className="p-1 text-theme-primary/50 hover:text-theme-primary rounded cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-theme-primary/60 font-semibold mb-1 uppercase tracking-wider">
+                  Gán âm thanh cho câu này (Câu #{currentIndex + 1}):
+                </p>
+                <p className="text-sm font-serif font-bold text-theme-primary bg-theme-base-alt p-2.5 rounded border border-theme-subtle">
+                  {example.sentence}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-theme-primary/60 font-semibold mb-1 uppercase tracking-wider">
+                  Chọn câu nguồn đang có âm thanh để lấy:
+                </label>
+                <select
+                  value={selectedSourceId}
+                  onChange={(e) => setSelectedSourceId(e.target.value)}
+                  className="w-full bg-theme-base-alt border border-theme-subtle rounded-lg px-3 py-2 text-sm text-theme-primary focus:outline-none focus:border-theme-accent"
+                >
+                  <option value="">-- Chọn câu có sẵn âm thanh --</option>
+                  {otherExamplesWithAudio.map((e) => {
+                    const idx = allExamples.findIndex(x => x.id === e.id);
+                    const isDup = duplicateInfo?.otherId === e.id;
+                    return (
+                      <option key={e.id} value={e.id}>
+                        {`Câu #${idx + 1}: ${e.sentence.slice(0, 45)}${e.sentence.length > 45 ? '...' : ''} ${isDup ? '⚠️ [CÂU TRÙNG NỘI DUNG]' : ''}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-theme-subtle">
+                <button
+                  type="button"
+                  onClick={() => setShowReceiveModal(false)}
+                  className="px-4 py-2 text-xs uppercase font-semibold text-theme-primary/60 hover:text-theme-primary rounded cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedSourceId || isTransferring}
+                  onClick={async () => {
+                    if (!selectedSourceId || !onTransferAudio) return;
+                    setIsTransferring(true);
+                    try {
+                      await onTransferAudio(selectedSourceId, example.id, 'copy');
+                      setShowReceiveModal(false);
+                    } finally {
+                      setIsTransferring(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted text-xs uppercase font-bold tracking-wider rounded-lg transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  {isTransferring ? 'Đang lấy...' : 'Lấy âm thanh ngay'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
