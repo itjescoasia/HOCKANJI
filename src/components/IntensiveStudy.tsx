@@ -1437,7 +1437,7 @@ function StudyView({
     };
 
     onUpdateWord(word.id, {
-      examples: [newExample, ...word.examples],
+      examples: [newExample, ...(word.examples || [])],
     });
 
     setNewSentence("");
@@ -1447,6 +1447,15 @@ function StudyView({
     setNewTranslation("");
     setNewSpecialNote("");
     setIsAddingExample(false);
+    setExampleSearchQuery(""); // Clear search so the newly added sentence is visible at the very top
+    setHighlightedExampleId(newExample.id);
+    setTimeout(() => {
+      const el = document.getElementById(`example-${newExample.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      setTimeout(() => setHighlightedExampleId(null), 3000);
+    }, 100);
   };
 
   const handleRemoveExample = (exId: string) => {
@@ -1725,17 +1734,17 @@ function StudyView({
             placeholder="Tìm kiếm câu ví dụ (Tiếng Nhật, Romaji, Tiếng Việt...)"
           />
         </div>
-        <div className="flex items-center justify-between border-b border-theme-subtle pb-4">
-          <h3 className="text-lg font-serif text-theme-primary tracking-widest uppercase">
+        <div className="sticky top-16 z-20 bg-theme-panel/95 backdrop-blur-md py-3 px-3.5 -mx-2 sm:-mx-3 rounded-xl border border-theme-subtle shadow-md flex items-center justify-between gap-4 mb-3 transition-all">
+          <h3 className="text-sm sm:text-base font-serif text-theme-primary tracking-widest uppercase">
             Các Câu Ví Dụ ({filteredExamples.length}{exampleSearchQuery.trim() ? ` / ${word.examples.length}` : ""})
           </h3>
-          <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
             {word.examples.length > 0 && (
               <>
                 <button
                   onClick={toggleAllMeanings}
-                  className="text-theme-primary/60 hover:text-theme-primary flex items-center gap-1 text-[10px] sm:text-sm uppercase tracking-wider font-medium transition-colors"
+                  className="text-theme-primary/60 hover:text-theme-primary flex items-center gap-1 text-[10px] sm:text-xs uppercase tracking-wider font-medium transition-colors cursor-pointer"
                 >
                   {isAllHidden ? "Hiện tất cả" : "Ẩn tất cả"}
                 </button>
@@ -1744,7 +1753,7 @@ function StudyView({
                     setDeleteEnabled(!deleteEnabled);
                     setConfirmingDeleteId(null);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold transition-all border rounded ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[10px] uppercase tracking-wider font-bold transition-all border rounded cursor-pointer ${
                     deleteEnabled 
                       ? "bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20 hover:border-red-500" 
                       : "bg-theme-base text-theme-primary/40 border-theme-subtle hover:text-theme-primary hover:border-theme-primary/40"
@@ -1757,21 +1766,33 @@ function StudyView({
             )}
             {!isAddingExample && (
               <button
-                onClick={() => setIsAddingExample(true)}
-                className="text-theme-accent hover:text-theme-accent-hover flex items-center gap-1 text-sm uppercase tracking-wider font-medium"
+                id="btn-sticky-add-example"
+                onClick={() => {
+                  setIsAddingExample(true);
+                  setTimeout(() => {
+                    const formEl = document.getElementById('add-example-form-section');
+                    if (formEl) {
+                      formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      const inputEl = document.getElementById('new-sentence-input');
+                      if (inputEl) inputEl.focus();
+                    }
+                  }, 80);
+                }}
+                className="text-theme-accent hover:text-theme-accent-hover flex items-center gap-1 text-xs sm:text-sm uppercase tracking-wider font-bold transition-all px-3 py-1.5 rounded-lg border border-theme-accent/40 bg-theme-accent/10 hover:bg-theme-accent/20 cursor-pointer shadow-xs"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Thêm mới</span>
-            </button>
+              </button>
             )}
           </div>
         </div>
 
         {isAddingExample && (
           <motion.div
+            id="add-example-form-section"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-theme-base-alt border border-theme-accent/30 p-6 rounded-lg relative shadow-xl mb-4"
+            className="bg-theme-base-alt border border-theme-accent/30 p-6 rounded-lg relative shadow-xl mb-4 scroll-mt-28"
           >
             <h4 className="text-xs uppercase tracking-wider text-theme-accent mb-4 font-medium">
               Thêm Câu Ví Dụ Mới
@@ -1816,6 +1837,7 @@ function StudyView({
                   </button>
                 </div>
                 <textarea
+                  id="new-sentence-input"
                   required
                   rows={2}
                   value={newSentence}
@@ -2411,6 +2433,30 @@ function StudyView({
           onUpdateWord(id, { manualStatus: newStatus, statusUpdatedAt: Date.now() });
         }}
       />
+
+      {/* Floating Action Button (FAB) - Luôn chạy theo người dùng khi cuộn trang */}
+      {!isAddingExample && (
+        <button
+          id="btn-floating-add-example"
+          type="button"
+          onClick={() => {
+            setIsAddingExample(true);
+            setTimeout(() => {
+              const formEl = document.getElementById('add-example-form-section');
+              if (formEl) {
+                formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const inputEl = document.getElementById('new-sentence-input');
+                if (inputEl) inputEl.focus();
+              }
+            }, 80);
+          }}
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted shadow-2xl rounded-full px-5 py-3.5 flex items-center gap-2.5 font-bold tracking-wider text-xs uppercase cursor-pointer transition-all hover:scale-105 active:scale-95 border-2 border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-200"
+          title="Thêm câu ví dụ mới (Nút nổi luôn đi theo màn hình khi cuộn)"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <span className="font-sans font-bold">Thêm mới</span>
+        </button>
+      )}
     </div>
   );
 }
