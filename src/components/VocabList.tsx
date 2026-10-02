@@ -116,6 +116,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingCard, setViewingCard] = useState<KanjiCard | null>(null);
 
+  // Sync initialSearchQuery if passed from parent navigation
+  React.useEffect(() => {
+    if (initialSearchQuery !== undefined) {
+      setSearch(initialSearchQuery);
+      setCurrentPage(1);
+    }
+  }, [initialSearchQuery]);
+
   const [isBulkGenerating, setIsBulkGenerating] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
@@ -622,6 +630,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       if (card) {
         startEdit(card);
         setSearch(card.kanji || card.reading);
+        setCurrentPage(1);
       }
     }
   }, [editCardReq, initialEditId, deck]);
@@ -684,6 +693,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       if (card) {
         setViewingCard(card);
         setSearch(card.kanji || card.reading);
+        setCurrentPage(1);
       }
     }
   }, [viewCardReq, deck]);
@@ -785,6 +795,24 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     });
   }, [deck, search, filterType, audioFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredDeck.length / itemsPerPage));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
+
+  const hasActiveFilter = Boolean(search?.trim() || filterType !== 'all' || audioFilter !== 'all');
+
+  const handleClearAllFilters = () => {
+    setSearch('');
+    setFilterType('all');
+    setAudioFilter('all');
+    setCurrentPage(1);
+  };
+
   const uniqueWordTypes = React.useMemo(() => {
     return Array.from(new Set(deck.map(c => c.wordType).filter(Boolean)));
   }, [deck]);
@@ -857,19 +885,32 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-serif text-theme-primary font-bold mb-2 tracking-tight">Kho Từ Vựng</h2>
-          <div className="flex items-center gap-4">
-            <span className="text-theme-primary opacity-50 text-[10px] uppercase tracking-widest">Tổng cộng {deck.length} từ đã được thêm</span>
-            <div className="h-4 w-px bg-theme-subtle"></div>
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+            <span className="text-theme-primary opacity-60 text-[11px] font-medium tracking-wide">
+              {hasActiveFilter ? `Hiển thị ${filteredDeck.length} / ${deck.length} từ` : `Tổng cộng ${deck.length} từ`}
+            </span>
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border border-amber-500/30 cursor-pointer shadow-xs"
+                title="Bấm để hiển thị lại toàn bộ từ vựng"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Xem tất cả ({deck.length} từ)</span>
+              </button>
+            )}
+            <div className="h-4 w-px bg-theme-subtle hidden sm:block"></div>
             <button
               onClick={handleExport}
-              className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm"
+              className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm cursor-pointer"
             >
               <Download className="w-3 h-3" /> Xuất Excel
             </button>
             {isAdmin && <button
           onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm"
+              className="text-xs font-medium text-theme-primary/60 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-hover px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-theme-subtle hover:border-theme-accent/30 shadow-sm cursor-pointer"
             >
               <Upload className="w-3 h-3" /> {isImporting ? 'Đang Import...' : 'Nhập Excel'}
             </button>}
@@ -912,8 +953,18 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               placeholder="Tìm kiếm Kanji, nghĩa, romaji..."
               value={search}
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="pl-11 pr-4 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl placeholder:text-theme-primary/40 text-sm shadow-sm hover:border-theme-accent/50"
+              className="pl-11 pr-9 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl placeholder:text-theme-primary/40 text-sm shadow-sm hover:border-theme-accent/50"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setCurrentPage(1); }}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-theme-primary/40 hover:text-theme-primary cursor-pointer"
+                title="Xóa tìm kiếm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -923,12 +974,28 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           <div className="w-20 h-20 bg-theme-accent/10 border-theme-accent/20 flex items-center justify-center mx-auto mb-6 rounded-full">
             <Search className="w-8 h-8 text-theme-accent opacity-50" />
           </div>
-          <p className="text-xl font-bold text-theme-primary mb-2">Chưa có từ vựng nào</p>
-          <p className="text-theme-primary opacity-50 max-w-md mx-auto text-sm leading-relaxed tracking-wide">Hãy thêm từ vựng mới để bắt đầu quá trình học ứng dụng Spaced Repetition nhé.</p>
+          <p className="text-xl font-bold text-theme-primary mb-2">Chưa có từ vựng nào trong kho</p>
+          <p className="text-theme-primary opacity-50 max-w-md mx-auto text-sm leading-relaxed tracking-wide">
+            Đang tải dữ liệu từ Cloud hoặc kho từ chưa có từ nào. Bạn có thể thêm từ vựng mới hoặc nhập file Excel.
+          </p>
         </div>
       ) : filteredDeck.length === 0 ? (
-        <div className="bg-theme-panel border border-theme-subtle p-16 text-center shadow-sm rounded-2xl">
-          <p className="text-theme-primary opacity-50 text-sm tracking-wide">Không tìm thấy kết quả phù hợp với "{search}"</p>
+        <div className="bg-theme-panel border border-theme-subtle p-12 text-center shadow-sm rounded-2xl">
+          <div className="w-16 h-16 bg-amber-500/10 border-amber-500/20 flex items-center justify-center mx-auto mb-4 rounded-full text-amber-600 dark:text-amber-400">
+            <Search className="w-7 h-7" />
+          </div>
+          <p className="text-lg font-bold text-theme-primary mb-1">Không tìm thấy từ vựng nào khớp với bộ lọc</p>
+          <p className="text-theme-primary/60 max-w-md mx-auto text-xs leading-relaxed mb-4">
+            Kho hiện có <strong className="text-theme-accent font-bold">{deck.length} từ vựng</strong>. Các bộ lọc đang bật có thể làm ẩn kết quả.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearAllFilters}
+            className="px-5 py-2.5 bg-theme-accent text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-theme-accent-hover transition-all cursor-pointer shadow-md inline-flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Xóa bộ lọc & Xem tất cả {deck.length} từ</span>
+          </button>
         </div>
       ) : (
         <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-md sm:rounded-[20px] rounded-xl">
@@ -943,7 +1010,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 </tr>
               </thead>
               <tbody className="divide-y divide-theme-subtle">
-                {filteredDeck.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((card) => {
+                {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card) => {
                   const endOfToday = new Date();
                   endOfToday.setHours(23, 59, 59, 999);
                   const isDue = card.nextReviewDate <= endOfToday.getTime();
@@ -1535,20 +1602,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           {filteredDeck.length > itemsPerPage && (
             <div className="p-4 flex items-center justify-between border-t border-theme-subtle/50 bg-theme-base-alt/30">
               <div className="text-xs text-theme-muted">
-                Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, filteredDeck.length)} - {Math.min(currentPage * itemsPerPage, filteredDeck.length)} trong {filteredDeck.length} từ
+                Hiển thị {(safeCurrentPage - 1) * itemsPerPage + 1} - {Math.min(safeCurrentPage * itemsPerPage, filteredDeck.length)} trong {filteredDeck.length} từ
               </div>
               <div className="flex gap-2">
                 <button
-                  disabled={currentPage === 1}
+                  disabled={safeCurrentPage <= 1}
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm"
+                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm cursor-pointer"
                 >
                   Trước
                 </button>
                 <button
-                  disabled={currentPage >= Math.ceil(filteredDeck.length / itemsPerPage)}
-                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredDeck.length / itemsPerPage), prev + 1))}
-                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm cursor-pointer"
                 >
                   Tiếp
                 </button>

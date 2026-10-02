@@ -12,17 +12,17 @@ service cloud.firestore {
     }
 
     match /global_kanjiDeck/{docId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if request.auth != null;
     }
     match /global_intensiveVocab/{docId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if request.auth != null;
     }
     match /global_conversations/{docId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if request.auth != null;
     }

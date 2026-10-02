@@ -22,6 +22,9 @@ import {
   Volume2,
   Shuffle,
   CheckSquare,
+  Sparkles,
+  ArrowRight,
+  Play
 } from "lucide-react";
 import {
   PieChart,

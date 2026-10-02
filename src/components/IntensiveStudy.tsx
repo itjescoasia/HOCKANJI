@@ -2951,8 +2951,8 @@ function IntensiveExampleAudio({
           )}
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2 w-full">
-          <audio controls src={audioUrl} className="h-8 w-full max-w-[240px]" />
+        <div className="flex flex-wrap items-center gap-3 w-full bg-theme-base/40 p-2 sm:p-2.5 rounded-lg border border-theme-subtle/60">
+          <audio controls src={audioUrl} className="h-9 w-full sm:w-auto min-w-[280px] sm:min-w-[340px] max-w-[440px] rounded shadow-2xs" />
           
           {/* Nút nhanh chuyển/sao chép sang câu trùng lặp */}
           {counterpart && onTransferAudio && (
@@ -3020,7 +3020,7 @@ function IntensiveExampleAudio({
           onClick={() => setShowTransferModal(false)}
         >
           <div 
-            className="bg-theme-panel border border-theme-subtle rounded-xl p-6 max-w-lg w-full shadow-2xl relative"
+            className="bg-theme-panel border border-theme-subtle rounded-xl p-6 max-w-xl w-full shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-theme-subtle mb-4">
@@ -3146,7 +3146,7 @@ function IntensiveExampleAudio({
           onClick={() => setShowReceiveModal(false)}
         >
           <div 
-            className="bg-theme-panel border border-theme-subtle rounded-xl p-6 max-w-lg w-full shadow-2xl relative"
+            className="bg-theme-panel border border-theme-subtle rounded-xl p-6 max-w-xl w-full shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-theme-subtle mb-4">

@@ -38,61 +38,55 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 export function useIntensiveVocab() {
-  const [intensiveDeck, setIntensiveDeck] = useState<IntensiveWord[]>([]);
+  const [intensiveDeck, setIntensiveDeck] = useState<IntensiveWord[]>(() => {
+    try {
+      const stored = localStorage.getItem('intensive_vocab_deck_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | undefined;
-
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = undefined;
-      }
-
-      if (user) {
-        const basePath = `users/${user.uid}/intensiveVocab`;
-        const q = query(collection(db, 'global_intensiveVocab'));
-        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-          const loadedDeck: IntensiveWord[] = [];
-          snapshot.forEach((docSnap) => {
-            loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as IntensiveWord);
-          });
-          setIntensiveDeck(loadedDeck.sort((a,b) => {
-            if (a.order !== undefined && b.order !== undefined) {
-              return a.order - b.order;
-            }
-            if (a.order !== undefined) return -1;
-            if (b.order !== undefined) return 1;
-            return b.createdAt - a.createdAt;
-          }));
-          setIsLoaded(true);
-        }, (error) => {
-          setIsLoaded(true);
-          handleFirestoreError(error, OperationType.GET, basePath);
-        });
-      } else {
-        const stored = localStorage.getItem('intensive_vocab_deck_v1');
-        if (stored) {
-          try {
-            setIntensiveDeck(JSON.parse(stored));
-          } catch (e) {}
+    const q = query(collection(db, 'global_intensiveVocab'));
+    const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+      const loadedDeck: IntensiveWord[] = [];
+      snapshot.forEach((docSnap) => {
+        loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as IntensiveWord);
+      });
+      const sorted = loadedDeck.sort((a, b) => {
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
         }
-        setIsLoaded(true);
-      }
+        if (a.order !== undefined) return -1;
+        if (b.order !== undefined) return 1;
+        return b.createdAt - a.createdAt;
+      });
+      setIntensiveDeck(sorted);
+      setIsLoaded(true);
+      try {
+        localStorage.setItem('intensive_vocab_deck_v1', JSON.stringify(sorted));
+      } catch (e) {}
+    }, (error) => {
+      setIsLoaded(true);
+      console.warn("Firestore error in onSnapshot global_intensiveVocab:", error);
     });
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      unsubscribeSnapshot();
     };
   }, []);
 
   useEffect(() => {
-    if (isLoaded && !auth.currentUser) {
-      localStorage.setItem('intensive_vocab_deck_v1', JSON.stringify(intensiveDeck));
+    if (intensiveDeck.length > 0) {
+      try {
+        localStorage.setItem('intensive_vocab_deck_v1', JSON.stringify(intensiveDeck));
+      } catch (e) {}
     }
-  }, [intensiveDeck, isLoaded]);
+  }, [intensiveDeck]);
 
   const addWord = async (word: IntensiveWord) => {
     if (auth.currentUser) {

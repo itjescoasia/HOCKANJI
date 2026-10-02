@@ -22,89 +22,65 @@ export const removeUndefined = (obj: any): any => {
 
 
 export function useVocabDeck() {
-  const [deck, setDeck] = useState<KanjiCard[]>([]);
+  const [deck, setDeck] = useState<KanjiCard[]>(() => {
+    try {
+      const stored = localStorage.getItem('kanji_srs_deck');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load kanji_srs_deck from localStorage", e);
+    }
+    return [];
+  });
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | undefined;
-
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = undefined;
+    // Listen directly to Firestore global_kanjiDeck (allow read: if true)
+    const q = query(collection(db, 'global_kanjiDeck'));
+    
+    const unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+      const loadedDeck: KanjiCard[] = [];
+      snapshot.forEach((docSnap) => {
+        loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as KanjiCard);
+      });
+      const sorted = loadedDeck.sort((a, b) => b.createdAt - a.createdAt);
+      setDeck(sorted);
+      setIsLoaded(true);
+      try {
+        localStorage.setItem('kanji_srs_deck', JSON.stringify(sorted));
+      } catch (e) {
+        console.warn("Failed to cache kanji_srs_deck to localStorage", e);
       }
-
-      if (user) {
-        // User logged in, fetch from Firestore
-        const q = query(collection(db, 'global_kanjiDeck'));
-        
-        // Listen to changes
-        unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-          const loadedDeck: KanjiCard[] = [];
-          snapshot.forEach((docSnap) => {
-            loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as KanjiCard);
-          });
-          setDeck(loadedDeck.sort((a,b) => b.createdAt - a.createdAt));
-          setIsLoaded(true);
-          
-          if (snapshot.metadata.hasPendingWrites) {
-            console.log("Local changes haven't synced to server yet.");
-          } else {
-            console.log("Synced to server.");
-          }
-        }, (error) => {
-          console.error("Firestore error in onSnapshot:", error);
-          setIsLoaded(true); // Don't block UI if error
-        });
+      
+      if (snapshot.metadata.hasPendingWrites) {
+        console.log("Local changes haven't synced to server yet.");
       } else {
-        // Not logged in, load from localStorage if possible (fallback)
-        const stored = localStorage.getItem('kanji_srs_deck');
-        if (stored) {
-          try {
-            setDeck(JSON.parse(stored));
-          } catch (e) {}
-        } else {
-          setDeck([
-            {
-              id: 'mock-1',
-              kanji: '日',
-              reading: 'nichi, hi',
-              meaning: 'Mặt trời, Ngày',
-              interval: 0,
-              repetition: 0,
-              easeFactor: 2.5,
-              nextReviewDate: Date.now(),
-              createdAt: Date.now() - 100000
-            },
-            {
-              id: 'mock-2',
-              kanji: '月',
-              reading: 'getsu, tsuki',
-              meaning: 'Mặt trăng, Tháng',
-              interval: 0,
-              repetition: 0,
-              easeFactor: 2.5,
-              nextReviewDate: Date.now(),
-              createdAt: Date.now() - 50000
-            }
-          ]);
-        }
-        setIsLoaded(true);
+        console.log(`Synced ${loadedDeck.length} kanji cards from server.`);
       }
+    }, (error) => {
+      console.error("Firestore error in onSnapshot global_kanjiDeck:", error);
+      setIsLoaded(true); // Don't block UI if error
     });
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      unsubscribeSnapshot();
     };
   }, []);
 
-  // Sync to localStorage as a backup when not authenticated
+  // Sync to localStorage whenever deck changes and has data
   useEffect(() => {
-    if (isLoaded && !auth.currentUser) {
-      localStorage.setItem('kanji_srs_deck', JSON.stringify(deck));
+    if (deck.length > 0) {
+      try {
+        localStorage.setItem('kanji_srs_deck', JSON.stringify(deck));
+      } catch (e) {
+        console.warn("Error saving deck to localStorage", e);
+      }
     }
-  }, [deck, isLoaded]);
+  }, [deck]);
 
   const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string, examples?: any[], forms?: any[], audioUrl?: string | null, hasAudio?: boolean) => {
     const newCard: KanjiCard = {
