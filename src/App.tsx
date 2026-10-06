@@ -80,11 +80,11 @@ export const THEME_OPTIONS: ThemeOption[] = [
   {
     id: 'sepia',
     name: 'Cà phê ấm dịu (Gentle Coffee)',
-    description: 'Nhiệt độ màu vàng ấm dịu đã căn chỉnh mềm mại, không bị vàng gắt',
+    description: 'Nhiệt độ màu nâu cà phê ấm dịu với độ tương phản cao WCAG AAA bảo vệ mắt',
     bgHex: '#f5ede1',
     panelHex: '#faf5ee',
-    textHex: '#443627',
-    accentHex: '#9f5b24',
+    textHex: '#1c1208',
+    accentHex: '#7c340a',
   },
   {
     id: 'light',

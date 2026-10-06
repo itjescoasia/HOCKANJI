@@ -777,14 +777,14 @@ export default function IntensiveStudy({
                   onClick={() => setStatusFilter('mastered')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     statusFilter === 'mastered'
-                      ? 'bg-green-600 text-white shadow-xs'
-                      : 'text-green-600 dark:text-green-400 hover:bg-green-500/10'
+                      ? 'bg-green-700 text-white shadow-xs'
+                      : 'text-green-700 dark:text-green-400 hover:bg-green-500/10'
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                   <span>Đã thuộc</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    statusFilter === 'mastered' ? 'bg-white/25 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                    statusFilter === 'mastered' ? 'bg-white/25 text-white' : 'bg-green-500/15 text-green-700 dark:text-green-400'
                   }`}>
                     {masteredWordsCount}
                   </span>
@@ -913,7 +913,7 @@ export default function IntensiveStudy({
                                       }}
                                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-xs select-none ${
                                         isWordMastered(word)
-                                          ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
+                                          ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
                                           : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/35 hover:bg-amber-500/25'
                                       }`}
                                       title={isWordMastered(word) ? "Đang là: ĐÃ THUỘC (Bấm để đổi thành Chưa thuộc)" : "Đang là: CHƯA THUỘC (Bấm để đánh dấu Đã thuộc)"}
@@ -1808,7 +1808,7 @@ function StudyView({
                   }}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer shadow-xs select-none ${
                     isWordMastered(word)
-                      ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
+                      ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/35 hover:bg-green-500/25'
                       : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/35 hover:bg-amber-500/25'
                   }`}
                   title={isWordMastered(word) ? "Đang là: ĐÃ THUỘC (Bấm để đổi thành Chưa thuộc)" : "Đang là: CHƯA THUỘC (Bấm để đánh dấu Đã thuộc)"}
@@ -2118,7 +2118,7 @@ function StudyView({
                           </div>
                         )}
                         <div
-                          className={`bg-theme-hover p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? "pl-14" : ""}`}
+                          className={`bg-theme-panel p-6 relative z-10 w-full min-h-full ${editingExampleId !== ex.id ? "pl-14" : ""}`}
                         >
                           {/* Drag Handle */}
                           {editingExampleId !== ex.id && (
@@ -2500,7 +2500,7 @@ function StudyView({
                                   <div className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full font-serif text-sm font-bold shadow-xs ${
                                     duplicateExampleMap.has(ex.id)
                                       ? "bg-amber-500 text-white border-2 border-amber-600"
-                                      : "bg-theme-base-alt border border-theme-subtle text-theme-accent"
+                                      : "bg-theme-panel border border-theme-subtle text-theme-accent font-bold"
                                   }`}>
                                     {index + 1}
                                   </div>
@@ -2515,11 +2515,11 @@ function StudyView({
                                   {ex.reading &&
                                     !hiddenMeaningIds.includes(ex.id) &&
                                     furiganaMode === 'off' && (
-                                      <p className="text-xl sm:text-2xl text-theme-accent opacity-80 mb-1 font-serif">
+                                      <p className="text-xl sm:text-2xl text-theme-accent font-medium mb-1 font-serif">
                                         <RelatedHighlight text={ex.reading} type="hiragana" />
                                       </p>
                                     )}
-                                  <div className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3">
+                                  <div className="text-xl sm:text-2xl text-theme-primary font-serif leading-relaxed mb-3 font-medium">
                                     {furiganaMode === 'off' ? (
                                       renderHighlight(ex.sentence, word.word)
                                     ) : (
@@ -2535,7 +2535,7 @@ function StudyView({
                                     <span className="inline-flex flex-col items-center ml-3 gap-0.5 align-middle">
                                     <button
                                       onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-                                      className={`inline-flex items-center justify-center p-2 transition-colors rounded-full ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10'}`}
+                                      className={`inline-flex items-center justify-center p-2 transition-colors rounded-full ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-accent/10'}`}
                                       title={ex.audioUrl ? "Nghe file MP3" : "Nghe câu ví dụ"}
                                     >
                                       <Volume2 className="w-5 h-5" />
@@ -2547,13 +2547,13 @@ function StudyView({
                                   </div>
                                   {ex.romaji &&
                                     !hiddenMeaningIds.includes(ex.id) && (
-                                      <p className="text-sm text-theme-primary/60 mb-1">
+                                      <p className="text-sm text-theme-primary/80 font-medium mb-1 font-sans">
                                         <RelatedHighlight text={ex.romaji} type="romaji" />
                                       </p>
                                     )}
                                   {ex.translation &&
                                     !hiddenMeaningIds.includes(ex.id) && (
-                                      <p className="text-sm text-theme-primary/50 italic mb-2">
+                                      <p className="text-sm sm:text-base text-theme-primary/85 font-medium italic mb-2">
                                         (<span>
                                           {searchQuery 
                                             ? highlightSearchTerm(ex.translation || "", searchQuery) 

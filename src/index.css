@@ -21,9 +21,15 @@
   --color-theme-accent: var(--accent);
   --color-theme-accent-hover: var(--accent-hover);
   --color-theme-accent-light: var(--accent-light);
+  
+  --color-theme-success: var(--text-success);
+  --color-theme-danger: var(--text-danger);
 }
 
 :root {
+  --text-success: #4ade80;
+  --text-danger: #f87171;
+  
   --badge-blue-bg: rgba(30, 58, 138, 0.3);
   --badge-blue-text: #93c5fd;
   --badge-blue-border: rgba(30, 64, 175, 0.5);
@@ -357,58 +363,141 @@
 
 .theme-sepia {
   --badge-blue-bg: #e2e6f0;
-  --badge-blue-text: #2f4b7c;
-  --badge-blue-border: #c7d0e0;
+  --badge-blue-text: #172554;
+  --badge-blue-border: #93c5fd;
   
-  --badge-purple-bg: #eae2f0;
-  --badge-purple-text: #665191;
-  --badge-purple-border: #d4c7e0;
+  --badge-purple-bg: #ede4f5;
+  --badge-purple-text: #581c87;
+  --badge-purple-border: #d8b4fe;
   
-  --badge-pink-bg: #f0e2ea;
-  --badge-pink-text: #a05195;
-  --badge-pink-border: #e0c7d4;
+  --badge-pink-bg: #fae4ef;
+  --badge-pink-text: #831843;
+  --badge-pink-border: #f9a8d4;
   
-  --badge-emerald-bg: #e2f0e6;
-  --badge-emerald-text: #2f7c4b;
-  --badge-emerald-border: #c7e0d0;
+  --badge-emerald-bg: #d7f0e0;
+  --badge-emerald-text: #0e4b2a;
+  --badge-emerald-border: #86cf9e;
   
-  --badge-amber-bg: #f0ead2;
-  --badge-amber-text: #8c6b14;
-  --badge-amber-border: #e0d4a8;
+  --badge-amber-bg: #f8eed6;
+  --badge-amber-text: #78350f;
+  --badge-amber-border: #fcd34d;
   
-  --badge-orange-bg: #f0e6d2;
-  --badge-orange-text: #9c5c14;
-  --badge-orange-border: #e0cc98;
+  --badge-orange-bg: #fae8dc;
+  --badge-orange-text: #7c2d12;
+  --badge-orange-border: #fdba74;
   
-  --badge-cyan-bg: #d2eef0;
-  --badge-cyan-text: #147a8c;
-  --badge-cyan-border: #a8dce0;
+  --badge-cyan-bg: #d8f1f5;
+  --badge-cyan-text: #0e4b5c;
+  --badge-cyan-border: #7dd3fc;
   
-  --badge-indigo-bg: #e2e2f0;
-  --badge-indigo-text: #4b4b9c;
-  --badge-indigo-border: #c7c7e0;
+  --badge-indigo-bg: #e2e2f5;
+  --badge-indigo-text: #312e81;
+  --badge-indigo-border: #a5b4fc;
 
-  /* Gentle Warm Coffee: Soft warm tones, no harsh mustard yellow */
+  /* Gentle Warm Coffee: Soft warm tones with mathematically calculated WCAG AAA contrast */
   --bg-base: #f5ede1;
   --bg-base-alt: #ece1d1;
   --bg-panel: #faf5ee;
-  --bg-hover: #e3d4c0;
-  --bg-active: #d6c3ac;
-  --bg-active-alt: #c4ae95;
+  --bg-hover: #f0e4d2;
+  --bg-active: #e3d2be;
+  --bg-active-alt: #d5c0a8;
   
-  --border-subtle: #e0d0bc;
-  --border-strong: #c9b49c;
+  --border-subtle: #d9c8b2;
+  --border-strong: #b59f84;
   
-  /* Text colors: deep warm brown */
-  --text-primary: #443627;
-  --text-muted: #796652;
-  --text-accent-dark: #8c4e1a;
-  --text-inverted: #f5ede1;
-  --text-japanese: #443627;
+  /* Text colors: deep rich espresso & chocolate brown for maximum legibility */
+  --text-primary: #1c1208; /* Ultra-crisp contrast ratio > 15:1 on #faf5ee */
+  --text-muted: #483523; /* Contrast ratio > 8.2:1 on #faf5ee */
+  --text-accent-dark: #6e350d;
+  --text-inverted: #faf5ee;
+  --text-japanese: #1c1208;
   
-  --accent: #9f5b24;
-  --accent-hover: #864a1c;
-  --accent-light: #bb7133;
+  /* Recalibrated green: Imperial Forest Pine green with WCAG AAA contrast ratio > 9:1 */
+  --text-success: #0e4b2a; 
+  --text-danger: #881313; /* Deep crimson wine: contrast ratio > 7.8:1 on #faf5ee */
+  
+  --accent: #7c340a; /* Rich roasted coffee caramel, contrast ratio > 7.3:1 */
+  --accent-hover: #5e2605; /* Deep espresso caramel, contrast ratio > 9.5:1 */
+  --accent-light: #9c4510;
+}
+
+/* High-Contrast overrides specifically for Gentle Warm Coffee theme */
+/* Green & Emerald text: Recalculated to deep pine/forest jade green (#0e4b2a) guaranteeing WCAG AAA contrast > 8.8:1 on coffee background */
+.theme-sepia .text-green-300,
+.theme-sepia .text-green-400,
+.theme-sepia .text-green-500,
+.theme-sepia .text-green-600,
+.theme-sepia .text-green-700,
+.theme-sepia .text-green-800,
+.theme-sepia .text-emerald-300,
+.theme-sepia .text-emerald-400,
+.theme-sepia .text-emerald-500,
+.theme-sepia .text-emerald-600,
+.theme-sepia .text-emerald-700,
+.theme-sepia .text-emerald-800,
+.theme-sepia .text-teal-400,
+.theme-sepia .text-teal-500,
+.theme-sepia .text-teal-600,
+.theme-sepia [class*="text-green-"],
+.theme-sepia [class*="text-emerald-"],
+.theme-sepia [class*="dark:text-green-"],
+.theme-sepia [class*="dark:text-emerald-"] {
+  color: #0e4b2a !important;
+  font-weight: 600;
+}
+
+/* Green icon strokes & fills in coffee theme */
+.theme-sepia svg[class*="text-green-"],
+.theme-sepia svg[class*="text-emerald-"],
+.theme-sepia .text-green-500 svg,
+.theme-sepia .text-emerald-500 svg {
+  color: #0e4b2a !important;
+  stroke: #0e4b2a !important;
+}
+
+/* Green badge containers in coffee theme */
+.theme-sepia [class*="bg-green-500/"],
+.theme-sepia [class*="bg-emerald-500/"],
+.theme-sepia [class*="bg-green-600/"],
+.theme-sepia [class*="bg-emerald-600/"] {
+  background-color: rgba(14, 75, 42, 0.12) !important;
+  color: #0e4b2a !important;
+}
+
+.theme-sepia [class*="border-green-"],
+.theme-sepia [class*="border-emerald-"] {
+  border-color: rgba(14, 75, 42, 0.35) !important;
+}
+
+/* Red / Danger text overrides */
+.theme-sepia .text-red-400,
+.theme-sepia .text-red-500,
+.theme-sepia [class*="text-red-"] {
+  color: #881313 !important;
+  font-weight: 600;
+}
+
+/* High-contrast secondary text: never wash out into pale beige on coffee background */
+.theme-sepia .text-theme-primary\/30,
+.theme-sepia .text-theme-primary\/40,
+.theme-sepia .text-theme-primary\/50 {
+  color: #483523 !important;
+}
+
+.theme-sepia .text-theme-primary\/60,
+.theme-sepia .text-theme-primary\/70 {
+  color: #352618 !important;
+}
+
+.theme-sepia rt {
+  color: #7c340a !important;
+  font-weight: 700;
+}
+
+/* Example card inner surfaces in coffee theme: ensure crisp warm cream background */
+.theme-sepia [id^="example-"] > div {
+  background-color: var(--bg-panel) !important;
+  border-color: var(--border-subtle) !important;
 }
 
 .theme-dim {

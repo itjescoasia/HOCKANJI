@@ -208,9 +208,9 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   };
 
   let colorClass = "text-theme-accent";
-  if (status === 'good') colorClass = "text-green-500";
-  if (status === 'bad') colorClass = "text-red-400";
-  if (status === 'new') colorClass = "text-theme-primary/80";
+  if (status === 'good') colorClass = "text-theme-success text-green-600 dark:text-green-400";
+  if (status === 'bad') colorClass = "text-theme-danger text-red-500";
+  if (status === 'new') colorClass = "text-theme-primary/90";
 
   if (!card) {
     return <span className={`${colorClass} font-bold`}>{text}</span>;
