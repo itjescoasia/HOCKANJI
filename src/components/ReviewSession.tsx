@@ -1,12 +1,35 @@
-import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS , playAudioUrl} from '../utils/playTTS';
-import Markdown from 'react-markdown';
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect, Fragment, useRef } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
-import { motion } from 'motion/react';
-import { X, Trash2, Volume2, Edit3 } from 'lucide-react';
+import { usePersistentState } from '../hooks/usePersistentState';
+import { playTTS, playAudioUrl } from '../utils/playTTS';
+import Markdown from 'react-markdown';
+import { 
+  X, 
+  Trash2, 
+  Volume2, 
+  VolumeX,
+  Edit3, 
+  ArrowLeft, 
+  RotateCcw, 
+  Check, 
+  Sparkles, 
+  Flame, 
+  CheckCircle2, 
+  Award, 
+  ChevronRight,
+  BookOpen,
+  Keyboard,
+  HelpCircle,
+  Lightbulb,
+  Layers,
+  ArrowRight,
+  Clock,
+  Zap,
+  Repeat
+} from 'lucide-react';
 import { renderExampleHighlight, RelatedHighlight, HighlightVietnamese, HighlightProvider } from '../utils/highlight';
 import ReviewEditForm from './ReviewEditForm';
+import { getWordTypeBadgeStyle } from './VocabList';
 
 interface ReviewSessionProps {
   deck?: KanjiCard[];
@@ -20,15 +43,45 @@ interface ReviewSessionProps {
   isDifficultReview?: boolean;
 }
 
-export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyReview, onClose, onRemoveCard, onUpdateCard, isFreeStudy = false, isDifficultReview = false }: ReviewSessionProps) {
-  const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(dueCards);
+export default function ReviewSession({
+  deck = [],
+  dueCards = [],
+  onReview,
+  onFreeStudyReview,
+  onClose,
+  onRemoveCard,
+  onUpdateCard,
+  isFreeStudy = false,
+  isDifficultReview = false
+}: ReviewSessionProps) {
+  // Always ensure reviewQueue has cards if deck has cards
+  const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(() => {
+    if (dueCards && dueCards.length > 0) return dueCards;
+    if (deck && deck.length > 0) return deck;
+    return [];
+  });
+
   const [currentIndexRaw, setCurrentIndex] = usePersistentState('app_reviewsession_currentIndex', 0);
   const [flippedState, setFlippedState] = usePersistentState<Record<number, boolean>>('app_reviewsession_flippedState', {});
-  const currentIndex = reviewQueue.length > 0 ? Math.min(currentIndexRaw, reviewQueue.length - 1) : 0;
-  const showAnswer = flippedState[currentIndex] || false;
-  const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [currentIndex]: val }));
+  const [autoPlayAudio, setAutoPlayAudio] = usePersistentState<boolean>('app_reviewsession_autoplay_audio', true);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+  // Sync reviewQueue when dueCards or deck changes
+  useEffect(() => {
+    if (dueCards && dueCards.length > 0) {
+      setReviewQueue(dueCards);
+    } else if (deck && deck.length > 0 && reviewQueue.length === 0) {
+      setReviewQueue(deck);
+    }
+  }, [dueCards, deck]);
+
+  // Safe index calculation
+  const safeIndex = reviewQueue.length > 0 ? Math.min(Math.max(0, currentIndexRaw), reviewQueue.length - 1) : 0;
+  const currentCard = reviewQueue[safeIndex] || deck[0];
+  const showAnswer = flippedState[safeIndex] || false;
+  const setShowAnswer = (val: boolean) => setFlippedState(prev => ({ ...prev, [safeIndex]: val }));
+
   const [successCounts, setSuccessCounts] = useState<Record<string, number>>({});
-  
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<KanjiCard>>({});
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
@@ -41,7 +94,10 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
   
   const [exerciseType, setExerciseType] = useState<'typing_reading' | 'mcq_meaning' | 'mcq_reading' | 'flip'>('flip');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const cardContentRef = useRef<HTMLDivElement>(null);
 
+  // Sync TTS events
   useEffect(() => {
     const handleTTSGenerated = (e: any) => {
       const { text, audioUrl } = e.detail;
@@ -79,17 +135,19 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
   }, []);
 
-  const currentCard = reviewQueue[currentIndex];
-
   // Reset internal states when current index changes
   useEffect(() => {
     setReadingInput('');
     setInputError(false);
     setWrongMcqOption(null);
+    if (cardContentRef.current) {
+      cardContentRef.current.scrollTop = 0;
+    }
 
     if (isFreeStudy && currentCard) {
       const correctAnswer = currentCard.meaning || '';
-      const allOptions = Array.from(new Set(dueCards.map(c => c.meaning).filter(Boolean))) as string[];
+      const pool = (dueCards && dueCards.length > 0) ? dueCards : deck;
+      const allOptions = Array.from(new Set(pool.map(c => c.meaning).filter(Boolean))) as string[];
       
       if (allOptions.length < 2) {
         setExerciseType('flip');
@@ -97,17 +155,14 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
         setExerciseType('mcq_meaning');
         const wrongOptions = allOptions.filter(o => String(o || "").trim().toLowerCase() !== String(correctAnswer || "").trim().toLowerCase());
         
-        // Fisher-Yates shuffle wrongOptions
         for (let i = wrongOptions.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [wrongOptions[i], wrongOptions[j]] = [wrongOptions[j], wrongOptions[i]];
         }
         
-        // Take up to 9 wrong options for 10 total
         const shuffledWrong = wrongOptions.slice(0, 9);
         const finalOptions = [correctAnswer, ...shuffledWrong];
         
-        // Fisher-Yates shuffle finalOptions
         for (let i = finalOptions.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [finalOptions[i], finalOptions[j]] = [finalOptions[j], finalOptions[i]];
@@ -118,36 +173,174 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
     } else {
       setExerciseType('flip');
     }
-  }, [currentIndex, isFreeStudy, isDifficultReview, currentCard, dueCards]);
+  }, [safeIndex, isFreeStudy, isDifficultReview, currentCard, dueCards, deck]);
 
+  // Auto-play audio when card flips to back
+  useEffect(() => {
+    if (showAnswer && autoPlayAudio && currentCard) {
+      const timer = setTimeout(() => {
+        handleSpeak(null, currentCard.kanji || currentCard.reading, currentCard.audioUrl);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [showAnswer, autoPlayAudio, safeIndex]);
 
-  if (currentIndex >= reviewQueue.length) {
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if (isEditing || confirmingDeleteId || editingExampleId) {
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showShortcutHelp) {
+          setShowShortcutHelp(false);
+        } else {
+          onClose();
+        }
+        return;
+      }
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcutHelp(prev => !prev);
+        return;
+      }
+
+      if (e.key === ' ' || e.key === 'Enter') {
+        if (!showAnswer) {
+          e.preventDefault();
+          setShowAnswer(true);
+        }
+        return;
+      }
+
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        if (currentCard) {
+          handleSpeak(null, currentCard.kanji || currentCard.reading, currentCard.audioUrl);
+        }
+        return;
+      }
+
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        if (currentCard) {
+          startEdit();
+        }
+        return;
+      }
+
+      if (showAnswer) {
+        if (!isFreeStudy) {
+          if (e.key === '1') {
+            e.preventDefault();
+            handleGrade('forgot');
+          } else if (e.key === '2') {
+            e.preventDefault();
+            handleGrade('hard');
+          } else if (e.key === '3') {
+            e.preventDefault();
+            handleGrade('good');
+          } else if (e.key === '4') {
+            e.preventDefault();
+            handleGrade('easy');
+          }
+        } else {
+          if (e.key === '1') {
+            e.preventDefault();
+            handleFreeStudyForgot();
+          } else if (e.key === '2' || e.key === '3') {
+            e.preventDefault();
+            handleFreeStudyRemember();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAnswer, isEditing, confirmingDeleteId, editingExampleId, isFreeStudy, currentCard, safeIndex, showShortcutHelp]);
+
+  // Loading state if deck is completely empty
+  if (!currentCard && reviewQueue.length === 0) {
     return (
-      <div className="fixed inset-0 bg-theme-base-alt/95 flex flex-col items-center justify-center z-50 p-4">
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-theme-panel border border-theme-subtle p-12 text-center max-w-md w-full shadow-2xl"
-        >
-          <div className="w-16 h-16 border border-theme-accent text-theme-accent flex items-center justify-center mx-auto mb-8 bg-theme-hover">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 13l4 4L19 7" /></svg>
+      <div className="fixed inset-0 bg-theme-base z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 border-4 border-theme-subtle border-t-theme-accent rounded-full animate-spin mb-4" />
+        <h3 className="text-lg font-serif font-bold text-theme-primary mb-2">Đang tải từ vựng...</h3>
+        <p className="text-xs text-theme-primary/60 max-w-sm mb-6">Hệ thống đang chuẩn bị danh sách thẻ học cho bạn.</p>
+        <button onClick={onClose} className="px-6 py-2.5 rounded-xl border border-theme-subtle hover:bg-theme-hover text-xs font-bold uppercase tracking-wider">
+          Quay lại Trang Chủ
+        </button>
+      </div>
+    );
+  }
+
+  // Truly finished session view (when user reviewed all cards)
+  const isFinished = reviewQueue.length > 0 && currentIndexRaw >= reviewQueue.length;
+  if (isFinished) {
+    return (
+      <div className="fixed inset-0 bg-theme-base z-50 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="bg-theme-panel border border-theme-subtle p-8 sm:p-12 text-center max-w-lg w-full rounded-3xl shadow-2xl relative overflow-hidden">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 text-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <Award className="w-10 h-10 stroke-[2.2]" />
           </div>
-          <h2 className="text-2xl font-serif text-theme-accent mb-4 tracking-widest uppercase">Hoàn Tất Phiên Học</h2>
-          <p className="text-theme-primary opacity-50 mb-10 text-sm leading-relaxed tracking-wide">Tuyệt vời. Bạn đã hoàn thành tất cả các từ cần ôn cho hôm nay. Sự kiên trì sẽ tạo nên sự thành thạo.</p>
-          <button 
-            onClick={onClose}
-            className="w-full bg-theme-hover border border-theme-accent hover:bg-theme-accent hover:text-theme-inverted text-theme-accent font-medium py-4 uppercase tracking-[0.2em] text-[11px] transition-colors"
-          >
-            Trở lại trang chủ
-          </button>
-        </motion.div>
+
+          <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 inline-block mb-3">
+            Hoàn tất xuất sắc
+          </span>
+
+          <h2 className="text-2xl sm:text-3xl font-serif text-theme-primary font-bold mb-3 tracking-tight">
+            Phiên Học Đã Hoàn Thành!
+          </h2>
+
+          <p className="text-theme-primary/70 mb-8 text-xs sm:text-sm leading-relaxed max-w-sm mx-auto">
+            Bạn đã ôn tập xong toàn bộ <strong>{reviewQueue.length} từ vựng</strong> trong phiên này. Sự kiên trì mỗi ngày là chìa khóa để phản xạ tự nhiên.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-8 bg-theme-base-alt/70 p-4 rounded-2xl border border-theme-subtle">
+            <div className="text-center p-2">
+              <div className="text-3xl font-serif font-bold text-theme-accent">{reviewQueue.length}</div>
+              <div className="text-[11px] text-theme-primary/60 uppercase tracking-wider font-medium mt-1">Từ đã ôn tập</div>
+            </div>
+            <div className="text-center p-2">
+              <div className="text-3xl font-serif font-bold text-emerald-600 dark:text-emerald-400">100%</div>
+              <div className="text-[11px] text-theme-primary/60 uppercase tracking-wider font-medium mt-1">Mục tiêu phiên</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button 
+              onClick={() => {
+                setCurrentIndex(0);
+                setFlippedState({});
+              }}
+              className="flex-1 py-3.5 px-4 rounded-2xl border border-theme-subtle hover:bg-theme-hover text-theme-primary text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Ôn lại từ đầu</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="flex-1 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-3.5 px-4 rounded-2xl uppercase tracking-wider text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Trở về Trang Chủ</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   const handleGrade = (grade: ReviewGrade) => {
     onReview(currentCard.id, grade);
-    setFlippedState(fs => ({ ...fs, [currentIndex + 1]: false })); setCurrentIndex(prev => prev + 1);
+    setFlippedState(fs => ({ ...fs, [safeIndex + 1]: false }));
+    setCurrentIndex(prev => prev + 1);
   };
 
   const handleFreeStudyRemember = () => {
@@ -160,19 +353,21 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
       setReviewQueue(prev => {
         const newQueue = [...prev];
         const offset = count === 1 ? 4 : 6;
-        const insertIndex = Math.min(newQueue.length, currentIndex + offset);
+        const insertIndex = Math.min(newQueue.length, safeIndex + offset);
         newQueue.splice(insertIndex, 0, currentCard);
         return newQueue;
       });
     }
 
-    setFlippedState(fs => ({ ...fs, [currentIndex + 1]: false })); setCurrentIndex(prev => prev + 1);
+    setFlippedState(fs => ({ ...fs, [safeIndex + 1]: false }));
+    setCurrentIndex(prev => prev + 1);
   };
 
   const handleFreeStudyForgot = () => {
     if (onFreeStudyReview) onFreeStudyReview(currentCard.id, false);
     setReviewQueue(prev => [...prev, currentCard]);
-    setFlippedState(fs => ({ ...fs, [currentIndex + 1]: false })); setCurrentIndex(prev => prev + 1);
+    setFlippedState(fs => ({ ...fs, [safeIndex + 1]: false }));
+    setCurrentIndex(prev => prev + 1);
   };
 
   const handleCheckReading = () => {
@@ -183,8 +378,6 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
       setInputError(true);
     }
   };
-
-  const isWordWithKanji = currentCard?.kanji && currentCard?.reading && String(currentCard.kanji || "").trim() !== String(currentCard.reading || "").trim();
 
   const handleMcqSelect = (option: string) => {
     const field = exerciseType === 'mcq_meaning' ? 'meaning' : 'reading';
@@ -199,15 +392,14 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
   };
 
   const handleDelete = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa từ vựng này không?')) {
-      onRemoveCard(currentCard.id);
-      setReviewQueue(prev => prev.filter((_, i) => i !== currentIndex));
-      setShowAnswer(false);
-    }
+    setConfirmingDeleteId(currentCard.id);
   };
 
-  const handleSpeak = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
-    e.stopPropagation();
+  const handleSpeak = (e: React.MouseEvent | null, text: string, audioUrl?: string | null) => {
+    if (e) e.stopPropagation();
+    setIsPlayingAudio(true);
+    setTimeout(() => setIsPlayingAudio(false), 1200);
+
     if (audioUrl) {
       playAudioUrl(audioUrl, text);
       return;
@@ -215,70 +407,11 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
     if (text) playTTS(text);
   };
 
-  const renderExampleWithHighlight = (example: string, kanji: string | undefined, reading: string | undefined) => {
-    if (!example) return null;
-    
-    const targetKanji = kanji && example.includes(kanji) ? kanji : null;
-    if (targetKanji) {
-      const parts = example.split(targetKanji);
-      return (
-        <Fragment>
-          “{parts.map((p, i) => (
-            <Fragment key={i}>
-              {p}
-              {i < parts.length - 1 && <span className="text-theme-accent font-bold">{targetKanji}</span>}
-            </Fragment>
-          ))}”
-        </Fragment>
-      );
-    }
-
-    const kanjiChars = kanji ? kanji.match(/[\u4e00-\u9faf]+/g) : null;
-    if (kanjiChars && kanjiChars.length > 0) {
-      const stem = kanjiChars.join(''); // Try exactly first just in case
-      let targetStem = stem;
-      
-      if (!example.includes(stem)) {
-        // Just take the first kanji cluster if they don't appear together
-        targetStem = kanjiChars[0];
-      }
-      
-      if (example.includes(targetStem)) {
-        const parts = example.split(targetStem);
-        return (
-          <Fragment>
-            “{parts.map((p, i) => (
-              <Fragment key={i}>
-                {p}
-                {i < parts.length - 1 && <span className="text-theme-accent font-bold">{targetStem}</span>}
-              </Fragment>
-            ))}”
-          </Fragment>
-        );
-      }
-    }
-
-    const targetReading = reading && example.includes(reading) ? reading : null;
-    if (targetReading) {
-      const parts = example.split(targetReading);
-      return (
-        <Fragment>
-          “{parts.map((p, i) => (
-            <Fragment key={i}>
-              {p}
-              {i < parts.length - 1 && <span className="text-theme-accent font-bold">{targetReading}</span>}
-            </Fragment>
-          ))}”
-        </Fragment>
-      );
-    }
-
-    return <Fragment>“{example}”</Fragment>;
-  };
-
-  const totalGoal = dueCards.length * 3;
+  const totalGoal = (dueCards && dueCards.length > 0 ? dueCards.length : deck.length) * 3;
   const currentProgress = Object.values(successCounts).reduce((acc: number, count: number) => acc + Math.min(count, 3), 0) as number;
-  const progressPercent = totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0;
+  const progressPercent = isFreeStudy 
+    ? (totalGoal > 0 ? (currentProgress / totalGoal) * 100 : 0)
+    : (reviewQueue.length > 0 ? ((safeIndex) / reviewQueue.length) * 100 : 0);
   const currentCardProgress = successCounts[currentCard?.id] || 0;
 
   const startEdit = () => {
@@ -294,376 +427,521 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
     setIsEditing(false);
   };
 
+  const modeTitle = isDifficultReview 
+    ? 'Ôn từ hay quên (Khó)'
+    : isFreeStudy 
+      ? 'Ôn tập tự do (Học nhồi)' 
+      : 'Ôn tập ngắt quãng SRS';
+
+  // Fallback word display
+  const primaryDisplayWord = currentCard.kanji || currentCard.reading || currentCard.meaning || 'Từ vựng';
+
   return (
-    <div className="fixed inset-0 bg-theme-base-alt z-50 font-sans text-theme-primary">
-      <div className="w-full h-full overflow-y-auto flex flex-col items-center p-4 sm:p-8">
-        <div className="flex-1 shrink-0 min-h-0" />
-      {isFreeStudy && (
-        <div className="absolute top-0 left-0 w-full h-1 bg-theme-hover">
-          <div className="h-full bg-theme-accent transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }}></div>
-        </div>
-      )}
-
-      <button 
-        onClick={handleDelete}
-        className="absolute top-6 left-6 p-2 text-red-500 opacity-50 hover:opacity-100 hover:text-red-400 transition-opacity flex items-center gap-2"
-        title="Xóa từ vựng"
-      >
-        <Trash2 className="w-6 h-6 font-light" strokeWidth={1.5} />
-        <span className="hidden sm:inline text-sm">Xóa</span>
-      </button>
-
-      <button 
-        onClick={onClose}
-        className="absolute top-6 right-6 p-2 text-theme-primary opacity-50 hover:opacity-100 transition-opacity"
-      >
-        <X className="w-8 h-8 font-light" strokeWidth={1} />
-      </button>
-
-      {!isEditing && (
-        <button 
-          onClick={startEdit}
-          className="absolute top-6 right-20 p-2 text-theme-primary opacity-50 hover:opacity-100 transition-opacity flex items-center gap-2"
-          title="Sửa từ vựng"
-        >
-          <span className="hidden sm:inline text-sm">Sửa</span>
-          <Edit3 className="w-6 h-6 font-light" strokeWidth={1.5} />
-        </button>
-      )}
-
-      <div className="w-full max-w-2xl flex flex-col items-center my-auto shrink-0 py-12">
-        {isEditing ? (
-          <ReviewEditForm 
-            editForm={editForm}
-            setEditForm={setEditForm}
-            onSave={handleSaveEdit}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <>
-        <div className="mb-6 w-full flex justify-between items-center opacity-50">
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-theme-accent">Phiên học hiện tại</span>
-            {isFreeStudy && (
-              <div className="flex gap-1.5 opacity-80">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className={`w-1.5 h-1.5 bg-theme-accent transform rotate-45 ${i < currentCardProgress ? 'opacity-100' : 'opacity-20'}`} />
-                ))}
-              </div>
-            )}
-          </div>
-          <span className="text-[10px] uppercase tracking-widest font-serif">
-            {currentIndex + 1} / {reviewQueue.length}
-          </span>
-        </div>
-
-        <div 
-          className={`w-full aspect-[4/3] relative mb-10 ${!(isFreeStudy && exerciseType !== 'flip') ? 'cursor-pointer' : ''}`}
-          style={{ perspective: 1000 }}
-          onClick={() => {
-            if (!(isFreeStudy && exerciseType !== 'flip')) {
-              setShowAnswer(true);
-            }
-          }}
-        >
-          <motion.div
-            className="w-full h-full relative"
-            animate={{ rotateY: showAnswer ? 180 : 0 }}
-            transition={{ duration: 0.6, type: 'spring', stiffness: 220, damping: 20 }}
-            style={{ transformStyle: 'preserve-3d' }}
+    <div className="fixed inset-0 bg-theme-base z-50 font-sans text-theme-primary flex flex-col overflow-hidden select-none">
+      
+      {/* Top App Bar Header */}
+      <header className="shrink-0 w-full bg-theme-panel/95 backdrop-blur-md border-b border-theme-subtle px-3 sm:px-6 py-2.5 z-20 flex items-center justify-between gap-3 shadow-xs">
+        
+        {/* Left: Exit & Mode */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button 
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/70 hover:text-theme-primary transition-all text-xs font-medium cursor-pointer"
+            title="Thoát phiên học (Esc)"
           >
-            {/* Front */}
-            <div 
-              className={`absolute inset-0 flex flex-col bg-theme-panel border border-theme-subtle shadow-2xl overflow-y-auto p-4 sm:p-8 ${showAnswer ? 'pointer-events-none' : ''}`}
-              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-            >
-              <div className="flex-1 shrink-0"></div>
-              <div className="flex flex-col gap-4 items-center w-full py-4 shrink-0">
-                <div className="flex flex-col items-center gap-6">
-                  <h1 className="text-6xl sm:text-[140px] font-serif text-theme-primary leading-tight tracking-tighter text-center break-words max-w-full" style={{ fontFamily: 'serif' }}>{currentCard.kanji || currentCard.reading}</h1>
-<div className="flex flex-col items-center gap-0.5">
-                  <button 
-                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                    className={`p-3 rounded-full transition-transform active:scale-95 ${currentCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors'}`}
-                    title={currentCard.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                  >
-                    <Volume2 className="w-8 h-8 sm:w-10 sm:h-10 font-light" strokeWidth={1.5} />
-                  </button>
-                  {currentCard.audioUrl && <span className="text-[10px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-1">MP3</span>}
-                  </div>
-                </div>
-                {!showAnswer && isFreeStudy && exerciseType !== 'flip' && (
-                  <div className="text-theme-accent opacity-70 text-xs uppercase tracking-[0.2em] mt-4">
-                    {exerciseType === 'mcq_meaning' ? 'Chọn Ý Nghĩa' : 'Chọn/Nhập Cách Đọc'}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 shrink-0"></div>
-            </div>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Thoát</span>
+            <kbd className="hidden md:inline text-[10px] font-mono opacity-50 px-1 rounded bg-theme-base-alt">Esc</kbd>
+          </button>
 
-            {/* Back */}
-            <div 
-              className={`absolute inset-0 flex flex-col bg-theme-panel border border-theme-subtle shadow-2xl ${!showAnswer ? 'pointer-events-none' : ''}`}
-              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-            >
-              <div className="absolute inset-0 overflow-y-auto flex flex-col p-6 pb-12 sm:p-8">
-                <div className="flex-1 shrink-0"></div>
-                <div className="flex flex-col items-center space-y-4 sm:space-y-6 w-full py-4 shrink-0">
-                  <div className="flex flex-col items-center gap-4 mb-2 sm:mb-4">
-                    <h2 className="text-4xl sm:text-6xl font-serif text-theme-primary opacity-80" style={{ fontFamily: 'serif' }}>{currentCard.kanji}</h2>
-<div className="flex flex-col items-center gap-0.5">
-                  <button 
-                    onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                    className={`p-2 rounded-full transition-transform active:scale-95 ${currentCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary opacity-50 hover:opacity-100 hover:text-theme-accent transition-colors'}`}
-                    title={currentCard.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                  >
-                    <Volume2 className="w-6 h-6 sm:w-8 sm:h-8 font-light" strokeWidth={1.5} />
-                  </button>
-                  {currentCard.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-1">MP3</span>}
-                  </div>
-                </div>
-                <div className="flex flex-row gap-6 sm:gap-12 items-center justify-center w-full mb-2">
-                  <div className="flex justify-end flex-1 flex-col items-end gap-1">
-                    <p className="text-xl sm:text-3xl font-serif text-theme-accent italic tracking-wide text-right">{currentCard.reading}</p>
-                    {currentCard.romaji && (
-                      <p className="text-sm text-theme-primary opacity-50 italic text-right">{currentCard.romaji}</p>
-                    )}
-                  </div>
-                  {currentCard.sinoVietnamese && (
-                    <>
-                      <div className="w-px h-8 sm:h-12 bg-theme-active flex-shrink-0"></div>
-                      <div className="flex justify-start flex-1">
-                        <p className="text-xl sm:text-3xl font-serif text-theme-accent uppercase tracking-widest">{currentCard.sinoVietnamese}</p>
-                      </div>
-                      </>
-                  )}
-                </div>
-
-                {currentCard.wordType && (
-                  <div className="text-[10px] sm:text-xs text-theme-primary opacity-50 bg-theme-hover px-3 py-1 rounded-sm border border-theme-subtle uppercase tracking-widest mt-2">{currentCard.wordType}</div>
-                )}
-
-                <div className="w-16 h-px bg-theme-active mx-auto my-2 sm:my-4 flex-shrink-0"></div>
-                <h2 className="text-xl sm:text-4xl font-light uppercase tracking-widest text-theme-primary leading-tight break-words text-center px-4 max-w-full">{currentCard.meaning}</h2>
-                { (currentCard.kanjiExplanation || currentCard.wordType) && (
-                  <div className="mt-4 px-6 py-4 bg-theme-hover/50 border border-theme-subtle rounded text-sm sm:text-base text-theme-primary font-sans opacity-90 leading-relaxed text-center max-w-lg mx-auto whitespace-pre-wrap markdown-body">
-                    <Markdown>{(currentCard.wordType ? `**Loại từ: ${currentCard.wordType}**\nn\n` : "") + (currentCard.kanjiExplanation || "")}</Markdown>
-                  </div>
-                )}
-                {currentCard.examples && currentCard.examples.length > 0 ? (
-                  <div className="mt-6 flex flex-col items-stretch gap-4 w-full max-w-2xl mx-auto px-2 sm:px-0">
-                    {currentCard.examples.map((ex, index) => {
-                      const isEditingExample = editingExampleId === ex.id;
-                      return (
-                      <HighlightProvider key={ex.id}><div className="w-full flex flex-col items-start gap-2 bg-theme-base-alt p-4 sm:p-5 border border-theme-subtle rounded-lg text-left shadow-sm group/ex relative">
-                        {isEditingExample ? (
-                          <div className="w-full flex flex-col gap-3">
-                            <input
-                              type="text"
-                              value={editExampleForm.sentence}
-                              onChange={e => setEditExampleForm({...editExampleForm, sentence: e.target.value})}
-                              className="w-full bg-theme-panel border border-theme-subtle rounded p-2 text-theme-primary focus:outline-none focus:border-theme-accent"
-                              placeholder="Câu tiếng Nhật..."
-                            />
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={editExampleForm.reading || ''}
-                                onChange={e => setEditExampleForm({...editExampleForm, reading: e.target.value})}
-                                className="w-1/2 bg-theme-panel border border-theme-subtle rounded p-2 text-theme-primary focus:outline-none focus:border-theme-accent"
-                                placeholder="Cách đọc (Hiragana)..."
-                              />
-                              <input
-                                type="text"
-                                value={editExampleForm.romaji || ''}
-                                onChange={e => setEditExampleForm({...editExampleForm, romaji: e.target.value})}
-                                className="w-1/2 bg-theme-panel border border-theme-subtle rounded p-2 text-theme-primary focus:outline-none focus:border-theme-accent"
-                                placeholder="Romaji..."
-                              />
-                            </div>
-                            <textarea
-                              value={editExampleForm.translation || ''}
-                              onChange={e => setEditExampleForm({...editExampleForm, translation: e.target.value})}
-                              className="w-full bg-theme-panel border border-theme-subtle rounded p-2 text-theme-primary focus:outline-none focus:border-theme-accent"
-                              placeholder="Nghĩa tiếng Việt..."
-                              rows={2}
-                            />
-                            <div className="flex justify-end gap-2 mt-2">
-                              <button
-                                onClick={() => setEditingExampleId(null)}
-                                className="px-3 py-1.5 text-sm text-theme-primary/60 hover:text-theme-primary"
-                              >
-                                Hủy
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (!onUpdateCard) return;
-                                  const updatedExamples = currentCard.examples!.map(e => 
-                                    e.id === ex.id ? { ...e, ...editExampleForm } : e
-                                  );
-                                  onUpdateCard(currentCard.id, { examples: updatedExamples });
-                                  setEditingExampleId(null);
-                                }}
-                                className="px-3 py-1.5 text-sm bg-theme-accent text-white rounded hover:bg-opacity-90"
-                              >
-                                Lưu thay đổi
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="w-full flex items-start gap-2 justify-between">
-                              <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">
-                                {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, deck || [], currentCard)}
-                              </p>
-                              <div className="flex items-center opacity-0 group-hover/ex:opacity-100 transition-opacity shrink-0 -mt-1 gap-1">
-                                <button
-                                  onClick={() => {
-                                    setEditingExampleId(ex.id);
-                                    setEditExampleForm({
-                                      sentence: ex.sentence,
-                                      translation: ex.translation || "",
-                                      reading: ex.reading || "",
-                                      romaji: ex.romaji || ""
-                                    });
-                                  }}
-                                  className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors"
-                                  title="Sửa câu ví dụ"
-                                >
-                                  <Edit3 className="w-5 h-5" />
-                                </button>
-                                <div className="flex flex-col items-center gap-0.5">
-                                <button
-                                  onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
-                                  className={`p-2 rounded-full transition-colors ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent'}`}
-                                  title={ex.audioUrl ? "Nghe file MP3" : "Nghe câu ví dụ"}
-                                >
-                                  <Volume2 className="w-5 h-5" />
-                                </button>
-                                {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
-                                </div>
-                              </div>
-                            </div>
-                            {(ex.reading || ex.romaji) && (
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-theme-primary/60 font-serif w-full">
-                                {ex.reading && <span className="opacity-80 italic"><RelatedHighlight text={ex.reading} type="hiragana" /></span>}
-                                {ex.romaji && <span className="opacity-60 italic"><RelatedHighlight text={ex.romaji} type="romaji" /></span>}
-                              </div>
-                            )}
-                            {ex.translation && (
-                              <p className="text-sm sm:text-base text-theme-accent opacity-90 leading-relaxed font-light mt-1 whitespace-pre-wrap border-t border-theme-subtle/50 pt-3 w-full">
-                                <HighlightVietnamese text={ex.translation} />
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div></HighlightProvider>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  (currentCard.example || currentCard.exampleTranslation) && (
-                    <div className="mt-6 flex flex-col items-stretch gap-4 w-full max-w-2xl mx-auto px-2 sm:px-0">
-                      <HighlightProvider><div className="w-full flex flex-col items-start gap-2 bg-theme-base-alt p-4 sm:p-5 border border-theme-subtle rounded-lg text-left shadow-sm group/ex relative">
-                        {editingExampleId === 'legacy' ? (
-                          <div className="w-full flex flex-col gap-3">
-                            <input
-                              type="text"
-                              value={editExampleForm.sentence}
-                              onChange={e => setEditExampleForm({...editExampleForm, sentence: e.target.value})}
-                              className="w-full bg-theme-panel border border-theme-subtle rounded p-2 text-theme-primary focus:outline-none focus:border-theme-accent"
-                              placeholder="Câu tiếng Nhật..."
-                            />
-                            <textarea
-                              value={editExampleForm.translation || ''}
-                              onChange={e => setEditExampleForm({...editExampleForm, translation: e.target.value})}
-                              className="w-full bg-theme-panel border border-theme-subtle rounded p-2 text-theme-primary focus:outline-none focus:border-theme-accent"
-                              placeholder="Nghĩa tiếng Việt..."
-                              rows={2}
-                            />
-                            <div className="flex justify-end gap-2 mt-2">
-                              <button
-                                onClick={() => setEditingExampleId(null)}
-                                className="px-3 py-1.5 text-sm text-theme-primary/60 hover:text-theme-primary"
-                              >
-                                Hủy
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (!onUpdateCard) return;
-                                  onUpdateCard(currentCard.id, { 
-                                    example: editExampleForm.sentence,
-                                    exampleTranslation: editExampleForm.translation
-                                  });
-                                  setEditingExampleId(null);
-                                }}
-                                className="px-3 py-1.5 text-sm bg-theme-accent text-white rounded hover:bg-opacity-90"
-                              >
-                                Lưu thay đổi
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            {currentCard.example && (
-                              <div className="w-full flex items-start gap-2 justify-between">
-                                <p className="text-xl sm:text-2xl text-theme-primary opacity-90 leading-relaxed font-serif break-words">
-                                  {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck || [], currentCard)}
-                                </p>
-                                <div className="flex items-center opacity-0 group-hover/ex:opacity-100 transition-opacity shrink-0 -mt-1 gap-1">
-                                  <button
-                                    onClick={() => {
-                                      setEditingExampleId('legacy');
-                                      setEditExampleForm({
-                                        sentence: currentCard.example || '',
-                                        translation: currentCard.exampleTranslation || ''
-                                      });
-                                    }}
-                                    className="p-2 text-theme-primary/40 hover:text-theme-accent transition-colors"
-                                    title="Sửa câu ví dụ"
-                                  >
-                                    <Edit3 className="w-5 h-5" />
-                                  </button>
-                                  <div className="flex flex-col items-center gap-0.5">
-                                  <button
-                                    onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
-                                    className={`p-2 rounded-full transition-colors ${currentCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent'}`}
-                                    title={currentCard.audioUrl ? "Nghe file MP3" : "Nghe câu ví dụ"}
-                                  >
-                                    <Volume2 className="w-5 h-5" />
-                                  </button>
-                                  {currentCard.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                            {currentCard.exampleTranslation && (
-                              <p className="text-sm sm:text-base text-theme-accent opacity-90 leading-relaxed font-light mt-1 whitespace-pre-wrap border-t border-theme-subtle/50 pt-3 w-full">
-                                <HighlightVietnamese text={currentCard.exampleTranslation} />
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div></HighlightProvider>
-                    </div>
-                  )
-                )}
-                </div>
-                <div className="flex-1 shrink-0"></div>
-              </div>
-            </div>
-          </motion.div>
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-theme-base-alt border border-theme-subtle">
+            <span className={`w-2 h-2 rounded-full ${isDifficultReview ? 'bg-red-500' : isFreeStudy ? 'bg-blue-500' : 'bg-amber-500'}`} />
+            <span className="text-[11px] font-semibold text-theme-primary/80">{modeTitle}</span>
+          </div>
         </div>
 
-        <div className="h-32 w-full">
+        {/* Center: Progress & Counter */}
+        <div className="flex-1 max-w-md mx-auto flex flex-col items-center gap-1 px-2">
+          <div className="w-full flex items-center justify-between text-[11px] font-mono text-theme-primary/70">
+            <span className="font-semibold text-theme-accent">
+              Từ {safeIndex + 1} <span className="opacity-50">/</span> {reviewQueue.length}
+            </span>
+            <span className="opacity-60 text-[10px]">
+              {reviewQueue.length - safeIndex} từ còn lại ({Math.round(progressPercent)}%)
+            </span>
+          </div>
+          
+          <div className="w-full h-2 bg-theme-base-alt rounded-full overflow-hidden border border-theme-subtle/50">
+            <div 
+              className={`h-full rounded-full transition-all duration-300 ${isDifficultReview ? 'bg-red-500' : isFreeStudy ? 'bg-blue-500' : 'bg-theme-accent'}`}
+              style={{ width: `${Math.max(5, progressPercent)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          
+          {/* Autoplay Audio Toggle */}
+          <button
+            onClick={() => setAutoPlayAudio(!autoPlayAudio)}
+            className={`p-2 rounded-xl border text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+              autoPlayAudio 
+                ? 'bg-theme-accent/10 border-theme-accent/30 text-theme-accent' 
+                : 'border-theme-subtle text-theme-primary/50 hover:bg-theme-hover'
+            }`}
+            title={autoPlayAudio ? "Tự động phát âm thanh khi lật thẻ: Đang Bật" : "Tự động phát âm thanh: Đang Tắt"}
+          >
+            {autoPlayAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            <span className="hidden xl:inline text-[11px] font-medium">Tự phát âm</span>
+          </button>
+
+          {/* Replay Current Word Audio */}
+          {currentCard && (
+            <button
+              onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+              className="p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent transition-all cursor-pointer"
+              title="Phát âm từ vựng (Phím R)"
+            >
+              <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-theme-accent' : ''}`} />
+            </button>
+          )}
+
+          {/* Quick Edit */}
+          {!isEditing && (
+            <button
+              onClick={startEdit}
+              className="p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/70 hover:text-theme-primary transition-all cursor-pointer"
+              title="Chỉnh sửa từ vựng (Phím E)"
+            >
+              <Edit3 className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Delete Card */}
+          <button
+            onClick={handleDelete}
+            className="p-2 rounded-xl border border-theme-subtle hover:border-red-500/30 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all cursor-pointer"
+            title="Xóa từ vựng"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+
+          {/* Keyboard shortcut guide */}
+          <button
+            onClick={() => setShowShortcutHelp(true)}
+            className="p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/60 hover:text-theme-primary transition-all cursor-pointer"
+            title="Bảng phím tắt (?)"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 w-full overflow-y-auto px-3 sm:px-6 py-4 flex flex-col items-center justify-between">
+        
+        <div className="w-full max-w-3xl flex-1 flex flex-col items-center justify-center my-auto py-2">
+          
+          {isEditing ? (
+            <ReviewEditForm 
+              editForm={editForm}
+              setEditForm={setEditForm}
+              onSave={handleSaveEdit}
+              onCancel={() => setIsEditing(false)}
+            />
+          ) : (
+            <div className="w-full flex flex-col items-center">
+              
+              {/* Flashcard Container */}
+              <div 
+                className="w-full relative group transition-all"
+                style={{ perspective: 1200 }}
+              >
+                <div 
+                  onClick={() => {
+                    if (!(isFreeStudy && exerciseType !== 'flip')) {
+                      setShowAnswer(!showAnswer);
+                    }
+                  }}
+                  className={`w-full min-h-[440px] sm:min-h-[480px] max-h-[66vh] sm:max-h-[70vh] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl shadow-black/5 dark:shadow-black/40 overflow-hidden flex flex-col relative transition-all duration-300 ${
+                    !(isFreeStudy && exerciseType !== 'flip') 
+                      ? 'cursor-pointer hover:border-theme-accent/40' 
+                      : ''
+                  }`}
+                >
+                  
+                  {/* Card Interior Header Tag */}
+                  <div className="w-full px-6 pt-5 pb-3 flex items-center justify-between border-b border-theme-subtle/50 shrink-0 bg-theme-panel">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent">
+                        {showAnswer ? 'Mặt sau (Đáp án & Chi tiết)' : 'Mặt trước (Từ vựng)'}
+                      </span>
+                      {currentCard.wordType && (
+                        <span className={getWordTypeBadgeStyle(currentCard.wordType, "text-[10px] px-2.5 py-0.5 rounded-full font-medium")}>
+                          {currentCard.wordType}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-theme-primary/60">
+                      {isFreeStudy && (
+                        <div className="flex items-center gap-1 mr-2">
+                          {[0, 1, 2].map(i => (
+                            <span 
+                              key={i} 
+                              className={`w-1.5 h-1.5 rounded-full ${i < currentCardProgress ? 'bg-theme-accent' : 'bg-theme-subtle'}`} 
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <span className="text-theme-accent font-bold">{safeIndex + 1}</span>
+                      <span>/</span>
+                      <span>{reviewQueue.length}</span>
+                    </div>
+                  </div>
+
+                  {/* Scrollable Card Body */}
+                  <div ref={cardContentRef} className="flex-1 overflow-y-auto px-6 py-6 sm:px-10 sm:py-8 flex flex-col items-center justify-center">
+                    
+                    {!showAnswer ? (
+                      /* Front View: Always 100% visible */
+                      <div className="w-full flex-1 flex flex-col items-center justify-center text-center my-auto gap-6 py-4">
+                        
+                        {/* Hero Kanji / Word */}
+                        <div className="flex flex-col items-center gap-3">
+                          <h1 
+                            className="text-6xl sm:text-7xl md:text-8xl font-serif text-theme-primary font-bold tracking-tight break-words max-w-full leading-tight select-text"
+                            style={{ fontFamily: 'serif' }}
+                          >
+                            {primaryDisplayWord}
+                          </h1>
+
+                          {/* Sino-Vietnamese hint on front if available */}
+                          {currentCard.sinoVietnamese && (
+                            <div className="mt-1 inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-xl">
+                              <span>Âm Hán Việt:</span>
+                              <strong className="tracking-widest">{currentCard.sinoVietnamese}</strong>
+                            </div>
+                          )}
+
+                          {/* Audio Play Button */}
+                          <div className="flex flex-col items-center gap-1.5 mt-2">
+                            <button
+                              type="button"
+                              onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+                              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md ${
+                                currentCard.audioUrl 
+                                  ? 'bg-theme-accent text-theme-inverted hover:scale-105 shadow-theme-accent/20' 
+                                  : 'bg-theme-hover border border-theme-subtle text-theme-primary hover:text-theme-accent hover:scale-105'
+                              }`}
+                              title={currentCard.audioUrl ? "Nghe phát âm chuẩn MP3" : "Nghe phát âm"}
+                            >
+                              <Volume2 className="w-7 h-7" />
+                            </button>
+                            {currentCard.audioUrl && (
+                              <span className="text-[10px] font-extrabold text-theme-accent uppercase tracking-widest">
+                                MP3 Chuẩn
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Flip instruction badge */}
+                        {!(isFreeStudy && exerciseType !== 'flip') && (
+                          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-base-alt border border-theme-subtle text-theme-primary/70 text-xs">
+                            <Repeat className="w-3.5 h-3.5 text-theme-accent shrink-0" />
+                            <span>Chạm vào thẻ hoặc nhấn <kbd className="font-mono bg-theme-panel px-1.5 py-0.5 rounded border border-theme-subtle text-theme-primary font-bold">Space</kbd> để xem đáp án</span>
+                          </div>
+                        )}
+
+                        {isFreeStudy && exerciseType !== 'flip' && (
+                          <div className="text-theme-accent text-xs font-bold uppercase tracking-widest mt-2">
+                            {exerciseType === 'mcq_meaning' ? 'Chọn nghĩa đúng của từ bên dưới' : 'Nhập cách đọc Hiragana bên dưới'}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Back View: Detailed breakdown */
+                      <div className="w-full flex flex-col items-center text-center gap-6 py-2">
+                        
+                        {/* Back Top: Kanji & Pronunciation Header */}
+                        <div className="w-full flex flex-col items-center gap-3 pb-6 border-b border-theme-subtle/50">
+                          
+                          <div className="flex items-center justify-center gap-3 flex-wrap">
+                            <h2 
+                              className="text-4xl sm:text-6xl font-serif text-theme-primary font-bold tracking-tight"
+                              style={{ fontFamily: 'serif' }}
+                            >
+                              {currentCard.kanji || currentCard.reading}
+                            </h2>
+
+                            <button
+                              type="button"
+                              onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+                              className={`p-2.5 rounded-xl transition-all cursor-pointer ${
+                                currentCard.audioUrl 
+                                  ? 'bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25' 
+                                  : 'bg-theme-hover text-theme-primary/70 hover:text-theme-accent'
+                              }`}
+                              title="Phát âm lại từ vựng"
+                            >
+                              <Volume2 className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          {/* Reading & Romaji & Sino-Vietnamese */}
+                          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mt-1">
+                            {currentCard.reading && (
+                              <div className="px-3.5 py-1.5 rounded-xl bg-theme-base-alt border border-theme-subtle text-lg sm:text-2xl font-serif text-theme-accent font-semibold tracking-wide">
+                                {currentCard.reading}
+                              </div>
+                            )}
+
+                            {currentCard.sinoVietnamese && (
+                              <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs sm:text-sm uppercase tracking-wider font-extrabold">
+                                Hán Việt: {currentCard.sinoVietnamese}
+                              </div>
+                            )}
+
+                            {currentCard.romaji && (
+                              <div className="text-xs sm:text-sm text-theme-primary/50 italic font-mono">
+                                [{currentCard.romaji}]
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Primary Meaning */}
+                        <div className="w-full flex flex-col items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent/70">
+                            Ý nghĩa chính
+                          </span>
+                          <h3 className="text-2xl sm:text-3xl font-bold text-theme-primary tracking-tight leading-relaxed max-w-xl">
+                            {currentCard.meaning}
+                          </h3>
+                        </div>
+
+                        {/* Kanji Explanation & Memory Tips */}
+                        {(currentCard.kanjiExplanation || currentCard.wordType) && (
+                          <div className="w-full max-w-2xl bg-theme-base-alt/60 border border-theme-subtle/70 rounded-2xl p-4 sm:p-5 text-left text-sm text-theme-primary/90 leading-relaxed shadow-xs">
+                            <div className="flex items-center gap-2 text-theme-accent text-xs font-bold uppercase tracking-wider mb-2">
+                              <BookOpen className="w-4 h-4" />
+                              <span>Giải thích &amp; Cách ghi nhớ</span>
+                            </div>
+                            <div className="markdown-body text-xs sm:text-sm leading-relaxed">
+                              <Markdown>
+                                {(currentCard.wordType ? `**Từ loại:** ${currentCard.wordType}\n\n` : "") + (currentCard.kanjiExplanation || "")}
+                              </Markdown>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Conjugation Forms (if any) */}
+                        {currentCard.forms && currentCard.forms.length > 0 && (
+                          <div className="w-full max-w-2xl flex flex-col items-start gap-2 text-left">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-theme-primary/50 flex items-center gap-1.5">
+                              <Layers className="w-3.5 h-3.5 text-theme-accent" />
+                              <span>Các dạng biến đổi (Forms)</span>
+                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
+                              {currentCard.forms.map((form, fIdx) => (
+                                <div key={fIdx} className="p-2.5 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="text-[10px] text-theme-primary/50 truncate uppercase font-bold">{form.name || 'Dạng'}</div>
+                                    <div className="text-xs font-serif font-bold text-theme-primary truncate">{form.value}</div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleSpeak(e, form.value, form.audioUrl)}
+                                    className="p-1 rounded text-theme-primary/40 hover:text-theme-accent cursor-pointer shrink-0"
+                                    title="Nghe dạng này"
+                                  >
+                                    <Volume2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Example Sentences */}
+                        {((currentCard.examples && currentCard.examples.length > 0) || currentCard.example) && (
+                          <div className="w-full max-w-2xl flex flex-col items-start gap-3 text-left pt-2">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-theme-primary/50 flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-theme-accent" />
+                              <span>Câu ví dụ thực tế trong bài</span>
+                            </span>
+
+                            <div className="flex flex-col gap-3 w-full">
+                              {currentCard.examples && currentCard.examples.length > 0 ? (
+                                currentCard.examples.map((ex) => {
+                                  const isEditingExample = editingExampleId === ex.id;
+                                  return (
+                                    <HighlightProvider key={ex.id}>
+                                      <div className="w-full p-4 sm:p-5 rounded-2xl bg-theme-base-alt border border-theme-subtle/80 flex flex-col gap-2.5 relative group/ex text-left shadow-xs">
+                                        {isEditingExample ? (
+                                          <div className="w-full flex flex-col gap-2.5">
+                                            <input
+                                              type="text"
+                                              value={editExampleForm.sentence}
+                                              onChange={e => setEditExampleForm({...editExampleForm, sentence: e.target.value})}
+                                              className="w-full bg-theme-panel border border-theme-subtle rounded-xl p-2.5 text-xs sm:text-sm text-theme-primary focus:outline-none focus:border-theme-accent"
+                                              placeholder="Câu tiếng Nhật..."
+                                            />
+                                            <div className="flex gap-2">
+                                              <input
+                                                type="text"
+                                                value={editExampleForm.reading || ''}
+                                                onChange={e => setEditExampleForm({...editExampleForm, reading: e.target.value})}
+                                                className="w-1/2 bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                                                placeholder="Cách đọc Hiragana..."
+                                              />
+                                              <input
+                                                type="text"
+                                                value={editExampleForm.romaji || ''}
+                                                onChange={e => setEditExampleForm({...editExampleForm, romaji: e.target.value})}
+                                                className="w-1/2 bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                                                placeholder="Romaji..."
+                                              />
+                                            </div>
+                                            <textarea
+                                              value={editExampleForm.translation || ''}
+                                              onChange={e => setEditExampleForm({...editExampleForm, translation: e.target.value})}
+                                              className="w-full bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs sm:text-sm text-theme-primary focus:outline-none focus:border-theme-accent"
+                                              placeholder="Nghĩa tiếng Việt..."
+                                              rows={2}
+                                            />
+                                            <div className="flex justify-end gap-2 mt-1">
+                                              <button
+                                                onClick={() => setEditingExampleId(null)}
+                                                className="px-3 py-1.5 text-xs text-theme-primary/60 hover:text-theme-primary"
+                                              >
+                                                Hủy
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  if (!onUpdateCard) return;
+                                                  const updatedExamples = currentCard.examples!.map(e => 
+                                                    e.id === ex.id ? { ...e, ...editExampleForm } : e
+                                                  );
+                                                  onUpdateCard(currentCard.id, { examples: updatedExamples });
+                                                  setEditingExampleId(null);
+                                                }}
+                                                className="px-4 py-1.5 text-xs font-bold bg-theme-accent text-theme-inverted rounded-xl hover:brightness-110"
+                                              >
+                                                Lưu thay đổi
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <div className="w-full flex items-start justify-between gap-3">
+                                              <p className="text-base sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium">
+                                                {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, deck, currentCard)}
+                                              </p>
+                                              
+                                              <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
+                                                  className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                                    ex.audioUrl 
+                                                      ? 'bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25' 
+                                                      : 'text-theme-primary/40 hover:text-theme-accent'
+                                                  }`}
+                                                  title={ex.audioUrl ? "Nghe âm thanh MP3 câu ví dụ" : "Nghe câu ví dụ"}
+                                                >
+                                                  <Volume2 className="w-4 h-4" />
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setEditingExampleId(ex.id);
+                                                    setEditExampleForm({
+                                                      sentence: ex.sentence,
+                                                      translation: ex.translation || "",
+                                                      reading: ex.reading || "",
+                                                      romaji: ex.romaji || ""
+                                                    });
+                                                  }}
+                                                  className="p-2 rounded-xl text-theme-primary/30 hover:text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer"
+                                                  title="Chỉnh sửa câu ví dụ"
+                                                >
+                                                  <Edit3 className="w-3.5 h-3.5" />
+                                                </button>
+                                              </div>
+                                            </div>
+
+                                            {(ex.reading || ex.romaji) && (
+                                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-theme-primary/60 font-serif">
+                                                {ex.reading && <span className="italic"><RelatedHighlight text={ex.reading} type="hiragana" /></span>}
+                                                {ex.romaji && <span className="opacity-60 italic"><RelatedHighlight text={ex.romaji} type="romaji" /></span>}
+                                              </div>
+                                            )}
+
+                                            {ex.translation && (
+                                              <p className="text-xs sm:text-sm text-theme-accent opacity-90 leading-relaxed pt-2 border-t border-theme-subtle/50">
+                                                <HighlightVietnamese text={ex.translation} />
+                                              </p>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    </HighlightProvider>
+                                  );
+                                })
+                              ) : (
+                                /* Legacy single example fallback */
+                                <HighlightProvider>
+                                  <div className="w-full p-4 sm:p-5 rounded-2xl bg-theme-base-alt border border-theme-subtle/80 flex flex-col gap-2 relative text-left shadow-xs">
+                                    {currentCard.example && (
+                                      <div className="w-full flex items-start justify-between gap-3">
+                                        <p className="text-base sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium">
+                                          {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck, currentCard)}
+                                        </p>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
+                                          className="p-2 rounded-xl text-theme-primary/40 hover:text-theme-accent cursor-pointer"
+                                          title="Nghe câu ví dụ"
+                                        >
+                                          <Volume2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    )}
+                                    {currentCard.exampleTranslation && (
+                                      <p className="text-xs sm:text-sm text-theme-accent opacity-90 leading-relaxed pt-2 border-t border-theme-subtle/50">
+                                        <HighlightVietnamese text={currentCard.exampleTranslation} />
+                                      </p>
+                                    )}
+                                  </div>
+                                </HighlightProvider>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    )}
+
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
+        {/* Bottom Response & Grading Actions */}
+        <div className="shrink-0 w-full max-w-3xl pt-3 pb-2 z-20">
           {!showAnswer ? (
             isFreeStudy && exerciseType !== 'flip' ? (
               exerciseType === 'typing_reading' ? (
-                <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="w-full flex flex-col items-center gap-2"
-                >
+                <div className="w-full flex flex-col items-center gap-2">
                   <div className="flex w-full gap-2 relative h-12">
                     <input 
                       type="text"
@@ -671,146 +949,247 @@ export default function ReviewSession({ deck, dueCards, onReview, onFreeStudyRev
                       onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
                       placeholder="Nhập Hiragana..."
-                      className={`flex-1 bg-theme-hover border ${inputError ? 'border-red-500' : 'border-theme-accent/30 focus:border-theme-accent'} text-theme-primary px-4 py-2 focus:outline-none placeholder:opacity-40 text-center text-lg`}
+                      className={`flex-1 bg-theme-panel border ${inputError ? 'border-red-500' : 'border-theme-accent/40 focus:border-theme-accent'} rounded-2xl text-theme-primary px-5 py-2 focus:outline-none text-center text-lg font-serif shadow-sm`}
                       autoFocus
                     />
                     <button 
                       onClick={handleCheckReading}
-                      className="bg-theme-accent text-theme-inverted px-6 uppercase tracking-widest font-medium hover:bg-theme-accent-light transition-colors text-[11px]"
+                      className="bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 rounded-2xl uppercase tracking-wider font-bold text-xs transition-colors cursor-pointer shadow-md"
                     >
                       Kiểm tra
                     </button>
                   </div>
                   {inputError && (
-                    <div className="w-full flex justify-between items-center px-2 py-1">
-                      <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
-                    </div>
+                    <span className="text-red-500 text-xs font-medium">Đáp án chưa chính xác, hãy thử lại!</span>
                   )}
-                </motion.div>
+                </div>
               ) : (
-                <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="w-full flex flex-col gap-2"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                <div className="w-full flex flex-col gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                     {mcqOptions.map((opt, i) => {
                       const isWrong = inputError && wrongMcqOption === opt;
                       return (
                         <button 
                           key={i}
                           onClick={() => handleMcqSelect(opt)}
-                          className={`bg-theme-hover border ${isWrong ? 'border-red-500 bg-red-500/10 text-red-100' : 'border-theme-subtle'} hover:border-theme-accent text-[15px] sm:text-sm text-theme-primary py-4 sm:py-3 px-4 text-center transition-colors tracking-wide`}
+                          className={`p-3.5 sm:p-4 rounded-2xl border transition-all text-left flex items-center gap-3 cursor-pointer ${
+                            isWrong 
+                              ? 'border-red-500 bg-red-500/15 text-red-400' 
+                              : 'border-theme-subtle bg-theme-panel hover:border-theme-accent/60 hover:bg-theme-hover text-theme-primary'
+                          }`}
                         >
-                          {opt}
+                          <span className="w-6 h-6 rounded-full bg-theme-base-alt border border-theme-subtle flex items-center justify-center text-xs font-mono font-bold shrink-0">
+                            {String.fromCharCode(65 + i)}
+                          </span>
+                          <span className="text-xs sm:text-sm font-medium line-clamp-2">{opt}</span>
                         </button>
                       );
                     })}
                   </div>
                   {inputError && (
-                    <div className="w-full flex justify-between items-center px-2 py-1">
-                      <span className="text-red-500 text-[10px] uppercase tracking-widest opacity-80">Đáp án chưa đúng</span>
-                    </div>
+                    <span className="text-red-500 text-xs font-medium text-center">Đáp án chưa đúng, chọn lại nhé!</span>
                   )}
-                </motion.div>
+                </div>
               )
             ) : (
-              <motion.button
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
+              /* Big Reveal Answer Button */
+              <button
+                type="button"
                 onClick={() => setShowAnswer(true)}
-                className="w-full bg-theme-hover border border-theme-accent hover:bg-theme-accent hover:text-theme-inverted py-5 uppercase tracking-[0.2em] text-theme-accent text-[11px] transition-colors"
+                className="w-full py-4 sm:py-4.5 bg-gradient-to-r from-theme-accent via-amber-500 to-theme-accent hover:brightness-110 text-theme-inverted font-bold text-sm sm:text-base uppercase tracking-wider rounded-2xl shadow-xl shadow-theme-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20"
               >
-                Xem đáp án
-              </motion.button>
+                <span>Lật thẻ xem đáp án</span>
+                <span className="text-xs font-mono bg-black/20 text-theme-inverted px-2.5 py-1 rounded-xl font-bold">
+                  Phím Space
+                </span>
+              </button>
             )
           ) : isFreeStudy ? (
-            <motion.div 
-              initial={{ y: 5, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className={`grid ${(inputError && exerciseType !== 'flip') ? 'grid-cols-1' : 'grid-cols-2'} gap-2 sm:gap-4 w-full`}
-            >
+            /* Free Study 2-button choice */
+            <div className="grid grid-cols-2 gap-3 w-full">
               <button 
                 onClick={handleFreeStudyForgot}
-                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-red-900/30 hover:border-red-500 group transition-all"
+                className="py-4 px-4 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
               >
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Cần ôn lại</span>
-                <span className="text-xs sm:text-sm text-red-500 font-serif italic">Quên</span>
+                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                  <RotateCcw className="w-4 h-4 group-hover:-rotate-45 transition-transform" />
+                  <span>Cần ôn lại</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/20">1</kbd>
+                </div>
+                <span className="text-[11px] opacity-75">Sẽ lặp lại sớm trong phiên này</span>
               </button>
-              {!(inputError && exerciseType !== 'flip') && (
-                <button 
-                  onClick={handleFreeStudyRemember}
-                  className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-subtle hover:border-green-500 group transition-all"
-                >
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Hoàn thành</span>
-                  <span className="text-xs sm:text-sm text-green-500 font-serif italic">Đã nhớ</span>
-                </button>
-              )}
-            </motion.div>
+
+              <button 
+                onClick={handleFreeStudyRemember}
+                className="py-4 px-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                  <CheckCircle2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span>Đã nhớ từ này</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20">2</kbd>
+                </div>
+                <span className="text-[11px] opacity-75">Ghi nhận tiến độ học nhồi</span>
+              </button>
+            </div>
           ) : (
-            <motion.div 
-              initial={{ y: 5, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="grid grid-cols-4 gap-2 sm:gap-4 w-full"
-            >
+            /* Standard SRS 4-Button Response Grid */
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full">
+              
+              {/* Grade: Forgot (1) */}
               <button 
                 onClick={() => handleGrade('forgot')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-red-900/30 hover:border-red-500 group transition-all"
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-red-500 mb-1">Chưa Nhớ</span>
-                <span className="text-xs sm:text-sm text-red-500 font-serif italic">Lặp lại</span>
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
+                  <span>Lặp lại</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/20">1</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-red-400/80">&lt; 10 phút</span>
               </button>
+
+              {/* Grade: Hard (2) */}
               <button 
                 onClick={() => handleGrade('hard')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-subtle hover:border-orange-400 group transition-all"
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15 text-amber-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-orange-400 mb-1">Mơ Hồ</span>
-                <span className="text-xs sm:text-sm text-orange-400 font-serif italic">Khó</span>
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <Flame className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Khó</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">2</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-amber-400/80">1 - 2 ngày</span>
               </button>
+
+              {/* Grade: Good (3) */}
               <button 
                 onClick={() => handleGrade('good')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-subtle hover:border-green-500 group transition-all"
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-green-500 mb-1">Đã Nhớ</span>
-                <span className="text-xs sm:text-sm text-green-500 font-serif italic">Tốt</span>
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <CheckCircle2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Tốt</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">3</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-500/80">3 - 4 ngày</span>
               </button>
+
+              {/* Grade: Easy (4) */}
               <button 
                 onClick={() => handleGrade('easy')}
-                className="flex flex-col items-center py-4 sm:py-5 bg-theme-hover border border-theme-accent/20 hover:border-theme-accent group transition-all"
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest opacity-40 group-hover:opacity-80 group-hover:text-blue-400 mb-1">Rất Dễ</span>
-                <span className="text-xs sm:text-sm text-blue-400 font-serif italic">Dễ</span>
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Rất dễ</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20">4</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-sky-400/80">6 - 7 ngày</span>
               </button>
-            </motion.div>
+
+            </div>
           )}
         </div>
-          </>
-        )}
-      </div>
-        <div className="flex-1 shrink-0 min-h-0" />
-      </div>
+
+      </main>
+
+      {/* Delete Confirmation Modal */}
       {confirmingDeleteId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={(e) => { e.stopPropagation(); setConfirmingDeleteId(null); }} />
-          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-serif text-theme-primary mb-4 text-red-500">Xóa từ vựng?</h3>
-            <p className="text-theme-primary/70 mb-6">Bạn có chắc chắn muốn xóa từ vựng này không?</p>
-            <div className="flex gap-3 justify-end mt-2">
-              <button onClick={(e) => { e.stopPropagation(); setConfirmingDeleteId(null); }} className="px-4 py-2 text-theme-primary/60 hover:text-theme-primary text-sm uppercase tracking-wider">Hủy</button>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingDeleteId(null)} />
+          <div className="bg-theme-panel border border-theme-subtle rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md relative z-10 flex flex-col gap-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-serif font-bold text-theme-primary">Xóa từ vựng này?</h3>
+            <p className="text-sm text-theme-primary/70">
+              Từ vựng này sẽ bị xóa khỏi kho học của bạn và không thể phục hồi.
+            </p>
+            <div className="flex items-center gap-3 justify-center mt-2">
               <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirmingDeleteId) onRemoveCard(confirmingDeleteId);
+                onClick={() => setConfirmingDeleteId(null)} 
+                className="px-5 py-2.5 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmingDeleteId) {
+                    onRemoveCard(confirmingDeleteId);
+                    setReviewQueue(prev => prev.filter(c => c.id !== confirmingDeleteId));
+                    setShowAnswer(false);
+                  }
                   setConfirmingDeleteId(null);
                 }}
-                className="bg-red-500 text-white px-6 py-2 rounded font-bold uppercase tracking-widest text-sm hover:bg-red-600"
+                className="px-6 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider shadow-md cursor-pointer"
               >
-                Xóa
+                Xác nhận xóa
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Keyboard Shortcut Help Modal */}
+      {showShortcutHelp && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)} />
+          <div className="bg-theme-panel border border-theme-subtle rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md relative z-10 flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-theme-subtle pb-3">
+              <div className="flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-theme-accent" />
+                <h3 className="font-serif font-bold text-theme-primary text-base">Phím tắt khi ôn tập</h3>
+              </div>
+              <button onClick={() => setShowShortcutHelp(false)} className="p-1 rounded text-theme-primary/50 hover:text-theme-primary cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Lật thẻ xem đáp án</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">Space / Enter</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Đánh giá: Chưa nhớ / Lặp lại</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-red-500">1</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Đánh giá: Khó / Mơ hồ</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-amber-500">2</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Đánh giá: Tốt / Đã nhớ</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-emerald-500">3</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Đánh giá: Rất dễ</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-sky-500">4</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Nghe lại phát âm âm thanh</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">R</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Chỉnh sửa nhanh thông tin từ</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">E</kbd>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
+                <span className="text-theme-primary/80">Thoát phiên học</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">Esc</kbd>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowShortcutHelp(false)}
+              className="mt-2 w-full py-2.5 bg-theme-accent text-theme-inverted font-bold rounded-xl text-xs uppercase tracking-wider hover:brightness-110 cursor-pointer"
+            >
+              Đã hiểu
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

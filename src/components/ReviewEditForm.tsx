@@ -52,89 +52,91 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
   };
 
   return (
-    <div className="w-full bg-theme-panel border border-theme-subtle p-6 shadow-2xl flex flex-col overflow-hidden max-h-[85vh]">
-      <div className="flex justify-between items-center mb-6 shrink-0">
-        <h2 className="text-xl font-serif text-theme-accent tracking-wider uppercase">Sửa từ vựng</h2>
-        <button onClick={onCancel} className="p-2 text-theme-primary opacity-50 hover:opacity-100">
+    <div className="w-full bg-theme-panel border border-theme-subtle p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[85vh]">
+      <div className="flex justify-between items-center mb-6 shrink-0 border-b border-theme-subtle/60 pb-4">
+        <h2 className="text-xl font-serif text-theme-primary font-bold tracking-tight">Chỉnh sửa từ vựng</h2>
+        <button onClick={onCancel} className="p-2 rounded-xl text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover transition-colors">
           <X className="w-5 h-5" />
         </button>
       </div>
       
-      <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-2 custom-scrollbar">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Kanji / Từ Vựng</label>
+      <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Kanji / Từ Vựng</label>
             <div className="flex gap-2">
             <input 
               value={editForm.kanji || ''} 
               onChange={e => setEditForm({...editForm, kanji: e.target.value})}
-              className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent font-serif text-lg"
+              className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent font-serif text-lg"
             />
             <button
               type="button"
               onClick={autoFillAI}
               disabled={isGeneratingAI || !editForm.kanji?.trim()}
-              className="px-3 py-2 bg-theme-accent text-theme-base font-bold text-[10px] tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="px-3.5 py-2.5 bg-theme-accent text-theme-inverted font-bold text-[10px] tracking-wider rounded-xl disabled:opacity-50 hover:brightness-110 transition-all whitespace-nowrap cursor-pointer shadow-xs"
             >
               {isGeneratingAI ? 'ĐANG TẠO...' : 'AI TỰ ĐỘNG ĐIỀN'}
             </button>
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Hán Việt</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Hán Việt</label>
             <input 
               value={editForm.sinoVietnamese || ''} 
               onChange={e => setEditForm({...editForm, sinoVietnamese: e.target.value})}
-              className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+              className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent"
+              placeholder="VD: KIM NHẬT"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Cách đọc (Hiragana)</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Cách đọc (Hiragana)</label>
             <input 
               value={editForm.reading || ''} 
               onChange={e => setEditForm({...editForm, reading: e.target.value})}
-              className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+              className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent font-serif"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Romaji</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Romaji</label>
             <input 
               value={editForm.romaji || ''} 
               onChange={e => setEditForm({...editForm, romaji: e.target.value})}
-              className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+              className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent font-mono text-xs"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Ý nghĩa</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Ý nghĩa (Tiếng Việt)</label>
             <input 
               value={editForm.meaning || ''} 
               onChange={e => setEditForm({...editForm, meaning: e.target.value})}
-              className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+              className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent font-medium"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Loại từ</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Loại từ</label>
             <input 
               value={editForm.wordType || ''} 
               onChange={e => setEditForm({...editForm, wordType: e.target.value})}
-              className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-              placeholder="VD: Danh từ, Động từ..."
+              className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent"
+              placeholder="VD: Danh từ, Động từ nhóm 1..."
             />
           </div>
         </div>
         
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] uppercase tracking-widest text-theme-primary/50">Giải thích Kanji</label>
-          <input 
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Giải thích Kanji &amp; Ghi nhớ</label>
+          <textarea 
             value={editForm.kanjiExplanation || ''} 
             onChange={e => setEditForm({...editForm, kanjiExplanation: e.target.value})}
-            className="w-full bg-theme-hover border border-theme-subtle text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+            rows={2}
+            className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-theme-primary p-3 focus:outline-none focus:border-theme-accent text-sm"
           />
         </div>
 
@@ -220,11 +222,11 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
         </div>
       </div>
       
-      <div className="mt-6 pt-4 border-t border-theme-subtle shrink-0">
+      <div className="mt-6 pt-4 border-t border-theme-subtle/60 shrink-0">
         <button 
           onClick={onSave}
           disabled={!editForm.kanji || !editForm.meaning}
-          className="w-full bg-theme-accent text-theme-inverted py-3 uppercase tracking-widest text-xs font-medium hover:bg-theme-accent-light transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full bg-theme-accent text-theme-inverted py-3.5 rounded-xl uppercase tracking-wider text-xs font-bold hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-md"
         >
           <Check className="w-4 h-4" />
           <span>Lưu thay đổi</span>

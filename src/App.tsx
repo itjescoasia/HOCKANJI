@@ -349,7 +349,11 @@ export default function App() {
   const dueCards = [...limitedNew, ...limitedReview];
 
   const handleStartReview = () => {
-    setIsFreeStudyMode(false);
+    if (dueCards.length === 0 && deck.length > 0) {
+      setIsFreeStudyMode(true);
+    } else {
+      setIsFreeStudyMode(false);
+    }
     setIsDifficultReviewMode(false);
     setView('review');
   };

@@ -24,7 +24,11 @@ import {
   CheckSquare,
   Sparkles,
   ArrowRight,
-  Play
+  Play,
+  Flame,
+  CheckCircle2,
+  Headphones,
+  RotateCcw
 } from "lucide-react";
 import {
   PieChart,
@@ -751,206 +755,215 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div className="bg-theme-base border border-theme-subtle p-8 sm:p-14 text-center relative overflow-hidden mt-2">
-        <h2 className="text-2xl sm:text-3xl font-serif mb-4 relative z-10 text-theme-accent tracking-widest uppercase">
-          {isDue
-            ? `Cần thực hiện: Ôn ${dueCards.length} từ`
-            : "Tuyệt vời, chưa có từ nào cần ôn"}
-        </h2>
+      <div className="bg-gradient-to-b from-theme-panel to-theme-base/80 border border-theme-subtle rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden shadow-xl mt-2">
+        {/* Subtle decorative glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-theme-accent/10 blur-3xl pointer-events-none rounded-full" />
 
-        <p className="opacity-60 mb-8 max-w-xl mx-auto relative z-10 text-[13px] leading-relaxed tracking-wide">
-          {isDue
-            ? "Danh sách ôn tập hằng ngày gồm các từ đã quên và đến hạn. Thẻ từ sẽ lặp lại liên tục ngắt quãng cho đến khi bạn khắc sâu."
-            : deck.length === 0
-              ? "Kho từ vựng trống. Hãy bắt đầu thêm các chữ mới vào từ điển của bạn."
-              : "Bạn đã hoàn thành mục tiêu hôm nay. Hãy quay lại vào ngày mai hoặc thu thập thêm từ vựng mới."}
-        </p>
+        {/* Status Header */}
+        <div className="relative z-10 flex flex-col items-center mb-6">
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 shadow-md ${
+            isDue 
+              ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-500' 
+              : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-500'
+          }`}>
+            {isDue ? <Flame className="w-7 h-7 stroke-[2.2]" /> : <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />}
+          </div>
 
-        {!isDue && leftoverNewCards > 0 && (
-          <div className="mb-10 w-full flex justify-center">
-            <div className="bg-theme-hover border border-theme-subtle inline-flex items-center gap-2 px-4 py-2 opacity-80">
-              <span className="w-2 h-2 rounded-full bg-theme-accent"></span>
-              <span className="text-xs uppercase tracking-widest text-theme-primary">
-                Hiện đang còn{" "}
-                <strong className="text-theme-accent">
-                  {leftoverNewCards} từ mới
-                </strong>{" "}
-                chờ bạn khám phá vào ngày mai!
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-theme-primary mb-2 tracking-tight">
+            {isDue ? (
+              <span>Cần ôn tập hôm nay: <strong className="text-theme-accent">{dueCards.length} từ vựng</strong></span>
+            ) : (
+              <span>Tuyệt vời! Bạn đã hoàn thành các từ cần ôn</span>
+            )}
+          </h2>
+
+          <p className="text-theme-primary/70 max-w-xl mx-auto text-xs sm:text-sm leading-relaxed">
+            {isDue
+              ? "Ứng dụng thuật toán ngắt quãng (Spaced Repetition) để củng cố trí nhớ dài hạn vào đúng thời điểm bạn sắp quên."
+              : deck.length === 0
+                ? "Kho từ vựng trống. Hãy bắt đầu thêm từ mới hoặc nhập file Excel để bắt đầu học nhé!"
+                : "Không còn từ vựng nào đến hạn ôn hôm nay. Bạn có thể luyện tập tự do hoặc ôn câu âm thanh bên dưới."}
+          </p>
+        </div>
+
+        {/* Leftover cards pill if available */}
+        {leftoverNewCards > 0 && (
+          <div className="mb-8 w-full flex justify-center relative z-10">
+            <div className="bg-theme-hover/80 border border-theme-subtle inline-flex items-center gap-2 px-4 py-2 rounded-full shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-theme-accent animate-pulse" />
+              <span className="text-xs text-theme-primary/80">
+                Đang có <strong className="text-theme-accent font-bold">{leftoverNewCards} từ mới</strong> chờ bạn khám phá vào ngày mai!
               </span>
             </div>
           </div>
         )}
 
-        {isDue && leftoverNewCards > 0 && (
-          <div className="mb-8 opacity-60 text-xs uppercase tracking-widest text-theme-accent">
-            Còn {leftoverNewCards} từ mới đang đợi được học vào ngày mai do đã
-            đạt giới hạn học từ mới hôm nay.
-          </div>
-        )}
-
-        {isDue ? (
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
+        {/* Study Actions Container (div:nth-of-type(2)) */}
+        <div className="flex flex-col gap-6 items-center relative z-10 w-full max-w-3xl mx-auto">
+          {/* Primary Action Button (button:nth-of-type(1)) */}
+          {isDue ? (
             <button
               onClick={onStartReview}
-              className="border border-theme-accent text-theme-accent bg-theme-panel hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              className="relative group w-full sm:w-auto min-w-[280px] sm:min-w-[340px] px-8 sm:px-12 py-4 bg-gradient-to-r from-theme-accent via-amber-500 to-theme-accent hover:brightness-110 text-theme-inverted font-bold text-sm sm:text-base tracking-wide rounded-2xl shadow-xl shadow-theme-accent/20 hover:shadow-2xl hover:shadow-theme-accent/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-between sm:justify-center gap-4 cursor-pointer overflow-hidden border border-white/20"
             >
-              Bắt đầu phiên ôn tập
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-black/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                </div>
+                <div className="text-left">
+                  <div className="uppercase tracking-wider font-extrabold text-xs sm:text-sm leading-tight">
+                    Bắt đầu phiên ôn tập
+                  </div>
+                  <div className="text-[11px] font-normal opacity-85 leading-tight mt-0.5">
+                    Thuật toán ghi nhớ ngắt quãng SRS
+                  </div>
+                </div>
+              </div>
+              <span className="text-xs font-mono bg-black/20 text-theme-inverted px-3 py-1.5 rounded-xl font-bold border border-white/10 flex items-center gap-1.5 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                {dueCards.length} từ
+              </span>
             </button>
-            {onStartShortStudy && deck.length > 0 && (
-              <button
-                onClick={onStartShortStudy}
-                className="border border-theme-subtle text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-hover font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Học ngắn (5 từ hay quên)
-              </button>
-            )}
-            {onStartFreeStudy && (
-              <button
-                onClick={onStartFreeStudy}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn tập tự do (Học nhồi)
-              </button>
-            )}
-            {onStartDifficultReview && deck.length > 0 && (
-              <button
-                onClick={onStartDifficultReview}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn các từ hay quên
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                onClick={() => onStartSentenceReview("JA_TO_VI")}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn câu (Nhật → Việt)
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                onClick={() => onStartSentenceReview("VI_TO_JA")}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn câu (Việt → Nhật)
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                id="btn-random-sentence-ja-vi"
-                onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
-                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Nhật → Việt)"
-              >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên MP3 (Nhật → Việt)</span>
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                id="btn-random-sentence-vi-ja"
-                onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
-                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Việt → Nhật)"
-              >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên MP3 (Việt → Nhật)</span>
-              </button>
-            )}
-            {onNavigateToQuiz && (
-              <button
-                onClick={onNavigateToQuiz}
-                className="border border-emerald-500/80 text-emerald-400 bg-emerald-950/30 hover:bg-emerald-600 hover:text-white font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer shadow-sm rounded-sm"
-                title="Làm bài test trắc nghiệm ngữ pháp &amp; từ vựng N4"
-              >
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>Trắc nghiệm N4 (Mới)</span>
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center relative z-10">
+          ) : (
             <button
               onClick={onNavigateAdd}
-              className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
+              className="w-full sm:w-auto px-8 sm:px-12 py-3.5 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs sm:text-sm uppercase tracking-wider rounded-2xl shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer border border-white/20"
             >
-              Thêm từ vựng mới
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span>Thêm từ vựng mới vào kho</span>
             </button>
-            {deck.length > 0 && onStartShortStudy && (
-              <button
-                onClick={onStartShortStudy}
-                className="border border-theme-subtle text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-hover font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Học ngắn (5 từ hay quên)
-              </button>
-            )}
-            {deck.length > 0 && onStartFreeStudy && (
-              <button
-                onClick={onStartFreeStudy}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn tập tự do (Học nhồi)
-              </button>
-            )}
-            {deck.length > 0 && onStartDifficultReview && (
-              <button
-                onClick={onStartDifficultReview}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-red-500 hover:text-red-500 font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn các từ hay quên
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                onClick={() => onStartSentenceReview("JA_TO_VI")}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn câu (Nhật → Việt)
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                onClick={() => onStartSentenceReview("VI_TO_JA")}
-                className="border border-theme-subtle text-theme-primary bg-theme-panel hover:border-theme-accent hover:text-theme-accent font-medium py-3 px-10 transition-colors uppercase tracking-[0.2em] text-[11px]"
-              >
-                Ôn câu (Việt → Nhật)
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                id="btn-random-sentence-ja-vi-notdue"
-                onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
-                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Nhật → Việt)"
-              >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên MP3 (Nhật → Việt)</span>
-              </button>
-            )}
-            {onStartSentenceReview && (
-              <button
-                id="btn-random-sentence-vi-ja-notdue"
-                onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
-                className="border border-theme-accent/60 text-theme-accent bg-theme-panel hover:border-theme-accent hover:bg-theme-accent hover:text-theme-inverted font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer"
-                title="Ôn tập ngẫu nhiên các câu ví dụ đã có file MP3 âm thanh upload thành công (Việt → Nhật)"
-              >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span>Ôn ngẫu nhiên MP3 (Việt → Nhật)</span>
-              </button>
-            )}
-            {onNavigateToQuiz && (
-              <button
-                onClick={onNavigateToQuiz}
-                className="border border-emerald-500/80 text-emerald-400 bg-emerald-950/30 hover:bg-emerald-600 hover:text-white font-medium py-3 px-8 transition-colors uppercase tracking-[0.15em] text-[11px] inline-flex items-center gap-2 cursor-pointer shadow-sm rounded-sm"
-                title="Làm bài test trắc nghiệm ngữ pháp &amp; từ vựng N4"
-              >
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>Trắc nghiệm N4 (Mới)</span>
-              </button>
-            )}
+          )}
+
+          {/* Secondary Study Modes Grid */}
+          <div className="w-full pt-4 border-t border-theme-subtle/80">
+            <div className="text-[11px] font-bold text-theme-primary/50 uppercase tracking-widest mb-3 text-center sm:text-left">
+              Chế độ học &amp; luyện tập bổ trợ
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 w-full text-left">
+              {deck.length > 0 && onStartShortStudy && (
+                <button
+                  type="button"
+                  onClick={onStartShortStudy}
+                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-theme-accent/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                >
+                  <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform shrink-0">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-theme-primary group-hover:text-theme-accent transition-colors">
+                      Học ngắn 5 phút
+                    </div>
+                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                      Củng cố nhanh 5 từ hay quên nhất
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {deck.length > 0 && onStartFreeStudy && (
+                <button
+                  type="button"
+                  onClick={onStartFreeStudy}
+                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-theme-accent/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                >
+                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shrink-0">
+                    <RotateCcw className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-theme-primary group-hover:text-theme-accent transition-colors">
+                      Ôn tập tự do (Học nhồi)
+                    </div>
+                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                      Luyện trắc nghiệm không tính SRS
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {deck.length > 0 && onStartDifficultReview && (
+                <button
+                  type="button"
+                  onClick={onStartDifficultReview}
+                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-red-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                >
+                  <div className="p-2 rounded-lg bg-red-500/10 text-red-500 group-hover:scale-110 transition-transform shrink-0">
+                    <Flame className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-theme-primary group-hover:text-red-500 transition-colors">
+                      Ôn các từ hay quên
+                    </div>
+                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                      Tập trung từ có điểm khó cao
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {onStartSentenceReview && (
+                <button
+                  type="button"
+                  onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
+                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-theme-accent/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                >
+                  <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shrink-0">
+                    <Headphones className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-theme-primary group-hover:text-theme-accent transition-colors">
+                      Ôn ngẫu nhiên MP3 (Nhật → Việt)
+                    </div>
+                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                      Nghe hiểu phản xạ câu tiếng Nhật
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {onStartSentenceReview && (
+                <button
+                  type="button"
+                  onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
+                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-theme-accent/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                >
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
+                    <Shuffle className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-theme-primary group-hover:text-theme-accent transition-colors">
+                      Ôn ngẫu nhiên MP3 (Việt → Nhật)
+                    </div>
+                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                      Luyện dịch và nói câu tiếng Nhật
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {onNavigateToQuiz && (
+                <button
+                  type="button"
+                  onClick={onNavigateToQuiz}
+                  className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-950/40 hover:border-emerald-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                >
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform shrink-0">
+                    <CheckSquare className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                      Trắc nghiệm N4 (Đề thi)
+                    </div>
+                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                      Bài test ngữ pháp &amp; từ vựng N4
+                    </div>
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
