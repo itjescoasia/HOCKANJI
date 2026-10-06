@@ -138,74 +138,402 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2, Edit2, Eye } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, CheckCircle } from 'lucide-react';
+import Markdown from 'react-markdown';
+import { cleanMarkdownForDisplay } from './stringUtils';
+
+interface VocabularyDetailWindowProps {
+  card: KanjiCard;
+  text: string;
+  matchedForm?: any;
+  isOpen: boolean;
+  onClose: () => void;
+  onEditCard?: (card: KanjiCard) => void;
+}
+
+const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
+  card,
+  text,
+  matchedForm,
+  isOpen,
+  onClose,
+  onEditCard,
+}) => {
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const handleSpeak = async (e: React.MouseEvent, textToSpeak: string, audioUrl?: string | null) => {
+    e.stopPropagation();
+    setIsPlayingAudio(true);
+    try {
+      if (audioUrl) {
+        await playAudioUrl(audioUrl, textToSpeak);
+      } else {
+        await playTTS(textToSpeak);
+      }
+    } catch (err) {
+      console.warn("Audio playback error:", err);
+    } finally {
+      setTimeout(() => setIsPlayingAudio(false), 1200);
+    }
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const info = [
+      `【${card.kanji || card.reading}】`,
+      card.reading && `Cách đọc: ${card.reading}`,
+      card.romaji && `Romaji: ${card.romaji}`,
+      card.sinoVietnamese && `Hán Việt: ${card.sinoVietnamese}`,
+      card.wordType && `Loại từ: ${card.wordType}`,
+      card.meaning && `Ý nghĩa: ${card.meaning}`,
+      card.kanjiExplanation && `\n--- Giải thích chi tiết ---\n${cleanMarkdownForDisplay(card.kanjiExplanation)}`,
+    ].filter(Boolean).join('\n');
+
+    navigator.clipboard.writeText(info).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => console.error("Copy error:", err));
+  };
+
+  const modalTarget = typeof document !== 'undefined' ? (document.getElementById('root') || document.body) : null;
+  if (!modalTarget) return null;
+
+  return createPortal(
+    <div
+      id="word-detail-modal-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        id="word-detail-modal-container"
+        className="bg-theme-panel border border-theme-subtle text-theme-primary rounded-2xl shadow-2xl w-full max-w-2xl sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative z-10 select-text"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div id="word-detail-modal-header" className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-theme-subtle bg-theme-panel/95 shrink-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-theme-primary/80">
+              <BookOpen className="w-4 h-4 text-theme-accent" />
+              Chi Tiết Từ Vựng
+            </span>
+            {card.sinoVietnamese && (
+              <span className="text-[10px] font-bold text-theme-inverted bg-theme-accent px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                {card.sinoVietnamese}
+              </span>
+            )}
+            {card.wordType && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-theme-subtle bg-theme-base-alt text-theme-primary/80">
+                {card.wordType}
+              </span>
+            )}
+            {matchedForm && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-theme-accent/40 bg-theme-accent/15 text-theme-accent">
+                Dạng chia: {matchedForm.name}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              id="word-detail-copy-btn"
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-theme-primary/80 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-subtle/50 border border-theme-subtle transition-all cursor-pointer shadow-xs"
+              title="Sao chép thông tin từ vựng"
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 text-theme-success" />
+                  <span className="text-theme-success font-semibold">Đã chép</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Sao chép</span>
+                </>
+              )}
+            </button>
+            <button
+              id="word-detail-close-btn"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-theme-primary/60 hover:text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer"
+              title="Đóng (ESC)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 custom-scrollbar">
+          {/* Hero Section */}
+          <div id="word-detail-hero-section" className="bg-theme-base-alt border border-theme-subtle rounded-xl p-5 sm:p-6 shadow-inner flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif text-theme-primary font-bold tracking-tight">
+                {card.kanji || card.reading}
+              </h3>
+              <div className="flex items-center justify-center sm:justify-start gap-3 flex-wrap">
+                {card.reading && (
+                  <span className="text-lg sm:text-xl font-serif font-medium text-theme-accent">
+                    {card.reading}
+                  </span>
+                )}
+                {card.romaji && (
+                  <span className="text-sm font-sans text-theme-primary/70 italic">
+                    ({card.romaji})
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <button
+                id="word-detail-audio-btn"
+                onClick={(e) => handleSpeak(e, text || card.kanji || card.reading, matchedForm?.audioUrl || card.audioUrl)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs ${
+                  isPlayingAudio
+                    ? 'bg-theme-accent text-theme-inverted ring-2 ring-theme-accent/50 scale-105'
+                    : (matchedForm?.audioUrl || card.audioUrl)
+                      ? 'bg-theme-accent text-theme-inverted hover:brightness-110 hover:scale-105 active:scale-95'
+                      : 'bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25 hover:scale-105 active:scale-95'
+                }`}
+                title={(matchedForm?.audioUrl || card.audioUrl) ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
+              >
+                <Volume2 className="w-4 h-4" />
+                <span>{(matchedForm?.audioUrl || card.audioUrl) ? "Nghe MP3 chuẩn" : "Phát âm"}</span>
+              </button>
+              {(matchedForm?.audioUrl || card.audioUrl) && (
+                <span className="text-[8px] font-bold text-theme-accent uppercase tracking-widest">
+                  Âm thanh chất lượng cao
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Meaning Section */}
+          <div id="word-detail-meaning-section" className="space-y-2">
+            <span className="text-xs uppercase tracking-widest font-bold text-theme-accent flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Ý nghĩa tiếng Việt</span>
+            </span>
+            <div className="text-lg sm:text-xl font-medium text-theme-primary leading-relaxed bg-theme-base-alt/60 p-4 rounded-xl border border-theme-subtle">
+              {card.meaning}
+            </div>
+          </div>
+
+          {/* Matched Conjugation Form (if any) */}
+          {matchedForm && (
+            <div id="word-detail-matched-form-section" className="p-4 rounded-xl bg-theme-accent/10 border border-theme-accent/30 flex flex-col gap-2">
+              <span className="text-xs uppercase font-bold text-theme-accent tracking-wider flex items-center gap-1.5">
+                <span>Thể chia xuất hiện trong câu: {matchedForm.name}</span>
+              </span>
+              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-2xl font-serif font-bold text-theme-primary">{matchedForm.value}</span>
+                  {matchedForm.reading && <span className="text-sm font-serif text-theme-accent">{matchedForm.reading}</span>}
+                  {matchedForm.romaji && <span className="text-xs text-theme-primary/60 italic font-sans">({matchedForm.romaji})</span>}
+                </div>
+                <button
+                  onClick={(e) => handleSpeak(e, matchedForm.value || matchedForm.reading || '', matchedForm.audioUrl)}
+                  className="p-2 text-theme-accent hover:bg-theme-accent/15 rounded-lg cursor-pointer transition-colors"
+                  title="Nghe dạng chia này"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
+              {matchedForm.meaning && (
+                <p className="text-sm text-theme-primary/90 mt-0.5">{matchedForm.meaning}</p>
+              )}
+            </div>
+          )}
+
+          {/* Detailed Explanation / Kanji Origin */}
+          {card.kanjiExplanation && (
+            <div id="word-detail-explanation-section" className="p-4 sm:p-5 rounded-xl bg-theme-base-alt border border-theme-subtle space-y-2">
+              <span className="text-xs uppercase tracking-widest font-bold text-theme-accent flex items-center gap-1.5">
+                <Lightbulb className="w-4 h-4" />
+                <span>Giải thích chi tiết & Phân tích chữ Hán</span>
+              </span>
+              <div className="text-sm sm:text-base text-theme-primary leading-relaxed whitespace-pre-wrap break-words font-sans">
+                <Markdown>{cleanMarkdownForDisplay(card.kanjiExplanation)}</Markdown>
+              </div>
+            </div>
+          )}
+
+          {/* Conjugation Forms Grid */}
+          {card.forms && card.forms.length > 0 && (
+            <div id="word-detail-conjugations-section" className="space-y-2.5">
+              <span className="text-xs uppercase tracking-widest font-bold text-theme-primary/70 flex items-center gap-1.5">
+                <span>Các dạng biến thể / Thể chia ({card.forms.length})</span>
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {card.forms.map((form) => (
+                  <div
+                    key={form.id || form.name}
+                    className={`p-3 rounded-xl border flex items-center justify-between gap-2.5 transition-all ${
+                      matchedForm?.name === form.name
+                        ? 'border-theme-accent bg-theme-accent/15 shadow-xs'
+                        : 'border-theme-subtle bg-theme-base-alt/50 hover:border-theme-accent/40'
+                    }`}
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-theme-primary/60 block">
+                        {form.name}
+                      </span>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="font-serif font-bold text-theme-primary text-base">
+                          {form.value}
+                        </span>
+                        {form.reading && (
+                          <span className="text-xs font-serif text-theme-accent">
+                            {form.reading}
+                          </span>
+                        )}
+                      </div>
+                      {form.meaning && (
+                        <p className="text-xs text-theme-primary/70 truncate">{form.meaning}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => handleSpeak(e, form.value || form.reading || '', form.audioUrl)}
+                      className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-lg cursor-pointer shrink-0 transition-colors"
+                      title="Nghe phát âm dạng chia"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Examples */}
+          {(card.examples?.length || card.example) && (
+            <div id="word-detail-examples-section" className="space-y-2.5">
+              <span className="text-xs uppercase tracking-widest font-bold text-theme-primary/70 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-theme-accent" />
+                <span>Câu ví dụ minh họa</span>
+              </span>
+              <div className="space-y-2.5">
+                {card.examples && card.examples.length > 0 ? (
+                  card.examples.map((ex, idx) => (
+                    <div
+                      key={ex.id || idx}
+                      className="p-4 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-start justify-between gap-3 text-left shadow-xs"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <p className="font-serif text-base sm:text-lg text-theme-primary font-medium leading-relaxed">
+                          {ex.sentence}
+                        </p>
+                        {ex.reading && (
+                          <p className="text-xs text-theme-accent font-serif">{ex.reading}</p>
+                        )}
+                        {ex.translation && (
+                          <p className="text-xs sm:text-sm text-theme-primary/80 italic pt-1 border-t border-theme-subtle/50">
+                            {ex.translation}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
+                        className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-xl cursor-pointer shrink-0 transition-colors"
+                        title="Nghe câu ví dụ"
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                ) : card.example ? (
+                  <div className="p-4 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-start justify-between gap-3 text-left shadow-xs">
+                    <div className="space-y-1 min-w-0">
+                      <p className="font-serif text-base sm:text-lg text-theme-primary font-medium leading-relaxed">
+                        {card.example}
+                      </p>
+                      {card.exampleTranslation && (
+                        <p className="text-xs sm:text-sm text-theme-primary/80 italic pt-1 border-t border-theme-subtle/50">
+                          {card.exampleTranslation}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => handleSpeak(e, card.example!, card.audioUrl)}
+                      className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-xl cursor-pointer shrink-0 transition-colors"
+                      title="Nghe câu ví dụ"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div id="word-detail-modal-footer" className="px-5 sm:px-6 py-3.5 border-t border-theme-subtle bg-theme-panel/95 flex items-center justify-between gap-3 shrink-0">
+          <span className="text-xs text-theme-primary/50 hidden sm:inline">
+            Bấm ESC hoặc nhấn ra ngoài để đóng cửa sổ
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            {onEditCard && (
+              <button
+                id="word-detail-edit-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                  onEditCard(card);
+                  window.dispatchEvent(new CustomEvent('editCard', { detail: card }));
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold border border-theme-subtle hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Chỉnh sửa từ vựng</span>
+              </button>
+            )}
+            <button
+              id="word-detail-close-footer-btn"
+              onClick={onClose}
+              className="px-5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-xs"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    modalTarget
+  );
+};
 
 const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }> = ({ text, status, card, occurrenceIndex = 0, matchedForm }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
-  const popupRef = useRef<HTMLSpanElement>(null);
   const { setHoveredCard, onEditCard, isLocked, setLocked } = useContext(HighlightContext);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-
-  const updateRect = () => {
-    if (containerRef.current) {
-      setRect(containerRef.current.getBoundingClientRect());
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      updateRect();
-      window.addEventListener('scroll', updateRect, true);
-      window.addEventListener('resize', updateRect);
-      return () => {
-        window.removeEventListener('scroll', updateRect, true);
-        window.removeEventListener('resize', updateRect);
-      };
-    }
-  }, [isOpen]);
-
 
   useEffect(() => {
     if (isOpen && card) {
       setLocked(true);
       setHoveredCard({ card, index: occurrenceIndex, matchedForm }, true);
     } else if (!isOpen && card) {
-      // We only unlock if we are the one locking. But how do we know?
-      // Actually, just setLocked(false). 
-      // If another word is clicked, its onClick will fire.
-      // mousedown on outside happens before the other word's onClick.
-      // So setLocked(false) and then the other word's onClick sets isOpen=true and locks.
       setLocked(false);
-      // We might want to setHoveredCard(null, true) when closed, to clear the lock.
-      // But let's just unlock and let mouse leave handle clearing it if needed, or clear it.
       setHoveredCard(null, true);
     }
   }, [isOpen]);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node) && (!popupRef.current || !popupRef.current.contains(event.target as Node))) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const playAudio = (e: React.MouseEvent, textToSpeak: string, audioUrl?: string | null) => {
-    e.stopPropagation();
-    if (audioUrl) {
-      playAudioUrl(audioUrl, textToSpeak);
-      return;
-    }
-    playTTS(textToSpeak);
-  };
 
   let colorClass = "text-theme-accent";
   if (status === 'good') colorClass = "text-theme-success text-green-600 dark:text-green-400";
@@ -217,93 +545,32 @@ const InteractiveWord: React.FC<{ text: string, status: 'good' | 'bad' | 'target
   }
 
   return (
-    <span className={`relative inline-block ${isOpen ? "z-30" : ""}`} ref={containerRef} onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })} onMouseLeave={() => setHoveredCard(null)} onClick={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}>
+    <span
+      className="relative inline-block"
+      ref={containerRef}
+      onMouseEnter={() => card && setHoveredCard({ card, index: occurrenceIndex, matchedForm })}
+      onMouseLeave={() => setHoveredCard(null)}
+    >
       <span 
-        className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current`}
+        className={`${colorClass} font-bold cursor-pointer hover:underline border-b border-dashed border-current/60 hover:border-current hover:bg-theme-accent/10 rounded-xs px-0.5 transition-all`}
         onClick={(e) => {
            e.stopPropagation();
-           setIsOpen(!isOpen);
+           setIsOpen(true);
         }}
-        title="Nhấn để xem nghĩa"
+        title="Nhấn để mở cửa sổ chi tiết từ vựng"
       >
         {text}
       </span>
-      {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {isOpen && rect && (
-            <motion.span
-              ref={popupRef}
-              initial={{ opacity: 0, y: -5, scale: 0.95, x: "-50%" }}
-              animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-              exit={{ opacity: 0, y: -5, scale: 0.95, x: "-50%" }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              style={{
-                position: 'fixed',
-                top: rect.bottom + 12,
-                left: rect.left + rect.width / 2,
-                zIndex: 999999
-              }}
-              className="w-max max-w-[320px] max-h-[400px] overflow-y-auto bg-theme-panel border border-theme-subtle rounded-xl shadow-xl p-4 flex flex-col gap-3 text-left font-sans text-base whitespace-normal"
-            >
-              {/* Arrow */}
-              <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-theme-panel border-t border-l border-theme-subtle rotate-45 rounded-[2px]" />
-              
-              <span className="flex items-start justify-between gap-4 relative z-10">
-                <span className="flex flex-col gap-1.5">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <strong className="text-2xl font-serif text-theme-primary leading-none">{card.kanji || card.reading}</strong>
-                    {card.sinoVietnamese && <span className="text-[10px] font-bold text-theme-inverted bg-theme-accent px-2 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap shadow-sm">{card.sinoVietnamese}</span>}
-                  </span>
-                  {card.reading && card.kanji && (
-                    <span className="text-sm font-medium text-theme-primary/70">{card.reading} {card.romaji ? `(${card.romaji})` : ''}</span>
-                  )}
-                </span>
-                <span className="flex items-center gap-1 -mt-1 -mr-1">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
-                    className="p-2 rounded-full text-theme-primary/40 hover:text-theme-primary hover:bg-theme-subtle/30 transition-colors shrink-0"
-                    title="Đóng"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                  <div className="flex flex-col items-center gap-0.5">
-    <button 
-      onClick={(e) => playAudio(e, text, matchedForm?.audioUrl || card.audioUrl)}
-      className={`p-2 rounded-full transition-colors shrink-0 ${(matchedForm?.audioUrl || card.audioUrl) ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-      title={(matchedForm?.audioUrl || card.audioUrl) ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
-    >
-      <Volume2 className="w-4 h-4" />
-    </button>
-    {(matchedForm?.audioUrl || card.audioUrl) && <span className="text-[7px] font-bold text-theme-accent uppercase leading-none tracking-widest -mt-1">MP3</span>}
-  </div>
-                  {onEditCard && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setIsOpen(false); if (onEditCard) onEditCard(card); window.dispatchEvent(new CustomEvent('editCard', { detail: card })); }}
-                      className="p-2 rounded-full text-theme-primary/40 hover:text-theme-accent hover:bg-theme-accent/10 transition-colors shrink-0"
-                      title="Chỉnh sửa từ vựng"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </span>
-              </span>
-              
-              <span className="w-full h-px bg-theme-subtle/50 relative z-10" />
-              
-              <span className="text-base text-theme-primary leading-relaxed relative z-10">
-                {card.meaning}
-              </span>
-              
-              {(card.wordType || card.kanjiExplanation) && (
-                 <span className="flex flex-col gap-2 relative z-10 mt-1">
-                   {card.wordType && <span className="text-[11px] font-bold text-theme-primary/50 uppercase tracking-widest">{card.wordType}</span>}
-                   {card.kanjiExplanation && <span className="text-sm text-theme-primary/80 italic leading-relaxed whitespace-pre-wrap break-words">{card.kanjiExplanation}</span>}
-                 </span>
-              )}
-            </motion.span>
-          )}
-        </AnimatePresence>,
-        document.body
+
+      {isOpen && (
+        <VocabularyDetailWindow
+          card={card}
+          text={text}
+          matchedForm={matchedForm}
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          onEditCard={onEditCard}
+        />
       )}
     </span>
   );
