@@ -1891,10 +1891,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                 e.stopPropagation();
                                 onStartSentenceReview?.('VI_TO_JA', [viewingCard], true, true);
                               }}
-                              className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 rounded-full transition-colors cursor-pointer"
-                              title="Luyện dịch câu ví dụ này (Việt → Nhật SRS)"
+                              className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 rounded-full transition-all cursor-pointer shadow-xs"
+                              title="Luyện dịch câu ví dụ này (Việt → Nhật theo nguyên tắc khoa học SRS)"
                             >
-                              <Shuffle className="w-3.5 h-3.5" />
+                              <Brain className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Dịch SRS</span>
                             </button>
 
                             {/* Nút Upload MP3 cho câu ví dụ */}

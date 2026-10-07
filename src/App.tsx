@@ -16,7 +16,7 @@ import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
 import AccountSettingsModal from './components/AccountSettingsModal';
 import N4QuizView from './components/N4QuizView';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette } from 'lucide-react';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -442,6 +442,10 @@ export default function App() {
       setIsAddModalOpen(true);
       return;
     }
+    if (newView === 'sentence_srs') {
+      handleStartSentenceReview('VI_TO_JA', null, false, true);
+      return;
+    }
     if (isFreeStudyMode || isDifficultReviewMode) {
       setIsFreeStudyMode(false);
       setIsDifficultReviewMode(false);
@@ -499,6 +503,7 @@ export default function App() {
   const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
+    { id: 'sentence_srs', label: 'Dịch câu SRS', icon: Brain },
     { id: 'quiz', label: 'Trắc nghiệm N4', icon: CheckSquare },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
     { id: 'intensive_vocab', label: 'Chuyên đề', icon: Lightbulb },

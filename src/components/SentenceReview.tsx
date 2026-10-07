@@ -923,12 +923,12 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     mode === "JA_TO_VI" ? currentExample.translation : currentExample.sentence;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-2 sm:px-4">
-      <div className="flex items-center justify-between p-4 border-b border-theme-subtle">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-2 sm:px-4 overflow-y-auto pb-12">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-theme-subtle bg-theme-panel/60 backdrop-blur-xs sticky top-0 z-20">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={onClose}
-            className="p-2 text-theme-primary/60 hover:text-theme-primary transition-colors cursor-pointer"
+            className="p-2 text-theme-primary/60 hover:text-theme-primary transition-colors cursor-pointer rounded-lg hover:bg-theme-hover"
             title="Đóng ôn tập"
           >
             <X className="w-5 h-5" />
@@ -1004,7 +1004,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         />
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="flex-1 flex flex-col items-center justify-start sm:justify-center py-4 sm:py-8 px-2 sm:px-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -1015,7 +1015,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           >
             
   
-  <div className="w-full relative min-h-[400px] mb-8" style={{ perspective: "1000px" }}>
+  <div className="w-full relative min-h-[400px] sm:min-h-[440px] mb-4 sm:mb-6" style={{ perspective: "1000px" }}>
     <motion.div
       className="w-full h-full absolute inset-0"
       style={{ transformStyle: "preserve-3d" }}
@@ -1025,7 +1025,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       {/* Front */}
       <div 
         id="sentence-review-card-front"
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center group overflow-y-auto ${showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
       >
         {/* Badges khoa học SRS */}
@@ -1212,7 +1212,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
       {/* Back */}
       <div 
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto rounded-xl shadow-xs ${!showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
       >
         <span className="absolute top-4 left-4 text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
@@ -1365,7 +1365,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 </motion.div>
 </AnimatePresence>
 {!isEditing && (
-  <div className="mt-6 flex items-center justify-center gap-3 w-full max-w-2xl">
+  <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3 w-full max-w-2xl sticky bottom-2 z-30 bg-theme-base-alt/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-theme-subtle shadow-xl">
     {showAnswer ? (
       /* 4-tier scientific SRS rating buttons */
       <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-[620px]">

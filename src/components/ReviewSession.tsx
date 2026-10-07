@@ -564,7 +564,7 @@ export default function ReviewSession({
                       setShowAnswer(!showAnswer);
                     }
                   }}
-                  className={`w-full min-h-[440px] sm:min-h-[480px] max-h-[66vh] sm:max-h-[70vh] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl shadow-black/5 dark:shadow-black/40 overflow-hidden flex flex-col relative transition-all duration-300 ${
+                  className={`w-full min-h-[380px] sm:min-h-[440px] max-h-[76vh] md:max-h-[82vh] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl shadow-black/5 dark:shadow-black/40 overflow-hidden flex flex-col relative transition-all duration-300 ${
                     !(isFreeStudy && exerciseType !== 'flip') 
                       ? 'cursor-pointer hover:border-theme-accent/40' 
                       : ''
@@ -572,7 +572,7 @@ export default function ReviewSession({
                 >
                   
                   {/* Card Interior Header Tag */}
-                  <div className="w-full px-6 pt-5 pb-3 flex items-center justify-between border-b border-theme-subtle/50 shrink-0 bg-theme-panel">
+                  <div className="w-full px-5 sm:px-6 pt-4 sm:pt-5 pb-3 flex items-center justify-between border-b border-theme-subtle/50 shrink-0 bg-theme-panel">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent">
                         {showAnswer ? 'Mặt sau (Đáp án & Chi tiết)' : 'Mặt trước (Từ vựng)'}
@@ -601,8 +601,8 @@ export default function ReviewSession({
                     </div>
                   </div>
 
-                  {/* Scrollable Card Body */}
-                  <div ref={cardContentRef} className="flex-1 overflow-y-auto px-6 py-6 sm:px-10 sm:py-8 flex flex-col items-center justify-center">
+                  {/* Scrollable Card Body: Uses items-center without justify-center so long content never gets clipped at the top */}
+                  <div ref={cardContentRef} className="flex-1 overflow-y-auto px-5 py-5 sm:px-10 sm:py-8 flex flex-col items-center custom-scrollbar">
                     
                     {!showAnswer ? (
                       /* Front View: Always 100% visible */
@@ -663,7 +663,7 @@ export default function ReviewSession({
                       </div>
                     ) : (
                       /* Back View: Detailed breakdown */
-                      <div className="w-full flex flex-col items-center text-center gap-6 py-2">
+                      <div className="w-full flex flex-col items-center text-center gap-6 py-2 my-auto">
                         
                         {/* Back Top: Kanji & Pronunciation Header */}
                         <div className="w-full flex flex-col items-center gap-3 pb-6 border-b border-theme-subtle/50">

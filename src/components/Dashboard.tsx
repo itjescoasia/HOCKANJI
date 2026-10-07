@@ -348,39 +348,79 @@ export default function Dashboard({
         </p>
       </div>
 
-      {/* N4 Quiz Quick Launch Banner */}
-      {onNavigateToQuiz && (
-        <div 
-          onClick={onNavigateToQuiz}
-          className="bg-gradient-to-r from-emerald-950/40 via-theme-panel to-emerald-950/30 border border-emerald-500/40 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-emerald-500 transition-all rounded-sm group shadow-sm"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
-              <CheckSquare className="w-5 h-5" />
+      {/* Feature Banners Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Sentence SRS Translation Banner */}
+        {onStartSentenceReview && (
+          <div 
+            onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
+            className="bg-gradient-to-r from-indigo-950/40 via-theme-panel to-indigo-950/30 border border-indigo-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-indigo-500 transition-all rounded-sm group shadow-sm"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+                <Brain className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded">
+                    Khoa học SRS Ebbinghaus
+                  </span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-theme-base text-theme-primary/60 border border-theme-subtle rounded">
+                    MP3 Chuẩn
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-indigo-400 transition-colors mt-1">
+                  Luyện Dịch Câu: Việt → Nhật (Khoa học SRS)
+                </h3>
+                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                  Lấy ngẫu nhiên câu ví dụ có MP3 • Tự động lặp lại câu quên theo chu kỳ Ebbinghaus • Giảm lặp câu đã nhớ.
+                </p>
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">
-                  Chức năng mới
-                </span>
-                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-emerald-400 transition-colors">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onStartSentenceReview("VI_TO_JA", null, false, true); }}
+              className="px-4 py-2 bg-indigo-600 group-hover:bg-indigo-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+            >
+              Luyện dịch ngay
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* N4 Quiz Quick Launch Banner */}
+        {onNavigateToQuiz && (
+          <div 
+            onClick={onNavigateToQuiz}
+            className="bg-gradient-to-r from-emerald-950/40 via-theme-panel to-emerald-950/30 border border-emerald-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-emerald-500 transition-all rounded-sm group shadow-sm"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">
+                    Đề thi N4
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-emerald-400 transition-colors mt-1">
                   Trắc Nghiệm Tiếng Nhật N4 (Đề thi &amp; Giải thích chi tiết)
                 </h3>
+                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                  Luyện tập thể khả năng (Bài 27), trợ từ (が, しか), tự/tha động từ, ý chí, bị động, sai khiến kèm bảng từ vựng và audio chuẩn.
+                </p>
               </div>
-              <p className="text-xs text-theme-primary/70 mt-1">
-                Luyện tập thể khả năng (Bài 27), trợ từ (が, しか), tự/tha động từ, ý chí, bị động, sai khiến kèm bảng từ vựng và audio chuẩn.
-              </p>
             </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onNavigateToQuiz(); }}
+              className="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+            >
+              Làm bài test
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onNavigateToQuiz(); }}
-            className="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end sm:self-auto flex items-center gap-1.5 cursor-pointer shadow"
-          >
-            Làm bài test
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Sentence of the Day */}
       {sentenceOfTheDay && (
