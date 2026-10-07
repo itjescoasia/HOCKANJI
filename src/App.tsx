@@ -743,7 +743,7 @@ export default function App() {
         )}
         
         {view === 'list' && (
-          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} editCardReq={editCardReq} viewCardReq={viewCardReq} />
+          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} editCardReq={editCardReq} viewCardReq={viewCardReq} onStartSentenceReview={handleStartSentenceReview} />
         )}
         
         {/* Modals */}

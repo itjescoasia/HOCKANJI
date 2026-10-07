@@ -3,7 +3,7 @@ import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -49,6 +49,7 @@ interface VocabListProps {
   initialEditId?: string | null;
   editCardReq?: { id: string, ts: number } | null;
   viewCardReq?: { id: string, ts: number } | null;
+  onStartSentenceReview?: (mode: 'JA_TO_VI' | 'VI_TO_JA', targetDeck?: any[] | null, forceAll?: boolean, isRandom?: boolean) => void;
 }
 
 function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => void }) {
@@ -105,7 +106,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
   );
 }
 
-export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null }: VocabListProps) {
+export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null, onStartSentenceReview }: VocabListProps) {
   const isAdmin = auth.currentUser?.email === 'nguyenthetrung200126@gmail.com';
   const [search, setSearch] = usePersistentState('app_vocablist_search', initialSearchQuery);
   const [filterType, setFilterType] = usePersistentState('app_vocablist_filterType', 'all');
@@ -1835,10 +1836,23 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               {/* Examples */}
               {(viewingCard.examples && viewingCard.examples.length > 0) || (viewingCard.example || viewingCard.exampleTranslation) ? (
                 <div className="bg-theme-base-alt rounded-md p-5 border border-theme-subtle">
-                  <h3 className="text-sm uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-4 border-b border-theme-subtle pb-2 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-theme-accent rounded-full"></span>
-                    Các câu ví dụ
-                  </h3>
+                  <div className="flex flex-wrap items-center justify-between border-b border-theme-subtle pb-2 mb-4 gap-2">
+                    <h3 className="text-sm uppercase tracking-[0.2em] text-theme-accent opacity-80 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-theme-accent rounded-full"></span>
+                      Các câu ví dụ
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onStartSentenceReview?.('VI_TO_JA', [viewingCard], true, true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-700 dark:text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                      title="Luyện dịch các câu ví dụ của từ này từ Việt sang Nhật theo nguyên tắc khoa học SRS"
+                    >
+                      <Shuffle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:text-white" />
+                      <span>Luyện dịch câu (Việt → Nhật SRS)</span>
+                    </button>
+                  </div>
                   <div className="flex flex-col gap-4">
                     {viewingCard.examples && viewingCard.examples.length > 0 ? (
                       viewingCard.examples.map((ex, idx) => (
@@ -1870,6 +1884,18 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               <Volume2 className="w-4 h-4" />
                             </button>
                             {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase tracking-widest px-0.5">MP3</span>}
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onStartSentenceReview?.('VI_TO_JA', [viewingCard], true, true);
+                              }}
+                              className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 rounded-full transition-colors cursor-pointer"
+                              title="Luyện dịch câu ví dụ này (Việt → Nhật SRS)"
+                            >
+                              <Shuffle className="w-3.5 h-3.5" />
+                            </button>
 
                             {/* Nút Upload MP3 cho câu ví dụ */}
                             <label

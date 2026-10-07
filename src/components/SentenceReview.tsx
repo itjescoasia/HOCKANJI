@@ -6,7 +6,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles, Upload, Trash2, Music, Play, Loader2 } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles, Upload, Trash2, Music, Play, Loader2, Brain, Clock, HelpCircle, VolumeX, Info, Flame } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard, FuriganaMode } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
@@ -28,13 +28,15 @@ interface SentenceReviewProps {
   forceAll?: boolean;
   isRandom?: boolean;
   onClose: () => void;
-  onUpdateWord?: (id: string, updates: Partial<IntensiveWord>) => void;
+  onUpdateWord?: (id: string, updates: Partial<IntensiveWord | KanjiCard | any>) => void;
   onRecordReview?: (isCorrect: boolean) => void;
 }
 
 interface ExampleWithWord extends IntensiveExample {
   word: string;
   wordId: string;
+  sessionRepeat?: boolean;
+  sessionRepeatCount?: number;
 }
 
 export const SentenceReview: React.FC<SentenceReviewProps> = ({
@@ -54,8 +56,12 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [randomCurrentIndex, setRandomCurrentIndex] = useState(0);
   const [userTranslation, setUserTranslation] = useState("");
-  const [sessionStats, setSessionStats] = useState({ correct: 0, wrong: 0, total: 0 });
+  const [sessionStats, setSessionStats] = useState({ correct: 0, wrong: 0, total: 0, requeuedCount: 0 });
   const [isSessionFinished, setIsSessionFinished] = useState(false);
+  const [autoPlayAudio, setAutoPlayAudio] = usePersistentState('app_sentencereview_autoplay_audio', true);
+  const [audioOnlyFilter, setAudioOnlyFilter] = usePersistentState('app_sentencereview_audio_only', true);
+  const [showScienceModal, setShowScienceModal] = useState(false);
+  const [requeuedNotice, setRequeuedNotice] = useState(false);
 
   const currentIndex = isRandom
     ? (examples.length > 0 ? Math.min(randomCurrentIndex, examples.length - 1) : 0)
@@ -239,31 +245,85 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     }
 
     if (isRandom) {
-      // ONLY take example sentences that have an uploaded mp3 audio file successfully
-      const audioOnlyExamples = allExamples.filter((ex) => {
-        if (!ex.audioUrl || typeof ex.audioUrl !== 'string') return false;
+      const hasAudioMp3 = (ex: ExampleWithWord) => {
+        if (!ex.audioUrl || typeof ex.audioUrl !== 'string') return !!ex.hasAudio;
         const trimmed = ex.audioUrl.trim();
-        if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return false;
+        if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return !!ex.hasAudio;
         return (
           trimmed.startsWith('http://') ||
           trimmed.startsWith('https://') ||
           trimmed.startsWith('firestore:') ||
           trimmed.startsWith('blob:') ||
-          trimmed.startsWith('data:audio')
+          trimmed.startsWith('data:audio') ||
+          !!ex.hasAudio
         );
+      };
+
+      const audioPool = allExamples.filter(hasAudioMp3);
+      const pool = (audioOnlyFilter && audioPool.length > 0) ? audioPool : allExamples;
+
+      const now = Date.now();
+      const forgottenList: ExampleWithWord[] = [];
+      const dueList: ExampleWithWord[] = [];
+      const newList: ExampleWithWord[] = [];
+      const learningList: ExampleWithWord[] = [];
+      const matureList: ExampleWithWord[] = [];
+
+      pool.forEach((ex) => {
+        const interval = mode === "VI_TO_JA" ? (ex.viToJaInterval ?? 0) : (ex.jaToViInterval ?? 0);
+        const failCount = mode === "VI_TO_JA" ? (ex.viToJaFailCount ?? 0) : (ex.jaToViFailCount ?? 0);
+        const nextReview = mode === "VI_TO_JA" ? (ex.viToJaNextReviewDate ?? 0) : (ex.jaToViNextReviewDate ?? 0);
+        const repetition = mode === "VI_TO_JA" ? (ex.viToJaRepetition ?? 0) : (ex.jaToViRepetition ?? 0);
+        const isDue = nextReview > 0 && nextReview <= now;
+
+        if (interval === 0 && failCount > 0) {
+          forgottenList.push(ex); // 1. Từng bị quên: ưu tiên lặp lại cao nhất
+        } else if (isDue) {
+          dueList.push(ex); // 2. Đến hạn ôn theo đường cong quên lãng Ebbinghaus
+        } else if (repetition === 0 && !nextReview) {
+          newList.push(ex); // 3. Câu mới tinh chưa học
+        } else if (interval <= 6) {
+          learningList.push(ex); // 4. Trí nhớ ngắn hạn (1-6 ngày)
+        } else {
+          matureList.push(ex); // 5. Đã nhớ vững (>= 7 ngày) -> ít lặp lại hơn theo nguyên tắc khoa học
+        }
       });
 
-      // Pure random shuffle across all available audio-only example sentences
-      const shuffled = [...audioOnlyExamples];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      const shuffle = <T,>(arr: T[]): T[] => {
+        const res = [...arr];
+        for (let i = res.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [res[i], res[j]] = [res[j], res[i]];
+        }
+        return res;
+      };
+
+      // Tỷ lệ chọn lọc khoa học:
+      // - 100% câu đang quên + 100% câu đến hạn
+      // - Tối đa 15 câu mới
+      // - Tối đa 10 câu đang học
+      // - Tối đa 3-4 câu đã nhớ vững (rất ít lặp lại)
+      const selected = [
+        ...shuffle(forgottenList),
+        ...shuffle(dueList),
+        ...shuffle(newList).slice(0, 15),
+        ...shuffle(learningList).slice(0, 10),
+        ...shuffle(matureList).slice(0, 3),
+      ];
+
+      // Bổ sung thêm nếu danh sách còn ít hơn 15 câu mà tổng pool còn nhiều
+      if (selected.length < 15 && pool.length > selected.length) {
+        const selectedIds = new Set(selected.map(s => s.id));
+        const unselected = shuffle(pool.filter(p => !selectedIds.has(p.id)));
+        selected.push(...unselected.slice(0, Math.min(25 - selected.length, unselected.length)));
       }
-      setExamples(shuffled);
+
+      const finalQueue = shuffle(selected.length > 0 ? selected : pool);
+      setExamples(finalQueue);
       setRandomCurrentIndex(0);
       setIsCardFlipped(false);
       setUserTranslation("");
-      setSessionStats({ correct: 0, wrong: 0, total: 0 });
+      setSessionStats({ correct: 0, wrong: 0, total: 0, requeuedCount: 0 });
       setIsSessionFinished(false);
       setIsInitialized(true);
       return;
@@ -300,7 +360,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
     setExamples(dueExamples);
     setIsInitialized(true);
-  }, [deck, mainDeck, mode, forceAll, isRandom]);
+  }, [deck, mainDeck, mode, forceAll, isRandom, audioOnlyFilter]);
 
   useEffect(() => {
     initExamples();
@@ -339,107 +399,115 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   };
 
   const handleConfirmResult = (isCorrect: boolean) => {
-    setSessionStats(prev => ({
-      ...prev,
-      correct: isCorrect ? prev.correct + 1 : prev.correct,
-      wrong: !isCorrect ? prev.wrong + 1 : prev.wrong,
-      total: prev.total + 1
-    }));
     handleGrade(isCorrect ? 'good' : 'forgot');
   };
 
-  const handleGrade = (grade: 'forgot' | 'hard' | 'good') => {
+  const handleGrade = (grade: 'forgot' | 'hard' | 'good' | 'easy') => {
     if (onRecordReview) {
       onRecordReview(grade !== 'forgot');
     }
 
+    const currentExample = examples[currentIndex];
+    if (!currentExample) return;
+
+    // Calculate Spaced Repetition values using SM-2
+    const currentInterval = mode === "VI_TO_JA" ? (currentExample.viToJaInterval || 0) : (currentExample.jaToViInterval || 0);
+    const currentFailCount = mode === "VI_TO_JA" ? (currentExample.viToJaFailCount || 0) : (currentExample.jaToViFailCount || 0);
+    const currentRepetition = mode === "VI_TO_JA" ? (currentExample.viToJaRepetition || 0) : (currentExample.jaToViRepetition || 0);
+    const currentEaseFactor = mode === "VI_TO_JA" ? (currentExample.viToJaEaseFactor || 2.5) : (currentExample.jaToViEaseFactor || 2.5);
+
+    let nextInterval = currentInterval;
+    let nextRepetition = currentRepetition;
+    let nextEaseFactor = currentEaseFactor;
+    let newFailCount = currentFailCount;
+    let isMastered = false;
+
+    if (grade === 'forgot') {
+      nextInterval = 0; // Học lại ngay
+      nextRepetition = 0;
+      newFailCount += 1;
+      nextEaseFactor = Math.max(1.3, nextEaseFactor - 0.2);
+      isMastered = false;
+    } else if (grade === 'hard') {
+      nextInterval = 1;
+      newFailCount += 1;
+      nextEaseFactor = Math.max(1.3, nextEaseFactor - 0.15);
+      isMastered = false;
+    } else if (grade === 'good') {
+      if (nextRepetition === 0) {
+        nextInterval = 1;
+      } else if (nextRepetition === 1) {
+        nextInterval = 3;
+      } else if (nextRepetition === 2) {
+        nextInterval = 7;
+      } else {
+        nextInterval = Math.round(Math.max(1, nextInterval) * nextEaseFactor);
+      }
+      nextRepetition += 1;
+      isMastered = true;
+    } else if (grade === 'easy') {
+      if (nextRepetition === 0) {
+        nextInterval = 3;
+      } else if (nextRepetition === 1) {
+        nextInterval = 7;
+      } else {
+        nextInterval = Math.round(Math.max(2, nextInterval) * (nextEaseFactor + 0.3));
+      }
+      nextRepetition += 1;
+      nextEaseFactor = Math.min(3.0, nextEaseFactor + 0.15);
+      isMastered = true;
+    }
+
+    let nextReviewDate = Date.now();
+    if (nextInterval > 0) {
+      nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
+    }
+
+    const srsUpdates = mode === "VI_TO_JA"
+      ? {
+          viToJaMastered: isMastered,
+          viToJaInterval: nextInterval,
+          viToJaNextReviewDate: nextReviewDate,
+          viToJaFailCount: newFailCount,
+          viToJaRepetition: nextRepetition,
+          viToJaEaseFactor: nextEaseFactor
+        }
+      : {
+          jaToViMastered: isMastered,
+          jaToViInterval: nextInterval,
+          jaToViNextReviewDate: nextReviewDate,
+          jaToViFailCount: newFailCount,
+          jaToViRepetition: nextRepetition,
+          jaToViEaseFactor: nextEaseFactor
+        };
+
     if (onUpdateWord) {
-      const word = deck.find((w) => w.id === currentExample.wordId);
+      const targetId = currentExample.wordId;
+      const word = deck.find((w) => w.id === targetId);
       if (word) {
-        const updatedExamples = word.examples.map((ex) => {
+        const updatedExamples = (word.examples || []).map((ex) => {
           if (ex.id === currentExample.id) {
-            // Calculate Spaced Repetition values using SM-2
-            const currentInterval = mode === "VI_TO_JA" ? (ex.viToJaInterval || 0) : (ex.jaToViInterval || 0);
-            const currentFailCount = mode === "VI_TO_JA" ? (ex.viToJaFailCount || 0) : (ex.jaToViFailCount || 0);
-            const currentRepetition = mode === "VI_TO_JA" ? (ex.viToJaRepetition || 0) : (ex.jaToViRepetition || 0);
-            const currentEaseFactor = mode === "VI_TO_JA" ? (ex.viToJaEaseFactor || 2.5) : (ex.jaToViEaseFactor || 2.5);
-
-            let nextInterval = currentInterval;
-            let nextRepetition = currentRepetition;
-            let nextEaseFactor = currentEaseFactor;
-            let sm2Quality = 0;
-            
-            if (grade === 'forgot') sm2Quality = 1;
-            if (grade === 'hard') sm2Quality = 3;
-            if (grade === 'good') sm2Quality = 4;
-            
-            if (sm2Quality >= 3) {
-              if (nextRepetition === 0) {
-                nextInterval = 1;
-              } else if (nextRepetition === 1) {
-                nextInterval = 6;
-              } else {
-                nextInterval = Math.round(nextInterval * nextEaseFactor);
-              }
-              nextRepetition++;
-            } else {
-              nextRepetition = 0;
-              nextInterval = 1;
-            }
-            
-            if (grade === 'forgot') {
-               nextInterval = 0; // Học lại ngay
-            }
-
-            nextEaseFactor = nextEaseFactor + (0.1 - (5 - sm2Quality) * (0.08 + (5 - sm2Quality) * 0.02));
-            if (nextEaseFactor < 1.3) nextEaseFactor = 1.3;
-
-            let nextReviewDate = Date.now();
-            let newFailCount = currentFailCount;
-            const currentIsMastered = mode === "VI_TO_JA" ? ex.viToJaMastered : ex.jaToViMastered;
-            let isMastered = currentIsMastered || false;
-            if (grade === 'good') {
-              isMastered = true;
-            } else if (grade === 'forgot') {
-              newFailCount += 1;
-              isMastered = false;
-            } else {
-              newFailCount += 1;
-            }
-
-            if (nextInterval > 0) {
-              nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
-            }
-
-            return mode === "VI_TO_JA"
-              ? {
-                  ...ex,
-                  viToJaMastered: isMastered,
-                  viToJaInterval: nextInterval,
-                  viToJaNextReviewDate: nextReviewDate,
-                  viToJaFailCount: newFailCount,
-                  viToJaRepetition: nextRepetition,
-                  viToJaEaseFactor: nextEaseFactor
-                }
-              : {
-                  ...ex,
-                  jaToViMastered: isMastered,
-                  jaToViInterval: nextInterval,
-                  jaToViNextReviewDate: nextReviewDate,
-                  jaToViFailCount: newFailCount,
-                  jaToViRepetition: nextRepetition,
-                  jaToViEaseFactor: nextEaseFactor
-                };
+            return { ...ex, ...srsUpdates };
           }
           return ex;
         });
         const oldScore = word.reviewScore || 0;
-        let scoreDelta = 0;
-        if (grade === 'good') scoreDelta = 1;
-        else if (grade === 'hard') scoreDelta = -1;
-        else if (grade === 'forgot') scoreDelta = -2;
+        let scoreDelta = grade === 'good' || grade === 'easy' ? 1 : (grade === 'hard' ? -1 : -2);
         const newScore = Math.max(0, oldScore + scoreDelta);
         onUpdateWord(word.id, { examples: updatedExamples, reviewScore: newScore });
+      } else if (mainDeck) {
+        const card = mainDeck.find((c) => c.id === targetId);
+        if (card) {
+          if (card.examples && Array.isArray(card.examples)) {
+            const updatedExamples = card.examples.map((ex) => {
+              if (ex.id === currentExample.id) {
+                return { ...ex, ...srsUpdates };
+              }
+              return ex;
+            });
+            onUpdateWord(card.id, { examples: updatedExamples });
+          }
+        }
       }
     }
 
@@ -447,50 +515,38 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     setExamples((prev) =>
       prev.map((ex, i) => {
         if (i === currentIndex) {
-          const currentInterval = mode === "VI_TO_JA" ? ex.viToJaInterval : ex.jaToViInterval;
-          const currentFailCount = mode === "VI_TO_JA" ? (ex.viToJaFailCount || 0) : (ex.jaToViFailCount || 0);
-
-          let nextInterval = 0;
-          let nextReviewDate = Date.now();
-          let newFailCount = currentFailCount;
-          const currentIsMastered = mode === "VI_TO_JA" ? ex.viToJaMastered : ex.jaToViMastered;
-          let isMastered = currentIsMastered || false;
-          if (grade === 'good') {
-            nextInterval = (!currentInterval || currentInterval === 0) ? 1 :
-                            (currentInterval === 1 ? 3 :
-                            (currentInterval === 3 ? 7 : currentInterval * 2));
-            isMastered = true;
-          } else if (grade === 'hard') {
-            nextInterval = 1;
-            newFailCount += 1;
-          } else if (grade === 'forgot') {
-            nextInterval = 0;
-            isMastered = false;
-          }
-
-          if (nextInterval > 0) {
-            nextReviewDate = Date.now() + nextInterval * 24 * 60 * 60 * 1000;
-          }
-
-          return mode === "VI_TO_JA"
-            ? {
-                ...ex,
-                viToJaMastered: isMastered,
-                viToJaInterval: nextInterval,
-                viToJaNextReviewDate: nextReviewDate,
-                viToJaFailCount: newFailCount
-              }
-            : {
-                ...ex,
-                jaToViMastered: isMastered,
-                jaToViInterval: nextInterval,
-                jaToViNextReviewDate: nextReviewDate,
-                jaToViFailCount: newFailCount
-              };
+          return { ...ex, ...srsUpdates };
         }
         return ex;
-      }),
+      })
     );
+
+    // Update session stats
+    setSessionStats((prev) => ({
+      ...prev,
+      correct: (grade === 'good' || grade === 'easy') ? prev.correct + 1 : prev.correct,
+      wrong: (grade === 'forgot' || grade === 'hard') ? prev.wrong + 1 : prev.wrong,
+      total: prev.total + 1,
+      requeuedCount: grade === 'forgot' ? (prev.requeuedCount || 0) + 1 : (prev.requeuedCount || 0)
+    }));
+
+    // In-session re-queueing for forgotten sentences
+    if (grade === 'forgot') {
+      setRequeuedNotice(true);
+      setTimeout(() => setRequeuedNotice(false), 3000);
+
+      setExamples((prev) => {
+        const copy = [...prev];
+        const repeatItem: ExampleWithWord = {
+          ...copy[currentIndex],
+          sessionRepeat: true,
+          sessionRepeatCount: ((copy[currentIndex] as any).sessionRepeatCount || 0) + 1
+        };
+        const insertPos = Math.min(copy.length, currentIndex + 4);
+        copy.splice(insertPos, 0, repeatItem);
+        return copy;
+      });
+    }
 
     handleNext();
   };
@@ -744,26 +800,19 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           setShowAnswer(true);
         }
       } else {
-        // Back face:
-        if (isRandom) {
-          if (e.key === '1' || e.key === 'ArrowLeft') {
-            e.preventDefault();
-            handleConfirmResult(false);
-          } else if (e.key === '2' || e.key === 'ArrowRight') {
-            e.preventDefault();
-            handleConfirmResult(true);
-          }
-        } else {
-          if (e.key === '1') {
-            e.preventDefault();
-            handleGrade('forgot');
-          } else if (e.key === '2') {
-            e.preventDefault();
-            handleGrade('hard');
-          } else if (e.key === '3') {
-            e.preventDefault();
-            handleGrade('good');
-          }
+        // Back face: 4-tier scientific SRS rating
+        if (e.key === '1' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handleGrade('forgot');
+        } else if (e.key === '2') {
+          e.preventDefault();
+          handleGrade('hard');
+        } else if (e.key === '3' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleGrade('good');
+        } else if (e.key === '4') {
+          e.preventDefault();
+          handleGrade('easy');
         }
       }
 
@@ -788,42 +837,57 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           <Trophy className="w-8 h-8" />
         </div>
         <h2 className="text-2xl font-serif text-theme-primary mb-2">
-          Hoàn thành phiên ôn tập!
+          Hoàn thành phiên dịch câu SRS!
         </h2>
-        <p className="text-theme-primary/60 text-sm mb-6 uppercase tracking-wider font-medium">
-          {mode === "JA_TO_VI" ? "Ngẫu nhiên: Nhật → Việt" : "Ngẫu nhiên: Việt → Nhật"}
+        <p className="text-theme-primary/60 text-xs mb-4 uppercase tracking-wider font-semibold">
+          {mode === "JA_TO_VI" ? "Dịch câu: Nhật → Việt" : "Dịch câu: Việt → Nhật"} • Nguyên tắc Ebbinghaus
         </p>
 
-        <div className="grid grid-cols-3 gap-3 w-full bg-theme-panel border border-theme-subtle p-6 rounded-xl mb-8 shadow-sm">
-          <div className="flex flex-col items-center">
+        {/* Thẻ thống kê 4 ô */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full bg-theme-panel border border-theme-subtle p-5 rounded-xl mb-6 shadow-sm">
+          <div className="flex flex-col items-center p-2 rounded-lg bg-theme-base/50">
             <span className="text-2xl font-bold text-theme-primary">{sessionStats.total}</span>
-            <span className="text-[11px] text-theme-primary/60 uppercase tracking-wider mt-1">Đã ôn</span>
+            <span className="text-[10px] text-theme-primary/60 uppercase tracking-wider mt-1 font-semibold">Đã luyện</span>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold text-emerald-500">{sessionStats.correct}</span>
-            <span className="text-[11px] text-emerald-500/80 uppercase tracking-wider mt-1">Dịch đúng</span>
+          <div className="flex flex-col items-center p-2 rounded-lg bg-emerald-500/10">
+            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{sessionStats.correct}</span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mt-1 font-semibold">Dịch tốt</span>
           </div>
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center p-2 rounded-lg bg-red-500/10">
             <span className="text-2xl font-bold text-red-500">{sessionStats.wrong}</span>
-            <span className="text-[11px] text-red-500/80 uppercase tracking-wider mt-1">Dịch sai</span>
+            <span className="text-[10px] text-red-500 uppercase tracking-wider mt-1 font-semibold">Dịch sai</span>
+          </div>
+          <div className="flex flex-col items-center p-2 rounded-lg bg-indigo-500/10">
+            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{sessionStats.requeuedCount || 0}</span>
+            <span className="text-[10px] text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mt-1 font-semibold">Đã ôn lại</span>
           </div>
         </div>
 
-        <div className="text-sm text-theme-primary/80 mb-8 font-medium">
+        <div className="w-full bg-theme-panel/70 border border-theme-subtle rounded-xl p-4 mb-6 text-left text-xs text-theme-primary/80 leading-relaxed">
+          <div className="flex items-center gap-2 mb-1.5 font-bold text-theme-accent">
+            <Brain className="w-4 h-4" />
+            <span>Ghi nhớ khoa học Ebbinghaus</span>
+          </div>
+          <p>
+            Các câu bạn dịch tốt đã được tự động kéo dài chu kỳ giãn cách (3 &ndash; 7 &ndash; 16+ ngày). Các câu bạn từng quên đã được lặp lại ngay trong phiên để kịp thời củng cố trước khi kết thúc!
+          </p>
+        </div>
+
+        <div className="text-sm text-theme-primary/80 mb-6 font-medium">
           Độ chính xác: <span className="text-theme-accent text-xl font-bold ml-1">{accuracy}%</span>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full">
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
           <button
             onClick={initExamples}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-theme-accent-hover transition-colors shadow-sm cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-theme-accent-hover transition-colors shadow-sm cursor-pointer"
           >
             <Shuffle className="w-4 h-4" />
-            <span>Ôn lại ngẫu nhiên</span>
+            <span>Luyện phiên mới (SRS)</span>
           </button>
           <button
             onClick={onClose}
-            className="flex-1 py-3.5 px-6 border border-theme-subtle text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover font-bold uppercase tracking-widest text-xs rounded-lg transition-colors cursor-pointer"
+            className="flex-1 py-3 px-6 border border-theme-subtle text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover font-bold uppercase tracking-widest text-xs rounded-xl transition-colors cursor-pointer"
           >
             Quay lại
           </button>
@@ -872,44 +936,63 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold tracking-widest uppercase text-theme-accent">
-                {isRandom ? "Ôn tập ngẫu nhiên MP3: " : "Ôn tập câu: "}
+                {isRandom ? "Dịch câu Khoa học SRS: " : "Ôn tập câu: "}
                 {mode === "JA_TO_VI" ? "Nhật → Việt" : "Việt → Nhật"}
               </h2>
-              {isRandom && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-theme-accent/15 text-theme-accent border border-theme-accent/30 flex items-center gap-1">
-                  <Shuffle className="w-2.5 h-2.5" />
-                  MP3 Audio Only
-                </span>
-              )}
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
+                <Brain className="w-2.5 h-2.5" />
+                SRS Ebbinghaus
+              </span>
             </div>
             <p className="text-xs text-theme-primary/50 mt-0.5">
               Câu {currentIndex + 1} / {examples.length}{" "}
               <span className="opacity-70">
                 ({examples.length - currentIndex - 1} câu còn lại)
               </span>
+              {sessionStats.requeuedCount > 0 && (
+                <span className="text-indigo-600 dark:text-indigo-400 font-semibold ml-1.5">
+                  • {sessionStats.requeuedCount} câu đang lặp lại
+                </span>
+              )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
           <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
 
-          {isRandom && sessionStats.total > 0 && (
-            <div className="hidden sm:flex items-center gap-2 text-xs font-medium px-3 py-1 bg-theme-panel border border-theme-subtle rounded-md">
-              <span className="text-emerald-500 font-bold">Đúng: {sessionStats.correct}</span>
-              <span className="text-theme-primary/30">|</span>
-              <span className="text-red-500 font-bold">Sai: {sessionStats.wrong}</span>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowScienceModal(true)}
+            className="px-2.5 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Xem nguyên tắc khoa học đường cong quên lãng Ebbinghaus & Spaced Repetition (SRS)"
+          >
+            <Brain className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">Khoa học SRS</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAutoPlayAudio(!autoPlayAudio)}
+            className={`px-2.5 py-1.5 text-xs rounded-md border transition-colors flex items-center gap-1.5 cursor-pointer ${
+              autoPlayAudio
+                ? 'bg-theme-accent/15 text-theme-accent border-theme-accent/40 font-bold'
+                : 'bg-theme-panel text-theme-primary/50 border-theme-subtle hover:text-theme-primary'
+            }`}
+            title={autoPlayAudio ? "Tự động phát MP3 khi lật thẻ: Đang BẬT" : "Tự động phát MP3 khi lật thẻ: Đang TẮT"}
+          >
+            {autoPlayAudio ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span className="hidden md:inline text-[11px] uppercase tracking-wider">{autoPlayAudio ? "Auto MP3: Bật" : "Auto MP3: Tắt"}</span>
+          </button>
 
           {isRandom && (
             <button
               onClick={initExamples}
-              title="Xáo trộn lại toàn bộ câu ngẫu nhiên"
+              title="Xáo trộn lại toàn bộ câu ngẫu nhiên theo nguyên tắc khoa học"
               className="px-2.5 py-1.5 text-xs text-theme-primary/70 hover:text-theme-accent border border-theme-subtle hover:border-theme-accent bg-theme-panel rounded flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline text-[11px] uppercase tracking-wider">Xáo trộn lại</span>
+              <span className="hidden md:inline text-[11px] uppercase tracking-wider">Xáo trộn</span>
             </button>
           )}
         </div>
@@ -945,9 +1028,58 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-8 sm:p-12 flex flex-col items-center text-center group overflow-y-auto ${showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
       >
-        <span className="absolute top-4 left-4 text-xs font-mono text-theme-accent/50 font-bold uppercase tracking-wider">
-          {mode === "JA_TO_VI" ? "CÂU HỎI (TIẾNG NHẬT)" : "CÂU HỎI (TIẾNG VIỆT)"}
-        </span>
+        {/* Badges khoa học SRS */}
+        <div className="absolute top-4 left-4 flex flex-wrap items-center gap-1.5 z-20">
+          <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-theme-base border border-theme-subtle text-theme-primary/70">
+            {mode === "JA_TO_VI" ? "CÂU HỎI NHẬT" : "DỊCH VIỆT → NHẬT"}
+          </span>
+
+          {currentExample.sessionRepeat && (
+            <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-red-500/15 text-red-500 border border-red-500/30 flex items-center gap-1 animate-pulse">
+              <RotateCcw className="w-2.5 h-2.5" />
+              Lặp lại câu quên
+            </span>
+          )}
+
+          {/* Ebbinghaus Stage Indicator */}
+          {(() => {
+            const interval = mode === "VI_TO_JA" ? (currentExample.viToJaInterval ?? 0) : (currentExample.jaToViInterval ?? 0);
+            const repetition = mode === "VI_TO_JA" ? (currentExample.viToJaRepetition ?? 0) : (currentExample.jaToViRepetition ?? 0);
+            if (interval === 0 && (currentExample.viToJaFailCount || currentExample.jaToViFailCount)) {
+              return (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                  Cần củng cố gấp
+                </span>
+              );
+            }
+            if (repetition === 0 && !currentExample.viToJaNextReviewDate && !currentExample.jaToViNextReviewDate) {
+              return (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  Câu mới
+                </span>
+              );
+            }
+            if (interval <= 3) {
+              return (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  Trí nhớ ngắn hạn ({interval}d)
+                </span>
+              );
+            }
+            if (interval <= 14) {
+              return (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Trí nhớ trung hạn ({interval}d)
+                </span>
+              );
+            }
+            return (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                Trí nhớ dài hạn ({interval}d)
+              </span>
+            );
+          })()}
+        </div>
         
         <button
           id="btn-edit-sentence-front"
@@ -1235,54 +1367,64 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 {!isEditing && (
   <div className="mt-6 flex items-center justify-center gap-3 w-full max-w-2xl">
     {showAnswer ? (
-      isRandom ? (
-        /* 2 Confirmation buttons: Dịch sai & Dịch đúng */
-        <div className="flex-1 grid grid-cols-2 gap-3 sm:gap-6 max-w-[440px]">
-          <button
-            id="btn-sentence-wrong"
-            onClick={() => handleConfirmResult(false)}
-            className="border-2 border-red-500/60 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold py-3.5 sm:py-4 transition-all flex items-center justify-center gap-2 rounded-xl shadow-xs uppercase tracking-wider text-xs sm:text-sm cursor-pointer"
-            title="Phím tắt: 1 hoặc Mũi tên trái"
-          >
-            <X className="w-5 h-5 stroke-[2.5]" />
-            <span>Dịch sai (1)</span>
-          </button>
-          <button
-            id="btn-sentence-correct"
-            onClick={() => handleConfirmResult(true)}
-            className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 sm:py-4 transition-all flex items-center justify-center gap-2 rounded-xl shadow-md uppercase tracking-wider text-xs sm:text-sm cursor-pointer"
-            title="Phím tắt: 2 hoặc Mũi tên phải"
-          >
-            <Check className="w-5 h-5 stroke-[2.5]" />
-            <span>Dịch đúng (2)</span>
-          </button>
-        </div>
-      ) : (
-        /* Regular SM-2 3 grading buttons */
-        <div className="flex-1 grid grid-cols-3 gap-2 sm:gap-4 max-w-[500px]">
-          <button
-            onClick={() => handleGrade('forgot')}
-            className="border border-red-500/50 text-red-500 bg-theme-panel hover:bg-red-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1 rounded"
-          >
-            <span className="uppercase tracking-widest text-[9px] opacity-70">Quên sạch</span>
-            <span className="text-xs">Lại từ đầu (1)</span>
-          </button>
-          <button
-            onClick={() => handleGrade('hard')}
-            className="border border-orange-500/50 text-orange-500 bg-theme-panel hover:bg-orange-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1 rounded"
-          >
-            <span className="uppercase tracking-widest text-[9px] opacity-70">Đã học</span>
-            <span className="text-xs">{mode === "VI_TO_JA" ? "Chưa nói được (2)" : "Chưa nhớ (2)"}</span>
-          </button>
-          <button
-            onClick={() => handleGrade('good')}
-            className="border border-green-500 text-green-500 bg-theme-panel hover:bg-green-500/10 font-bold py-3 sm:py-4 transition-colors flex flex-col items-center gap-1 rounded"
-          >
-            <span className="uppercase tracking-widest text-[9px] opacity-70">{mode === "VI_TO_JA" ? "Trôi chảy" : "Ghi nhớ"}</span>
-            <span className="text-xs">{mode === "VI_TO_JA" ? "Nói được (3)" : "Đã nhớ (3)"}</span>
-          </button>
-        </div>
-      )
+      /* 4-tier scientific SRS rating buttons */
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-[620px]">
+        <button
+          id="btn-sentence-forgot"
+          type="button"
+          onClick={() => handleGrade('forgot')}
+          className="border-2 border-red-500/60 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+          title="Phím tắt: 1 hoặc Mũi tên trái"
+        >
+          <div className="flex items-center gap-1">
+            <X className="w-4 h-4 stroke-[3]" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Quên (1)</span>
+          </div>
+          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại trong phiên</span>
+        </button>
+
+        <button
+          id="btn-sentence-hard"
+          type="button"
+          onClick={() => handleGrade('hard')}
+          className="border-2 border-amber-500/60 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+          title="Phím tắt: 2"
+        >
+          <div className="flex items-center gap-1">
+            <Clock className="w-4 h-4 stroke-[2.5]" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Khó (2)</span>
+          </div>
+          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại sau 1 ngày</span>
+        </button>
+
+        <button
+          id="btn-sentence-good"
+          type="button"
+          onClick={() => handleGrade('good')}
+          className="border-2 border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+          title="Phím tắt: 3 hoặc Mũi tên phải"
+        >
+          <div className="flex items-center gap-1">
+            <Check className="w-4 h-4 stroke-[3]" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Nhớ tốt (3)</span>
+          </div>
+          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 3-6 ngày</span>
+        </button>
+
+        <button
+          id="btn-sentence-easy"
+          type="button"
+          onClick={() => handleGrade('easy')}
+          className="border-2 border-indigo-500/60 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+          title="Phím tắt: 4"
+        >
+          <div className="flex items-center gap-1">
+            <Sparkles className="w-4 h-4" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Dễ dàng (4)</span>
+          </div>
+          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 10-20 ngày</span>
+        </button>
+      </div>
     ) : (
       <button
         id="btn-flip-card"
@@ -1553,6 +1695,96 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Toast thông báo lặp lại câu quên */}
+      <AnimatePresence>
+        {requeuedNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-theme-panel border border-red-500/50 text-red-600 dark:text-red-400 shadow-2xl flex items-center gap-2.5 text-xs font-bold"
+          >
+            <RotateCcw className="w-4 h-4 text-red-500 animate-spin" />
+            <span>Đã xếp lại câu này vào cuối phiên để củng cố trí nhớ!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal giải thích nguyên tắc khoa học Ebbinghaus & SRS */}
+      <AnimatePresence>
+        {showScienceModal && (
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setShowScienceModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-theme-panel border border-theme-subtle rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative my-auto"
+            >
+              <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-theme-subtle">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <Brain className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-theme-primary">Nguyên tắc khoa học Ebbinghaus &amp; SRS</h3>
+                    <p className="text-xs text-theme-primary/50">Hệ thống lặp lại ngắt quãng (Spaced Repetition)</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowScienceModal(false)}
+                  className="p-1.5 text-theme-primary/50 hover:text-theme-primary rounded-lg cursor-pointer hover:bg-theme-hover transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs text-theme-primary/80 leading-relaxed">
+                <p>
+                  Theo nghiên cứu kinh điển của nhà tâm lý học Đức <strong>Hermann Ebbinghaus</strong>, não bộ con người có xu hướng <strong>quên đi hơn 70% kiến thức mới sau 24 giờ</strong> nếu không được tái kích hoạt đúng thời điểm.
+                </p>
+
+                <div className="p-3.5 bg-theme-base rounded-xl border border-theme-subtle space-y-2.5">
+                  <div className="font-bold text-theme-accent text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Thuật toán thông minh của chế độ này:
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-500 font-bold shrink-0">1.</span>
+                    <span><strong>Lặp lại câu quên ngay trong phiên:</strong> Khi bạn chọn &ldquo;Quên&rdquo;, câu đó sẽ tự động chèn lại vào cuối phiên để não bộ kịp thời tái kích hoạt đường mòn thần kinh trước khi bạn kết thúc.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber-500 font-bold shrink-0">2.</span>
+                    <span><strong>Củng cố trí nhớ ngắn hạn:</strong> Các câu khó hoặc vừa học sẽ được lặp lại sau 1 &ndash; 3 ngày.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-emerald-500 font-bold shrink-0">3.</span>
+                    <span><strong>Giãn cách câu đã nhớ (Ít lặp lại hơn):</strong> Các câu bạn đã dịch trôi chảy sẽ tự động được kéo dài chu kỳ (3 ngày &rarr; 7 ngày &rarr; 16 ngày &rarr; 35 ngày...). Chúng sẽ xuất hiện với tần suất rất thấp để tránh làm mất thời gian quý báu của bạn, nhưng đảm bảo lưu giữ vĩnh viễn vào trí nhớ dài hạn.</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-theme-accent/10 border border-theme-accent/20 text-theme-accent flex items-center gap-2">
+                  <Info className="w-4 h-4 shrink-0" />
+                  <span>Hãy luyện tập đều đặn mỗi ngày 5-10 phút để đạt phản xạ ngôn ngữ tự nhiên nhất!</span>
+                </div>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-theme-subtle flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowScienceModal(false)}
+                  className="px-5 py-2 bg-theme-accent text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-theme-accent-hover transition-colors cursor-pointer"
+                >
+                  Đã hiểu
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

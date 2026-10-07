@@ -9,6 +9,21 @@ export interface KanjiExample {
   translation: string;
   audioUrl?: string | null;
   hasAudio?: boolean;
+  specialNote?: string;
+  memo?: string;
+  mastered?: boolean;
+  jaToViMastered?: boolean;
+  viToJaMastered?: boolean;
+  jaToViNextReviewDate?: number;
+  viToJaNextReviewDate?: number;
+  jaToViInterval?: number;
+  viToJaInterval?: number;
+  jaToViFailCount?: number;
+  viToJaFailCount?: number;
+  jaToViRepetition?: number;
+  viToJaRepetition?: number;
+  jaToViEaseFactor?: number;
+  viToJaEaseFactor?: number;
 }
 
 export interface KanjiCard {

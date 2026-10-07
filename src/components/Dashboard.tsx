@@ -926,17 +926,22 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
-                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-theme-accent/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                  className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-950/15 hover:bg-indigo-950/30 hover:border-indigo-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
                 >
-                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
-                    <Shuffle className="w-4 h-4" />
+                  <div className="p-2 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
+                    <Brain className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-theme-primary group-hover:text-theme-accent transition-colors">
-                      Ôn ngẫu nhiên MP3 (Việt → Nhật)
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 group-hover:underline">
+                        Dịch câu Khoa học SRS (Việt → Nhật)
+                      </span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-sm bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 uppercase tracking-widest">
+                        Ebbinghaus
+                      </span>
                     </div>
                     <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
-                      Luyện dịch và nói câu tiếng Nhật
+                      Lấy ngẫu nhiên ví dụ có MP3 • Lặp lại câu quên theo khoa học
                     </div>
                   </div>
                 </button>
