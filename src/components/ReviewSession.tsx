@@ -463,6 +463,30 @@ export default function ReviewSession({
     }
   };
 
+  const [uploadingExampleId, setUploadingExampleId] = useState<string | null>(null);
+
+  const handleUploadExampleAudio = async (e: React.ChangeEvent<HTMLInputElement>, exampleId: string) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentCard || !currentCard.examples) return;
+    try {
+      setUploadingExampleId(exampleId);
+      const url = await uploadAudioFile(file);
+      const updatedExamples = currentCard.examples.map(ex => 
+        ex.id === exampleId ? { ...ex, audioUrl: url, hasAudio: true } : ex
+      );
+      if (onUpdateCard) {
+        onUpdateCard(currentCard.id, { examples: updatedExamples });
+      }
+      setReviewQueue(prev => prev.map(c => c.id === currentCard.id ? { ...c, examples: updatedExamples } : c));
+      playAudioUrl(url);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh câu ví dụ');
+    } finally {
+      setUploadingExampleId(null);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleSpeak = (e: React.MouseEvent | null, text: string, audioUrl?: string | null, silentIfNoAudio: boolean = false) => {
     if (e) e.stopPropagation();
 
@@ -975,18 +999,57 @@ export default function ReviewSession({
                                               </p>
                                               
                                               <div className="flex items-center gap-1 shrink-0 -mt-1">
-                                                <button
-                                                  type="button"
-                                                  onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
-                                                  className={`p-2 rounded-xl transition-all cursor-pointer ${
-                                                    ex.audioUrl 
-                                                      ? 'bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25' 
-                                                      : 'text-theme-primary/40 hover:text-theme-accent'
-                                                  }`}
-                                                  title={ex.audioUrl ? "Nghe âm thanh MP3 câu ví dụ" : "Nghe câu ví dụ"}
-                                                >
-                                                  <Volume2 className="w-4 h-4" />
-                                                </button>
+                                                {ex.audioUrl ? (
+                                                  <div className="flex items-center gap-1">
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
+                                                      className="p-2 rounded-xl transition-all cursor-pointer bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25 flex items-center gap-1 shadow-xs"
+                                                      title="Nghe file MP3 chuẩn câu ví dụ"
+                                                    >
+                                                      <Volume2 className="w-4 h-4" />
+                                                      <span className="text-[9px] font-bold uppercase tracking-wider">MP3</span>
+                                                    </button>
+                                                    <label
+                                                      onClick={(e) => e.stopPropagation()}
+                                                      className="p-1.5 rounded-xl text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover cursor-pointer transition-colors"
+                                                      title="Đổi file MP3 cho câu ví dụ này"
+                                                    >
+                                                      {uploadingExampleId === ex.id ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
+                                                      ) : (
+                                                        <Upload className="w-3.5 h-3.5" />
+                                                      )}
+                                                      <input
+                                                        type="file"
+                                                        accept="audio/*"
+                                                        className="hidden"
+                                                        disabled={uploadingExampleId !== null}
+                                                        onChange={(e) => handleUploadExampleAudio(e, ex.id)}
+                                                      />
+                                                    </label>
+                                                  </div>
+                                                ) : (
+                                                  <label
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="px-2.5 py-1.5 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold shadow-xs"
+                                                    title="Câu ví dụ này chưa có file MP3. Bấm để tải lên file MP3 âm thanh (Tuyệt đối không phát giọng Google)"
+                                                  >
+                                                    {uploadingExampleId === ex.id ? (
+                                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                      <Upload className="w-3.5 h-3.5" />
+                                                    )}
+                                                    <span>Tải lên MP3</span>
+                                                    <input
+                                                      type="file"
+                                                      accept="audio/*"
+                                                      className="hidden"
+                                                      disabled={uploadingExampleId !== null}
+                                                      onChange={(e) => handleUploadExampleAudio(e, ex.id)}
+                                                    />
+                                                  </label>
+                                                )}
 
                                                 <button
                                                   type="button"
@@ -1034,14 +1097,31 @@ export default function ReviewSession({
                                         <p className="text-base sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium">
                                           {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck, currentCard)}
                                         </p>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
-                                          className="p-2 rounded-xl text-theme-primary/40 hover:text-theme-accent cursor-pointer"
-                                          title="Nghe câu ví dụ"
-                                        >
-                                          <Volume2 className="w-4 h-4" />
-                                        </button>
+                                        {currentCard.audioUrl ? (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
+                                            className="p-2 rounded-xl text-theme-accent bg-theme-accent/15 hover:bg-theme-accent/25 cursor-pointer shadow-xs"
+                                            title="Nghe file MP3 câu ví dụ"
+                                          >
+                                            <Volume2 className="w-4 h-4" />
+                                          </button>
+                                        ) : (
+                                          <label
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="px-2.5 py-1 rounded-xl cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1 shadow-xs"
+                                            title="Tải lên file MP3 cho câu ví dụ"
+                                          >
+                                            <Upload className="w-3.5 h-3.5" />
+                                            <span>Tải MP3</span>
+                                            <input
+                                              type="file"
+                                              accept="audio/*"
+                                              className="hidden"
+                                              onChange={handleUploadCardAudio}
+                                            />
+                                          </label>
+                                        )}
                                       </div>
                                     )}
                                     {currentCard.exampleTranslation && (

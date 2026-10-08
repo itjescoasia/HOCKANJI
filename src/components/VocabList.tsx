@@ -1901,18 +1901,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
                             {/* Nút Upload MP3 cho câu ví dụ */}
                             <label
-                              className={`p-1.5 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                              className={`px-2.5 py-1 rounded-full cursor-pointer transition-all flex items-center gap-1 font-bold text-xs shadow-xs ${
                                 ex.audioUrl
-                                  ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
-                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                                  ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover p-1.5'
+                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40'
                               }`}
-                              title={ex.audioUrl ? "Đổi file MP3 cho ví dụ này" : "Tải lên file MP3 cho câu ví dụ này"}
+                              title={ex.audioUrl ? "Đổi file MP3 cho ví dụ này" : "Tải lên file MP3 cho câu ví dụ này (Tuyệt đối không phát giọng Google)"}
                             >
                               {uploadingExIdx === idx ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
                               ) : (
-                                <Upload className="w-4 h-4" />
+                                <Upload className="w-3.5 h-3.5" />
                               )}
+                              {!ex.audioUrl && <span>Tải MP3</span>}
                               <input
                                 type="file"
                                 accept="audio/*"

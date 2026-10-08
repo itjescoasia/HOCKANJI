@@ -644,6 +644,52 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     }
   };
 
+  const handleUploadSentenceAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const currentEx = examples[currentIndex];
+    if (!file || !currentEx) return;
+    try {
+      const base64 = await fileToBase64(file);
+      const audioId = `sentence_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      let finalAudioUrl = base64;
+      if (auth.currentUser) {
+        try {
+          await setDoc(doc(db, 'global_audio', audioId), {
+            data: base64,
+            createdAt: Date.now(),
+            filename: file.name
+          });
+          finalAudioUrl = `firestore:${audioId}`;
+        } catch (storageErr) {
+          console.warn("Firestore audio upload failed, falling back to data URL:", storageErr);
+        }
+      }
+
+      const updates = { audioUrl: finalAudioUrl, hasAudio: true };
+      setExamples(prev => prev.map((ex, i) => i === currentIndex ? { ...ex, ...updates } : ex));
+
+      if (onUpdateWord) {
+        const targetId = currentEx.wordId;
+        const word = deck.find(w => w.id === targetId);
+        if (word && word.examples) {
+          const updatedExamples = word.examples.map(ex => ex.id === currentEx.id ? { ...ex, ...updates } : ex);
+          onUpdateWord(word.id, { examples: updatedExamples });
+        } else if (mainDeck) {
+          const card = mainDeck.find(c => c.id === targetId);
+          if (card && card.examples) {
+            const updatedExamples = card.examples.map(ex => ex.id === currentEx.id ? { ...ex, ...updates } : ex);
+            onUpdateWord(card.id, { examples: updatedExamples });
+          }
+        }
+      }
+      playAudioUrl(finalAudioUrl);
+    } catch (err: any) {
+      alert("Lỗi khi tải file âm thanh lên: " + (err.message || "Vui lòng thử lại"));
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleGenerateAIAudio = async () => {
     const textToSpeak = editData.sentence.trim();
     if (!textToSpeak) {
@@ -1130,16 +1176,35 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             {mode === "JA_TO_VI" && (
               <div className="flex items-center justify-center gap-2 mt-3">
                 <div className="flex flex-col items-center gap-0.5">
-                  <button
-                    id="btn-sentence-audio"
-                    type="button"
-                    onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className={`p-2 rounded-full transition-colors ${currentExample.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-                    title={currentExample.audioUrl ? "Nghe file MP3" : "Phát âm"}
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                  {currentExample.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                  {currentExample.audioUrl ? (
+                    <>
+                      <button
+                        id="btn-sentence-audio"
+                        type="button"
+                        onClick={(e) => handleTTS(currentExample.sentence, e)}
+                        className="p-2 rounded-full transition-colors text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 cursor-pointer shadow-xs"
+                        title="Nghe file MP3 chuẩn"
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                      <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>
+                    </>
+                  ) : (
+                    <label
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1 text-xs font-bold cursor-pointer shadow-xs"
+                      title="Câu này chưa có MP3. Bấm để tải lên file MP3 âm thanh (Tuyệt đối không phát giọng Google)"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Tải MP3</span>
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={handleUploadSentenceAudio}
+                      />
+                    </label>
+                  )}
                 </div>
                 
                 <button
@@ -1305,15 +1370,32 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 </p>
               )}
               <div className="flex items-center gap-2 mt-3 pt-2 border-t border-emerald-500/20">
-                <button
-                  type="button"
-                  onClick={(e) => handleTTS(currentExample.sentence, e)}
-                  className="p-1.5 rounded-full text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1 text-xs cursor-pointer"
-                  title="Nghe phát âm"
-                >
-                  <Volume2 className="w-4 h-4" />
-                  <span className="text-[10px] uppercase tracking-wider font-semibold">Phát âm</span>
-                </button>
+                {currentExample.audioUrl ? (
+                  <button
+                    type="button"
+                    onClick={(e) => handleTTS(currentExample.sentence, e)}
+                    className="p-1.5 rounded-full text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1 text-xs cursor-pointer"
+                    title="Nghe phát âm MP3 chuẩn"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">Phát âm MP3</span>
+                  </button>
+                ) : (
+                  <label
+                    onClick={(e) => e.stopPropagation()}
+                    className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                    title="Tải lên file MP3 cho câu này"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold">Tải MP3</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={handleUploadSentenceAudio}
+                    />
+                  </label>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
