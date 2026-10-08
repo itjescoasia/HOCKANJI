@@ -126,7 +126,10 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         }
     }
     
-    playTTS(text);
+    // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của Google nếu chưa có file mp3 hoàn chỉnh
+    if (e) {
+      alert('Câu ví dụ này chưa có file âm thanh MP3 hoàn chỉnh. Bạn hãy bấm vào nút "Sửa câu" để tải lên file MP3.');
+    }
   };
   
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');

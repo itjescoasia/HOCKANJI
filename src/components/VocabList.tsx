@@ -371,8 +371,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     try {
       if (audioUrl) {
         await playAudioUrl(audioUrl, text);
-      } else if (clean) {
-        await playTTS(clean);
+      } else {
+        // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của Google nếu chưa có file mp3 hoàn chỉnh
+        alert('Mục này chưa có file MP3 phát âm hoàn chỉnh. Bạn hãy tải lên file MP3 chuẩn.');
       }
     } catch (err) {
       console.warn('Audio playback issue:', err);

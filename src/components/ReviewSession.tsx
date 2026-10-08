@@ -1,7 +1,10 @@
 import React, { useState, useEffect, Fragment, useRef } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, playAudioUrl } from '../utils/playTTS';
+import { playAudioUrl } from '../utils/playTTS';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { storage, auth, db } from '../lib/firebase';
 import Markdown from 'react-markdown';
 import { 
   X, 
@@ -25,7 +28,9 @@ import {
   ArrowRight,
   Clock,
   Zap,
-  Repeat
+  Repeat,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { renderExampleHighlight, RelatedHighlight, HighlightVietnamese, HighlightProvider } from '../utils/highlight';
 import ReviewEditForm from './ReviewEditForm';
@@ -175,15 +180,15 @@ export default function ReviewSession({
     }
   }, [safeIndex, isFreeStudy, isDifficultReview, currentCard, dueCards, deck]);
 
-  // Auto-play audio when card flips to back
+  // Auto-play audio when card flips to back (only if MP3 exists)
   useEffect(() => {
-    if (showAnswer && autoPlayAudio && currentCard) {
+    if (showAnswer && autoPlayAudio && currentCard && currentCard.audioUrl) {
       const timer = setTimeout(() => {
-        handleSpeak(null, currentCard.kanji || currentCard.reading, currentCard.audioUrl);
+        handleSpeak(null, currentCard.kanji || currentCard.reading, currentCard.audioUrl, true);
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [showAnswer, autoPlayAudio, safeIndex]);
+  }, [showAnswer, autoPlayAudio, safeIndex, currentCard]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -395,16 +400,83 @@ export default function ReviewSession({
     setConfirmingDeleteId(currentCard.id);
   };
 
-  const handleSpeak = (e: React.MouseEvent | null, text: string, audioUrl?: string | null) => {
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+
+  const uploadAudioFile = async (file: File): Promise<string> => {
+    if (!file.type.startsWith('audio/')) {
+      throw new Error('Vui lòng chọn file âm thanh hợp lệ (mp3, m4a, wav, v.v.)');
+    }
+    const uid = auth.currentUser?.uid;
+    try {
+      if (!uid) throw new Error("Chưa đăng nhập");
+      const filename = `users/${uid}/audio/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, filename);
+      await Promise.race([
+        uploadBytes(storageRef, file),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 8000))
+      ]);
+      return await getDownloadURL(storageRef);
+    } catch (err) {
+      console.warn("Storage upload failed, falling back to Firestore", err);
+      if (file.size > 800 * 1024) {
+        throw new Error('File mp3 quá lớn (Vượt quá 800KB). Vui lòng dùng file nhẹ hơn.');
+      }
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            if (uid) {
+              const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
+              const audioDocRef = doc(db, 'global_audio', audioId);
+              await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
+              resolve('firestore:' + audioId);
+            } else {
+              resolve(reader.result as string);
+            }
+          } catch (e) {
+            reject(e);
+          }
+        };
+        reader.onerror = () => reject(new Error("Lỗi đọc file âm thanh"));
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleUploadCardAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentCard) return;
+    try {
+      setIsUploadingAudio(true);
+      const url = await uploadAudioFile(file);
+      const updates = { audioUrl: url, hasAudio: true };
+      if (onUpdateCard) {
+        onUpdateCard(currentCard.id, updates);
+      }
+      setReviewQueue(prev => prev.map(c => c.id === currentCard.id ? { ...c, ...updates } : c));
+      playAudioUrl(url, currentCard.kanji || currentCard.reading);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh');
+    } finally {
+      setIsUploadingAudio(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleSpeak = (e: React.MouseEvent | null, text: string, audioUrl?: string | null, silentIfNoAudio: boolean = false) => {
     if (e) e.stopPropagation();
-    setIsPlayingAudio(true);
-    setTimeout(() => setIsPlayingAudio(false), 1200);
 
     if (audioUrl) {
+      setIsPlayingAudio(true);
+      setTimeout(() => setIsPlayingAudio(false), 1200);
       playAudioUrl(audioUrl, text);
       return;
     }
-    if (text) playTTS(text);
+
+    // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của google nếu chưa có file mp3 hoàn chỉnh
+    if (!silentIfNoAudio && e) {
+      alert('Từ vựng này chưa có file MP3 hoàn chỉnh. Vui lòng bấm nút "Tải lên file MP3" để nạp file âm thanh chuẩn.');
+    }
   };
 
   const totalGoal = (dueCards && dueCards.length > 0 ? dueCards.length : deck.length) * 3;
@@ -608,8 +680,8 @@ export default function ReviewSession({
                       /* Front View: Always 100% visible */
                       <div className="w-full flex-1 flex flex-col items-center justify-center text-center my-auto gap-6 py-4">
                         
-                        {/* Hero Kanji / Word */}
-                        <div className="flex flex-col items-center gap-3">
+                        {/* Hero Kanji / Word: Front side is ONLY for looking and recalling the word, NO explanations */}
+                        <div className="flex flex-col items-center gap-4">
                           <h1 
                             className="text-6xl sm:text-7xl md:text-8xl font-serif text-theme-primary font-bold tracking-tight break-words max-w-full leading-tight select-text"
                             style={{ fontFamily: 'serif' }}
@@ -617,32 +689,63 @@ export default function ReviewSession({
                             {primaryDisplayWord}
                           </h1>
 
-                          {/* Sino-Vietnamese hint on front if available */}
-                          {currentCard.sinoVietnamese && (
-                            <div className="mt-1 inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1 rounded-xl">
-                              <span>Âm Hán Việt:</span>
-                              <strong className="tracking-widest">{currentCard.sinoVietnamese}</strong>
-                            </div>
-                          )}
-
-                          {/* Audio Play Button */}
-                          <div className="flex flex-col items-center gap-1.5 mt-2">
-                            <button
-                              type="button"
-                              onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md ${
-                                currentCard.audioUrl 
-                                  ? 'bg-theme-accent text-theme-inverted hover:scale-105 shadow-theme-accent/20' 
-                                  : 'bg-theme-hover border border-theme-subtle text-theme-primary hover:text-theme-accent hover:scale-105'
-                              }`}
-                              title={currentCard.audioUrl ? "Nghe phát âm chuẩn MP3" : "Nghe phát âm"}
-                            >
-                              <Volume2 className="w-7 h-7" />
-                            </button>
-                            {currentCard.audioUrl && (
-                              <span className="text-[10px] font-extrabold text-theme-accent uppercase tracking-widest">
-                                MP3 Chuẩn
-                              </span>
+                          {/* Audio Play & Direct Upload Section */}
+                          <div className="flex flex-col items-center gap-2 mt-2">
+                            {currentCard.audioUrl ? (
+                              <div className="flex flex-col items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+                                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md bg-theme-accent text-theme-inverted hover:scale-105 shadow-theme-accent/20"
+                                  title="Nghe phát âm chuẩn MP3"
+                                >
+                                  <Volume2 className="w-7 h-7" />
+                                </button>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-extrabold text-theme-accent uppercase tracking-widest">
+                                    MP3 Chuẩn
+                                  </span>
+                                  <label
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-[10px] text-theme-primary/50 hover:text-theme-accent underline cursor-pointer transition-colors"
+                                    title="Tải đè hoặc thay đổi file MP3 khác cho từ này"
+                                  >
+                                    {isUploadingAudio ? "Đang tải..." : "Đổi file MP3"}
+                                    <input
+                                      type="file"
+                                      accept="audio/*"
+                                      className="hidden"
+                                      disabled={isUploadingAudio}
+                                      onChange={handleUploadCardAudio}
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-1.5">
+                                <label
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs font-semibold text-xs group"
+                                  title="Từ vựng này chưa có file MP3. Bấm để tải lên file MP3 âm thanh trực tiếp"
+                                >
+                                  {isUploadingAudio ? (
+                                    <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                                  ) : (
+                                    <Upload className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                  )}
+                                  <span>{isUploadingAudio ? "Đang tải lên MP3..." : "Tải lên file MP3 âm thanh"}</span>
+                                  <input
+                                    type="file"
+                                    accept="audio/*"
+                                    className="hidden"
+                                    disabled={isUploadingAudio}
+                                    onChange={handleUploadCardAudio}
+                                  />
+                                </label>
+                                <span className="text-[10px] text-theme-primary/40 italic">
+                                  (Chưa có MP3 • Tuyệt đối không phát giọng mặc định Google)
+                                </span>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -676,18 +779,48 @@ export default function ReviewSession({
                               {currentCard.kanji || currentCard.reading}
                             </h2>
 
-                            <button
-                              type="button"
-                              onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                              className={`p-2.5 rounded-xl transition-all cursor-pointer ${
-                                currentCard.audioUrl 
-                                  ? 'bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25' 
-                                  : 'bg-theme-hover text-theme-primary/70 hover:text-theme-accent'
-                              }`}
-                              title="Phát âm lại từ vựng"
-                            >
-                              <Volume2 className="w-5 h-5" />
-                            </button>
+                            {currentCard.audioUrl ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+                                  className="p-2.5 rounded-xl transition-all cursor-pointer bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25"
+                                  title="Phát âm file MP3 chuẩn"
+                                >
+                                  <Volume2 className="w-5 h-5" />
+                                </button>
+                                <label
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-2 text-theme-primary/40 hover:text-theme-accent rounded-xl hover:bg-theme-hover cursor-pointer transition-colors"
+                                  title="Đổi file MP3 khác cho từ này"
+                                >
+                                  <Upload className="w-4 h-4" />
+                                  <input
+                                    type="file"
+                                    accept="audio/*"
+                                    className="hidden"
+                                    disabled={isUploadingAudio}
+                                    onChange={handleUploadCardAudio}
+                                  />
+                                </label>
+                              </div>
+                            ) : (
+                              <label
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-3 py-2 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold"
+                                title="Từ vựng này chưa có MP3. Bấm để tải lên file MP3 chuẩn"
+                              >
+                                {isUploadingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                <span>Tải lên MP3</span>
+                                <input
+                                  type="file"
+                                  accept="audio/*"
+                                  className="hidden"
+                                  disabled={isUploadingAudio}
+                                  onChange={handleUploadCardAudio}
+                                />
+                              </label>
+                            )}
                           </div>
 
                           {/* Reading & Romaji & Sino-Vietnamese */}

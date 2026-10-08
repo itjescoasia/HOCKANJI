@@ -112,7 +112,8 @@ export default function Dashboard({
       playAudioUrl(audioUrl, text);
       return;
     }
-    if (text) playTTS(text);
+    // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của google nếu chưa có file mp3 hoàn chỉnh
+    alert('Mục này chưa có file MP3 phát âm hoàn chỉnh. Bạn hãy tải lên file MP3 chuẩn.');
   };
 
   const isDue = dueCards.length > 0;
