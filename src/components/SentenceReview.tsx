@@ -257,23 +257,33 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       });
     }
 
-    if (isRandom) {
-      const hasAudioMp3 = (ex: ExampleWithWord) => {
-        if (!ex.audioUrl || typeof ex.audioUrl !== 'string') return !!ex.hasAudio;
+    const hasAudioMp3 = (ex: ExampleWithWord) => {
+      if (ex.audioUrl && typeof ex.audioUrl === 'string') {
         const trimmed = ex.audioUrl.trim();
-        if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return !!ex.hasAudio;
-        return (
-          trimmed.startsWith('http://') ||
-          trimmed.startsWith('https://') ||
-          trimmed.startsWith('firestore:') ||
-          trimmed.startsWith('blob:') ||
-          trimmed.startsWith('data:audio') ||
-          !!ex.hasAudio
-        );
-      };
+        if (trimmed && trimmed !== 'null' && trimmed !== 'undefined' && trimmed !== '') {
+          if (
+            trimmed.startsWith('http://') ||
+            trimmed.startsWith('https://') ||
+            trimmed.startsWith('firestore:') ||
+            trimmed.startsWith('blob:') ||
+            trimmed.startsWith('data:audio') ||
+            trimmed.startsWith('/') ||
+            trimmed.startsWith('./')
+          ) {
+            return true;
+          }
+        }
+      }
+      return !!ex.hasAudio;
+    };
 
-      const audioPool = allExamples.filter(hasAudioMp3);
-      const pool = (audioOnlyFilter && audioPool.length > 0) ? audioPool : allExamples;
+    // Theo yêu cầu: Chức năng "Dịch câu Khoa học SRS: Việt → Nhật" CHỈ đưa vào những câu ví dụ THỰC SỰ có file MP3 hoàn chỉnh.
+    const eligibleExamples = (mode === "VI_TO_JA" || isRandom || audioOnlyFilter)
+      ? allExamples.filter(hasAudioMp3)
+      : allExamples;
+
+    if (isRandom) {
+      const pool = eligibleExamples;
 
       const now = Date.now();
       const forgottenList: ExampleWithWord[] = [];
@@ -343,7 +353,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     }
 
     const now = Date.now();
-    const dueExamples = forceAll ? allExamples : allExamples.filter((ex) => {
+    const dueExamples = forceAll ? eligibleExamples : eligibleExamples.filter((ex) => {
       const nextReviewDate =
         mode === "VI_TO_JA" ? ex.viToJaNextReviewDate : ex.jaToViNextReviewDate;
       
@@ -970,17 +980,23 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
   if (examples.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-6">
-        <p className="text-theme-primary/60 mb-6 font-serif text-lg">
-          {isRandom
-            ? "Chưa có câu ví dụ nào có file MP3 âm thanh upload thành công để ôn tập ngẫu nhiên. Vui lòng upload file âm thanh MP3 cho các câu ví dụ trước nhé!"
+      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-6 max-w-md mx-auto">
+        <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-500">
+          <Volume2 className="w-7 h-7" />
+        </div>
+        <h3 className="text-lg font-bold font-serif text-theme-primary mb-2">
+          {mode === "VI_TO_JA" ? "Chưa có câu ví dụ nào có file MP3" : "Chưa có câu ví dụ đến hạn"}
+        </h3>
+        <p className="text-theme-primary/60 mb-6 text-sm leading-relaxed">
+          {mode === "VI_TO_JA"
+            ? "Chức năng Dịch câu Khoa học SRS: Việt → Nhật chỉ chọn lọc những câu ví dụ thực sự có file âm thanh MP3 hoàn chỉnh. Bạn hãy vào danh sách từ vựng và bổ sung file MP3 cho các câu ví dụ nhé!"
             : (deck.some((word) => (word.examples || []).length > 0)
               ? "Tuyệt vời, bạn đã hoàn thành hết các câu đến hạn!"
               : "Chưa có câu ví dụ nào trong dữ liệu để ôn tập.")}
         </p>
         <button
           onClick={onClose}
-          className="border border-theme-subtle hover:border-theme-accent text-theme-accent bg-theme-panel px-8 py-3 rounded-none uppercase tracking-[0.2em] text-xs transition-colors cursor-pointer"
+          className="border border-theme-subtle hover:border-theme-accent text-theme-accent bg-theme-panel px-8 py-3 rounded-xl uppercase tracking-[0.2em] text-xs transition-colors cursor-pointer"
         >
           Quay lại
         </button>
@@ -1006,7 +1022,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             <X className="w-5 h-5" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-sm font-bold tracking-widest uppercase text-theme-accent">
                 {isRandom ? "Dịch câu Khoa học SRS: " : "Ôn tập câu: "}
                 {mode === "JA_TO_VI" ? "Nhật → Việt" : "Việt → Nhật"}
@@ -1015,6 +1031,12 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 <Brain className="w-2.5 h-2.5" />
                 SRS Ebbinghaus
               </span>
+              {mode === "VI_TO_JA" && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1" title="Chỉ những câu ví dụ thực sự có file MP3 mới được đưa vào luyện dịch">
+                  <Volume2 className="w-2.5 h-2.5" />
+                  100% Có MP3
+                </span>
+              )}
             </div>
             <p className="text-xs text-theme-primary/50 mt-0.5">
               Câu {currentIndex + 1} / {examples.length}{" "}
