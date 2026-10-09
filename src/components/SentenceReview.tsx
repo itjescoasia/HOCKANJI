@@ -194,10 +194,20 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
   }, []);
 
+  const deckRef = React.useRef(deck);
+  const mainDeckRef = React.useRef(mainDeck);
+  deckRef.current = deck;
+  mainDeckRef.current = mainDeck;
+
+  const initializedConfigRef = React.useRef<string | null>(null);
+
   const initExamples = useCallback(() => {
+    const currentDeck = deckRef.current;
+    const currentMainDeck = mainDeckRef.current;
+
     // Extract all examples from the deck
     const allExamples: ExampleWithWord[] = [];
-    deck.forEach((word) => {
+    currentDeck.forEach((word) => {
       (word.examples || []).forEach((ex) => {
         if (ex.sentence && ex.translation) {
           allExamples.push({
@@ -212,9 +222,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     });
 
     // If reviewing generally without a specific single-word restriction, or in isRandom mode, also pull examples from mainDeck
-    const isSingleWordReview = deck.length === 1 && !isRandom;
-    if (mainDeck && !isSingleWordReview) {
-      mainDeck.forEach((card) => {
+    const isSingleWordReview = currentDeck.length === 1 && !isRandom;
+    if (currentMainDeck && !isSingleWordReview) {
+      currentMainDeck.forEach((card) => {
         if (card.examples && Array.isArray(card.examples)) {
           card.examples.forEach((ex) => {
             if (ex.sentence && ex.translation && !allExamples.some(e => e.sentence === ex.sentence)) {
@@ -363,11 +373,22 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
     setExamples(dueExamples);
     setIsInitialized(true);
-  }, [deck, mainDeck, mode, forceAll, isRandom, audioOnlyFilter]);
+  }, [mode, forceAll, isRandom, audioOnlyFilter]);
+
+  const sessionConfig = `${mode}_${forceAll}_${isRandom}_${audioOnlyFilter}`;
 
   useEffect(() => {
-    initExamples();
-  }, [initExamples]);
+    // Chỉ khởi tạo lại khi cấu hình phiên thay đổi (mode, filter, random),
+    // hoặc khi danh sách examples còn trống và dữ liệu đã sẵn sàng.
+    // Tuyệt đối không tự xáo trộn hoặc chuyển câu khi đang sửa câu / lưu câu trong phiên học.
+    if (
+      initializedConfigRef.current !== sessionConfig ||
+      (examples.length === 0 && (deck.length > 0 || (mainDeck && mainDeck.length > 0)))
+    ) {
+      initializedConfigRef.current = sessionConfig;
+      initExamples();
+    }
+  }, [sessionConfig, deck.length, mainDeck?.length, examples.length, initExamples]);
 
   const handleNext = () => {
     setIsCardFlipped(false);
@@ -606,6 +627,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   };
 
   const handleCancelEdit = () => {
+    setPreviewAudioBlobUrl(null);
     setIsEditing(false);
   };
 
@@ -820,6 +842,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       }),
     );
 
+    setPreviewAudioBlobUrl(null);
     setIsEditing(false);
   };
 
