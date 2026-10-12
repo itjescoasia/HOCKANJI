@@ -1694,63 +1694,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               </div>
 
               <div className="flex gap-3 items-start">
-                  {((viewingCard.forms && viewingCard.forms.length > 0) || (viewingCard.examples && viewingCard.examples.length > 0)) && (
-                     <div className="flex flex-col gap-1.5 items-end">
-                       {(() => {
-                          const hasMissingMp3s = (viewingCard.forms?.some(f => f.value && !f.audioUrl)) || (viewingCard.examples?.some(ex => ex.sentence && !ex.audioUrl));
-                          
-                          if (!hasMissingMp3s && !isBulkGenerating) {
-                             return (
-                               <button 
-                                 type="button"
-                                 disabled
-                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-md transition-colors min-w-[140px] justify-center cursor-default shadow-xs"
-                                 title="Tất cả các thể và câu ví dụ đều đã có MP3"
-                               >
-                                 <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                 <span>Đã đủ MP3</span>
-                               </button>
-                             );
-                          }
-
-                          return (
-                             <button 
-                               type="button"
-                               onClick={handleBulkGenerateAudio}
-                               disabled={isBulkGenerating}
-                               className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 rounded-md transition-all disabled:opacity-50 min-w-[170px] justify-center shadow-md hover:shadow-lg cursor-pointer"
-                               title="Tự động tạo MP3 bằng AI và lưu vào Database cho tất cả các Thể và Ví dụ chưa có âm thanh"
-                             >
-                               {isBulkGenerating ? (
-                                 <span className="flex items-center gap-2">
-                                   <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                   <span>{bulkProgress ? `Tạo MP3 (${bulkProgress.current}/${bulkProgress.total})...` : 'Đang xử lý...'}</span>
-                                 </span>
-                               ) : (
-                                 <span className="flex items-center gap-1.5">
-                                   <Brain className="w-4 h-4" />
-                                   <span>Tải MP3 Hàng Loạt (AI)</span>
-                                 </span>
-                               )}
-                             </button>
-                          );
-                       })()}
-                       {isBulkGenerating && bulkProgress && (
-                         <div className="w-full bg-theme-subtle/40 rounded-full h-1.5 overflow-hidden relative mt-0.5">
-                            <div 
-                              className="bg-indigo-600 dark:bg-indigo-500 h-1.5 transition-all duration-300 rounded-full" 
-                              style={{ width: `${Math.round((bulkProgress.current / bulkProgress.total) * 100)}%` }}
-                            ></div>
-                         </div>
-                       )}
-                     </div>
-                  )}
-                  <button 
-                    onClick={() => setViewingCard(null)}
-                    className="p-2 text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                <button 
+                  onClick={() => setViewingCard(null)}
+                  className="p-2 text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
             </div>

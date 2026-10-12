@@ -138,9 +138,12 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, CheckCircle } from 'lucide-react';
+import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, CheckCircle, Upload, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { cleanMarkdownForDisplay } from './stringUtils';
+import { doc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage, removeUndefined } from '../lib/firebase';
 
 interface VocabularyDetailWindowProps {
   card: KanjiCard;
@@ -159,8 +162,19 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
   onClose,
   onEditCard,
 }) => {
+  const [currentCard, setCurrentCard] = useState<KanjiCard>(card);
+  const [currentMatchedForm, setCurrentMatchedForm] = useState<any>(matchedForm);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [uploadingMainAudio, setUploadingMainAudio] = useState(false);
+  const [uploadingFormKey, setUploadingFormKey] = useState<string | null>(null);
+  const [uploadingExIdx, setUploadingExIdx] = useState<number | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentCard(card);
+    setCurrentMatchedForm(matchedForm);
+  }, [card, matchedForm]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -173,15 +187,184 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
 
   if (!isOpen) return null;
 
+  const uploadAudioFile = async (file: File): Promise<string> => {
+    if (!file.type.startsWith('audio/')) {
+      throw new Error('Vui lòng chọn file âm thanh (mp3, m4a, wav, v.v.)');
+    }
+    const uid = auth.currentUser?.uid;
+    try {
+      if (!uid) throw new Error("Chưa đăng nhập");
+      const filename = `users/${uid}/audio/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, filename);
+      await Promise.race([
+        uploadBytes(storageRef, file),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 8000))
+      ]);
+      return await getDownloadURL(storageRef);
+    } catch (err) {
+      console.warn("Storage upload failed, falling back to Firestore", err);
+      if (file.size > 800 * 1024) {
+        throw new Error('File mp3 quá lớn (Vượt quá 800KB). Vui lòng dùng file nhẹ hơn.');
+      }
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            if (uid) {
+              const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
+              const audioDocRef = doc(db, 'global_audio', audioId);
+              await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
+              resolve('firestore:' + audioId);
+            } else {
+              resolve(reader.result as string);
+            }
+          } catch (e) {
+            reject(e);
+          }
+        };
+        reader.onerror = () => reject(new Error("Lỗi đọc file âm thanh"));
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const persistCardUpdate = async (updated: KanjiCard) => {
+    setCurrentCard(updated);
+    if (updated.id) {
+      try {
+        const cardRef = doc(db, 'global_kanjiDeck', updated.id);
+        await setDoc(cardRef, removeUndefined(updated), { merge: true });
+      } catch (e) {
+        console.warn('Could not save to global_kanjiDeck, trying global_intensiveVocab:', e);
+        try {
+          const intRef = doc(db, 'global_intensiveVocab', updated.id);
+          await setDoc(intRef, removeUndefined(updated), { merge: true });
+        } catch (e2) {
+          console.error('Error persisting card update:', e2);
+        }
+      }
+    }
+    if (onEditCard) {
+      onEditCard(updated);
+    }
+  };
+
+  const showToast = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3000);
+  };
+
+  const handleUploadCardMainAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingMainAudio(true);
+      const url = await uploadAudioFile(file);
+      const updated = {
+        ...currentCard,
+        audioUrl: url,
+        hasAudio: true,
+      };
+      await persistCardUpdate(updated);
+      showToast('Đã tải lên MP3 thành công cho từ vựng!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file âm thanh');
+    } finally {
+      setUploadingMainAudio(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadFormAudio = async (formIndexOrName: number | string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingFormKey(String(formIndexOrName));
+      const url = await uploadAudioFile(file);
+      const newForms = currentCard.forms ? [...currentCard.forms] : [];
+      let updatedMatched = currentMatchedForm;
+
+      if (typeof formIndexOrName === 'number' && newForms[formIndexOrName]) {
+        newForms[formIndexOrName] = {
+          ...newForms[formIndexOrName],
+          audioUrl: url,
+          hasAudio: true,
+        };
+        if (currentMatchedForm && (currentMatchedForm.id === newForms[formIndexOrName].id || currentMatchedForm.name === newForms[formIndexOrName].name)) {
+          updatedMatched = { ...currentMatchedForm, audioUrl: url, hasAudio: true };
+        }
+      } else if (typeof formIndexOrName === 'string') {
+        const idx = newForms.findIndex(f => f.name === formIndexOrName || f.id === formIndexOrName);
+        if (idx !== -1) {
+          newForms[idx] = { ...newForms[idx], audioUrl: url, hasAudio: true };
+        }
+        if (currentMatchedForm && (currentMatchedForm.name === formIndexOrName || currentMatchedForm.id === formIndexOrName)) {
+          updatedMatched = { ...currentMatchedForm, audioUrl: url, hasAudio: true };
+        }
+      }
+
+      setCurrentMatchedForm(updatedMatched);
+      const updated = {
+        ...currentCard,
+        forms: newForms,
+      };
+      await persistCardUpdate(updated);
+      showToast('Đã tải lên MP3 thành công cho thể chia!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file MP3 cho thể chia');
+    } finally {
+      setUploadingFormKey(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadExampleAudio = async (exIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingExIdx(exIndex);
+      const url = await uploadAudioFile(file);
+      let updated: KanjiCard;
+      if (currentCard.examples && currentCard.examples.length > 0) {
+        const newExamples = [...currentCard.examples];
+        if (newExamples[exIndex]) {
+          newExamples[exIndex] = {
+            ...newExamples[exIndex],
+            audioUrl: url,
+            hasAudio: true,
+          };
+        }
+        updated = {
+          ...currentCard,
+          examples: newExamples,
+        };
+      } else {
+        updated = {
+          ...currentCard,
+          audioUrl: url,
+          hasAudio: true,
+        };
+      }
+      await persistCardUpdate(updated);
+      showToast('Đã tải lên MP3 thành công cho câu ví dụ!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tải file MP3 cho câu ví dụ');
+    } finally {
+      setUploadingExIdx(null);
+      e.target.value = '';
+    }
+  };
+
   const handleSpeak = async (e: React.MouseEvent, textToSpeak: string, audioUrl?: string | null) => {
     e.stopPropagation();
+    if (!audioUrl) {
+      // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của google nếu chưa có file mp3 hoàn chỉnh
+      alert('Mục này chưa có file MP3 phát âm hoàn chỉnh. Hãy tải file MP3 lên bằng nút Tải MP3 bên cạnh.');
+      return;
+    }
     setIsPlayingAudio(true);
     try {
-      if (audioUrl) {
-        await playAudioUrl(audioUrl, textToSpeak);
-      } else {
-        await playTTS(textToSpeak);
-      }
+      await playAudioUrl(audioUrl, textToSpeak);
     } catch (err) {
       console.warn("Audio playback error:", err);
     } finally {
@@ -192,13 +375,13 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     const info = [
-      `【${card.kanji || card.reading}】`,
-      card.reading && `Cách đọc: ${card.reading}`,
-      card.romaji && `Romaji: ${card.romaji}`,
-      card.sinoVietnamese && `Hán Việt: ${card.sinoVietnamese}`,
-      card.wordType && `Loại từ: ${card.wordType}`,
-      card.meaning && `Ý nghĩa: ${card.meaning}`,
-      card.kanjiExplanation && `\n--- Giải thích chi tiết ---\n${cleanMarkdownForDisplay(card.kanjiExplanation)}`,
+      `【${currentCard.kanji || currentCard.reading}】`,
+      currentCard.reading && `Cách đọc: ${currentCard.reading}`,
+      currentCard.romaji && `Romaji: ${currentCard.romaji}`,
+      currentCard.sinoVietnamese && `Hán Việt: ${currentCard.sinoVietnamese}`,
+      currentCard.wordType && `Loại từ: ${currentCard.wordType}`,
+      currentCard.meaning && `Ý nghĩa: ${currentCard.meaning}`,
+      currentCard.kanjiExplanation && `\n--- Giải thích chi tiết ---\n${cleanMarkdownForDisplay(currentCard.kanjiExplanation)}`,
     ].filter(Boolean).join('\n');
 
     navigator.clipboard.writeText(info).then(() => {
@@ -232,19 +415,19 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
               <BookOpen className="w-4 h-4 text-theme-accent" />
               Chi Tiết Từ Vựng
             </span>
-            {card.sinoVietnamese && (
+            {currentCard.sinoVietnamese && (
               <span className="text-[10px] font-bold text-theme-inverted bg-theme-accent px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
-                {card.sinoVietnamese}
+                {currentCard.sinoVietnamese}
               </span>
             )}
-            {card.wordType && (
+            {currentCard.wordType && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-theme-subtle bg-theme-base-alt text-theme-primary/80">
-                {card.wordType}
+                {currentCard.wordType}
               </span>
             )}
-            {matchedForm && (
+            {currentMatchedForm && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-theme-accent/40 bg-theme-accent/15 text-theme-accent">
-                Dạng chia: {matchedForm.name}
+                Dạng chia: {currentMatchedForm.name}
               </span>
             )}
           </div>
@@ -281,45 +464,88 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 custom-scrollbar">
+          {successToast && (
+            <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs px-3.5 py-2.5 rounded-xl font-medium flex items-center gap-2 animate-in fade-in duration-200">
+              <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500" />
+              <span>{successToast}</span>
+            </div>
+          )}
+
           {/* Hero Section */}
           <div id="word-detail-hero-section" className="bg-theme-base-alt border border-theme-subtle rounded-xl p-5 sm:p-6 shadow-inner flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
             <div className="flex-1 text-center sm:text-left space-y-2">
               <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif text-theme-primary font-bold tracking-tight">
-                {card.kanji || card.reading}
+                {currentCard.kanji || currentCard.reading}
               </h3>
               <div className="flex items-center justify-center sm:justify-start gap-3 flex-wrap">
-                {card.reading && (
+                {currentCard.reading && (
                   <span className="text-lg sm:text-xl font-serif font-medium text-theme-accent">
-                    {card.reading}
+                    {currentCard.reading}
                   </span>
                 )}
-                {card.romaji && (
+                {currentCard.romaji && (
                   <span className="text-sm font-sans text-theme-primary/70 italic">
-                    ({card.romaji})
+                    ({currentCard.romaji})
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-1 shrink-0">
-              <button
-                id="word-detail-audio-btn"
-                onClick={(e) => handleSpeak(e, text || card.kanji || card.reading, matchedForm?.audioUrl || card.audioUrl)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs ${
-                  isPlayingAudio
-                    ? 'bg-theme-accent text-theme-inverted ring-2 ring-theme-accent/50 scale-105'
-                    : (matchedForm?.audioUrl || card.audioUrl)
-                      ? 'bg-theme-accent text-theme-inverted hover:brightness-110 hover:scale-105 active:scale-95'
-                      : 'bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25 hover:scale-105 active:scale-95'
-                }`}
-                title={(matchedForm?.audioUrl || card.audioUrl) ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
-              >
-                <Volume2 className="w-4 h-4" />
-                <span>{(matchedForm?.audioUrl || card.audioUrl) ? "Nghe MP3 chuẩn" : "Phát âm"}</span>
-              </button>
-              {(matchedForm?.audioUrl || card.audioUrl) && (
+            <div className="flex flex-col items-center sm:items-end gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+                {/* Audio button */}
+                <button
+                  id="word-detail-audio-btn"
+                  onClick={(e) => handleSpeak(e, text || currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs ${
+                    isPlayingAudio
+                      ? 'bg-theme-accent text-theme-inverted ring-2 ring-theme-accent/50 scale-105'
+                      : currentCard.audioUrl
+                        ? 'bg-theme-accent text-theme-inverted hover:brightness-110 hover:scale-105 active:scale-95'
+                        : 'bg-theme-subtle/40 text-theme-primary/50 hover:bg-theme-subtle/60'
+                  }`}
+                  title={currentCard.audioUrl ? "Nghe file âm thanh MP3 chuẩn" : "Chưa có file MP3 - hãy bấm Tải MP3"}
+                >
+                  <Volume2 className="w-4 h-4" />
+                  <span>{currentCard.audioUrl ? "Nghe MP3 chuẩn" : "Chưa có MP3"}</span>
+                </button>
+
+                {/* Direct MP3 Upload Button */}
+                <label
+                  id="word-detail-upload-mp3-btn"
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-xs border ${
+                    uploadingMainAudio
+                      ? 'opacity-70 pointer-events-none bg-theme-base-alt border-theme-subtle text-theme-primary'
+                      : currentCard.audioUrl
+                        ? 'border-theme-subtle bg-theme-panel text-theme-primary/80 hover:text-theme-accent hover:border-theme-accent/50 hover:scale-105 active:scale-95'
+                        : 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 hover:scale-105 active:scale-95'
+                  }`}
+                  title={currentCard.audioUrl ? "Tải lên file MP3 mới thay thế" : "Tải file âm thanh MP3 trực tiếp cho từ vựng này"}
+                >
+                  {uploadingMainAudio ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                      <span>Đang tải...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>{currentCard.audioUrl ? "Đổi MP3" : "Tải MP3"}</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    disabled={uploadingMainAudio}
+                    onChange={handleUploadCardMainAudio}
+                  />
+                </label>
+              </div>
+
+              {currentCard.audioUrl && (
                 <span className="text-[8px] font-bold text-theme-accent uppercase tracking-widest">
-                  Âm thanh chất lượng cao
+                  Âm thanh chất lượng cao (MP3)
                 </span>
               )}
             </div>
@@ -332,61 +558,84 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
               <span>Ý nghĩa tiếng Việt</span>
             </span>
             <div className="text-lg sm:text-xl font-medium text-theme-primary leading-relaxed bg-theme-base-alt/60 p-4 rounded-xl border border-theme-subtle">
-              {card.meaning}
+              {currentCard.meaning}
             </div>
           </div>
 
           {/* Matched Conjugation Form (if any) */}
-          {matchedForm && (
+          {currentMatchedForm && (
             <div id="word-detail-matched-form-section" className="p-4 rounded-xl bg-theme-accent/10 border border-theme-accent/30 flex flex-col gap-2">
               <span className="text-xs uppercase font-bold text-theme-accent tracking-wider flex items-center gap-1.5">
-                <span>Thể chia xuất hiện trong câu: {matchedForm.name}</span>
+                <span>Thể chia xuất hiện trong câu: {currentMatchedForm.name}</span>
               </span>
               <div className="flex items-baseline justify-between gap-3 flex-wrap">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-2xl font-serif font-bold text-theme-primary">{matchedForm.value}</span>
-                  {matchedForm.reading && <span className="text-sm font-serif text-theme-accent">{matchedForm.reading}</span>}
-                  {matchedForm.romaji && <span className="text-xs text-theme-primary/60 italic font-sans">({matchedForm.romaji})</span>}
+                  <span className="text-2xl font-serif font-bold text-theme-primary">{currentMatchedForm.value}</span>
+                  {currentMatchedForm.reading && <span className="text-sm font-serif text-theme-accent">{currentMatchedForm.reading}</span>}
+                  {currentMatchedForm.romaji && <span className="text-xs text-theme-primary/60 italic font-sans">({currentMatchedForm.romaji})</span>}
                 </div>
-                <button
-                  onClick={(e) => handleSpeak(e, matchedForm.value || matchedForm.reading || '', matchedForm.audioUrl)}
-                  className="p-2 text-theme-accent hover:bg-theme-accent/15 rounded-lg cursor-pointer transition-colors"
-                  title="Nghe dạng chia này"
-                >
-                  <Volume2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => handleSpeak(e, currentMatchedForm.value || currentMatchedForm.reading || '', currentMatchedForm.audioUrl)}
+                    className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                      currentMatchedForm.audioUrl
+                        ? 'text-theme-accent hover:bg-theme-accent/15'
+                        : 'text-theme-primary/40 hover:bg-theme-subtle/50'
+                    }`}
+                    title={currentMatchedForm.audioUrl ? "Nghe dạng chia này" : "Chưa có file MP3"}
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                  <label
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-lg cursor-pointer transition-colors"
+                    title="Tải MP3 cho dạng chia này"
+                  >
+                    {uploadingFormKey === String(currentMatchedForm.name) ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      disabled={uploadingFormKey !== null}
+                      onChange={(e) => handleUploadFormAudio(currentMatchedForm.name, e)}
+                    />
+                  </label>
+                </div>
               </div>
-              {matchedForm.meaning && (
-                <p className="text-sm text-theme-primary/90 mt-0.5">{matchedForm.meaning}</p>
+              {currentMatchedForm.meaning && (
+                <p className="text-sm text-theme-primary/90 mt-0.5">{currentMatchedForm.meaning}</p>
               )}
             </div>
           )}
 
           {/* Detailed Explanation / Kanji Origin */}
-          {card.kanjiExplanation && (
+          {currentCard.kanjiExplanation && (
             <div id="word-detail-explanation-section" className="p-4 sm:p-5 rounded-xl bg-theme-base-alt border border-theme-subtle space-y-2">
               <span className="text-xs uppercase tracking-widest font-bold text-theme-accent flex items-center gap-1.5">
                 <Lightbulb className="w-4 h-4" />
                 <span>Giải thích chi tiết & Phân tích chữ Hán</span>
               </span>
               <div className="text-sm sm:text-base text-theme-primary leading-relaxed whitespace-pre-wrap break-words font-sans">
-                <Markdown>{cleanMarkdownForDisplay(card.kanjiExplanation)}</Markdown>
+                <Markdown>{cleanMarkdownForDisplay(currentCard.kanjiExplanation)}</Markdown>
               </div>
             </div>
           )}
 
           {/* Conjugation Forms Grid */}
-          {card.forms && card.forms.length > 0 && (
+          {currentCard.forms && currentCard.forms.length > 0 && (
             <div id="word-detail-conjugations-section" className="space-y-2.5">
               <span className="text-xs uppercase tracking-widest font-bold text-theme-primary/70 flex items-center gap-1.5">
-                <span>Các dạng biến thể / Thể chia ({card.forms.length})</span>
+                <span>Các dạng biến thể / Thể chia ({currentCard.forms.length})</span>
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {card.forms.map((form) => (
+                {currentCard.forms.map((form, fIdx) => (
                   <div
-                    key={form.id || form.name}
+                    key={form.id || form.name || fIdx}
                     className={`p-3 rounded-xl border flex items-center justify-between gap-2.5 transition-all ${
-                      matchedForm?.name === form.name
+                      currentMatchedForm?.name === form.name
                         ? 'border-theme-accent bg-theme-accent/15 shadow-xs'
                         : 'border-theme-subtle bg-theme-base-alt/50 hover:border-theme-accent/40'
                     }`}
@@ -409,13 +658,36 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                         <p className="text-xs text-theme-primary/70 truncate">{form.meaning}</p>
                       )}
                     </div>
-                    <button
-                      onClick={(e) => handleSpeak(e, form.value || form.reading || '', form.audioUrl)}
-                      className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-lg cursor-pointer shrink-0 transition-colors"
-                      title="Nghe phát âm dạng chia"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => handleSpeak(e, form.value || form.reading || '', form.audioUrl)}
+                        className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                          form.audioUrl
+                            ? 'text-theme-accent hover:bg-theme-accent/15'
+                            : 'text-theme-primary/40 hover:bg-theme-subtle/50'
+                        }`}
+                        title={form.audioUrl ? "Nghe phát âm dạng chia" : "Chưa có file MP3"}
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+                      <label
+                        className="p-1.5 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-lg cursor-pointer transition-colors"
+                        title={form.audioUrl ? "Đổi file MP3 thể chia này" : "Tải file MP3 thể chia này"}
+                      >
+                        {uploadingFormKey === String(fIdx) ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          disabled={uploadingFormKey !== null}
+                          onChange={(e) => handleUploadFormAudio(fIdx, e)}
+                        />
+                      </label>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -423,15 +695,15 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
           )}
 
           {/* Examples */}
-          {(card.examples?.length || card.example) && (
+          {(currentCard.examples?.length || currentCard.example) && (
             <div id="word-detail-examples-section" className="space-y-2.5">
               <span className="text-xs uppercase tracking-widest font-bold text-theme-primary/70 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-theme-accent" />
                 <span>Câu ví dụ minh họa</span>
               </span>
               <div className="space-y-2.5">
-                {card.examples && card.examples.length > 0 ? (
-                  card.examples.map((ex, idx) => (
+                {currentCard.examples && currentCard.examples.length > 0 ? (
+                  currentCard.examples.map((ex, idx) => (
                     <div
                       key={ex.id || idx}
                       className="p-4 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-start justify-between gap-3 text-left shadow-xs"
@@ -449,34 +721,80 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                           </p>
                         )}
                       </div>
-                      <button
-                        onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
-                        className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-xl cursor-pointer shrink-0 transition-colors"
-                        title="Nghe câu ví dụ"
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
+                          className={`p-2 rounded-xl cursor-pointer transition-colors ${
+                            ex.audioUrl
+                              ? 'text-theme-accent hover:bg-theme-accent/15'
+                              : 'text-theme-primary/40 hover:bg-theme-subtle/50'
+                          }`}
+                          title={ex.audioUrl ? "Nghe câu ví dụ" : "Chưa có file MP3"}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                        <label
+                          className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-xl cursor-pointer transition-colors"
+                          title={ex.audioUrl ? "Đổi file MP3 cho câu ví dụ này" : "Tải lên file MP3 cho câu ví dụ này"}
+                        >
+                          {uploadingExIdx === idx ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            className="hidden"
+                            disabled={uploadingExIdx !== null}
+                            onChange={(e) => handleUploadExampleAudio(idx, e)}
+                          />
+                        </label>
+                      </div>
                     </div>
                   ))
-                ) : card.example ? (
+                ) : currentCard.example ? (
                   <div className="p-4 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-start justify-between gap-3 text-left shadow-xs">
                     <div className="space-y-1 min-w-0">
                       <p className="font-serif text-base sm:text-lg text-theme-primary font-medium leading-relaxed">
-                        {card.example}
+                        {currentCard.example}
                       </p>
-                      {card.exampleTranslation && (
+                      {currentCard.exampleTranslation && (
                         <p className="text-xs sm:text-sm text-theme-primary/80 italic pt-1 border-t border-theme-subtle/50">
-                          {card.exampleTranslation}
+                          {currentCard.exampleTranslation}
                         </p>
                       )}
                     </div>
-                    <button
-                      onClick={(e) => handleSpeak(e, card.example!, card.audioUrl)}
-                      className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-xl cursor-pointer shrink-0 transition-colors"
-                      title="Nghe câu ví dụ"
-                    >
-                      <Volume2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
+                        className={`p-2 rounded-xl cursor-pointer transition-colors ${
+                          currentCard.audioUrl
+                            ? 'text-theme-accent hover:bg-theme-accent/15'
+                            : 'text-theme-primary/40 hover:bg-theme-subtle/50'
+                        }`}
+                        title={currentCard.audioUrl ? "Nghe câu ví dụ" : "Chưa có file MP3"}
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
+                      <label
+                        className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-xl cursor-pointer transition-colors"
+                        title="Tải file MP3 cho câu ví dụ"
+                      >
+                        {uploadingExIdx === 0 ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          disabled={uploadingExIdx !== null}
+                          onChange={(e) => handleUploadExampleAudio(0, e)}
+                        />
+                      </label>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -496,8 +814,8 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   onClose();
-                  onEditCard(card);
-                  window.dispatchEvent(new CustomEvent('editCard', { detail: card }));
+                  onEditCard(currentCard);
+                  window.dispatchEvent(new CustomEvent('editCard', { detail: currentCard }));
                 }}
                 className="px-4 py-2 rounded-xl text-xs font-bold border border-theme-subtle hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
               >
