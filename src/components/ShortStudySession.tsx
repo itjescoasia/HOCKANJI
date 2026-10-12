@@ -1,7 +1,7 @@
 import { playTTS , playAudioUrl} from '../utils/playTTS';
 import React, { useState } from 'react';
 import { KanjiCard } from '../types';
-import { ArrowLeft, Volume2 } from 'lucide-react';
+import { ArrowLeft, Volume2, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ShortStudySessionProps {
@@ -141,19 +141,31 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
       )}
 
       {isMeaningShown && (
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <button 
-             onClick={onForgot}
-             className="flex-1 bg-theme-panel border border-red-500/30 text-red-500 hover:bg-red-500/10 px-6 py-4 rounded font-bold uppercase tracking-widest transition-all"
-          >
-             Quên (-1)
-          </button>
-          <button 
-             onClick={onRemember}
-             className="flex-1 bg-theme-accent border border-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-4 rounded font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#c5a059]/10"
-          >
-             Nhớ (+1)
-          </button>
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-center">
+            <button
+              onClick={handleFlip}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Lật lại mặt trước thẻ"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
+              <span>Lật lại mặt trước (Ẩn ý nghĩa)</span>
+            </button>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button 
+               onClick={onForgot}
+               className="flex-1 bg-theme-panel border border-red-500/30 text-red-500 hover:bg-red-500/10 px-6 py-4 rounded font-bold uppercase tracking-widest transition-all"
+            >
+               Quên (-1)
+            </button>
+            <button 
+               onClick={onRemember}
+               className="flex-1 bg-theme-accent border border-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-4 rounded font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#c5a059]/10"
+            >
+               Nhớ (+1)
+            </button>
+          </div>
         </div>
       )}
     </motion.div>

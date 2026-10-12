@@ -882,6 +882,13 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           setShowAnswer(true);
         }
       } else {
+        // Back face: Space or Backspace flips back to front
+        if (e.key === ' ' || e.key === 'Backspace') {
+          e.preventDefault();
+          setShowAnswer(false);
+          return;
+        }
+
         // Back face: 4-tier scientific SRS rating
         if (e.key === '1' || e.key === 'ArrowLeft') {
           e.preventDefault();
@@ -1328,9 +1335,21 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
       >
-        <span className="absolute top-4 left-4 text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
-          {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
-        </span>
+        <div className="absolute top-4 left-4 flex items-center gap-2 z-30">
+          <span className="text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
+            {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
+          </span>
+          <button
+            id="btn-flip-sentence-back"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowAnswer(false); }}
+            className="flex items-center gap-1 px-2 py-1 rounded-md border border-theme-subtle text-theme-primary/70 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-[11px] font-semibold cursor-pointer shadow-xs active:scale-95"
+            title="Lật lại mặt trước câu hỏi (Phím Space)"
+          >
+            <RotateCcw className="w-3 h-3 text-theme-accent" />
+            <span>Lật lại mặt trước</span>
+          </button>
+        </div>
         
         <button
           id="btn-edit-sentence-back"
@@ -1497,63 +1516,82 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 {!isEditing && (
   <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3 w-full max-w-2xl sticky bottom-2 z-30 bg-theme-base-alt/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-theme-subtle shadow-xl">
     {showAnswer ? (
-      /* 4-tier scientific SRS rating buttons */
-      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-[620px]">
-        <button
-          id="btn-sentence-forgot"
-          type="button"
-          onClick={() => handleGrade('forgot')}
-          className="border-2 border-red-500/60 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
-          title="Phím tắt: 1 hoặc Mũi tên trái"
-        >
-          <div className="flex items-center gap-1">
-            <X className="w-4 h-4 stroke-[3]" />
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Quên (1)</span>
-          </div>
-          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại trong phiên</span>
-        </button>
+      /* 4-tier scientific SRS rating buttons with flip back option */
+      <div className="flex-1 flex flex-col gap-2 max-w-[620px]">
+        <div className="flex items-center justify-between">
+          <button
+            id="btn-sentence-flip-back-controls"
+            type="button"
+            onClick={() => setShowAnswer(false)}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+            title="Lật lại mặt trước câu hỏi (Phím Space)"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
+            <span>Lật lại mặt trước</span>
+            <kbd className="font-mono text-[9px] bg-theme-base-alt px-1 py-0.5 rounded border border-theme-subtle">Space</kbd>
+          </button>
+          <span className="text-[11px] text-theme-primary/50 italic hidden sm:inline">
+            Chọn đánh giá để sang câu kế tiếp:
+          </span>
+        </div>
 
-        <button
-          id="btn-sentence-hard"
-          type="button"
-          onClick={() => handleGrade('hard')}
-          className="border-2 border-amber-500/60 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
-          title="Phím tắt: 2"
-        >
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4 stroke-[2.5]" />
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Khó (2)</span>
-          </div>
-          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại sau 1 ngày</span>
-        </button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full">
+          <button
+            id="btn-sentence-forgot"
+            type="button"
+            onClick={() => handleGrade('forgot')}
+            className="border-2 border-red-500/60 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            title="Phím tắt: 1 hoặc Mũi tên trái"
+          >
+            <div className="flex items-center gap-1">
+              <X className="w-4 h-4 stroke-[3]" />
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Quên (1)</span>
+            </div>
+            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại trong phiên</span>
+          </button>
 
-        <button
-          id="btn-sentence-good"
-          type="button"
-          onClick={() => handleGrade('good')}
-          className="border-2 border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
-          title="Phím tắt: 3 hoặc Mũi tên phải"
-        >
-          <div className="flex items-center gap-1">
-            <Check className="w-4 h-4 stroke-[3]" />
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Nhớ tốt (3)</span>
-          </div>
-          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 3-6 ngày</span>
-        </button>
+          <button
+            id="btn-sentence-hard"
+            type="button"
+            onClick={() => handleGrade('hard')}
+            className="border-2 border-amber-500/60 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            title="Phím tắt: 2"
+          >
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4 stroke-[2.5]" />
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Khó (2)</span>
+            </div>
+            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại sau 1 ngày</span>
+          </button>
 
-        <button
-          id="btn-sentence-easy"
-          type="button"
-          onClick={() => handleGrade('easy')}
-          className="border-2 border-indigo-500/60 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
-          title="Phím tắt: 4"
-        >
-          <div className="flex items-center gap-1">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Dễ dàng (4)</span>
-          </div>
-          <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 10-20 ngày</span>
-        </button>
+          <button
+            id="btn-sentence-good"
+            type="button"
+            onClick={() => handleGrade('good')}
+            className="border-2 border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            title="Phím tắt: 3 hoặc Mũi tên phải"
+          >
+            <div className="flex items-center gap-1">
+              <Check className="w-4 h-4 stroke-[3]" />
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Nhớ tốt (3)</span>
+            </div>
+            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 3-6 ngày</span>
+          </button>
+
+          <button
+            id="btn-sentence-easy"
+            type="button"
+            onClick={() => handleGrade('easy')}
+            className="border-2 border-indigo-500/60 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            title="Phím tắt: 4"
+          >
+            <div className="flex items-center gap-1">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Dễ dàng (4)</span>
+            </div>
+            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 10-20 ngày</span>
+          </button>
+        </div>
       </div>
     ) : (
       <button
