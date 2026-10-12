@@ -1932,9 +1932,11 @@ function ConversationVocabReview({
       </div>
       
       <div 
-        className="w-full aspect-[4/3] sm:aspect-[16/9] mb-10 cursor-pointer"
+        className={`w-full aspect-[4/3] sm:aspect-[16/9] mb-10 ${!isFlipped ? 'cursor-pointer' : ''}`}
         style={{ perspective: "1000px" }}
-        onClick={() => setIsFlipped(!isFlipped)}
+        onClick={() => {
+          if (!isFlipped) setIsFlipped(true);
+        }}
       >
         <motion.div
           className="w-full h-full relative"
@@ -2009,42 +2011,26 @@ function ConversationVocabReview({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex flex-col gap-3 w-full"
+              className="flex gap-4 w-full h-14"
             >
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFlipped(false);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Lật lại mặt trước thẻ"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
-                  <span>Lật lại mặt trước (Ẩn đáp án)</span>
-                </button>
-              </div>
-              <div className="flex gap-4 w-full h-14">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleScore(-1);
-                  }}
-                  className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-3 px-6 uppercase tracking-widest text-sm transition-all rounded-xl hover:scale-105 active:scale-95 shadow-sm"
-                >
-                  Quên
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleScore(1);
-                  }}
-                  className="flex-1 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-3 px-6 uppercase tracking-widest text-sm transition-all rounded-xl hover:scale-105 active:scale-95 shadow-md"
-                >
-                  Nhớ
-                </button>
-              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleScore(-1);
+                }}
+                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-3 px-6 uppercase tracking-widest text-sm transition-all rounded-xl hover:scale-105 active:scale-95 shadow-sm"
+              >
+                Quên
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleScore(1);
+                }}
+                className="flex-1 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold py-3 px-6 uppercase tracking-widest text-sm transition-all rounded-xl hover:scale-105 active:scale-95 shadow-md"
+              >
+                Nhớ
+              </button>
             </motion.div>
           ) : (
              <motion.div 

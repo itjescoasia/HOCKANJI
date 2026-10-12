@@ -220,16 +220,7 @@ export default function ReviewSession({
         if (!showAnswer) {
           e.preventDefault();
           setShowAnswer(true);
-        } else if (e.key === ' ') {
-          e.preventDefault();
-          setShowAnswer(false);
         }
-        return;
-      }
-
-      if (e.key === 'Backspace' && showAnswer) {
-        e.preventDefault();
-        setShowAnswer(false);
         return;
       }
 
@@ -666,11 +657,13 @@ export default function ReviewSession({
                 <div 
                   onClick={() => {
                     if (!(isFreeStudy && exerciseType !== 'flip')) {
-                      setShowAnswer(!showAnswer);
+                      if (!showAnswer) {
+                        setShowAnswer(true);
+                      }
                     }
                   }}
                   className={`w-full min-h-[380px] sm:min-h-[440px] max-h-[76vh] md:max-h-[82vh] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl shadow-black/5 dark:shadow-black/40 overflow-hidden flex flex-col relative transition-all duration-300 ${
-                    !(isFreeStudy && exerciseType !== 'flip') 
+                    !(isFreeStudy && exerciseType !== 'flip') && !showAnswer
                       ? 'cursor-pointer hover:border-theme-accent/40' 
                       : ''
                   }`}
@@ -682,20 +675,6 @@ export default function ReviewSession({
                       <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent">
                         {showAnswer ? 'Mặt sau (Đáp án & Chi tiết)' : 'Mặt trước (Từ vựng)'}
                       </span>
-                      {showAnswer && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowAnswer(false);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-theme-base-alt hover:bg-theme-hover border border-theme-subtle text-theme-primary/80 hover:text-theme-accent text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                          title="Lật lại mặt trước (Ẩn đáp án)"
-                        >
-                          <RotateCcw className="w-3 h-3 text-theme-accent" />
-                          <span>Lật lại mặt trước</span>
-                        </button>
-                      )}
                       {currentCard.wordType && (
                         <span className={getWordTypeBadgeStyle(currentCard.wordType, "text-[10px] px-2.5 py-0.5 rounded-full font-medium")}>
                           {currentCard.wordType}
@@ -1159,22 +1138,6 @@ export default function ReviewSession({
                           </div>
                         )}
 
-                        {/* Flip back button at bottom of card back body */}
-                        <div className="w-full flex justify-center pt-3 pb-1 border-t border-theme-subtle/40">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowAnswer(false);
-                            }}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-theme-base-alt hover:bg-theme-hover border border-theme-subtle text-theme-primary/80 hover:text-theme-accent text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                            title="Lật lại mặt trước (Ẩn đáp án)"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
-                            <span>Lật lại mặt trước (Xem lại từ vựng)</span>
-                          </button>
-                        </div>
-
                       </div>
                     )}
 
@@ -1257,121 +1220,88 @@ export default function ReviewSession({
               </button>
             )
           ) : isFreeStudy ? (
-            /* Free Study 2-button choice with Flip Back Option */
-            <div className="flex flex-col gap-2.5 w-full">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAnswer(false)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Lật lại mặt trước (Ẩn đáp án) - Phím Space"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
-                  <span>Lật lại mặt trước</span>
-                  <kbd className="font-mono text-[10px] bg-theme-base-alt px-1.5 py-0.5 rounded border border-theme-subtle font-bold">Space</kbd>
-                </button>
-              </div>
+            /* Free Study 2-button choice */
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <button 
+                onClick={handleFreeStudyForgot}
+                className="py-4 px-4 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                  <RotateCcw className="w-4 h-4 group-hover:-rotate-45 transition-transform" />
+                  <span>Cần ôn lại</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/20">1</kbd>
+                </div>
+                <span className="text-[11px] opacity-75">Sẽ lặp lại sớm trong phiên này</span>
+              </button>
 
-              <div className="grid grid-cols-2 gap-3 w-full">
-                <button 
-                  onClick={handleFreeStudyForgot}
-                  className="py-4 px-4 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-                    <RotateCcw className="w-4 h-4 group-hover:-rotate-45 transition-transform" />
-                    <span>Cần ôn lại</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/20">1</kbd>
-                  </div>
-                  <span className="text-[11px] opacity-75">Sẽ lặp lại sớm trong phiên này</span>
-                </button>
-
-                <button 
-                  onClick={handleFreeStudyRemember}
-                  className="py-4 px-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-                    <CheckCircle2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    <span>Đã nhớ từ này</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20">2</kbd>
-                  </div>
-                  <span className="text-[11px] opacity-75">Ghi nhận tiến độ học nhồi</span>
-                </button>
-              </div>
+              <button 
+                onClick={handleFreeStudyRemember}
+                className="py-4 px-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                  <CheckCircle2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span>Đã nhớ từ này</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20">2</kbd>
+                </div>
+                <span className="text-[11px] opacity-75">Ghi nhận tiến độ học nhồi</span>
+              </button>
             </div>
           ) : (
-            /* Standard SRS 4-Button Response Grid with Flip Back Option */
-            <div className="flex flex-col gap-2.5 w-full">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAnswer(false)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Lật lại mặt trước (Ẩn đáp án) - Phím Space"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
-                  <span>Lật lại mặt trước</span>
-                  <kbd className="font-mono text-[10px] bg-theme-base-alt px-1.5 py-0.5 rounded border border-theme-subtle font-bold">Space</kbd>
-                </button>
-                <span className="text-[11px] text-theme-primary/50 italic hidden sm:inline">
-                  Đánh giá mức độ nhớ:
-                </span>
-              </div>
+            /* Standard SRS 4-Button Response Grid */
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full">
+              
+              {/* Grade: Forgot (1) */}
+              <button 
+                onClick={() => handleGrade('forgot')}
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
+                  <span>Lặp lại</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/20">1</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-red-400/80">&lt; 10 phút</span>
+              </button>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full">
-                
-                {/* Grade: Forgot (1) */}
-                <button 
-                  onClick={() => handleGrade('forgot')}
-                  className="py-3 sm:py-3.5 px-3 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
-                    <span>Lặp lại</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/20">1</kbd>
-                  </div>
-                  <span className="text-[10px] font-mono text-red-400/80">&lt; 10 phút</span>
-                </button>
+              {/* Grade: Hard (2) */}
+              <button 
+                onClick={() => handleGrade('hard')}
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15 text-amber-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <Flame className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Khó</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">2</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-amber-400/80">1 - 2 ngày</span>
+              </button>
 
-                {/* Grade: Hard (2) */}
-                <button 
-                  onClick={() => handleGrade('hard')}
-                  className="py-3 sm:py-3.5 px-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15 text-amber-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <Flame className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                    <span>Khó</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">2</kbd>
-                  </div>
-                  <span className="text-[10px] font-mono text-amber-400/80">1 - 2 ngày</span>
-                </button>
+              {/* Grade: Good (3) */}
+              <button 
+                onClick={() => handleGrade('good')}
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <CheckCircle2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Tốt</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">3</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-500/80">3 - 4 ngày</span>
+              </button>
 
-                {/* Grade: Good (3) */}
-                <button 
-                  onClick={() => handleGrade('good')}
-                  className="py-3 sm:py-3.5 px-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                    <span>Tốt</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">3</kbd>
-                  </div>
-                  <span className="text-[10px] font-mono text-emerald-500/80">3 - 4 ngày</span>
-                </button>
+              {/* Grade: Easy (4) */}
+              <button 
+                onClick={() => handleGrade('easy')}
+                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                  <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Rất dễ</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20">4</kbd>
+                </div>
+                <span className="text-[10px] font-mono text-sky-400/80">6 - 7 ngày</span>
+              </button>
 
-                {/* Grade: Easy (4) */}
-                <button 
-                  onClick={() => handleGrade('easy')}
-                  className="py-3 sm:py-3.5 px-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                    <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                    <span>Rất dễ</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20">4</kbd>
-                  </div>
-                  <span className="text-[10px] font-mono text-sky-400/80">6 - 7 ngày</span>
-                </button>
-
-              </div>
             </div>
           )}
         </div>
@@ -1432,8 +1362,8 @@ export default function ReviewSession({
 
             <div className="flex flex-col gap-2.5 text-xs">
               <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
-                <span className="text-theme-primary/80">Lật thẻ xem đáp án / Lật lại mặt trước</span>
-                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">Space / Enter / Backspace</kbd>
+                <span className="text-theme-primary/80">Lật thẻ xem đáp án</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">Space / Enter</kbd>
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
                 <span className="text-theme-primary/80">Đánh giá: Chưa nhớ / Lặp lại</span>

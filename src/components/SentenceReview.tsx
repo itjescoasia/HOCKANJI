@@ -882,13 +882,6 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           setShowAnswer(true);
         }
       } else {
-        // Back face: Space or Backspace flips back to front
-        if (e.key === ' ' || e.key === 'Backspace') {
-          e.preventDefault();
-          setShowAnswer(false);
-          return;
-        }
-
         // Back face: 4-tier scientific SRS rating
         if (e.key === '1' || e.key === 'ArrowLeft') {
           e.preventDefault();
@@ -1335,21 +1328,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
       >
-        <div className="absolute top-4 left-4 flex items-center gap-2 z-30">
-          <span className="text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
-            {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
-          </span>
-          <button
-            id="btn-flip-sentence-back"
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setShowAnswer(false); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-md border border-theme-subtle text-theme-primary/70 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-[11px] font-semibold cursor-pointer shadow-xs active:scale-95"
-            title="Lật lại mặt trước câu hỏi (Phím Space)"
-          >
-            <RotateCcw className="w-3 h-3 text-theme-accent" />
-            <span>Lật lại mặt trước</span>
-          </button>
-        </div>
+        <span className="absolute top-4 left-4 text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
+          {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
+        </span>
         
         <button
           id="btn-edit-sentence-back"
@@ -1516,26 +1497,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 {!isEditing && (
   <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3 w-full max-w-2xl sticky bottom-2 z-30 bg-theme-base-alt/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-theme-subtle shadow-xl">
     {showAnswer ? (
-      /* 4-tier scientific SRS rating buttons with flip back option */
-      <div className="flex-1 flex flex-col gap-2 max-w-[620px]">
-        <div className="flex items-center justify-between">
-          <button
-            id="btn-sentence-flip-back-controls"
-            type="button"
-            onClick={() => setShowAnswer(false)}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Lật lại mặt trước câu hỏi (Phím Space)"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-theme-accent" />
-            <span>Lật lại mặt trước</span>
-            <kbd className="font-mono text-[9px] bg-theme-base-alt px-1 py-0.5 rounded border border-theme-subtle">Space</kbd>
-          </button>
-          <span className="text-[11px] text-theme-primary/50 italic hidden sm:inline">
-            Chọn đánh giá để sang câu kế tiếp:
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full">
+      /* 4-tier scientific SRS rating buttons */
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-[620px]">
           <button
             id="btn-sentence-forgot"
             type="button"
@@ -1592,7 +1555,6 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 10-20 ngày</span>
           </button>
         </div>
-      </div>
     ) : (
       <button
         id="btn-flip-card"
