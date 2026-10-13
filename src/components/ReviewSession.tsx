@@ -30,7 +30,8 @@ import {
   Zap,
   Repeat,
   Upload,
-  Loader2
+  Loader2,
+  Copy
 } from 'lucide-react';
 import { renderExampleHighlight, RelatedHighlight, HighlightVietnamese, HighlightProvider } from '../utils/highlight';
 import ReviewEditForm from './ReviewEditForm';
@@ -92,6 +93,16 @@ export default function ReviewSession({
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleForm, setEditExampleForm] = useState<{ sentence: string; translation?: string; reading?: string; romaji?: string }>({ sentence: "" });
+  const [copiedExampleId, setCopiedExampleId] = useState<string | null>(null);
+
+  const handleCopySentence = (e: React.MouseEvent, text: string, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedExampleId(id);
+    setTimeout(() => {
+      setCopiedExampleId(prev => prev === id ? null : prev);
+    }, 2000);
+  };
 
   const [readingInput, setReadingInput] = useState('');
   const [inputError, setInputError] = useState(false);
@@ -1069,6 +1080,23 @@ export default function ReviewSession({
                                                 >
                                                   <Edit3 className="w-3.5 h-3.5" />
                                                 </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => handleCopySentence(e, ex.sentence, ex.id)}
+                                                  className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                                    copiedExampleId === ex.id
+                                                      ? 'bg-emerald-500/15 text-emerald-500 font-bold'
+                                                      : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                                  }`}
+                                                  title={copiedExampleId === ex.id ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
+                                                >
+                                                  {copiedExampleId === ex.id ? (
+                                                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                                  ) : (
+                                                    <Copy className="w-3.5 h-3.5" />
+                                                  )}
+                                                </button>
                                               </div>
                                             </div>
 
@@ -1099,31 +1127,50 @@ export default function ReviewSession({
                                         <p className="text-base sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium">
                                           {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck, currentCard)}
                                         </p>
-                                        {currentCard.audioUrl ? (
+                                        <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                          {currentCard.audioUrl ? (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
+                                              className="p-2 rounded-xl text-theme-accent bg-theme-accent/15 hover:bg-theme-accent/25 cursor-pointer shadow-xs"
+                                              title="Nghe file MP3 câu ví dụ"
+                                            >
+                                              <Volume2 className="w-4 h-4" />
+                                            </button>
+                                          ) : (
+                                            <label
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="px-2.5 py-1 rounded-xl cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1 shadow-xs"
+                                              title="Tải lên file MP3 cho câu ví dụ"
+                                            >
+                                              <Upload className="w-3.5 h-3.5" />
+                                              <span>Tải MP3</span>
+                                              <input
+                                                type="file"
+                                                accept="audio/*"
+                                                className="hidden"
+                                                onChange={handleUploadCardAudio}
+                                              />
+                                            </label>
+                                          )}
+
                                           <button
                                             type="button"
-                                            onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
-                                            className="p-2 rounded-xl text-theme-accent bg-theme-accent/15 hover:bg-theme-accent/25 cursor-pointer shadow-xs"
-                                            title="Nghe file MP3 câu ví dụ"
+                                            onClick={(e) => handleCopySentence(e, currentCard.example!, 'legacy')}
+                                            className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                              copiedExampleId === 'legacy'
+                                                ? 'bg-emerald-500/15 text-emerald-500 font-bold'
+                                                : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                            }`}
+                                            title={copiedExampleId === 'legacy' ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
                                           >
-                                            <Volume2 className="w-4 h-4" />
+                                            {copiedExampleId === 'legacy' ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                            ) : (
+                                              <Copy className="w-3.5 h-3.5" />
+                                            )}
                                           </button>
-                                        ) : (
-                                          <label
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="px-2.5 py-1 rounded-xl cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1 shadow-xs"
-                                            title="Tải lên file MP3 cho câu ví dụ"
-                                          >
-                                            <Upload className="w-3.5 h-3.5" />
-                                            <span>Tải MP3</span>
-                                            <input
-                                              type="file"
-                                              accept="audio/*"
-                                              className="hidden"
-                                              onChange={handleUploadCardAudio}
-                                            />
-                                          </label>
-                                        )}
+                                        </div>
                                       </div>
                                     )}
                                     {currentCard.exampleTranslation && (

@@ -3,7 +3,7 @@ import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -54,10 +54,18 @@ interface VocabListProps {
 
 function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   if (!card.examples || card.examples.length === 0) return null;
 
   const ex = card.examples[currentIndex];
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(ex.sentence);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,15 +82,27 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
       <HighlightProvider><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
         <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
           <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
-          <div className="flex flex-col items-center gap-0.5 shrink-0 -mt-0.5">
-          <button
-            onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-            className={`p-1.5 rounded-full transition-colors opacity-100 ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
-            title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
-          >
-            <Volume2 className="w-4 h-4" />
-          </button>
-          {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+          <div className="flex items-center gap-1 shrink-0 -mt-0.5">
+            <button
+              onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
+              className={`p-1.5 rounded-full transition-colors opacity-100 ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+              title={ex.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+            >
+              <Volume2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                copied
+                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                  : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+              }`}
+              title={copied ? "Đã copy câu tiếng Nhật!" : "Copy câu tiếng Nhật"}
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+            {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
           </div>
         </div>
         {(ex.reading || ex.romaji) && (
@@ -116,6 +136,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingCard, setViewingCard] = useState<KanjiCard | null>(null);
+  const [copiedSentenceKey, setCopiedSentenceKey] = useState<string | null>(null);
+
+  const handleCopySentence = (e: React.MouseEvent, text: string, key: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedSentenceKey(key);
+    setTimeout(() => {
+      setCopiedSentenceKey(prev => prev === key ? null : prev);
+    }, 2000);
+  };
 
   // Sync initialSearchQuery if passed from parent navigation
   React.useEffect(() => {
@@ -1532,15 +1562,27 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                 {card.example && (
                                   <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
                                     <span title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
-                                    <div className="flex flex-col items-center gap-0.5 shrink-0 -mt-0.5">
-                                    <button
-                                      onClick={(e) => playAudio(e, card.example!, card.audioUrl)}
-                                      className={`p-1.5 rounded-full transition-colors opacity-100 ${card.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
-                                      title={card.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
-                                    >
-                                      <Volume2 className="w-4 h-4" />
-                                    </button>
-                                    {card.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
+                                    <div className="flex items-center gap-1 shrink-0 -mt-0.5">
+                                      <button
+                                        onClick={(e) => playAudio(e, card.example!, card.audioUrl)}
+                                        className={`p-1.5 rounded-full transition-colors opacity-100 ${card.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
+                                        title={card.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
+                                      >
+                                        <Volume2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleCopySentence(e, card.example!, `card-${card.id}-ex`)}
+                                        className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                                          copiedSentenceKey === `card-${card.id}-ex`
+                                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                                            : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                        }`}
+                                        title={copiedSentenceKey === `card-${card.id}-ex` ? "Đã copy câu tiếng Nhật!" : "Copy câu tiếng Nhật"}
+                                      >
+                                        {copiedSentenceKey === `card-${card.id}-ex` ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                      </button>
+                                      {card.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>}
                                     </div>
                                   </div>
                                 )}
@@ -1837,6 +1879,23 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
                             <button
                               type="button"
+                              onClick={(e) => handleCopySentence(e, ex.sentence, `view-ex-${idx}`)}
+                              className={`p-2 rounded-full transition-all cursor-pointer shadow-xs ${
+                                copiedSentenceKey === `view-ex-${idx}`
+                                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                  : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                              }`}
+                              title={copiedSentenceKey === `view-ex-${idx}` ? "Đã copy câu tiếng Nhật!" : "Copy câu tiếng Nhật"}
+                            >
+                              {copiedSentenceKey === `view-ex-${idx}` ? (
+                                <Check className="w-4 h-4 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onStartSentenceReview?.('VI_TO_JA', [viewingCard], true, true);
@@ -1897,6 +1956,23 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             <Volume2 className="w-4 h-4" />
                           </button>
                           {viewingCard.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase tracking-widest px-0.5">MP3</span>}
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopySentence(e, viewingCard.example!, 'view-ex-single')}
+                            className={`p-2 rounded-full transition-all cursor-pointer shadow-xs ${
+                              copiedSentenceKey === 'view-ex-single'
+                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                            }`}
+                            title={copiedSentenceKey === 'view-ex-single' ? "Đã copy câu tiếng Nhật!" : "Copy câu tiếng Nhật"}
+                          >
+                            {copiedSentenceKey === 'view-ex-single' ? (
+                              <Check className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
 
                           <label
                             className={`p-1.5 rounded-full cursor-pointer transition-all flex items-center justify-center ${

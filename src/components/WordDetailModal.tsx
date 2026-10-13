@@ -3,6 +3,7 @@ import {
   X,
   Volume2,
   Copy,
+  Check,
   CheckCircle,
   CheckCircle2,
   Circle,
@@ -45,6 +46,7 @@ export default function WordDetailModal({
 }: WordDetailModalProps) {
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [copied, setCopied] = useState(false);
+  const [copiedSentenceIdx, setCopiedSentenceIdx] = useState<number | null>(null);
   const [searchExampleText, setSearchExampleText] = useState('');
   const [activeAudioText, setActiveAudioText] = useState<string | null>(null);
 
@@ -493,6 +495,27 @@ export default function WordDetailModal({
                             title={ex.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
                           >
                             <Volume2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(ex.sentence);
+                              setCopiedSentenceIdx(idx);
+                              setTimeout(() => setCopiedSentenceIdx(null), 2000);
+                            }}
+                            className={`p-2 rounded-full border border-theme-subtle transition-all cursor-pointer ${
+                              copiedSentenceIdx === idx
+                                ? 'text-emerald-500 bg-emerald-500/15 border-emerald-500/30'
+                                : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
+                            }`}
+                            title={copiedSentenceIdx === idx ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
+                          >
+                            {copiedSentenceIdx === idx ? (
+                              <Check className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </div>
