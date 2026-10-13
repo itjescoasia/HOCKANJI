@@ -138,7 +138,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, CheckCircle, Upload, Loader2 } from 'lucide-react';
+import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, Check, CheckCircle, Upload, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { cleanMarkdownForDisplay } from './stringUtils';
 import { doc, setDoc } from 'firebase/firestore';
@@ -166,6 +166,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
   const [currentMatchedForm, setCurrentMatchedForm] = useState<any>(matchedForm);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedSentenceKey, setCopiedSentenceKey] = useState<string | null>(null);
   const [uploadingMainAudio, setUploadingMainAudio] = useState(false);
   const [uploadingFormKey, setUploadingFormKey] = useState<string | null>(null);
   const [uploadingExIdx, setUploadingExIdx] = useState<number | null>(null);
@@ -388,6 +389,17 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(err => console.error("Copy error:", err));
+  };
+
+  const handleCopySentence = (e: React.MouseEvent, text: string, key: string) => {
+    e.stopPropagation();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedSentenceKey(key);
+      setTimeout(() => {
+        setCopiedSentenceKey(prev => (prev === key ? null : prev));
+      }, 2000);
+    }).catch(err => console.error("Copy sentence error:", err));
   };
 
   const modalTarget = typeof document !== 'undefined' ? (document.getElementById('root') || document.body) : null;
@@ -660,6 +672,22 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
+                        type="button"
+                        onClick={(e) => handleCopySentence(e, form.value || form.reading || '', `form-${fIdx}`)}
+                        className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                          copiedSentenceKey === `form-${fIdx}`
+                            ? 'text-emerald-500 bg-emerald-500/15'
+                            : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-subtle/50'
+                        }`}
+                        title={copiedSentenceKey === `form-${fIdx}` ? "Đã copy dạng chia!" : "Copy dạng chia"}
+                      >
+                        {copiedSentenceKey === `form-${fIdx}` ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <button
                         onClick={(e) => handleSpeak(e, form.value || form.reading || '', form.audioUrl)}
                         className={`p-2 rounded-lg cursor-pointer transition-colors ${
                           form.audioUrl
@@ -723,6 +751,22 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
+                          type="button"
+                          onClick={(e) => handleCopySentence(e, ex.sentence, `ex-${idx}`)}
+                          className={`p-2 rounded-xl cursor-pointer transition-colors ${
+                            copiedSentenceKey === `ex-${idx}`
+                              ? 'text-emerald-500 bg-emerald-500/15'
+                              : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-subtle/50'
+                          }`}
+                          title={copiedSentenceKey === `ex-${idx}` ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
+                        >
+                          {copiedSentenceKey === `ex-${idx}` ? (
+                            <Check className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
                           onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
                           className={`p-2 rounded-xl cursor-pointer transition-colors ${
                             ex.audioUrl
@@ -766,6 +810,22 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopySentence(e, currentCard.example!, 'single-ex')}
+                        className={`p-2 rounded-xl cursor-pointer transition-colors ${
+                          copiedSentenceKey === 'single-ex'
+                            ? 'text-emerald-500 bg-emerald-500/15'
+                            : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-subtle/50'
+                        }`}
+                        title={copiedSentenceKey === 'single-ex' ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
+                      >
+                        {copiedSentenceKey === 'single-ex' ? (
+                          <Check className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
                       <button
                         onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
                         className={`p-2 rounded-xl cursor-pointer transition-colors ${
