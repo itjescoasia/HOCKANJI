@@ -1,12 +1,12 @@
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, playAudioUrl, generateAndUploadTTS } from '../utils/playTTS';
+import { playTTS, playAudioUrl } from '../utils/playTTS';
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles, Upload, Trash2, Music, Play, Loader2, Brain, Clock, HelpCircle, VolumeX, Info, Flame } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Eye, Pen, Lightbulb, Volume2, Copy, Shuffle, Check, Trophy, RotateCcw, Sparkles, Upload, Trash2, Play, Pause, Brain, Clock, HelpCircle, VolumeX, Info, Flame } from "lucide-react";
 import { IntensiveExample, IntensiveWord, KanjiCard, FuriganaMode } from "../types";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
 import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
@@ -80,13 +80,105 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     } catch (_) {}
   }, []);
 
-  // When index or mode changes, reset flip and translation so front card is ALWAYS displayed first
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0); // 0 to 100
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const activeAudioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const formatAudioTime = (sec: number) => {
+    if (!sec || isNaN(sec)) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const handleSeekAudio = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (!activeAudioRef.current || !activeAudioRef.current.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+    activeAudioRef.current.currentTime = pct * activeAudioRef.current.duration;
+    setAudioProgress(pct * 100);
+    setAudioCurrentTime(activeAudioRef.current.currentTime);
+  };
+
+  useEffect(() => {
+    const handleAudioStarted = (e: any) => {
+      const audio: HTMLAudioElement = e.detail?.audio;
+      if (!audio) return;
+      activeAudioRef.current = audio;
+      setIsPlayingAudio(true);
+      setAudioProgress(0);
+      setAudioCurrentTime(0);
+
+      const onTimeUpdate = () => {
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          setAudioDuration(audio.duration);
+          setAudioCurrentTime(audio.currentTime);
+          setAudioProgress(Math.min(100, (audio.currentTime / audio.duration) * 100));
+        }
+      };
+
+      const onLoadedMetadata = () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+          setAudioDuration(audio.duration);
+        }
+      };
+
+      const onEnded = () => {
+        setIsPlayingAudio(false);
+        setAudioProgress(100);
+        setTimeout(() => {
+          setAudioProgress(0);
+          setAudioCurrentTime(0);
+        }, 500);
+      };
+
+      const onPause = () => {
+        setIsPlayingAudio(false);
+      };
+
+      const onPlay = () => {
+        setIsPlayingAudio(true);
+      };
+
+      audio.addEventListener('timeupdate', onTimeUpdate);
+      audio.addEventListener('loadedmetadata', onLoadedMetadata);
+      audio.addEventListener('ended', onEnded);
+      audio.addEventListener('pause', onPause);
+      audio.addEventListener('play', onPlay);
+    };
+
+    window.addEventListener('app-audio-started', handleAudioStarted);
+    return () => {
+      window.removeEventListener('app-audio-started', handleAudioStarted);
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.pause();
+          activeAudioRef.current.currentTime = 0;
+        } catch (_) {}
+      }
+    };
+  }, []);
+
+  // When index or mode changes, reset flip and translation and stop any active audio
   useEffect(() => {
     setIsCardFlipped(false);
     setUserTranslation("");
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (_) {}
+      activeAudioRef.current = null;
+    }
+    setIsPlayingAudio(false);
+    setAudioProgress(0);
+    setAudioCurrentTime(0);
+    setAudioDuration(0);
   }, [currentIndex, mode]);
-
-
 
   const handleTTS = async (text: string, e?: React.MouseEvent) => {
     if (e) {
@@ -94,6 +186,18 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       e.preventDefault();
     }
     
+    // Toggle pause/stop if audio is actively playing
+    if (activeAudioRef.current && isPlayingAudio && !activeAudioRef.current.paused) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (_) {}
+      setIsPlayingAudio(false);
+      setAudioProgress(0);
+      setAudioCurrentTime(0);
+      return;
+    }
+
     // Check if we have an example with audio
     const currentExample = examples[currentIndex];
     
@@ -118,7 +222,13 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             }
             
             if (urlToPlay) {
-                playAudioUrl(urlToPlay, text || currentExample?.sentence);
+                if (activeAudioRef.current) {
+                  try {
+                    activeAudioRef.current.pause();
+                    activeAudioRef.current.currentTime = 0;
+                  } catch (_) {}
+                }
+                await playAudioUrl(urlToPlay, text || currentExample?.sentence);
                 return;
             }
         } catch (err) {
@@ -135,7 +245,6 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [isEditing, setIsEditing] = useState(false);
   const [isGeneratingFurigana, setIsGeneratingFurigana] = useState(false);
-  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [previewAudioBlobUrl, setPreviewAudioBlobUrl] = useState<string | null>(null);
   const editAudioInputRef = React.useRef<HTMLInputElement>(null);
@@ -722,44 +831,6 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     }
   };
 
-  const handleGenerateAIAudio = async () => {
-    const textToSpeak = editData.sentence.trim();
-    if (!textToSpeak) {
-      alert("Vui lòng nhập câu tiếng Nhật trước khi tạo âm thanh AI.");
-      return;
-    }
-    setIsGeneratingAudio(true);
-    try {
-      const cloudUrl = await generateAndUploadTTS(textToSpeak);
-      if (cloudUrl) {
-        setEditData(prev => ({ ...prev, audioUrl: cloudUrl, hasAudio: true }));
-        if (cloudUrl.startsWith('firestore:')) {
-          const audioId = cloudUrl.split(':')[1];
-          try {
-            const docSnap = await getDoc(doc(db, 'global_audio', audioId));
-            if (docSnap.exists()) {
-              setPreviewAudioBlobUrl(docSnap.data().data);
-            } else {
-              setPreviewAudioBlobUrl(cloudUrl);
-            }
-          } catch {
-            setPreviewAudioBlobUrl(cloudUrl);
-          }
-        } else {
-          setPreviewAudioBlobUrl(cloudUrl);
-        }
-        playAudioUrl(cloudUrl, textToSpeak);
-      } else {
-        alert("Không thể tạo file âm thanh AI lúc này. Vui lòng thử lại sau.");
-      }
-    } catch (err: any) {
-      console.error("AI TTS error:", err);
-      alert("Lỗi khi tạo âm thanh AI: " + (err?.message || "Vui lòng thử lại."));
-    } finally {
-      setIsGeneratingAudio(false);
-    }
-  };
-
   const handleRemoveEditAudio = () => {
     setEditData(prev => ({ ...prev, audioUrl: null, hasAudio: false }));
     setPreviewAudioBlobUrl(null);
@@ -1219,54 +1290,97 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               </p>
             )}
             {mode === "JA_TO_VI" && (
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <div className="flex flex-col items-center gap-0.5">
-                  {currentExample.audioUrl ? (
-                    <>
+              <div className="flex flex-col items-center justify-center gap-2 mt-3 w-full max-w-sm mx-auto">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {currentExample.audioUrl ? (
                       <button
                         id="btn-sentence-audio"
                         type="button"
                         onClick={(e) => handleTTS(currentExample.sentence, e)}
-                        className="p-2 rounded-full transition-colors text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 cursor-pointer shadow-xs"
-                        title="Nghe file MP3 chuẩn"
+                        className={`p-1.5 px-3 rounded-full transition-all flex items-center gap-2 cursor-pointer shadow-xs border ${
+                          isPlayingAudio
+                            ? 'bg-theme-accent text-theme-inverted border-theme-accent ring-2 ring-theme-accent/40 shadow-theme-accent/30 shadow-md'
+                            : 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 border-theme-accent/20'
+                        }`}
+                        title={isPlayingAudio ? "Bấm để dừng phát âm" : "Nghe file MP3 chuẩn"}
                       >
-                        <Volume2 className="w-5 h-5" />
+                        {isPlayingAudio ? (
+                          <>
+                            <Pause className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-0.5 h-3">
+                              <span className="w-0.5 h-3 bg-white animate-pulse"></span>
+                              <span className="w-0.5 h-2 bg-white animate-pulse delay-75"></span>
+                              <span className="w-0.5 h-3.5 bg-white animate-pulse delay-150"></span>
+                            </span>
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Dừng phát</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-4 h-4" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Phát MP3</span>
+                          </>
+                        )}
                       </button>
-                      <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">MP3</span>
-                    </>
-                  ) : (
-                    <label
-                      onClick={(e) => e.stopPropagation()}
-                      className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1 text-xs font-bold cursor-pointer shadow-xs"
-                      title="Câu này chưa có MP3. Bấm để tải lên file MP3 âm thanh (Tuyệt đối không phát giọng Google)"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Tải MP3</span>
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={handleUploadSentenceAudio}
-                      />
-                    </label>
-                  )}
+                    ) : (
+                      <label
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1 text-xs font-bold cursor-pointer shadow-xs"
+                        title="Câu này chưa có MP3. Bấm để tải lên file MP3 âm thanh (Tuyệt đối không phát giọng Google)"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Tải MP3</span>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={handleUploadSentenceAudio}
+                        />
+                      </label>
+                    )}
+                  </div>
+                  
+                  <button
+                    id="btn-copy-sentence"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(currentExample.sentence);
+                      const btn = e.currentTarget;
+                      const originalHTML = btn.innerHTML;
+                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                    }}
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    title="Copy câu tiếng Nhật"
+                  >
+                    <Copy className="w-5 h-5" />
+                  </button>
                 </div>
-                
-                <button
-                  id="btn-copy-sentence"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(currentExample.sentence);
-                    const btn = e.currentTarget;
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                    setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-                  }}
-                  className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
-                  title="Copy câu tiếng Nhật"
-                >
-                  <Copy className="w-5 h-5" />
-                </button>
+
+                {/* Progress bar in JA_TO_VI */}
+                {currentExample.audioUrl && (
+                  <div className="w-full flex flex-col gap-1">
+                    <div 
+                      onClick={handleSeekAudio}
+                      className="w-full h-2.5 bg-theme-accent/15 hover:bg-theme-accent/25 rounded-full overflow-hidden cursor-pointer relative transition-all group"
+                      title="Thanh tiến độ phát âm MP3 (Bấm để tua)"
+                    >
+                      <div 
+                        className="h-full bg-gradient-to-r from-theme-accent to-theme-accent/70 transition-all duration-75 relative rounded-full"
+                        style={{ width: `${audioProgress}%` }}
+                      >
+                        {isPlayingAudio && (
+                          <span className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border-2 border-theme-accent"></span>
+                        )}
+                      </div>
+                    </div>
+                    {(isPlayingAudio || audioDuration > 0) && (
+                      <div className="flex justify-end text-[10px] font-mono text-theme-primary/60">
+                        <span>{formatAudioTime(audioCurrentTime)} / {formatAudioTime(audioDuration)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1414,48 +1528,99 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   <RelatedHighlight text={currentExample.romaji} type="romaji" />
                 </p>
               )}
-              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-emerald-500/20">
-                {currentExample.audioUrl ? (
-                  <button
-                    type="button"
-                    onClick={(e) => handleTTS(currentExample.sentence, e)}
-                    className="p-1.5 rounded-full text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1 text-xs cursor-pointer"
-                    title="Nghe phát âm MP3 chuẩn"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                    <span className="text-[10px] uppercase tracking-wider font-semibold">Phát âm MP3</span>
-                  </button>
-                ) : (
-                  <label
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1 text-xs font-bold cursor-pointer"
-                    title="Tải lên file MP3 cho câu này"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span className="text-[10px] uppercase tracking-wider font-semibold">Tải MP3</span>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      className="hidden"
-                      onChange={handleUploadSentenceAudio}
-                    />
-                  </label>
+              <div className="flex flex-col gap-2.5 mt-3 pt-2.5 border-t border-emerald-500/20">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    {currentExample.audioUrl ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleTTS(currentExample.sentence, e)}
+                        className={`p-1.5 px-3 rounded-full transition-all flex items-center gap-2 text-xs cursor-pointer border shadow-xs ${
+                          isPlayingAudio
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/30 shadow-md ring-2 ring-emerald-400/40'
+                            : 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30'
+                        }`}
+                        title={isPlayingAudio ? "Bấm để dừng phát âm" : "Nghe phát âm MP3 chuẩn"}
+                      >
+                        {isPlayingAudio ? (
+                          <>
+                            <Pause className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-0.5 h-3">
+                              <span className="w-0.5 h-3 bg-white animate-pulse"></span>
+                              <span className="w-0.5 h-2 bg-white animate-pulse delay-75"></span>
+                              <span className="w-0.5 h-3.5 bg-white animate-pulse delay-150"></span>
+                            </span>
+                            <span className="text-[11px] uppercase tracking-wider font-bold">Dừng phát</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-4 h-4" />
+                            <span className="text-[10px] uppercase tracking-wider font-semibold">Phát âm MP3</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <label
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                        title="Tải lên file MP3 cho câu này"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span className="text-[10px] uppercase tracking-wider font-semibold">Tải MP3</span>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={handleUploadSentenceAudio}
+                        />
+                      </label>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(currentExample.sentence);
+                        const btn = e.currentTarget;
+                        const originalHTML = btn.innerHTML;
+                        btn.innerHTML = '<span class="text-xs text-green-500 font-semibold">Đã copy!</span>';
+                        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                      }}
+                      className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors flex items-center gap-1 text-xs cursor-pointer"
+                      title="Copy câu tiếng Nhật"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase tracking-wider">Copy</span>
+                    </button>
+                  </div>
+
+                  {/* Audio time indicator */}
+                  {currentExample.audioUrl && (isPlayingAudio || audioDuration > 0) && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      <span>{formatAudioTime(audioCurrentTime)}</span>
+                      <span>/</span>
+                      <span>{formatAudioTime(audioDuration)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress bar hiệu ứng tiến độ */}
+                {currentExample.audioUrl && (
+                  <div className="space-y-1">
+                    <div 
+                      onClick={handleSeekAudio}
+                      className="w-full h-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 rounded-full overflow-hidden cursor-pointer relative transition-all group"
+                      title="Thanh tiến độ phát âm MP3 (Bấm để tua)"
+                    >
+                      <div 
+                        className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 transition-all duration-75 relative rounded-full"
+                        style={{ width: `${audioProgress}%` }}
+                      >
+                        {isPlayingAudio && (
+                          <span className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border-2 border-emerald-500"></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(currentExample.sentence);
-                    const btn = e.currentTarget;
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<span class="text-xs text-green-500 font-semibold">Đã copy!</span>';
-                    setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-                  }}
-                  className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors flex items-center gap-1 text-xs cursor-pointer"
-                  title="Copy câu tiếng Nhật"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase tracking-wider">Copy</span>
-                </button>
               </div>
             </div>
 
@@ -1748,7 +1913,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                           id="btn-replace-audio"
                           type="button"
                           onClick={() => editAudioInputRef.current?.click()}
-                          disabled={isUploadingAudio || isGeneratingAudio}
+                          disabled={isUploadingAudio}
                           className="text-xs text-theme-primary/70 hover:text-theme-accent px-2.5 py-1 rounded border border-theme-subtle hover:border-theme-accent transition-all cursor-pointer disabled:opacity-50"
                           title="Thay thế file MP3 khác"
                         >
@@ -1769,38 +1934,18 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                     <div className="p-4 bg-theme-base/60 border border-dashed border-theme-subtle rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <p className="text-xs text-theme-primary/60 font-medium">Chưa có file âm thanh MP3 cho câu này.</p>
-                        <p className="text-[11px] text-theme-primary/40">Tải file MP3 của bạn lên hoặc để AI tự động đọc và tạo file.</p>
+                        <p className="text-[11px] text-theme-primary/40">Tải file MP3 của bạn lên từ thiết bị.</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           id="btn-upload-audio-modal"
                           type="button"
                           onClick={() => editAudioInputRef.current?.click()}
-                          disabled={isUploadingAudio || isGeneratingAudio}
+                          disabled={isUploadingAudio}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-panel border border-theme-subtle hover:border-theme-accent text-theme-primary/80 hover:text-theme-accent rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
                         >
                           <Upload className="w-3.5 h-3.5" />
                           <span>{isUploadingAudio ? 'Đang tải...' : 'Tải file MP3'}</span>
-                        </button>
-                        <button
-                          id="btn-generate-ai-audio-modal"
-                          type="button"
-                          onClick={handleGenerateAIAudio}
-                          disabled={isGeneratingAudio || isUploadingAudio || !editData.sentence.trim()}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 border border-theme-accent/30 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
-                          title="Dùng AI (Inworld/Gemini) để tự động tạo file MP3 giọng chuẩn"
-                        >
-                          {isGeneratingAudio ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>Đang tạo AI...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Music className="w-3.5 h-3.5" />
-                              <span>Tải âm thanh (AI)</span>
-                            </>
-                          )}
                         </button>
                       </div>
                     </div>

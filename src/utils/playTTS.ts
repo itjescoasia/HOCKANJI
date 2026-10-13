@@ -355,12 +355,12 @@ export const playTTS = async (text: string) => {
 /**
  * Play audio from a URL (Firebase Storage, Firestore, base64 data, or server audio)
  */
-export const playAudioUrl = async (url: string, fallbackText?: string | null, allowTTSFallback: boolean = false) => {
+export const playAudioUrl = async (url: string, fallbackText?: string | null, allowTTSFallback: boolean = false): Promise<HTMLAudioElement | null> => {
   if (!url) {
     if (allowTTSFallback && fallbackText) {
       await playTTS(fallbackText);
     }
-    return;
+    return null;
   }
 
   const isStaticExternalHost = typeof window !== 'undefined' && 
@@ -374,7 +374,7 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null, al
   if (isStaticExternalHost && (url.startsWith('/api/audio/') || (url.startsWith('/') && !url.startsWith('//')))) {
     if (allowTTSFallback && fallbackText) {
       await playTTS(fallbackText);
-      return;
+      return null;
     }
   }
 
@@ -406,13 +406,13 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null, al
         } else {
           console.warn('[TTS] Firestore audio not found for ID:', audioId);
           if (allowTTSFallback && fallbackText) await playTTS(fallbackText);
-          return;
+          return null;
         }
       }
     } catch (err) {
       console.error('[TTS] Error fetching audio from firestore:', err);
       if (allowTTSFallback && fallbackText) await playTTS(fallbackText);
-      return;
+      return null;
     }
   } else if (url.startsWith('/api/audio/') || url.startsWith('/')) {
     // If running with relative path, check local cache first
@@ -432,6 +432,8 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null, al
     const audio = new Audio(finalUrl);
     currentActiveAudio = audio;
 
+    window.dispatchEvent(new CustomEvent('app-audio-started', { detail: { audio, url: finalUrl } }));
+
     audio.onerror = () => {
       console.warn('[TTS] Audio failed to load from URL:', finalUrl);
       if (allowTTSFallback && fallbackText) {
@@ -450,11 +452,13 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null, al
         }
       });
     }
+    return audio;
   } catch (err) {
     console.error('[TTS] Audio initialization error:', err);
     if (allowTTSFallback && fallbackText) {
       playTTS(fallbackText);
     }
+    return null;
   }
 };
 
