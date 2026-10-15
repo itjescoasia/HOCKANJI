@@ -127,6 +127,19 @@ export default function Dashboard({
 
   const totalCards = deck.length;
 
+  const taggedForgottenWords = useMemo(() => {
+    return deck.filter((c) => c.isForgotten);
+  }, [deck]);
+
+  const difficultWordsCount = useMemo(() => {
+    return deck.filter(
+      (c) =>
+        c.isForgotten ||
+        (c.difficultScore !== undefined && c.difficultScore < 0) ||
+        (c.interval <= 1 && c.repetition === 0),
+    ).length;
+  }, [deck]);
+
   // Chart 1: Word Type Distribution Data
   const wordTypeData = useMemo(() => {
     const stats: Record<string, number> = {
@@ -296,7 +309,7 @@ export default function Dashboard({
   return (
     <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
       {/* Search Bar */}
-      <div className={`relative mb-2 transition-all ${searchQuery.trim() ? 'z-20' : 'z-10'}`}>
+      <div className={`relative mb-2 transition-all ${searchQuery.trim() ? 'z-30' : 'z-0'}`}>
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search className="h-4 w-4 text-theme-primary opacity-40" />
         </div>
@@ -305,44 +318,51 @@ export default function Dashboard({
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Tìm kiếm từ vựng..." 
-          className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-10 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-sm shadow-sm rounded-sm"
+          className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-10 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-base sm:text-sm shadow-sm rounded-xl"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery('')}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-theme-primary/40 hover:text-theme-primary cursor-pointer"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-theme-primary/40 hover:text-theme-primary cursor-pointer p-2"
             title="Xóa tìm kiếm (hoặc bấm Esc)"
           >
             <X className="w-4 h-4" />
           </button>
         )}
-        {searchQuery.trim() && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-sm max-h-[300px] overflow-y-auto z-20">
-            {searchResults.map((res, i) => (
-              <button 
-                key={`${res.type}-${res.id}-${i}`}
-                className="w-full text-left px-4 py-3 hover:bg-theme-hover border-b border-theme-subtle last:border-b-0 flex items-center justify-between"
-                onClick={() => {
-                  setSearchQuery("");
-                  if (onNavigateToWord) onNavigateToWord(res.word, res.type === 'intensive', res.id);
-                }}
-              >
-                <div className="flex flex-col min-w-0 pr-4">
-                  <span className="text-sm font-serif text-theme-primary truncate">{res.word}</span>
-                  <span className="text-xs text-theme-primary/60 truncate">{res.reading} {res.reading && res.meaning ? '•' : ''} {res.meaning}</span>
-                </div>
-                <span className={`shrink-0 text-[10px] px-2 py-0.5 uppercase tracking-widest rounded-sm ${res.type === 'intensive' ? 'bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border border-[var(--badge-amber-border)]' : 'bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border border-[var(--badge-emerald-border)]'}`}>
-                  {res.type === 'intensive' ? 'Chuyên sâu' : 'Từ vựng'}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {searchQuery.trim() && searchResults.length === 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-sm px-4 py-3 z-20">
-             <span className="text-xs text-theme-primary/60 italic">Không tìm thấy từ vựng nào phù hợp</span>
-          </div>
+        {searchQuery.trim() && (
+          <>
+            <div 
+              className="fixed inset-0 z-20 bg-black/20" 
+              onClick={() => setSearchQuery('')}
+            />
+            {searchResults.length > 0 ? (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-2xl overflow-hidden rounded-xl max-h-[300px] overflow-y-auto z-30 divide-y divide-theme-subtle">
+                {searchResults.map((res, i) => (
+                  <button 
+                    key={`${res.type}-${res.id}-${i}`}
+                    className="w-full text-left px-4 py-3 hover:bg-theme-hover flex items-center justify-between cursor-pointer transition-colors"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (onNavigateToWord) onNavigateToWord(res.word, res.type === 'intensive', res.id);
+                    }}
+                  >
+                    <div className="flex flex-col min-w-0 pr-4">
+                      <span className="text-sm font-serif font-bold text-theme-primary truncate">{res.word}</span>
+                      <span className="text-xs text-theme-primary/60 truncate">{res.reading} {res.reading && res.meaning ? '•' : ''} {res.meaning}</span>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest rounded-md ${res.type === 'intensive' ? 'bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border border-[var(--badge-amber-border)]' : 'bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border border-[var(--badge-emerald-border)]'}`}>
+                      {res.type === 'intensive' ? 'Chuyên sâu' : 'Từ vựng'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-xl px-4 py-3 z-30">
+                <span className="text-xs text-theme-primary/60 italic">Không tìm thấy từ vựng nào phù hợp</span>
+              </div>
+            )}
+          </>
         )}
       </div>
       {/* Search Bar End */}
@@ -360,7 +380,44 @@ export default function Dashboard({
       </div>
 
       {/* Feature Banners Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Forgotten Words Specialized Banner */}
+        {onStartDifficultReview && (
+          <div 
+            onClick={onStartDifficultReview}
+            className="bg-gradient-to-r from-rose-950/40 via-theme-panel to-rose-950/30 border border-rose-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-rose-500 transition-all rounded-sm group shadow-sm"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+                <Flame className="w-5 h-5 fill-rose-500/30" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded">
+                    Khoa học Active Recall
+                  </span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-theme-base text-rose-400 border border-rose-500/30 rounded">
+                    {taggedForgottenWords.length > 0 ? `${taggedForgottenWords.length} từ gán Quên` : `${difficultWordsCount} từ khó`}
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-rose-400 transition-colors mt-1">
+                  Ôn Các Từ Vựng Hay Quên
+                </h3>
+                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                  Chu kỳ ngắt quãng ngắn Ebbinghaus • Trắc nghiệm 4 đáp án &amp; nghe MP3 • Tự động phục hồi trí nhớ khi nhớ đúng.
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onStartDifficultReview(); }}
+              className="px-4 py-2 bg-rose-600 group-hover:bg-rose-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+            >
+              Ôn từ hay quên ngay
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Sentence SRS Translation Banner */}
         {onStartSentenceReview && (
           <div 
@@ -381,7 +438,7 @@ export default function Dashboard({
                   </span>
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-indigo-400 transition-colors mt-1">
-                  Luyện Dịch Câu: Việt → Nhật (Khoa học SRS)
+                  Luyện Dịch Câu: Việt → Nhật
                 </h3>
                 <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
                   Lấy ngẫu nhiên câu ví dụ có MP3 • Tự động lặp lại câu quên theo chu kỳ Ebbinghaus • Giảm lặp câu đã nhớ.
@@ -415,10 +472,10 @@ export default function Dashboard({
                   </span>
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-emerald-400 transition-colors mt-1">
-                  Trắc Nghiệm Tiếng Nhật N4 (Đề thi &amp; Giải thích chi tiết)
+                  Trắc Nghiệm Tiếng Nhật N4
                 </h3>
                 <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
-                  Luyện tập thể khả năng (Bài 27), trợ từ (が, しか), tự/tha động từ, ý chí, bị động, sai khiến kèm bảng từ vựng và audio chuẩn.
+                  Luyện tập thể khả năng (Bài 27), trợ từ (が, しか), tự/tha động từ, ý chí, bị động kèm audio chuẩn.
                 </p>
               </div>
             </div>
@@ -937,17 +994,24 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={onStartDifficultReview}
-                  className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-red-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                  className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-950/15 hover:bg-rose-950/30 hover:border-rose-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
                 >
-                  <div className="p-2 rounded-lg bg-red-500/10 text-red-500 group-hover:scale-110 transition-transform shrink-0">
-                    <Flame className="w-4 h-4" />
+                  <div className="p-2 rounded-lg bg-rose-500/15 text-rose-500 group-hover:scale-110 transition-transform shrink-0">
+                    <Flame className="w-4 h-4 fill-rose-500/30" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-theme-primary group-hover:text-red-500 transition-colors">
-                      Ôn các từ hay quên
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 group-hover:underline">
+                        Ôn các từ hay quên
+                      </span>
+                      {taggedForgottenWords.length > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/30">
+                          {taggedForgottenWords.length} từ
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
-                      Tập trung từ có điểm khó cao
+                      Khoa học Active Recall &amp; phục hồi trí nhớ
                     </div>
                   </div>
                 </button>

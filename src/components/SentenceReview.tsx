@@ -1180,18 +1180,18 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           >
             
   
-  <div className="w-full relative min-h-[400px] sm:min-h-[440px] mb-4 sm:mb-6" style={{ perspective: "1000px" }}>
+  <div className="w-full relative min-h-[380px] sm:min-h-[440px] mb-4 sm:mb-6" style={{ perspective: "1000px", WebkitPerspective: "1000px" as any }}>
     <motion.div
       className="w-full h-full absolute inset-0"
-      style={{ transformStyle: "preserve-3d" }}
+      style={{ transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d" as any }}
       animate={{ rotateY: showAnswer ? 180 : 0 }}
       transition={{ duration: 0.6, type: 'spring', stiffness: 220, damping: 20 }}
     >
       {/* Front */}
       <div 
         id="sentence-review-card-front"
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${showAnswer ? 'pointer-events-none' : ''}`}
-        style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-5 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${showAnswer ? 'pointer-events-none' : ''}`}
+        style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", visibility: showAnswer ? 'hidden' : 'visible' }}
       >
         {/* Badges khoa học SRS */}
         <div className="absolute top-4 left-4 flex flex-wrap items-center gap-1.5 z-20">
@@ -1439,8 +1439,8 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
       {/* Back */}
       <div 
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-6 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
-        style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-5 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
+        style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", visibility: !showAnswer ? 'hidden' : 'visible' }}
       >
         <span className="absolute top-4 left-4 text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
           {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}

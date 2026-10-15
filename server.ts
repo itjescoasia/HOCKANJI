@@ -44,6 +44,41 @@ async function startServer() {
     }
   }));
 
+  async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
+    const candidateModels = [
+      'gemini-3.5-flash',
+      'gemini-3.8-flash',
+      'gemini-3.6-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemini-flash-lite-latest'
+    ];
+    let lastErr: any = null;
+    for (const model of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: promptText,
+          config: { responseMimeType: 'application/json' }
+        });
+        if (response && response.text) {
+          return response.text;
+        }
+      } catch (err: any) {
+        lastErr = err;
+        const errMsg = err.message || '';
+        const isTemporary = err.status === 503 || errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE') || err.status === 429 || errMsg.includes('429');
+        if (isTemporary) {
+          console.warn(`Gemini model ${model} temporarily unavailable (${err.status || 503}), trying next model...`);
+          await new Promise(r => setTimeout(r, 300));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr || new Error('All Gemini candidate models failed');
+  }
+
   app.post('/api/generate-vocab', async (req, res) => {
     try {
       const { word } = req.body;
@@ -51,8 +86,8 @@ async function startServer() {
         return res.status(400).json({ error: 'Word is required' });
       }
 
-            if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
-         return res.status(500).json({ error: 'API_KEY is missing. Vui lòng thiết lập GEMINI_API_KEY, OPENAI_API_KEY hoặc GROQ_API_KEY trong Settings.' });
+      if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+        return res.status(500).json({ error: 'API_KEY is missing. Vui lòng thiết lập GEMINI_API_KEY, OPENAI_API_KEY hoặc GROQ_API_KEY trong Settings.' });
       }
 
       const prompt = `Bạn là một chuyên gia ngôn ngữ tiếng Nhật. Hãy phân tích từ vựng/ngữ pháp tiếng Nhật sau đây: "${word}".
@@ -103,32 +138,20 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       let lastError = null;
       if (process.env.GEMINI_API_KEY && !success) {
         try {
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-          let response;
-          try {
-            response = await ai.models.generateContent({
-              model: 'gemini-3.8-flash',
-              contents: prompt,
-              config: { responseMimeType: 'application/json' }
-            });
-          } catch (error: any) {
-            const errorMsg = error.message || '';
-            if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE') || error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota exceeded')) {
-               response = await ai.models.generateContent({
-                 model: 'gemini-3.1-flash-lite',
-                 contents: prompt,
-                 config: { responseMimeType: 'application/json' }
-            });
-            } else {
-               throw error;
+          const ai = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY,
+            httpOptions: {
+              headers: {
+                'User-Agent': 'aistudio-build'
+              }
             }
-          }
-          text = response.text || '';
+          });
+          text = await generateGeminiContentWithFallback(ai, prompt);
           success = true;
         } catch (e: any) {
           e.provider = 'Gemini';
           lastError = e;
-          if (!e.message.includes('429') && !e.message.includes('503')) console.error('Gemini failed:', e.message);
+          console.error('Gemini generate-vocab failed:', e.message);
         }
       }
 
@@ -270,32 +293,20 @@ QUY TẮC BẮT BUỘC:
 
       if (process.env.GEMINI_API_KEY && !success) {
         try {
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-          let response;
-          try {
-            response = await ai.models.generateContent({
-              model: 'gemini-3.8-flash',
-              contents: prompt,
-              config: { responseMimeType: 'application/json' }
-            });
-          } catch (error: any) {
-            const errorMsg = error.message || '';
-            if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE') || error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota exceeded')) {
-              response = await ai.models.generateContent({
-                model: 'gemini-3.1-flash-lite',
-                contents: prompt,
-                config: { responseMimeType: 'application/json' }
-              });
-            } else {
-              throw error;
+          const ai = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY,
+            httpOptions: {
+              headers: {
+                'User-Agent': 'aistudio-build'
+              }
             }
-          }
-          text = response.text || '';
+          });
+          text = await generateGeminiContentWithFallback(ai, prompt);
           success = true;
         } catch (e: any) {
           e.provider = 'Gemini';
           lastError = e;
-          if (!e.message.includes('429') && !e.message.includes('503')) console.error('Gemini furigana failed:', e.message);
+          console.error('Gemini furigana failed:', e.message);
         }
       }
 

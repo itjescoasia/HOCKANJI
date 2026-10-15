@@ -138,7 +138,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, Check, CheckCircle, Upload, Loader2 } from 'lucide-react';
+import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, Check, CheckCircle, Upload, Loader2, Flame } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { cleanMarkdownForDisplay } from './stringUtils';
 import { doc, setDoc } from 'firebase/firestore';
@@ -402,13 +402,30 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
     }).catch(err => console.error("Copy sentence error:", err));
   };
 
+  const handleToggleForgotten = async () => {
+    const isNow = !currentCard.isForgotten;
+    const updated: KanjiCard = {
+      ...currentCard,
+      isForgotten: isNow,
+      forgottenAt: isNow ? Date.now() : currentCard.forgottenAt,
+      forgottenCount: isNow ? (currentCard.forgottenCount || 0) + 1 : currentCard.forgottenCount,
+      difficultScore: isNow ? Math.min(-1, (currentCard.difficultScore || 0) - 2) : currentCard.difficultScore,
+    };
+    await persistCardUpdate(updated);
+    showToast(
+      isNow
+        ? 'Đã gán nhãn [HAY QUÊN]! Từ này sẽ xuất hiện ưu tiên trong mục "Ôn các từ hay quên" ở Trang chủ.'
+        : 'Đã gỡ nhãn Hay quên cho từ này.'
+    );
+  };
+
   const modalTarget = typeof document !== 'undefined' ? (document.getElementById('root') || document.body) : null;
   if (!modalTarget) return null;
 
   return createPortal(
     <div
       id="word-detail-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 pt-safe pb-safe bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -417,16 +434,22 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
     >
       <div
         id="word-detail-modal-container"
-        className="bg-theme-panel border border-theme-subtle text-theme-primary rounded-2xl shadow-2xl w-full max-w-2xl sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative z-10 select-text"
+        className="bg-theme-panel border border-theme-subtle text-theme-primary rounded-2xl shadow-2xl w-full max-w-2xl sm:max-w-3xl max-h-[92dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative z-10 select-text"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div id="word-detail-modal-header" className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-theme-subtle bg-theme-panel/95 shrink-0">
+        <div id="word-detail-modal-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-theme-subtle bg-theme-panel/95 shrink-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-theme-primary/80">
               <BookOpen className="w-4 h-4 text-theme-accent" />
               Chi Tiết Từ Vựng
             </span>
+            {currentCard.isForgotten && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                <Flame className="w-3 h-3 fill-rose-500/40" />
+                Hay quên
+              </span>
+            )}
             {currentCard.sinoVietnamese && (
               <span className="text-[10px] font-bold text-theme-inverted bg-theme-accent px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                 {currentCard.sinoVietnamese}
@@ -444,7 +467,27 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end shrink-0">
+            {/* Nút QUÊN / HAY QUÊN */}
+            <button
+              id="word-detail-toggle-forgotten-btn"
+              type="button"
+              onClick={handleToggleForgotten}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+                currentCard.isForgotten
+                  ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
+                  : 'bg-theme-base-alt text-theme-primary/75 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40 hover:bg-rose-500/5'
+              }`}
+              title={
+                currentCard.isForgotten
+                  ? "Từ này đang được gán nhãn HAY QUÊN (Bấm để gỡ bỏ)"
+                  : "Bấm để gán nhãn QUÊN - Từ này sẽ được đưa vào chuyên mục 'Ôn các từ vựng hay quên' ở trang chủ"
+              }
+            >
+              <Flame className={`w-3.5 h-3.5 ${currentCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
+              <span>{currentCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
+            </button>
+
             <button
               id="word-detail-copy-btn"
               onClick={handleCopy}

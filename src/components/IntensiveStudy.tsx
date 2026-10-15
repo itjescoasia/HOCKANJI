@@ -1130,6 +1130,14 @@ export default function IntensiveStudy({
           onUpdateWord(id, { manualStatus: newStatus, statusUpdatedAt: Date.now() });
           setDetailModalWord(prev => prev && prev.id === id ? { ...prev, manualStatus: newStatus, statusUpdatedAt: Date.now() } : prev);
         }}
+        onToggleForgotten={(id, isForgotten) => {
+          onUpdateWord(id, {
+            isForgotten,
+            forgottenAt: isForgotten ? Date.now() : undefined,
+            forgottenCount: isForgotten ? ((detailModalWord?.forgottenCount || 0) + 1) : detailModalWord?.forgottenCount,
+          });
+          setDetailModalWord(prev => prev && prev.id === id ? { ...prev, isForgotten } : prev);
+        }}
       />
     )}
     </>
@@ -2694,6 +2702,13 @@ function StudyView({
         renderHighlight={renderHighlight}
         onToggleStatus={(id, newStatus) => {
           onUpdateWord(id, { manualStatus: newStatus, statusUpdatedAt: Date.now() });
+        }}
+        onToggleForgotten={(id, isForgotten) => {
+          onUpdateWord(id, {
+            isForgotten,
+            forgottenAt: isForgotten ? Date.now() : undefined,
+            forgottenCount: isForgotten ? ((word.forgottenCount || 0) + 1) : word.forgottenCount,
+          });
         }}
       />
 

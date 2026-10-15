@@ -43,15 +43,32 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     
     try {
       setIsGeneratingAI(true);
-      const res = await fetch(getApiEndpoint('/api/generate-vocab'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: kanji.trim() })
-      });
-      
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Lỗi lấy dữ liệu từ AI');
+      let res: Response | null = null;
+      let data: any = null;
+
+      // Try up to 2 attempts with a short backoff for transient server or network glitches
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          res = await fetch(getApiEndpoint('/api/generate-vocab'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: kanji.trim() })
+          });
+          data = await res.json();
+          if (res.ok) {
+            break;
+          }
+        } catch (fetchErr) {
+          if (attempt === 2) throw fetchErr;
+        }
+
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1200));
+        }
+      }
+
+      if (!res || !res.ok) {
+        throw new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
       }
 
       if (data.reading) setReading(data.reading);

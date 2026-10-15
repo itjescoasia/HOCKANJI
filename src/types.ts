@@ -43,6 +43,10 @@ export interface KanjiCard {
   wordType?: string;
   freeStudyScore?: number;
   difficultScore?: number;
+  isForgotten?: boolean;
+  forgottenAt?: number;
+  forgottenCount?: number;
+  forgottenMasteryStreak?: number;
   manualStatus?: 'mastered' | 'learning';
   statusUpdatedAt?: number;
   interval: number;
@@ -93,6 +97,10 @@ export interface IntensiveWord {
   order?: number;
   hasAudio?: boolean;
   audioUrl?: string | null;
+  isForgotten?: boolean;
+  forgottenAt?: number;
+  forgottenCount?: number;
+  forgottenMasteryStreak?: number;
   manualStatus?: 'mastered' | 'learning';
   statusUpdatedAt?: number;
 }

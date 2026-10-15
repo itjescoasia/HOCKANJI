@@ -13,7 +13,8 @@ import {
   Lightbulb,
   Search,
   FileText,
-  Sparkles
+  Sparkles,
+  Flame
 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { IntensiveWord, IntensiveExample, KanjiCard, FuriganaMode } from '../types';
@@ -32,6 +33,7 @@ interface WordDetailModalProps {
   onEdit?: () => void;
   renderHighlight?: (text: string | undefined | null, kanji: string) => React.ReactNode;
   onToggleStatus?: (wordId: string, newStatus: 'mastered' | 'learning') => void;
+  onToggleForgotten?: (wordId: string, isForgotten: boolean) => void;
 }
 
 export default function WordDetailModal({
@@ -43,9 +45,11 @@ export default function WordDetailModal({
   onEdit,
   renderHighlight,
   onToggleStatus,
+  onToggleForgotten,
 }: WordDetailModalProps) {
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [copied, setCopied] = useState(false);
+  const [forgottenToast, setForgottenToast] = useState<string | null>(null);
   const [copiedSentenceIdx, setCopiedSentenceIdx] = useState<number | null>(null);
   const [searchExampleText, setSearchExampleText] = useState('');
   const [activeAudioText, setActiveAudioText] = useState<string | null>(null);
@@ -123,6 +127,19 @@ export default function WordDetailModal({
     );
   });
 
+  const handleToggleForgotten = () => {
+    const nextVal = !word.isForgotten;
+    if (onToggleForgotten) {
+      onToggleForgotten(word.id, nextVal);
+    }
+    setForgottenToast(
+      nextVal
+        ? 'Đã gán nhãn [HAY QUÊN]! Từ vựng này đã được thêm vào chuyên mục "Ôn các từ hay quên" ở Trang chủ.'
+        : 'Đã gỡ nhãn Hay quên cho từ này.'
+    );
+    setTimeout(() => setForgottenToast(null), 3000);
+  };
+
   const masteryPercent = calculateMasteryPercent(word);
   const masteredExamplesCount = word.examples.filter(
     ex => ex.jaToViMastered || ex.viToJaMastered || ex.mastered
@@ -131,21 +148,27 @@ export default function WordDetailModal({
   return (
     <div
       id="word-detail-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 pt-safe pb-safe bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
         id="word-detail-modal-container"
-        className="bg-theme-base border border-theme-subtle rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-theme-base border border-theme-subtle rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-theme-subtle bg-theme-panel/70">
-          <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-theme-subtle bg-theme-panel/95 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-theme-primary/60">
               <BookOpen className="w-4 h-4 text-theme-accent" />
               Chi Tiết Từ Vựng
             </span>
+            {word.isForgotten && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                <Flame className="w-3 h-3 fill-rose-500/40" />
+                Hay quên
+              </span>
+            )}
             <span className={getCategoryBadgeStyle(word.category, "text-[10px] font-bold px-2 py-0.5 rounded-full border border-theme-subtle bg-theme-hover text-theme-primary/70")}>
               {word.category}
             </span>
@@ -182,7 +205,27 @@ export default function WordDetailModal({
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end shrink-0">
+            {/* Nút QUÊN */}
+            <button
+              id="word-detail-forgotten-btn"
+              type="button"
+              onClick={handleToggleForgotten}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+                word.isForgotten
+                  ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
+                  : 'bg-theme-hover text-theme-primary/80 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40 hover:bg-rose-500/5'
+              }`}
+              title={
+                word.isForgotten
+                  ? "Từ này đang được gán nhãn HAY QUÊN (Bấm để gỡ bỏ)"
+                  : "Bấm để gán nhãn QUÊN - Từ này sẽ được đưa vào chuyên mục 'Ôn các từ vựng hay quên' ở trang chủ"
+              }
+            >
+              <Flame className={`w-3.5 h-3.5 ${word.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
+              <span>{word.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
+            </button>
+
             <button
               onClick={handleCopy}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-theme-primary/80 hover:text-theme-accent bg-theme-hover hover:bg-theme-subtle/40 border border-theme-subtle transition-all cursor-pointer"
@@ -209,6 +252,13 @@ export default function WordDetailModal({
             </button>
           </div>
         </div>
+
+        {forgottenToast && (
+          <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs px-3.5 py-2.5 rounded-xl font-medium flex items-center gap-2 animate-in fade-in duration-200 mx-5 sm:mx-7 mt-3">
+            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500" />
+            <span>{forgottenToast}</span>
+          </div>
+        )}
 
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar">

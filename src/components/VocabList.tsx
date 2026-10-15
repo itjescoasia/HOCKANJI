@@ -3,7 +3,7 @@ import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy, Flame } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -1031,7 +1031,165 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         </div>
       ) : (
         <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-md sm:rounded-[20px] rounded-xl">
-          <div className="overflow-x-auto">
+          {/* Mobile Card List (Visible on iPhone & mobile < md) */}
+          <div className="block md:hidden divide-y divide-theme-subtle">
+            {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card) => {
+              const isEditing = editingId === card.id;
+              if (isEditing) {
+                return (
+                  <div key={`mob-edit-${card.id}`} className="p-4 bg-theme-hover space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase text-theme-accent">Đang sửa thẻ</span>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={saveEdit} className="p-2 bg-theme-accent text-theme-inverted rounded-lg cursor-pointer" title="Lưu">
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button onClick={cancelEdit} className="p-2 border border-theme-subtle text-theme-primary rounded-lg cursor-pointer" title="Hủy">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <input 
+                      value={editForm.kanji} 
+                      onChange={e => setEditForm({...editForm, kanji: e.target.value})}
+                      className="w-full bg-theme-base-alt border border-theme-subtle text-xl font-serif text-theme-primary px-3 py-2 rounded-lg"
+                      placeholder="Kanji"
+                    />
+                    <input 
+                      value={editForm.reading} 
+                      onChange={e => setEditForm({...editForm, reading: e.target.value})}
+                      className="w-full bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 rounded-lg"
+                      placeholder="Cách đọc (Hiragana)"
+                    />
+                    <input 
+                      value={editForm.meaning} 
+                      onChange={e => setEditForm({...editForm, meaning: e.target.value})}
+                      className="w-full bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 rounded-lg"
+                      placeholder="Ý nghĩa"
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <div key={`mob-${card.id}`} className="p-4 flex flex-col gap-2.5 hover:bg-theme-hover/40 transition-colors">
+                  {/* Top Header Row */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        onClick={() => setViewingCard(card)}
+                        className="text-2xl font-serif text-theme-primary bg-theme-base-alt px-3 py-1.5 rounded-xl shadow-xs border border-theme-subtle font-bold cursor-pointer hover:border-theme-accent transition-colors"
+                      >
+                        {card.kanji || card.reading}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-theme-primary/90">{card.reading || '---'}</span>
+                        {card.romaji && <span className="text-[11px] font-mono text-theme-primary/50">[{card.romaji}]</span>}
+                      </div>
+                    </div>
+
+                    {/* Audio & Quick Controls */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={(e) => playAudio(e, card.kanji || card.reading, card.audioUrl)}
+                        className={`p-2.5 rounded-full transition-all cursor-pointer ${
+                          activeAudioText === (card.kanji || card.reading)?.trim()
+                            ? 'text-theme-accent bg-theme-accent/20 ring-2 ring-theme-accent/50 animate-pulse'
+                            : card.audioUrl 
+                              ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' 
+                              : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                        }`}
+                        title="Nghe phát âm"
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Badges row */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {card.isForgotten && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        <Flame className="w-3 h-3 fill-rose-500/40" />
+                        Hay quên
+                      </span>
+                    )}
+                    {card.sinoVietnamese && (
+                      <span className="text-[10px] font-bold text-theme-accent uppercase tracking-widest border border-theme-accent/30 bg-theme-accent/10 px-2 py-0.5 rounded-full">
+                        {card.sinoVietnamese}
+                      </span>
+                    )}
+                    {card.wordType && (
+                      <span className={getWordTypeBadgeStyle(card.wordType, "text-[10px] px-2 py-0.5 rounded-full border border-theme-subtle bg-theme-hover")}>
+                        {card.wordType}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Meaning */}
+                  <div 
+                    onClick={() => setViewingCard(card)}
+                    className="text-sm text-theme-primary leading-snug font-medium cursor-pointer"
+                  >
+                    {card.meaning}
+                  </div>
+
+                  {/* Action Buttons row on Mobile */}
+                  <div className="flex items-center justify-between pt-2 border-t border-theme-subtle/50 mt-1">
+                    <button
+                      onClick={() => setViewingCard(card)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-theme-base-alt hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent text-xs font-semibold border border-theme-subtle transition-colors cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Chi tiết</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {onStartSentenceReview && (
+                        <button
+                          onClick={() => onStartSentenceReview('VI_TO_JA', [card], true, true)}
+                          className="p-2 text-theme-primary/60 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Luyện dịch câu này"
+                        >
+                          <Brain className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      <button
+                        onClick={(e) => handleCopySentence(e, card.kanji || card.reading, `mob-copy-${card.id}`)}
+                        className="p-2 text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover rounded-lg transition-colors cursor-pointer"
+                        title="Sao chép từ"
+                      >
+                        {copiedSentenceKey === `mob-copy-${card.id}` ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => startEdit(card)}
+                            className="p-2 text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover rounded-lg transition-colors cursor-pointer"
+                            title="Sửa từ"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onRemove && onRemove(card.id)}
+                            className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table (Hidden on screens < md, visible md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-theme-base-alt/50 border-b border-theme-subtle">
@@ -1671,10 +1829,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         </div>
       )}
       {viewingCard && (
-        <div id="view-card-modal-overlay" className="fixed inset-0 bg-theme-base z-50 flex flex-col w-full h-full overflow-hidden">
+        <div id="view-card-modal-overlay" className="fixed inset-0 bg-theme-base z-50 flex flex-col w-full h-full overflow-hidden pb-safe">
           <div className="bg-theme-base w-full h-full flex flex-col relative overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
             {/* Header / Main Vocab */}
-            <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-20 border-b border-theme-subtle px-4 sm:px-8 py-4 flex justify-between items-start shrink-0 shadow-sm">
+            <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-20 border-b border-theme-subtle px-4 sm:px-8 py-3.5 sm:py-4 pt-safe flex flex-col sm:flex-row justify-between items-start gap-3 shrink-0 shadow-sm">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-1">
                   <h2 className="text-4xl md:text-5xl font-serif text-theme-accent">{viewingCard.kanji || viewingCard.reading}</h2>
@@ -1735,7 +1893,31 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 </div>
               </div>
 
-              <div className="flex gap-3 items-start">
+              <div className="flex gap-3 items-center">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const isNow = !viewingCard.isForgotten;
+                    const updates = {
+                      isForgotten: isNow,
+                      forgottenAt: isNow ? Date.now() : viewingCard.forgottenAt,
+                      forgottenCount: isNow ? (viewingCard.forgottenCount || 0) + 1 : viewingCard.forgottenCount,
+                      difficultScore: isNow ? Math.min(-1, (viewingCard.difficultScore || 0) - 2) : viewingCard.difficultScore,
+                    };
+                    setViewingCard(prev => prev ? { ...prev, ...updates } : null);
+                    if (onUpdate) await onUpdate(viewingCard.id, updates);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+                    viewingCard.isForgotten
+                      ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
+                      : 'bg-theme-base-alt text-theme-primary/75 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40'
+                  }`}
+                  title={viewingCard.isForgotten ? "Đang gán nhãn HAY QUÊN (Bấm để gỡ bỏ)" : "Gán nhãn QUÊN"}
+                >
+                  <Flame className={`w-3.5 h-3.5 ${viewingCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
+                  <span>{viewingCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
+                </button>
+
                 <button 
                   onClick={() => setViewingCard(null)}
                   className="p-2 text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"

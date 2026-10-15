@@ -638,3 +638,75 @@ body {
     @apply border-l-4 border-theme-accent pl-4 italic opacity-80 mb-2;
   }
 }
+
+/* ========================================================
+   iPhone & iOS Safari Optimizations
+   ======================================================== */
+
+/* Prevent iOS Safari auto-zooming on input focus (occurs when font-size < 16px) */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Eliminate 300ms tap delay and double-tap zoom quirk on iOS */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS Momentum Scrolling */
+.custom-scrollbar,
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe Area Inset Helpers */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Dynamic Viewport Height for iOS Safari address bar changes */
+.min-h-screen-ios {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.h-screen-ios {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.max-h-modal-ios {
+  max-height: 90vh;
+  max-height: 90dvh;
+}
+

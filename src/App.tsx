@@ -16,7 +16,8 @@ import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
 import AccountSettingsModal from './components/AccountSettingsModal';
 import N4QuizView from './components/N4QuizView';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain } from 'lucide-react';
+import ForgottenVocabSession from './components/ForgottenVocabSession';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -126,6 +127,9 @@ export default function App() {
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement>(null);
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     document.documentElement.classList.remove(
       'theme-matcha',
@@ -147,14 +151,17 @@ export default function App() {
       if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
         setIsThemeMenuOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
     };
-    if (isThemeMenuOpen) {
+    if (isThemeMenuOpen || isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isThemeMenuOpen]);
+  }, [isThemeMenuOpen, isMobileMenuOpen]);
 
   useEffect(() => {
     const calculateTimeUntilMidnight = () => {
@@ -274,7 +281,7 @@ export default function App() {
   const activeSecondsRef = useRef(0);
 
   useEffect(() => {
-    const isTrackingView = view === 'short_study' || ((isFreeStudyMode || isDifficultReviewMode) && view === 'review');
+    const isTrackingView = view === 'short_study' || view === 'difficult_review' || ((isFreeStudyMode || isDifficultReviewMode) && view === 'review');
     if (!isTrackingView) return;
     
     lastActivityRef.current = Date.now();
@@ -367,7 +374,7 @@ export default function App() {
   const handleStartDifficultReview = () => {
     setIsFreeStudyMode(false);
     setIsDifficultReviewMode(true);
-    setView('review');
+    setView('difficult_review');
   };
 
   const handleStartShortStudy = () => {
@@ -468,6 +475,11 @@ export default function App() {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled.sort((a, b) => {
+      const isForgottenA = a.isForgotten ? 1 : 0;
+      const isForgottenB = b.isForgotten ? 1 : 0;
+      if (isForgottenA !== isForgottenB) {
+        return isForgottenB - isForgottenA;
+      }
       const isRedA = a.interval <= 1 || a.repetition === 0 ? 1 : 0;
       const isRedB = b.interval <= 1 || b.repetition === 0 ? 1 : 0;
       if (isRedA !== isRedB) {
@@ -831,6 +843,16 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Forgotten Vocab Scientific Review Overlay */}
+      {view === 'difficult_review' && (
+        <ForgottenVocabSession
+          deck={deck}
+          onClose={() => setView('dashboard')}
+          onUpdateCard={updateCard}
+          onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+        />
+      )}
 
       {/* Review Overlay */}
       {view === 'review' && (
