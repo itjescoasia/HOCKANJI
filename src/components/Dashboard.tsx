@@ -296,7 +296,7 @@ export default function Dashboard({
   return (
     <div className="max-w-5xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col gap-6">
       {/* Search Bar */}
-      <div className="relative z-[100] mb-2">
+      <div className={`relative mb-2 transition-all ${searchQuery.trim() ? 'z-20' : 'z-10'}`}>
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search className="h-4 w-4 text-theme-primary opacity-40" />
         </div>
@@ -305,10 +305,20 @@ export default function Dashboard({
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Tìm kiếm từ vựng..." 
-          className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-4 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-sm shadow-sm rounded-sm"
+          className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-10 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-sm shadow-sm rounded-sm"
         />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-theme-primary/40 hover:text-theme-primary cursor-pointer"
+            title="Xóa tìm kiếm (hoặc bấm Esc)"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         {searchQuery.trim() && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-sm max-h-[300px] overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-sm max-h-[300px] overflow-y-auto z-20">
             {searchResults.map((res, i) => (
               <button 
                 key={`${res.type}-${res.id}-${i}`}
@@ -330,7 +340,7 @@ export default function Dashboard({
           </div>
         )}
         {searchQuery.trim() && searchResults.length === 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-sm px-4 py-3">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-theme-panel border border-theme-subtle shadow-xl overflow-hidden rounded-sm px-4 py-3 z-20">
              <span className="text-xs text-theme-primary/60 italic">Không tìm thấy từ vựng nào phù hợp</span>
           </div>
         )}
