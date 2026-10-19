@@ -11,6 +11,7 @@ import { removeUndefined } from '../hooks/useVocabDeck';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { cleanTextForSearch } from '../utils/stringUtils';
+import { scoreKanjiCardMatch } from '../utils/searchMatcher';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
 import AudioUpload from './AudioUpload';
@@ -767,64 +768,34 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const filteredDeck = React.useMemo(() => {
-    return deck.filter(c => {
-      const q = String(search || "").trim();
-      if (!q) {
-        const matchesFilter = filterType === 'all' || c.wordType === filterType;
-        let matchesAudio = true;
-        if (audioFilter === 'has_audio') matchesAudio = !!c.audioUrl;
-        else if (audioFilter === 'no_audio') matchesAudio = !c.audioUrl;
-        return matchesFilter && matchesAudio;
-      }
-      
-      const cleanQ = cleanTextForSearch(q);
-      const queryWords = cleanQ.split(/\s+/).filter(Boolean);
+    const q = String(search || "").trim();
 
-      const stem = c.kanji ? c.kanji.replace(/[ぁ-ん]+$/, '') : '';
-      
-      const k = cleanTextForSearch(c.kanji);
-      const m = cleanTextForSearch(c.meaning);
-      const r = cleanTextForSearch(c.reading);
-      const ro = cleanTextForSearch(c.romaji);
-      const stemClean = cleanTextForSearch(stem);
-      
-      const textToSearch = `${k} ${m} ${r} ${ro}`;
-
-      let matchesSearch = textToSearch.includes(cleanQ) || (stemClean && stemClean.length > 0 && cleanQ.includes(stemClean));
-      
-      if (!matchesSearch && queryWords.length > 0) {
-          const matchCount = queryWords.filter(qw => textToSearch.includes(qw)).length;
-          matchesSearch = (matchCount / queryWords.length) >= 0.7;
-      }
-      
-      if (!matchesSearch && c.forms) {
-          matchesSearch = c.forms.some(f => f.value && cleanTextForSearch(f.value).includes(cleanQ));
-      }
-
-      if (!matchesSearch) {
-          if (c.examples && Array.isArray(c.examples)) {
-              matchesSearch = c.examples.some(ex => 
-                (ex.sentence && cleanTextForSearch(ex.sentence).includes(cleanQ)) ||
-                (ex.translation && cleanTextForSearch(ex.translation).includes(cleanQ))
-              );
-          }
-          if (!matchesSearch && c.example) {
-              matchesSearch = cleanTextForSearch(c.example).includes(cleanQ) || 
-                              Boolean(c.exampleTranslation && cleanTextForSearch(c.exampleTranslation).includes(cleanQ));
-          }
-      }
-                            
+    // 1. Filter by category/wordType and audio status
+    const baseList = deck.filter(c => {
       const matchesFilter = filterType === 'all' || c.wordType === filterType;
-      
       let matchesAudio = true;
-      if (audioFilter === 'has_audio') {
-        matchesAudio = !!c.audioUrl;
-      } else if (audioFilter === 'no_audio') {
-        matchesAudio = !c.audioUrl;
-      }
-      
-      return matchesSearch && matchesFilter && matchesAudio;
+      if (audioFilter === 'has_audio') matchesAudio = !!c.audioUrl;
+      else if (audioFilter === 'no_audio') matchesAudio = !c.audioUrl;
+      return matchesFilter && matchesAudio;
     });
+
+    if (!q) {
+      return baseList;
+    }
+
+    // 2. Score each card using the Vietnamese & Japanese intelligent search matcher
+    const scoredList: { card: KanjiCard; score: number }[] = [];
+    for (const card of baseList) {
+      const matchResult = scoreKanjiCardMatch(card, q);
+      if (matchResult.matched) {
+        scoredList.push({ card, score: matchResult.score });
+      }
+    }
+
+    // 3. Sort descending by relevance score (exact phrase and whole words in meaning/Hán Việt first)
+    scoredList.sort((a, b) => b.score - a.score);
+
+    return scoredList.map(item => item.card);
   }, [deck, search, filterType, audioFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredDeck.length / itemsPerPage));
@@ -982,10 +953,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             </div>
             <input
               type="text"
-              placeholder="Tìm kiếm Kanji, nghĩa, romaji..."
+              placeholder="Tìm kiếm tiếng Việt (có/không dấu), Hán Việt, Kanji..."
               value={search}
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="pl-11 pr-9 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary w-full sm:w-72 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl placeholder:text-theme-primary/40 text-sm shadow-sm hover:border-theme-accent/50"
+              className="pl-11 pr-9 py-2.5 bg-theme-panel border border-theme-subtle text-theme-primary w-full sm:w-80 md:w-96 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-accent transition-all rounded-xl placeholder:text-theme-primary/40 text-sm shadow-sm hover:border-theme-accent/50"
             />
             {search && (
               <button

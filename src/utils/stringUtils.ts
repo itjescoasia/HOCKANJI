@@ -21,8 +21,8 @@ export const cleanTextForSearch = (str: string) => {
     if (!str) return "";
     return str.normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[đĐ]/g, "d")
         .toLowerCase()
-        .replace(/đ/g, "d")
         .replace(/[^\p{L}\p{N} ]/gu, " ")
         .replace(/\s+/g, " ")
         .trim();

@@ -62,6 +62,7 @@ interface DashboardProps {
 }
 
 import { cleanTextForSearch } from "../utils/stringUtils";
+import { scoreKanjiCardMatch, matchTextScore, hasVietnameseDiacritics } from "../utils/searchMatcher";
 
 export default function Dashboard({
   deck,
@@ -84,26 +85,79 @@ export default function Dashboard({
   const [searchQuery, setSearchQuery] = React.useState("");
 
   const searchResults = React.useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const query = cleanTextForSearch(searchQuery);
+    const q = searchQuery.trim();
+    if (!q) return [];
     
-    const normalMatches = deck.filter(c => 
-      cleanTextForSearch(c.kanji).includes(query) || 
-      cleanTextForSearch(c.reading).includes(query) || 
-      cleanTextForSearch(c.meaning).includes(query) ||
-      (c.examples || []).some(ex => cleanTextForSearch(ex.sentence || '').includes(query) || cleanTextForSearch(ex.translation || '').includes(query)) ||
-      (c.example && cleanTextForSearch(c.example).includes(query)) ||
-      (c.exampleTranslation && cleanTextForSearch(c.exampleTranslation).includes(query))
-    ).map(c => ({ type: 'normal', word: c.kanji, reading: c.reading, meaning: c.meaning, id: c.id, item: c }));
+    const queryHasDiacritics = hasVietnameseDiacritics(q);
+    const scoredResults: {
+      type: 'normal' | 'intensive';
+      word: string;
+      reading: string;
+      meaning: string;
+      id: string;
+      item: any;
+      score: number;
+    }[] = [];
 
-    const intensiveMatches = intensiveDeck.filter(c =>
-      cleanTextForSearch(c.word).includes(query) || 
-      cleanTextForSearch(c.reading || '').includes(query) || 
-      cleanTextForSearch(c.explanation || '').includes(query) ||
-      (c.examples || []).some(ex => cleanTextForSearch(ex.sentence || '').includes(query) || cleanTextForSearch(ex.translation || '').includes(query))
-    ).map(c => ({ type: 'intensive', word: c.word, reading: c.reading || '', meaning: c.explanation || '', id: c.id, item: c }));
+    // 1. Normal Deck
+    for (const c of deck) {
+      const match = scoreKanjiCardMatch(c, q);
+      if (match.matched) {
+        scoredResults.push({
+          type: 'normal',
+          word: c.kanji,
+          reading: c.reading,
+          meaning: c.meaning,
+          id: c.id,
+          item: c,
+          score: match.score,
+        });
+      }
+    }
 
-    return [...normalMatches, ...intensiveMatches].slice(0, 8);
+    // 2. Intensive Deck
+    for (const c of intensiveDeck) {
+      let bestScore = 0;
+      if (c.word && c.word.includes(q)) bestScore = Math.max(bestScore, 1400);
+      if (c.reading && c.reading.includes(q)) bestScore = Math.max(bestScore, 1200);
+
+      if (c.explanation) {
+        const score = matchTextScore(c.explanation, q, queryHasDiacritics);
+        if (score > 0) bestScore = Math.max(bestScore, score * 1.4);
+      }
+
+      if (c.category) {
+        const score = matchTextScore(c.category, q, queryHasDiacritics);
+        if (score > 0) bestScore = Math.max(bestScore, score * 0.9);
+      }
+
+      if (c.examples && c.examples.length > 0) {
+        for (const ex of c.examples) {
+          if (ex.sentence && ex.sentence.includes(q)) bestScore = Math.max(bestScore, 500);
+          if (ex.translation) {
+            const score = matchTextScore(ex.translation, q, queryHasDiacritics);
+            if (score > 0) bestScore = Math.max(bestScore, score * 1.0);
+          }
+        }
+      }
+
+      if (bestScore > 0) {
+        scoredResults.push({
+          type: 'intensive',
+          word: c.word,
+          reading: c.reading || '',
+          meaning: c.explanation || '',
+          id: c.id,
+          item: c,
+          score: bestScore,
+        });
+      }
+    }
+
+    // Sort descending by relevance score
+    scoredResults.sort((a, b) => b.score - a.score);
+
+    return scoredResults.slice(0, 8);
   }, [searchQuery, deck, intensiveDeck]);
 
   const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
@@ -317,7 +371,7 @@ export default function Dashboard({
           type="text" 
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Tìm kiếm từ vựng..." 
+          placeholder="Tìm kiếm tiếng Việt (có/không dấu), Hán Việt, Kanji..." 
           className="w-full bg-theme-panel border border-theme-subtle py-3 pl-10 pr-10 text-theme-primary placeholder-theme-primary/30 focus:outline-none focus:border-theme-accent transition-colors text-base sm:text-sm shadow-sm rounded-xl"
         />
         {searchQuery && (
