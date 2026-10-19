@@ -1,6 +1,15 @@
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../utils/playTTS';
-import { cleanMarkdownForDisplay } from '../utils/stringUtils';
+import {
+  cleanMarkdownForDisplay,
+  cleanTextForSearch,
+  isDictionaryForm,
+  getEffectiveCardAudioUrl,
+  getEffectiveFormAudioUrl,
+  syncDictionaryAudioOnCardUpload,
+  syncDictionaryAudioOnFormUpload,
+  sanitizeCardFormsAudio
+} from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
 import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy, Flame } from 'lucide-react';
@@ -10,7 +19,6 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { removeUndefined } from '../hooks/useVocabDeck';
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { cleanTextForSearch } from '../utils/stringUtils';
 import { scoreKanjiCardMatch } from '../utils/searchMatcher';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
@@ -464,9 +472,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     try {
       setUploadingMainAudio(true);
       const url = await uploadAudioFile(file);
-      const updates = { audioUrl: url, hasAudio: true };
+      // Synchronize with any dictionary form(s)
+      const updatedCard = syncDictionaryAudioOnCardUpload(viewingCard, url);
+      const updates = { audioUrl: url, hasAudio: true, forms: updatedCard.forms };
       if (onUpdate) await onUpdate(viewingCard.id, updates);
-      setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
+      setViewingCard(updatedCard);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
@@ -515,17 +525,26 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const handleUploadViewingCardFormAudio = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
-    if (!file || !viewingCard) return;
+    if (!file || !viewingCard || !viewingCard.forms) return;
     try {
       setUploadingFormIdx(index);
       const url = await uploadAudioFile(file);
-      const updatedForms = [...(viewingCard.forms || [])];
-      if (updatedForms[index]) {
+      const targetForm = viewingCard.forms[index];
+      const isDict = isDictionaryForm(targetForm?.name, targetForm?.value, viewingCard.kanji, viewingCard.reading);
+
+      let updatedCard: KanjiCard;
+      if (isDict) {
+        // Synchronize with main card only if genuinely Dictionary form
+        const res = syncDictionaryAudioOnFormUpload(viewingCard, index, url);
+        updatedCard = res.updatedCard;
+      } else {
+        // Non-dictionary form (Thể phủ định, Thể quá khứ, v.v.): STRICTLY ISOLATED to only this form!
+        const updatedForms = [...viewingCard.forms];
         updatedForms[index] = { ...updatedForms[index], audioUrl: url, hasAudio: true };
-        const updates = { forms: updatedForms };
-        if (onUpdate) await onUpdate(viewingCard.id, updates);
-        setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
+        updatedCard = { ...viewingCard, forms: updatedForms };
       }
+      if (onUpdate) await onUpdate(viewingCard.id, updatedCard);
+      setViewingCard(updatedCard);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
@@ -533,6 +552,31 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       e.target.value = '';
     }
   };
+
+  const handleDeleteViewingCardFormAudio = async (index: number) => {
+    if (!viewingCard || !viewingCard.forms) return;
+    try {
+      const updatedForms = [...viewingCard.forms];
+      if (updatedForms[index]) {
+        const oldUrl = updatedForms[index].audioUrl;
+        const targetForm = updatedForms[index];
+        const isDict = isDictionaryForm(targetForm?.name, targetForm?.value, viewingCard.kanji, viewingCard.reading);
+        const { audioUrl, hasAudio, ...rest } = updatedForms[index];
+        updatedForms[index] = rest;
+
+        let updatedCard = { ...viewingCard, forms: updatedForms };
+        if (isDict && viewingCard.audioUrl === oldUrl) {
+          updatedCard.audioUrl = null;
+          updatedCard.hasAudio = false;
+        }
+        if (onUpdate) await onUpdate(viewingCard.id, updatedCard);
+        setViewingCard(updatedCard);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xóa file âm thanh');
+    }
+  };
+
 
   const [isFetchingOjad, setIsFetchingOjad] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -674,8 +718,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     if (viewingCard) {
       const updatedCard = deck.find(c => c.id === viewingCard.id);
       if (updatedCard) {
-         if (JSON.stringify(updatedCard) !== JSON.stringify(viewingCard)) {
-            setViewingCard(updatedCard);
+         const sanitized = sanitizeCardFormsAudio(updatedCard);
+         if (JSON.stringify(sanitized) !== JSON.stringify(viewingCard)) {
+            setViewingCard(sanitized);
          }
       }
     }
@@ -724,7 +769,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     if (viewCardReq?.id) {
       const card = deck.find(c => c.id === viewCardReq.id);
       if (card) {
-        setViewingCard(card);
+        setViewingCard(sanitizeCardFormsAudio(card));
         setSearch(card.kanji || card.reading);
         setCurrentPage(1);
       }
@@ -1805,43 +1850,54 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             {/* Header / Main Vocab */}
             <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-20 border-b border-theme-subtle px-4 sm:px-8 py-3.5 sm:py-4 pt-safe flex flex-col sm:flex-row justify-between items-start gap-3 shrink-0 shadow-sm">
               <div className="flex flex-col">
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <h2 className="text-4xl md:text-5xl font-serif text-theme-accent">{viewingCard.kanji || viewingCard.reading}</h2>
                   
                   {/* Audio Controls for Main Word */}
-                  <div className="flex items-center gap-1.5 bg-theme-base-alt/80 p-1 rounded-full border border-theme-subtle shadow-xs">
-                    <button
-                      onClick={(e) => playAudio(e, viewingCard.kanji || viewingCard.reading, viewingCard.audioUrl)}
-                      className="p-2 bg-theme-accent/10 text-theme-accent rounded-full hover:bg-theme-accent hover:text-theme-inverted transition-colors cursor-pointer"
-                      title={viewingCard.audioUrl ? "Nghe file âm thanh MP3" : "Nghe phát âm"}
-                    >
-                      <Volume2 className="w-5 h-5" />
-                    </button>
-                    {viewingCard.audioUrl && <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest px-1">MP3</span>}
+                  {(() => {
+                    const effectiveMainAudio = getEffectiveCardAudioUrl(viewingCard);
+                    const isSharedFromDict = !viewingCard.audioUrl && !!effectiveMainAudio;
 
-                    {/* Nút Upload MP3 cho từ vựng chính */}
-                    <label
-                      className={`p-2 rounded-full cursor-pointer transition-all flex items-center justify-center ${
-                        viewingCard.audioUrl
-                          ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
-                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
-                      }`}
-                      title={viewingCard.audioUrl ? "Đổi file MP3 cho từ này" : "Tải lên file MP3 phát âm cho từ này"}
-                    >
-                      {uploadingMainAudio ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-theme-accent" />
-                      ) : (
-                        <Upload className="w-5 h-5" />
-                      )}
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        disabled={uploadingMainAudio}
-                        onChange={handleUploadViewingCardMainAudio}
-                      />
-                    </label>
-                  </div>
+                    return (
+                      <div className="flex items-center gap-1.5 bg-theme-base-alt/80 p-1 rounded-full border border-theme-subtle shadow-xs">
+                        <button
+                          onClick={(e) => playAudio(e, viewingCard.kanji || viewingCard.reading, effectiveMainAudio)}
+                          className="p-2 bg-theme-accent/10 text-theme-accent rounded-full hover:bg-theme-accent hover:text-theme-inverted transition-colors cursor-pointer"
+                          title={effectiveMainAudio ? (isSharedFromDict ? "Nghe file âm thanh MP3 (sài chung từ Thể từ điển ngắn)" : "Nghe file âm thanh MP3") : "Nghe phát âm"}
+                        >
+                          <Volume2 className="w-5 h-5" />
+                        </button>
+                        {effectiveMainAudio && (
+                          <span className="text-[9px] font-bold text-theme-accent uppercase tracking-widest px-1">
+                            MP3{isSharedFromDict ? ' (CHUNG)' : ''}
+                          </span>
+                        )}
+
+                        {/* Nút Upload MP3 cho từ vựng chính */}
+                        <label
+                          className={`p-2 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                            effectiveMainAudio
+                              ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                          }`}
+                          title={effectiveMainAudio ? "Đổi file MP3 cho từ này (sài chung cả Thể từ điển ngắn)" : "Tải lên file MP3 phát âm cho từ này (sài chung cả Thể từ điển ngắn)"}
+                        >
+                          {uploadingMainAudio ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-theme-accent" />
+                          ) : (
+                            <Upload className="w-5 h-5" />
+                          )}
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            className="hidden"
+                            disabled={uploadingMainAudio}
+                            onChange={handleUploadViewingCardMainAudio}
+                          />
+                        </label>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mt-2">
                   {viewingCard.kanji && viewingCard.reading && viewingCard.kanji !== viewingCard.reading && (
@@ -1918,65 +1974,97 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               {/* Forms / Conjugation */}
               {viewingCard.forms && viewingCard.forms.length > 0 && (
                 <div className="bg-theme-base-alt rounded-md p-5 border border-theme-subtle">
-                  <h3 className="text-sm uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-4 border-b border-theme-subtle pb-2 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-theme-accent rounded-full"></span>
-                    Các thể / Chia thì
-                  </h3>
+                  <div className="flex items-center justify-between gap-2 border-b border-theme-subtle pb-2 mb-4 flex-wrap">
+                    <h3 className="text-sm uppercase tracking-[0.2em] text-theme-accent opacity-80 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-theme-accent rounded-full"></span>
+                      Các thể / Chia thì
+                    </h3>
+                    <span className="text-[11px] text-theme-accent font-medium">
+                      Chỉ riêng Thể từ điển (ngắn) tự động sài chung MP3 với từ vựng lớn. Thể phủ định, quá khứ,... hoàn toàn độc lập.
+                    </span>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {viewingCard.forms.map((f, idx) => (
-                      <div key={idx} className="bg-theme-hover p-4 rounded-md border border-theme-subtle/50 flex flex-col gap-1.5 shadow-sm">
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-theme-accent/70 bg-theme-panel inline-block w-max px-2 py-0.5 rounded-sm mb-1">{f.name}</div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-xl font-serif text-theme-primary">{f.value}</span>
-                          <div className="flex items-center gap-1 bg-theme-panel/90 p-0.5 rounded-full border border-theme-subtle">
-                            <button
-                              onClick={(e) => playAudio(e, f.value, f.audioUrl)}
-                              className={`p-1.5 rounded-full transition-colors cursor-pointer ${f.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel bg-theme-base'}`}
-                              title={f.audioUrl ? "Nghe file MP3" : "Nghe phát âm"}
-                            >
-                              <Volume2 className="w-3.5 h-3.5" />
-                            </button>
-                            {f.audioUrl && <span className="text-[7px] font-bold text-theme-accent uppercase leading-none tracking-widest px-0.5">MP3</span>}
+                    {viewingCard.forms.map((f, idx) => {
+                      const isDict = isDictionaryForm(f.name, f.value, viewingCard.kanji, viewingCard.reading);
+                      const effectiveFormAudio = getEffectiveFormAudioUrl(f, viewingCard.audioUrl, viewingCard.forms, viewingCard.kanji, viewingCard.reading);
+                      const isShared = isDict && !f.audioUrl && !!viewingCard.audioUrl;
 
-                            <label
-                              className={`p-1 rounded-full cursor-pointer transition-all flex items-center justify-center ${
-                                f.audioUrl
-                                  ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
-                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
-                              }`}
-                              title={f.audioUrl ? "Đổi file MP3 cho thể này" : "Tải lên file MP3 cho thể này"}
-                            >
-                              {uploadingFormIdx === idx ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
-                              ) : (
-                                <Upload className="w-3.5 h-3.5" />
+                      return (
+                        <div key={idx} className="bg-theme-hover p-4 rounded-md border border-theme-subtle/50 flex flex-col gap-1.5 shadow-sm">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent/70 bg-theme-panel inline-block w-max px-2 py-0.5 rounded-sm">
+                              {f.name}
+                            </span>
+                            {isDict && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-theme-accent/15 text-theme-accent border border-theme-accent/25">
+                                Sài chung MP3 (Thể từ điển)
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xl font-serif text-theme-primary">{f.value}</span>
+                            <div className="flex items-center gap-1 bg-theme-panel/90 p-0.5 rounded-full border border-theme-subtle">
+                              <button
+                                onClick={(e) => playAudio(e, f.value, effectiveFormAudio)}
+                                className={`p-1.5 rounded-full transition-colors cursor-pointer ${effectiveFormAudio ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel bg-theme-base'}`}
+                                title={effectiveFormAudio ? (isShared ? "Nghe phát âm (sài chung MP3 từ vựng lớn)" : "Nghe file MP3") : "Nghe phát âm"}
+                              >
+                                <Volume2 className="w-3.5 h-3.5" />
+                              </button>
+                              {effectiveFormAudio && <span className="text-[7px] font-bold text-theme-accent uppercase leading-none tracking-widest px-0.5">MP3</span>}
+
+                              <label
+                                className={`p-1 rounded-full cursor-pointer transition-all flex items-center justify-center ${
+                                  effectiveFormAudio
+                                    ? 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/40 shadow-xs'
+                                }`}
+                                title={isDict ? "Tải/Đổi file MP3 (sài chung & đồng bộ cả từ vựng lớn)" : (effectiveFormAudio ? "Đổi file MP3 riêng cho thể này" : "Tải lên file MP3 riêng cho thể này")}
+                              >
+                                {uploadingFormIdx === idx ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
+                                ) : (
+                                  <Upload className="w-3.5 h-3.5" />
+                                )}
+                                <input
+                                  type="file"
+                                  accept="audio/*"
+                                  className="hidden"
+                                  disabled={uploadingFormIdx !== null}
+                                  onChange={(e) => handleUploadViewingCardFormAudio(e, idx)}
+                                />
+                              </label>
+
+                              {f.audioUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteViewingCardFormAudio(idx)}
+                                  className="p-1 rounded-full text-theme-primary/40 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                  title="Xóa file MP3 của thể này"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
                               )}
-                              <input
-                                type="file"
-                                accept="audio/*"
-                                className="hidden"
-                                disabled={uploadingFormIdx !== null}
-                                onChange={(e) => handleUploadViewingCardFormAudio(e, idx)}
-                              />
-                            </label>
+                            </div>
                           </div>
+                          {(f.reading || f.romaji) && (
+                            <div className="text-[11px] text-theme-primary/60 mt-1 flex justify-between">
+                              <span>{f.reading}</span>
+                              <span className="font-mono">{f.romaji}</span>
+                            </div>
+                          )}
+                          {f.meaning && (
+                            <div className="text-xs text-theme-primary/80 italic mt-2 border-t border-theme-subtle/30 pt-2">
+                              {f.meaning}
+                            </div>
+                          )}
                         </div>
-                        {(f.reading || f.romaji) && (
-                          <div className="text-[11px] text-theme-primary/60 mt-1 flex justify-between">
-                            <span>{f.reading}</span>
-                            <span className="font-mono">{f.romaji}</span>
-                          </div>
-                        )}
-                        {f.meaning && (
-                          <div className="text-xs text-theme-primary/80 italic mt-2 border-t border-theme-subtle/30 pt-2">
-                            {f.meaning}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
+
 
               {/* Examples */}
               {(viewingCard.examples && viewingCard.examples.length > 0) || (viewingCard.example || viewingCard.exampleTranslation) ? (

@@ -20,7 +20,7 @@ import Markdown from 'react-markdown';
 import { IntensiveWord, IntensiveExample, KanjiCard, FuriganaMode } from '../types';
 import { getCategoryBadgeStyle, calculateMasteryPercent, isWordMastered } from './IntensiveStudy';
 import { playTTS, playAudioUrl } from '../utils/playTTS';
-import { cleanMarkdownForDisplay } from '../utils/stringUtils';
+import { cleanMarkdownForDisplay, isDictionaryForm, getEffectiveCardAudioUrl, getEffectiveFormAudioUrl } from '../utils/stringUtils';
 import { FuriganaSentence, FuriganaToggle } from './FuriganaSentence';
 import { usePersistentState } from '../hooks/usePersistentState';
 
@@ -270,24 +270,39 @@ export default function WordDetailModal({
                   {word.word}
                 </h2>
                 <div className="flex flex-col items-center gap-0.5">
-                  <button
-                    onClick={(e) => playAudio(e, word.word || word.reading, word.audioUrl)}
-                    className={`p-2 rounded-full border border-theme-subtle shadow-sm transition-all duration-200 cursor-pointer ${
-                      activeAudioText === (word.word || word.reading)?.trim()
-                        ? 'scale-110 text-theme-accent bg-theme-accent/25 ring-2 ring-theme-accent/50 animate-pulse'
-                        : word.audioUrl
-                          ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/25 hover:scale-105 active:scale-95'
-                          : 'text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover hover:scale-105 active:scale-95'
-                    }`}
-                    title={word.audioUrl ? "Nghe file âm thanh MP3 (Inworld AI)" : "Nghe phát âm"}
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                  {word.audioUrl && (
-                    <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest">
-                      MP3
-                    </span>
-                  )}
+                  {(() => {
+                    const effectiveHeroAudio =
+                      word.audioUrl ||
+                      getEffectiveCardAudioUrl(matchedCard) ||
+                      matchedCard?.forms?.find(f => isDictionaryForm(f.name, f.value, matchedCard?.kanji, matchedCard?.reading) && f.audioUrl)?.audioUrl;
+                    const isHeroAudioSharedFromDict = !word.audioUrl && (!matchedCard?.audioUrl) && !!effectiveHeroAudio;
+
+                    return (
+                      <>
+                        <button
+                          onClick={(e) => playAudio(e, word.word || word.reading, effectiveHeroAudio)}
+                          className={`p-2 rounded-full border border-theme-subtle shadow-sm transition-all duration-200 cursor-pointer ${
+                            activeAudioText === (word.word || word.reading)?.trim()
+                              ? 'scale-110 text-theme-accent bg-theme-accent/25 ring-2 ring-theme-accent/50 animate-pulse'
+                              : effectiveHeroAudio
+                                ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/25 hover:scale-105 active:scale-95'
+                                : 'text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover hover:scale-105 active:scale-95'
+                          }`}
+                          title={effectiveHeroAudio ? (isHeroAudioSharedFromDict ? "Nghe file âm thanh MP3 (sài chung từ Thể từ điển ngắn)" : "Nghe file âm thanh MP3") : "Nghe phát âm"}
+                        >
+                          <Volume2 className="w-5 h-5" />
+                        </button>
+                        {effectiveHeroAudio && (
+                          <span
+                            className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest text-center"
+                            title={isHeroAudioSharedFromDict ? "Dùng chung MP3 thể từ điển (ngắn)" : "MP3 Chuẩn"}
+                          >
+                            MP3{isHeroAudioSharedFromDict ? ' (CHUNG)' : ''}
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -404,43 +419,65 @@ export default function WordDetailModal({
           {/* Section 4: Verb / Adjective Forms (if present in matched card) */}
           {matchedCard?.forms && matchedCard.forms.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-accent">
-                <BookOpen className="w-4 h-4" />
-                <span>Các Thể Biến Đổi Của Từ ({matchedCard.forms.length} thể)</span>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-accent">
+                  <BookOpen className="w-4 h-4" />
+                  <span>Các Thể Biến Đổi Của Từ ({matchedCard.forms.length} thể)</span>
+                </div>
+                <span className="text-[11px] text-theme-accent font-medium">
+                  Chỉ riêng Thể từ điển (ngắn) tự động sài chung MP3 với từ vựng lớn. Thể phủ định, quá khứ,... hoàn toàn độc lập.
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {matchedCard.forms.map((f, idx) => (
-                  <div
-                    key={f.id || idx}
-                    className="flex items-center justify-between p-3 rounded-lg bg-theme-base-alt border border-theme-subtle hover:border-theme-accent/40 transition-colors"
-                  >
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-theme-primary/50 block">
-                        {f.name}
-                      </span>
-                      <span className="text-base font-serif font-semibold text-theme-primary block">
-                        {f.value}
-                      </span>
-                      {(f.reading || f.romaji) && (
-                        <span className="text-xs text-theme-accent block">
-                          {f.reading} {f.romaji ? `[${f.romaji}]` : ''}
-                        </span>
-                      )}
-                      {f.meaning && (
-                        <span className="text-xs text-theme-primary/70 italic block">
-                          {f.meaning}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={(e) => playAudio(e, f.value, f.audioUrl)}
-                      className="p-2 rounded-full text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover transition-colors cursor-pointer"
-                      title="Nghe thể này"
+                {matchedCard.forms.map((f, idx) => {
+                  const isDict = isDictionaryForm(f.name, f.value, matchedCard.kanji, matchedCard.reading);
+                  const effectiveFormAudio = getEffectiveFormAudioUrl(f, word.audioUrl || matchedCard?.audioUrl, matchedCard.forms, matchedCard.kanji, matchedCard.reading);
+                  const isSharedAudio = isDict && !f.audioUrl && !!(word.audioUrl || matchedCard?.audioUrl);
+
+                  return (
+                    <div
+                      key={f.id || idx}
+                      className="flex items-center justify-between p-3 rounded-lg bg-theme-base-alt border border-theme-subtle hover:border-theme-accent/40 transition-colors"
                     >
-                      <Volume2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-theme-primary/50 block">
+                            {f.name}
+                          </span>
+                          {isDict && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-theme-accent/15 text-theme-accent border border-theme-accent/25">
+                              Sài chung MP3 (Thể từ điển)
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-base font-serif font-semibold text-theme-primary block">
+                          {f.value}
+                        </span>
+                        {(f.reading || f.romaji) && (
+                          <span className="text-xs text-theme-accent block">
+                            {f.reading} {f.romaji ? `[${f.romaji}]` : ''}
+                          </span>
+                        )}
+                        {f.meaning && (
+                          <span className="text-xs text-theme-primary/70 italic block">
+                            {f.meaning}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => playAudio(e, f.value, effectiveFormAudio)}
+                        className={`p-2 rounded-full cursor-pointer transition-colors ${
+                          effectiveFormAudio
+                            ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20'
+                            : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
+                        }`}
+                        title={effectiveFormAudio ? (isSharedAudio ? "Nghe phát âm (sài chung MP3 với từ vựng lớn)" : "Nghe thể này") : "Nghe phát âm"}
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

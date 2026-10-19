@@ -2,6 +2,7 @@ import React, { useState, useEffect, Fragment, useRef } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playAudioUrl } from '../utils/playTTS';
+import { isDictionaryForm, getEffectiveCardAudioUrl, getEffectiveFormAudioUrl, syncDictionaryAudioOnCardUpload } from '../utils/stringUtils';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { storage, auth, db } from '../lib/firebase';
@@ -460,7 +461,8 @@ export default function ReviewSession({
     try {
       setIsUploadingAudio(true);
       const url = await uploadAudioFile(file);
-      const updates = { audioUrl: url, hasAudio: true };
+      const updatedCard = syncDictionaryAudioOnCardUpload(currentCard, url);
+      const updates = { audioUrl: url, hasAudio: true, forms: updatedCard.forms };
       if (onUpdateCard) {
         onUpdateCard(currentCard.id, updates);
       }
@@ -469,6 +471,7 @@ export default function ReviewSession({
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
+
       setIsUploadingAudio(false);
       if (e.target) e.target.value = '';
     }
@@ -915,22 +918,30 @@ export default function ReviewSession({
                               <span>Các dạng biến đổi (Forms)</span>
                             </span>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
-                              {currentCard.forms.map((form, fIdx) => (
-                                <div key={fIdx} className="p-2.5 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-center justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <div className="text-[10px] text-theme-primary/50 truncate uppercase font-bold">{form.name || 'Dạng'}</div>
-                                    <div className="text-xs font-serif font-bold text-theme-primary truncate">{form.value}</div>
+                              {currentCard.forms.map((form, fIdx) => {
+                                const isDict = isDictionaryForm(form.name, form.value, currentCard.kanji, currentCard.reading);
+                                const formAudio = getEffectiveFormAudioUrl(form, currentCard.audioUrl, currentCard.forms, currentCard.kanji, currentCard.reading);
+                                const isShared = isDict && !form.audioUrl && !!currentCard.audioUrl;
+                                return (
+                                  <div key={fIdx} className="p-2.5 rounded-xl bg-theme-base-alt border border-theme-subtle flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-theme-primary/50 truncate uppercase font-bold">{form.name || 'Dạng'}</span>
+                                        {isDict && <span className="text-[8px] font-bold text-theme-accent">CHUNG</span>}
+                                      </div>
+                                      <div className="text-xs font-serif font-bold text-theme-primary truncate">{form.value}</div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleSpeak(e, form.value, formAudio)}
+                                      className="p-1 rounded text-theme-primary/40 hover:text-theme-accent cursor-pointer shrink-0"
+                                      title={formAudio ? (isShared ? "Nghe phát âm (sài chung MP3 từ vựng gốc)" : "Nghe dạng này") : "Chưa có file MP3"}
+                                    >
+                                      <Volume2 className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleSpeak(e, form.value, form.audioUrl)}
-                                    className="p-1 rounded text-theme-primary/40 hover:text-theme-accent cursor-pointer shrink-0"
-                                    title="Nghe dạng này"
-                                  >
-                                    <Volume2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}

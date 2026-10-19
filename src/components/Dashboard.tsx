@@ -62,7 +62,7 @@ interface DashboardProps {
 }
 
 import { cleanTextForSearch } from "../utils/stringUtils";
-import { scoreKanjiCardMatch, matchTextScore, hasVietnameseDiacritics } from "../utils/searchMatcher";
+import { scoreKanjiCardMatch, scoreIntensiveWordMatch, matchTextScore, hasVietnameseDiacritics } from "../utils/searchMatcher";
 
 export default function Dashboard({
   deck,
@@ -117,31 +117,8 @@ export default function Dashboard({
 
     // 2. Intensive Deck
     for (const c of intensiveDeck) {
-      let bestScore = 0;
-      if (c.word && c.word.includes(q)) bestScore = Math.max(bestScore, 1400);
-      if (c.reading && c.reading.includes(q)) bestScore = Math.max(bestScore, 1200);
-
-      if (c.explanation) {
-        const score = matchTextScore(c.explanation, q, queryHasDiacritics);
-        if (score > 0) bestScore = Math.max(bestScore, score * 1.4);
-      }
-
-      if (c.category) {
-        const score = matchTextScore(c.category, q, queryHasDiacritics);
-        if (score > 0) bestScore = Math.max(bestScore, score * 0.9);
-      }
-
-      if (c.examples && c.examples.length > 0) {
-        for (const ex of c.examples) {
-          if (ex.sentence && ex.sentence.includes(q)) bestScore = Math.max(bestScore, 500);
-          if (ex.translation) {
-            const score = matchTextScore(ex.translation, q, queryHasDiacritics);
-            if (score > 0) bestScore = Math.max(bestScore, score * 1.0);
-          }
-        }
-      }
-
-      if (bestScore > 0) {
+      const match = scoreIntensiveWordMatch(c, q);
+      if (match.matched) {
         scoredResults.push({
           type: 'intensive',
           word: c.word,
@@ -149,10 +126,11 @@ export default function Dashboard({
           meaning: c.explanation || '',
           id: c.id,
           item: c,
-          score: bestScore,
+          score: match.score,
         });
       }
     }
+
 
     // Sort descending by relevance score
     scoredResults.sort((a, b) => b.score - a.score);

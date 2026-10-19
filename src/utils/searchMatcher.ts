@@ -308,6 +308,96 @@ export const scoreKanjiCardMatch = (card: KanjiCard, rawQuery: string): CardMatc
 };
 
 /**
+ * Evaluates whether an IntensiveWord matches a search query and scores its relevance.
+ * Highly optimized for Vietnamese searches (with and without diacritics).
+ */
+export const scoreIntensiveWordMatch = (word: any, rawQuery: string): CardMatchResult => {
+  const q = rawQuery.trim();
+  if (!q) return { matched: true, score: 0 };
+
+  const queryHasDiacritics = hasVietnameseDiacritics(q);
+  const qLower = q.toLowerCase();
+
+  let bestScore = 0;
+
+  // 1. Japanese Word match
+  if (word.word) {
+    const w = word.word.trim();
+    if (w === q) bestScore = Math.max(bestScore, 1500);
+    else if (w.startsWith(q)) bestScore = Math.max(bestScore, 1200);
+    else if (w.includes(q)) bestScore = Math.max(bestScore, 900);
+  }
+
+  // 2. Reading match
+  if (word.reading) {
+    const r = word.reading.trim();
+    if (r === q) bestScore = Math.max(bestScore, 1400);
+    else if (r.startsWith(q)) bestScore = Math.max(bestScore, 1100);
+    else if (r.includes(q)) bestScore = Math.max(bestScore, 800);
+  }
+
+  // 3. Romaji match
+  if (word.romaji) {
+    const ro = word.romaji.toLowerCase().trim();
+    const roClean = normalizeRomaji(word.romaji);
+    const qRo = normalizeRomaji(q);
+    if (ro === qLower || roClean === qRo) bestScore = Math.max(bestScore, 1100);
+    else if (ro.startsWith(qLower) || roClean.startsWith(qRo)) bestScore = Math.max(bestScore, 850);
+    else if (ro.includes(qLower) || roClean.includes(qRo)) bestScore = Math.max(bestScore, 600);
+  }
+
+  // 4. Vietnamese Explanation (Core Meaning!) - Highest Priority for Vietnamese
+  if (word.explanation) {
+    const score = matchTextScore(word.explanation, q, queryHasDiacritics);
+    if (score > 0) {
+      bestScore = Math.max(bestScore, score * 1.5);
+    }
+  }
+
+  // 5. Category (Từ loại)
+  if (word.category) {
+    const score = matchTextScore(word.category, q, queryHasDiacritics);
+    if (score > 0) {
+      bestScore = Math.max(bestScore, score * 1.0);
+    }
+  }
+
+  // 6. Examples & Translations
+  if (word.examples && Array.isArray(word.examples)) {
+    for (const ex of word.examples) {
+      if (ex.sentence && ex.sentence.includes(q)) {
+        bestScore = Math.max(bestScore, 500);
+      }
+      if (ex.reading && ex.reading.includes(q)) {
+        bestScore = Math.max(bestScore, 450);
+      }
+      if (ex.romaji) {
+        const roClean = normalizeRomaji(ex.romaji);
+        const qRo = normalizeRomaji(q);
+        if (roClean.includes(qRo)) bestScore = Math.max(bestScore, 400);
+      }
+      if (ex.translation) {
+        const score = matchTextScore(ex.translation, q, queryHasDiacritics);
+        if (score > 0) {
+          bestScore = Math.max(bestScore, score * 1.2);
+        }
+      }
+    }
+  }
+
+  // 7. Stem & Kanji sub-queries for Japanese verbs
+  const stem = q.replace(/[ぁ-ん]+$/, "");
+  if (stem && stem !== q && /[\u4e00-\u9faf々]/.test(stem) && word.word && word.word.includes(stem)) {
+    bestScore = Math.max(bestScore, 650);
+  }
+
+  return {
+    matched: bestScore > 0,
+    score: bestScore,
+  };
+};
+
+/**
  * Filter and sort a deck by relevance to query.
  */
 export const filterAndRankDeck = <T extends KanjiCard>(deck: T[], query: string): T[] => {
@@ -322,8 +412,28 @@ export const filterAndRankDeck = <T extends KanjiCard>(deck: T[], query: string)
     }
   }
 
-  // Sort descending by score
   scoredCards.sort((a, b) => b.score - a.score);
 
   return scoredCards.map(item => item.card);
 };
+
+/**
+ * Filter and sort an IntensiveWord deck by relevance to query.
+ */
+export const filterAndRankIntensiveDeck = <T extends any>(deck: T[], query: string): T[] => {
+  if (!query || !query.trim()) return deck;
+
+  const scoredItems: { item: T; score: number }[] = [];
+
+  for (const word of deck) {
+    const res = scoreIntensiveWordMatch(word, query);
+    if (res.matched) {
+      scoredItems.push({ item: word, score: res.score });
+    }
+  }
+
+  scoredItems.sort((a, b) => b.score - a.score);
+
+  return scoredItems.map(s => s.item);
+};
+
