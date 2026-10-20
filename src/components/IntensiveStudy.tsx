@@ -355,10 +355,7 @@ export default function IntensiveStudy({
     e.stopPropagation();
     if (audioUrl) {
       playAudioUrl(audioUrl, text);
-      return;
     }
-    
-    if (text) playTTS(text);
   };
 
   const fuse = React.useMemo(
@@ -1330,10 +1327,7 @@ function StudyView({
     e.stopPropagation();
     if (audioUrl) {
       playAudioUrl(audioUrl, text);
-      return;
     }
-    
-    if (text) playTTS(text);
   };
 
   const toggleAllMeanings = () => {
@@ -2354,18 +2348,6 @@ function StudyView({
                                   </button>
                                 )}
                                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
-                                  {!ex.hasAudio && !ex.audioUrl && (
-                                  <div className="flex flex-col items-center gap-0.5">
-                                  <button
-                                    onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-                                    className={`p-2 rounded transition-colors ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-panel'}`}
-                                    title={ex.audioUrl ? "Nghe file MP3" : "Phát âm thanh"}
-                                  >
-                                    <Volume2 className="w-4 h-4" />
-                                  </button>
-                                  {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-0.5">MP3</span>}
-                                  </div>
-                                  )}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -2648,18 +2630,7 @@ function StudyView({
                                         autoFetch={true}
                                       />
                                     )}
-                                    {!ex.hasAudio && !ex.audioUrl && (
-                                    <span className="inline-flex flex-col items-center ml-3 gap-0.5 align-middle">
-                                    <button
-                                      onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
-                                      className={`inline-flex items-center justify-center p-2 transition-colors rounded-full ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-accent/10'}`}
-                                      title={ex.audioUrl ? "Nghe file MP3" : "Nghe câu ví dụ"}
-                                    >
-                                      <Volume2 className="w-5 h-5" />
-                                    </button>
-                                    {ex.audioUrl && <span className="text-[8px] font-bold text-theme-accent uppercase leading-none tracking-widest mt-0.5">MP3</span>}
-                                    </span>
-                                    )}
+
 
                                   </div>
                                   {ex.romaji &&
