@@ -2580,22 +2580,7 @@ function StudyView({
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
-                                      {!thisHasAudio && otherHasAudio && (
-                                        <button
-                                          type="button"
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            await handleTransferAudio(rel.otherId, ex.id, 'copy');
-                                          }}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
-                                          title={`Tham khảo/lấy MP3 từ Câu #${rel.otherIndex} (Lưu ý khác động từ)`}
-                                        >
-                                          <Volume2 className="w-3.5 h-3.5" />
-                                          <span>Tham khảo MP3 câu #{rel.otherIndex}</span>
-                                        </button>
-                                      )}
-
+                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2916,7 +2901,8 @@ function IntensiveExampleAudio({
     return allExamples.filter(e => e.id !== example.id && (e.audioUrl || e.hasAudio));
   }, [allExamples, example.id]);
 
-  const counterpart = duplicateInfo?.otherId ? allExamples.find(e => e.id === duplicateInfo.otherId) : null;
+  const isTrueDuplicate = duplicateInfo?.type === 'duplicate';
+  const counterpart = isTrueDuplicate && duplicateInfo?.otherId ? allExamples.find(e => e.id === duplicateInfo.otherId) : null;
   const counterpartHasAudio = !!(counterpart?.audioUrl || counterpart?.hasAudio);
 
   const handleGenerateAI = async (e: React.MouseEvent) => {
@@ -3065,7 +3051,7 @@ function IntensiveExampleAudio({
             {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
           </button>
 
-          {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp hoặc câu khác động từ */}
+          {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp */}
           {counterpart && counterpartHasAudio && onTransferAudio && (
             <button
               type="button"
@@ -3073,23 +3059,11 @@ function IntensiveExampleAudio({
                 e.stopPropagation();
                 await onTransferAudio(counterpart.id, example.id, 'copy');
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border ${
-                duplicateInfo?.type === 'different_verb'
-                  ? "bg-indigo-500/15 hover:bg-indigo-500/25 border-indigo-500/40 text-indigo-700 dark:text-indigo-300"
-                  : "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
-              }`}
-              title={
-                duplicateInfo?.type === 'different_verb'
-                  ? `Tham khảo file MP3 từ câu #${duplicateInfo?.otherIndex} (Lưu ý: 2 câu khác động từ)`
-                  : `Lấy trực tiếp file MP3 từ câu trùng #${duplicateInfo?.otherIndex}`
-              }
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+              title={`Lấy trực tiếp file MP3 từ câu trùng #${duplicateInfo?.otherIndex}`}
             >
-              <Volume2 className="w-3.5 h-3.5" />
-              <span>
-                {duplicateInfo?.type === 'different_verb'
-                  ? `Tham khảo MP3 câu #${duplicateInfo?.otherIndex}`
-                  : `Lấy MP3 từ câu #${duplicateInfo?.otherIndex}`}
-              </span>
+              <Volume2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Lấy MP3 từ câu #{duplicateInfo?.otherIndex}</span>
             </button>
           )}
 
@@ -3114,7 +3088,7 @@ function IntensiveExampleAudio({
         <div className="flex flex-wrap items-center gap-3 w-full bg-theme-base/40 p-2 sm:p-2.5 rounded-lg border border-theme-subtle/60">
           <audio controls src={audioUrl} className="h-9 w-full sm:w-auto min-w-[280px] sm:min-w-[340px] max-w-[440px] rounded shadow-2xs" />
           
-          {/* Nút nhanh chuyển/sao chép sang câu trùng lặp hoặc câu khác động từ */}
+          {/* Nút nhanh chuyển/sao chép sang câu trùng lặp (chỉ áp dụng cho câu trùng 100%) */}
           {counterpart && onTransferAudio && (
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
@@ -3123,16 +3097,8 @@ function IntensiveExampleAudio({
                   e.stopPropagation();
                   await onTransferAudio(example.id, counterpart.id, 'copy');
                 }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border ${
-                  duplicateInfo?.type === 'different_verb'
-                    ? "bg-indigo-500/15 hover:bg-indigo-500/25 border-indigo-500/40 text-indigo-700 dark:text-indigo-300"
-                    : "bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/40 text-blue-700 dark:text-blue-300"
-                }`}
-                title={
-                  duplicateInfo?.type === 'different_verb'
-                    ? `Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (Lưu ý: 2 câu khác động từ)`
-                    : `Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`
-                }
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/40 text-blue-700 dark:text-blue-300"
+                title={`Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`}
               >
                 <Copy className="w-3 h-3" />
                 <span>Chép sang câu #{duplicateInfo?.otherIndex}</span>
@@ -3141,8 +3107,7 @@ function IntensiveExampleAudio({
                 type="button"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  const note = duplicateInfo?.type === 'different_verb' ? ' (Lưu ý: 2 câu này khác động từ đuôi câu)' : '';
-                  if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex}${note} (và gỡ khỏi câu này)?`)) {
+                  if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} (và gỡ khỏi câu này)?`)) {
                     await onTransferAudio(example.id, counterpart.id, 'move');
                   }
                 }}
@@ -3161,7 +3126,7 @@ function IntensiveExampleAudio({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedTargetId(duplicateInfo?.otherId || allExamples.find(e => e.id !== example.id)?.id || '');
+                setSelectedTargetId((isTrueDuplicate && duplicateInfo?.otherId) || allExamples.find(e => e.id !== example.id)?.id || '');
                 setShowTransferModal(true);
               }}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-theme-primary/10 hover:bg-theme-accent hover:text-theme-inverted text-theme-primary/70 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs"
