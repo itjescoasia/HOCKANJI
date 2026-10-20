@@ -2521,66 +2521,36 @@ function StudyView({
                                   );
                                 }
 
-                                // rel.type === 'different_verb'
+                                // rel.type === 'different_verb' - Chỉ hiển thị nhãn gọn gàng, không giải thích dài dòng
                                 return (
-                                  <div className="p-3.5 mb-4 rounded-xl bg-gradient-to-r from-indigo-500/15 via-blue-500/10 to-indigo-500/15 border-2 border-indigo-500/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="flex items-start sm:items-center gap-2.5">
-                                      <div className="p-2 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-lg shadow-sm shrink-0">
-                                        <GitFork className="w-5 h-5 stroke-[2.5]" />
-                                      </div>
-                                      <div>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-indigo-900 dark:text-indigo-100 bg-indigo-500/30 px-2.5 py-0.5 rounded border border-indigo-500/40">
-                                            🔀 KHÁC ĐỘNG TỪ
-                                          </span>
-                                          <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                                            {rel.reason}
-                                          </span>
-                                        </div>
-                                        <p className="text-xs text-indigo-800/90 dark:text-indigo-300/90 mt-1">
-                                          Phần ngoài trước giống nhau với <strong>Câu #{rel.otherIndex}</strong>, khác động từ/vị ngữ đuôi câu.
-                                        </p>
-                                        {(rel.commonPrefix || rel.tailThis || rel.tailOther) && (
-                                          <div className="mt-1.5 flex items-center gap-2 text-[11px] flex-wrap">
-                                            {rel.commonPrefix && (
-                                              <span className="bg-indigo-500/15 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 rounded border border-indigo-500/30">
-                                                Phần đầu chung: 「<strong>{rel.commonPrefix}</strong>」
-                                              </span>
-                                            )}
-                                            {rel.tailThis && (
-                                              <span className="bg-blue-500/15 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded border border-blue-500/30">
-                                                Động từ câu này: 「<strong>{rel.tailThis}</strong>」
-                                              </span>
-                                            )}
-                                            {rel.tailOther && (
-                                              <span className="bg-cyan-500/15 text-cyan-800 dark:text-cyan-200 px-2 py-0.5 rounded border border-cyan-500/30">
-                                                Câu #{rel.otherIndex}: 「<strong>{rel.tailOther}</strong>」
-                                              </span>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
+                                  <div className="py-2 px-3 mb-3.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30 flex items-center gap-1.5 shadow-2xs">
+                                        <GitFork className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.5]" />
+                                        <span>KHÁC ĐỘNG TỪ</span>
+                                      </span>
+                                      <span className="text-xs text-indigo-800/80 dark:text-indigo-300/80 font-medium">
+                                        (với Câu #{rel.otherIndex})
+                                      </span>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const el = document.getElementById(`example-${rel.otherId}`);
-                                          if (el) {
-                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            setHighlightedExampleId(rel.otherId);
-                                            setTimeout(() => setHighlightedExampleId(null), 3000);
-                                          }
-                                        }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/60 text-indigo-900 dark:text-indigo-100 font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
-                                        title={`Bấm để cuộn và so sánh với câu #${rel.otherIndex}`}
-                                      >
-                                        <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                                        <span>So sánh với câu #{rel.otherIndex}</span>
-                                      </button>
-                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const el = document.getElementById(`example-${rel.otherId}`);
+                                        if (el) {
+                                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                          setHighlightedExampleId(rel.otherId);
+                                          setTimeout(() => setHighlightedExampleId(null), 3000);
+                                        }
+                                      }}
+                                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-800 dark:text-indigo-200 font-medium text-xs cursor-pointer transition-colors shadow-2xs"
+                                      title={`Bấm để cuộn và xem câu #${rel.otherIndex}`}
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                      <span>So sánh câu #{rel.otherIndex}</span>
+                                    </button>
                                   </div>
                                 );
                               })()}
