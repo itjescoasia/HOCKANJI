@@ -42,7 +42,8 @@ import {
   FileText,
   Sparkles,
   AlertTriangle,
-  ArrowRightLeft
+  ArrowRightLeft,
+  GitFork
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import WordDetailModal from "./WordDetailModal";
@@ -96,7 +97,7 @@ export function getCategoryBadgeStyle(typeStr: string | undefined, defaultClasse
   return defaultClasses;
 }
 
-import { normalizeSentence, cleanTextForSearch, cleanMarkdownForDisplay, calculateSimilarity } from "../utils/stringUtils";
+import { normalizeSentence, cleanTextForSearch, cleanMarkdownForDisplay, calculateSimilarity, compareSentenceRelation, SentenceRelationResult } from "../utils/stringUtils";
 import {
   DragDropContext,
   Droppable,
@@ -1156,45 +1157,63 @@ function StudyView({
   const [newTranslation, setNewTranslation] = useState("");
   const [newSpecialNote, setNewSpecialNote] = useState("");
   const [exampleSearchQuery, setExampleSearchQuery] = useState("");
-  const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
+  const [filterMode, setFilterMode] = useState<'all' | 'duplicates' | 'different_verbs'>('all');
+  const showOnlyDuplicates = filterMode === 'duplicates';
+  const setShowOnlyDuplicates = (val: boolean) => setFilterMode(val ? 'duplicates' : 'all');
 
-  // Map of duplicate examples in this topic
-  const duplicateExampleMap = React.useMemo(() => {
-    const map = new Map<string, { reason: string; otherId: string; otherIndex: number }>();
+  // Map of all sentence relations (distinguishing exact duplicates vs different verbs)
+  const sentenceRelationMap = React.useMemo(() => {
+    const map = new Map<string, {
+      type: 'duplicate' | 'different_verb';
+      badgeLabel: string;
+      reason: string;
+      otherId: string;
+      otherIndex: number;
+      commonPrefix?: string;
+      tailThis?: string;
+      tailOther?: string;
+    }>();
     const examples = word.examples || [];
     
     for (let i = 0; i < examples.length; i++) {
       const ex1 = examples[i];
-      const normJp1 = normalizeSentence(ex1.sentence);
-      const normVi1 = cleanTextForSearch(ex1.translation || '');
-      const normReading1 = normalizeSentence(ex1.reading || '');
 
       for (let j = i + 1; j < examples.length; j++) {
         const ex2 = examples[j];
-        const normJp2 = normalizeSentence(ex2.sentence);
-        const normVi2 = cleanTextForSearch(ex2.translation || '');
-        const normReading2 = normalizeSentence(ex2.reading || '');
 
-        let matchReason = '';
-        if (normJp1 && normJp2 && normJp1 === normJp2) {
-          matchReason = 'Trùng 100% câu tiếng Nhật';
-        } else if (normReading1 && normReading2 && normReading1 === normReading2 && normReading1.length >= 3) {
-          matchReason = 'Trùng cách đọc phiên âm';
-        } else if (normVi1 && normVi2 && normVi1 === normVi2 && normVi1.length >= 2) {
-          matchReason = 'Trùng bản dịch tiếng Việt';
-        } else if (normJp1 && normJp2 && normJp1.length >= 6 && normJp2.length >= 6) {
-          const sim = calculateSimilarity(normJp1, normJp2);
-          if (sim >= 0.88) {
-            matchReason = `Tương đồng ${Math.round(sim * 100)}% tiếng Nhật`;
-          }
-        }
+        const rel = compareSentenceRelation(
+          ex1.sentence,
+          ex2.sentence,
+          ex1.translation,
+          ex2.translation,
+          ex1.reading,
+          ex2.reading
+        );
 
-        if (matchReason) {
+        if (rel) {
           if (!map.has(ex1.id)) {
-            map.set(ex1.id, { reason: matchReason, otherId: ex2.id, otherIndex: j + 1 });
+            map.set(ex1.id, {
+              type: rel.type,
+              badgeLabel: rel.badgeLabel || (rel.type === 'duplicate' ? 'CÂU TRÙNG LẶP' : 'KHÁC ĐỘNG TỪ'),
+              reason: rel.reason,
+              otherId: ex2.id,
+              otherIndex: j + 1,
+              commonPrefix: rel.commonPrefix,
+              tailThis: rel.tail1,
+              tailOther: rel.tail2,
+            });
           }
           if (!map.has(ex2.id)) {
-            map.set(ex2.id, { reason: matchReason, otherId: ex1.id, otherIndex: i + 1 });
+            map.set(ex2.id, {
+              type: rel.type,
+              badgeLabel: rel.badgeLabel || (rel.type === 'duplicate' ? 'CÂU TRÙNG LẶP' : 'KHÁC ĐỘNG TỪ'),
+              reason: rel.reason,
+              otherId: ex1.id,
+              otherIndex: i + 1,
+              commonPrefix: rel.commonPrefix,
+              tailThis: rel.tail2,
+              tailOther: rel.tail1,
+            });
           }
         }
       }
@@ -1203,10 +1222,52 @@ function StudyView({
     return map;
   }, [word.examples]);
 
+  // Derived map for TRUE DUPLICATES ONLY
+  const duplicateExampleMap = React.useMemo(() => {
+    const map = new Map<string, {
+      type: 'duplicate';
+      badgeLabel: string;
+      reason: string;
+      otherId: string;
+      otherIndex: number;
+      commonPrefix?: string;
+      tailThis?: string;
+      tailOther?: string;
+    }>();
+    sentenceRelationMap.forEach((val, key) => {
+      if (val.type === 'duplicate') {
+        map.set(key, val as any);
+      }
+    });
+    return map;
+  }, [sentenceRelationMap]);
+
+  // Derived map for DIFFERENT VERB SENTENCES (same front part, different predicate/verb)
+  const differentVerbExampleMap = React.useMemo(() => {
+    const map = new Map<string, {
+      type: 'different_verb';
+      badgeLabel: string;
+      reason: string;
+      otherId: string;
+      otherIndex: number;
+      commonPrefix?: string;
+      tailThis?: string;
+      tailOther?: string;
+    }>();
+    sentenceRelationMap.forEach((val, key) => {
+      if (val.type === 'different_verb') {
+        map.set(key, val as any);
+      }
+    });
+    return map;
+  }, [sentenceRelationMap]);
+
   const filteredExamples = React.useMemo(() => {
     let list = word.examples || [];
-    if (showOnlyDuplicates) {
+    if (filterMode === 'duplicates') {
       list = list.filter(ex => duplicateExampleMap.has(ex.id));
+    } else if (filterMode === 'different_verbs') {
+      list = list.filter(ex => differentVerbExampleMap.has(ex.id));
     }
     if (!exampleSearchQuery.trim()) return list;
     const q = exampleSearchQuery.toLowerCase();
@@ -1217,7 +1278,7 @@ function StudyView({
       ex.romaji?.toLowerCase().includes(q) ||
       ex.specialNote?.toLowerCase().includes(q)
     );
-  }, [word.examples, exampleSearchQuery, showOnlyDuplicates, duplicateExampleMap]);
+  }, [word.examples, exampleSearchQuery, filterMode, duplicateExampleMap, differentVerbExampleMap]);
   const [isEditing, setIsEditing] = useState(false);
   const [editWordData, setEditWordData] = useState({
     word: word.word || "",
@@ -1822,16 +1883,31 @@ function StudyView({
             {duplicateExampleMap.size > 0 && (
               <button
                 type="button"
-                onClick={() => setShowOnlyDuplicates(!showOnlyDuplicates)}
+                onClick={() => setFilterMode(filterMode === 'duplicates' ? 'all' : 'duplicates')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-bold transition-all border rounded-lg cursor-pointer ${
-                  showOnlyDuplicates
+                  filterMode === 'duplicates'
                     ? "bg-amber-600 text-white border-amber-600 shadow-md ring-2 ring-amber-400 animate-pulse"
                     : "bg-amber-500/15 border-2 border-amber-500/60 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25"
                 }`}
                 title="Bấm để lọc chỉ xem các câu bị trùng nội dung"
               >
-                <AlertTriangle className={`w-3.5 h-3.5 ${showOnlyDuplicates ? 'text-white' : 'text-amber-500'}`} />
-                <span>{showOnlyDuplicates ? "Xem tất cả" : `Có ${duplicateExampleMap.size} câu trùng`}</span>
+                <AlertTriangle className={`w-3.5 h-3.5 ${filterMode === 'duplicates' ? 'text-white' : 'text-amber-500'}`} />
+                <span>{filterMode === 'duplicates' ? "Xem tất cả" : `Có ${duplicateExampleMap.size} câu trùng`}</span>
+              </button>
+            )}
+            {differentVerbExampleMap.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterMode(filterMode === 'different_verbs' ? 'all' : 'different_verbs')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-bold transition-all border rounded-lg cursor-pointer ${
+                  filterMode === 'different_verbs'
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-400"
+                    : "bg-indigo-500/15 border-2 border-indigo-500/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/25"
+                }`}
+                title="Bấm để lọc các câu có phần ngoài trước giống nhau nhưng khác động từ"
+              >
+                <GitFork className={`w-3.5 h-3.5 ${filterMode === 'different_verbs' ? 'text-white' : 'text-indigo-500'}`} />
+                <span>{filterMode === 'different_verbs' ? "Xem tất cả" : `Có ${differentVerbExampleMap.size} câu khác động từ`}</span>
               </button>
             )}
             {word.examples.length > 0 && (
@@ -2057,9 +2133,11 @@ function StudyView({
                         className={`relative overflow-hidden rounded-lg border transition-all duration-300 ease-out ${
                           duplicateExampleMap.has(ex.id)
                             ? "border-amber-500/90 border-l-[10px] border-l-amber-500 bg-amber-500/[0.06] ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
-                            : snapshot.isDragging
-                              ? "border-theme-accent shadow-2xl z-50 scale-[1.02]"
-                              : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"
+                            : differentVerbExampleMap.has(ex.id)
+                              ? "border-indigo-500/90 border-l-[10px] border-l-indigo-500 bg-indigo-500/[0.04] ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-500/10"
+                              : snapshot.isDragging
+                                ? "border-theme-accent shadow-2xl z-50 scale-[1.02]"
+                                : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"
                         } ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
@@ -2069,6 +2147,15 @@ function StudyView({
                             <div className="bg-gradient-to-r from-amber-500 to-red-500 text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 shadow-md flex items-center gap-1 rounded-bl-lg">
                               <AlertTriangle className="w-3 h-3 stroke-[2.5]" />
                               <span>TRÙNG NỘI DUNG</span>
+                            </div>
+                          </div>
+                        )}
+                        {/* Corner Ribbon for Different Verb */}
+                        {differentVerbExampleMap.has(ex.id) && (
+                          <div className="absolute top-0 right-0 z-20 pointer-events-none">
+                            <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 shadow-md flex items-center gap-1.5 rounded-bl-lg">
+                              <GitFork className="w-3 h-3 stroke-[2.5]" />
+                              <span>KHÁC ĐỘNG TỪ</span>
                             </div>
                           </div>
                         )}
@@ -2358,61 +2445,154 @@ function StudyView({
                                 </div>
                               </div>
 
-                              {duplicateExampleMap.has(ex.id) && (() => {
-                                const dup = duplicateExampleMap.get(ex.id)!;
-                                const otherEx = (word.examples || []).find(e => e.id === dup.otherId);
+                              {sentenceRelationMap.has(ex.id) && (() => {
+                                const rel = sentenceRelationMap.get(ex.id)!;
+                                const otherEx = (word.examples || []).find(e => e.id === rel.otherId);
                                 const thisHasAudio = !!(ex.audioUrl || ex.hasAudio);
                                 const otherHasAudio = !!(otherEx?.audioUrl || otherEx?.hasAudio);
+
+                                if (rel.type === 'duplicate') {
+                                  return (
+                                    <div className="p-3.5 mb-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-red-500/15 to-amber-500/10 border-2 border-amber-500/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="p-2 bg-gradient-to-br from-amber-500 to-red-500 text-white rounded-lg shadow-sm shrink-0">
+                                          <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+                                        </div>
+                                        <div>
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-amber-900 dark:text-amber-100 bg-amber-500/30 px-2 py-0.5 rounded border border-amber-500/40">
+                                              ⚠️ CÂU TRÙNG LẶP
+                                            </span>
+                                            <span className="text-xs font-bold text-amber-900 dark:text-amber-100">
+                                              {rel.reason}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-1">
+                                            Trùng nội dung với <strong>Câu #{rel.otherIndex}</strong> trong chuyên đề
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                                        {/* Chuyển / Lấy âm thanh thông minh giữa 2 câu trùng */}
+                                        {thisHasAudio && !otherHasAudio && (
+                                          <button
+                                            type="button"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              await handleTransferAudio(ex.id, rel.otherId, 'copy');
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                            title={`Sao chép file MP3 này sang Câu #${rel.otherIndex}`}
+                                          >
+                                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                                            <span>Chép MP3 sang câu #{rel.otherIndex}</span>
+                                          </button>
+                                        )}
+
+                                        {!thisHasAudio && otherHasAudio && (
+                                          <button
+                                            type="button"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              await handleTransferAudio(rel.otherId, ex.id, 'copy');
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                            title={`Lấy file MP3 từ Câu #${rel.otherIndex}`}
+                                          >
+                                            <Volume2 className="w-3.5 h-3.5" />
+                                            <span>Lấy MP3 từ câu #{rel.otherIndex}</span>
+                                          </button>
+                                        )}
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const el = document.getElementById(`example-${rel.otherId}`);
+                                            if (el) {
+                                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                              setHighlightedExampleId(rel.otherId);
+                                              setTimeout(() => setHighlightedExampleId(null), 3000);
+                                            }
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/60 text-amber-900 dark:text-amber-100 font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                          title={`Bấm để cuộn và xem câu #${rel.otherIndex}`}
+                                        >
+                                          <Eye className="w-3.5 h-3.5 text-amber-600" />
+                                          <span>Đối chiếu câu #{rel.otherIndex}</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveExample(ex.id);
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                          title="Xóa câu trùng lặp này khỏi chuyên đề"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <span>Xóa câu này</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                // rel.type === 'different_verb'
                                 return (
-                                  <div className="p-3.5 mb-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-red-500/15 to-amber-500/10 border-2 border-amber-500/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="p-2 bg-gradient-to-br from-amber-500 to-red-500 text-white rounded-lg shadow-sm shrink-0">
-                                        <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+                                  <div className="p-3.5 mb-4 rounded-xl bg-gradient-to-r from-indigo-500/15 via-blue-500/10 to-indigo-500/15 border-2 border-indigo-500/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-start sm:items-center gap-2.5">
+                                      <div className="p-2 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-lg shadow-sm shrink-0">
+                                        <GitFork className="w-5 h-5 stroke-[2.5]" />
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-amber-900 dark:text-amber-100 bg-amber-500/30 px-2 py-0.5 rounded border border-amber-500/40">
-                                            ⚠️ CÂU TRÙNG LẶP
+                                          <span className="font-black text-[10px] sm:text-[11px] uppercase tracking-wider text-indigo-900 dark:text-indigo-100 bg-indigo-500/30 px-2.5 py-0.5 rounded border border-indigo-500/40">
+                                            🔀 KHÁC ĐỘNG TỪ
                                           </span>
-                                          <span className="text-xs font-bold text-amber-900 dark:text-amber-100">
-                                            {dup.reason}
+                                          <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                                            {rel.reason}
                                           </span>
                                         </div>
-                                        <p className="text-xs text-amber-800/90 dark:text-amber-200/90 mt-1">
-                                          Trùng nội dung với <strong>Câu #{dup.otherIndex}</strong> trong chuyên đề
+                                        <p className="text-xs text-indigo-800/90 dark:text-indigo-300/90 mt-1">
+                                          Phần ngoài trước giống nhau với <strong>Câu #{rel.otherIndex}</strong>, khác động từ/vị ngữ đuôi câu.
                                         </p>
+                                        {(rel.commonPrefix || rel.tailThis || rel.tailOther) && (
+                                          <div className="mt-1.5 flex items-center gap-2 text-[11px] flex-wrap">
+                                            {rel.commonPrefix && (
+                                              <span className="bg-indigo-500/15 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 rounded border border-indigo-500/30">
+                                                Phần đầu chung: 「<strong>{rel.commonPrefix}</strong>」
+                                              </span>
+                                            )}
+                                            {rel.tailThis && (
+                                              <span className="bg-blue-500/15 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded border border-blue-500/30">
+                                                Động từ câu này: 「<strong>{rel.tailThis}</strong>」
+                                              </span>
+                                            )}
+                                            {rel.tailOther && (
+                                              <span className="bg-cyan-500/15 text-cyan-800 dark:text-cyan-200 px-2 py-0.5 rounded border border-cyan-500/30">
+                                                Câu #{rel.otherIndex}: 「<strong>{rel.tailOther}</strong>」
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
-                                      {/* Chuyển / Lấy âm thanh thông minh giữa 2 câu trùng */}
-                                      {thisHasAudio && !otherHasAudio && (
-                                        <button
-                                          type="button"
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            await handleTransferAudio(ex.id, dup.otherId, 'copy');
-                                          }}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
-                                          title={`Sao chép file MP3 này sang Câu #${dup.otherIndex}`}
-                                        >
-                                          <ArrowRightLeft className="w-3.5 h-3.5" />
-                                          <span>Chép MP3 sang câu #{dup.otherIndex}</span>
-                                        </button>
-                                      )}
-
                                       {!thisHasAudio && otherHasAudio && (
                                         <button
                                           type="button"
                                           onClick={async (e) => {
                                             e.stopPropagation();
-                                            await handleTransferAudio(dup.otherId, ex.id, 'copy');
+                                            await handleTransferAudio(rel.otherId, ex.id, 'copy');
                                           }}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
-                                          title={`Lấy file MP3 từ Câu #${dup.otherIndex}`}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                          title={`Tham khảo/lấy MP3 từ Câu #${rel.otherIndex} (Lưu ý khác động từ)`}
                                         >
                                           <Volume2 className="w-3.5 h-3.5" />
-                                          <span>Lấy MP3 từ câu #{dup.otherIndex}</span>
+                                          <span>Tham khảo MP3 câu #{rel.otherIndex}</span>
                                         </button>
                                       )}
 
@@ -2420,30 +2600,18 @@ function StudyView({
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const el = document.getElementById(`example-${dup.otherId}`);
+                                          const el = document.getElementById(`example-${rel.otherId}`);
                                           if (el) {
                                             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            setHighlightedExampleId(dup.otherId);
+                                            setHighlightedExampleId(rel.otherId);
                                             setTimeout(() => setHighlightedExampleId(null), 3000);
                                           }
                                         }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/60 text-amber-900 dark:text-amber-100 font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
-                                        title={`Bấm để cuộn và xem câu #${dup.otherIndex}`}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/60 text-indigo-900 dark:text-indigo-100 font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
+                                        title={`Bấm để cuộn và so sánh với câu #${rel.otherIndex}`}
                                       >
-                                        <Eye className="w-3.5 h-3.5 text-amber-600" />
-                                        <span>Đối chiếu câu #{dup.otherIndex}</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRemoveExample(ex.id);
-                                        }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold text-xs cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-xs"
-                                        title="Xóa câu trùng lặp này khỏi chuyên đề"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Xóa câu này</span>
+                                        <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                                        <span>So sánh với câu #{rel.otherIndex}</span>
                                       </button>
                                     </div>
                                   </div>
@@ -2455,7 +2623,9 @@ function StudyView({
                                   <div className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full font-serif text-sm font-bold shadow-xs ${
                                     duplicateExampleMap.has(ex.id)
                                       ? "bg-amber-500 text-white border-2 border-amber-600"
-                                      : "bg-theme-panel border border-theme-subtle text-theme-accent font-bold"
+                                      : differentVerbExampleMap.has(ex.id)
+                                        ? "bg-indigo-600 text-white border-2 border-indigo-700"
+                                        : "bg-theme-panel border border-theme-subtle text-theme-accent font-bold"
                                   }`}>
                                     {index + 1}
                                   </div>
@@ -2463,6 +2633,13 @@ function StudyView({
                                     <span className="absolute -top-1 -right-1 flex h-3 w-3">
                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                       <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border border-white"></span>
+                                    </span>
+                                  )}
+                                  {differentVerbExampleMap.has(ex.id) && (
+                                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5" title="Khác động từ (cùng mẫu câu phía trước)">
+                                      <span className="relative inline-flex items-center justify-center rounded-full h-3.5 w-3.5 bg-indigo-600 border border-white text-[8px] text-white font-bold">
+                                        🔀
+                                      </span>
                                     </span>
                                   )}
                                 </div>
@@ -2521,7 +2698,7 @@ function StudyView({
                                     example={ex} 
                                     allExamples={word.examples || []}
                                     currentIndex={index}
-                                    duplicateInfo={duplicateExampleMap.get(ex.id)}
+                                    duplicateInfo={sentenceRelationMap.get(ex.id)}
                                     onUpdateExample={(exId, updates) => {
                                       const updatedExamples = word.examples.map(e => e.id === exId ? { ...e, ...updates } : e);
                                       onUpdateWord(word.id, { examples: updatedExamples });
@@ -2708,7 +2885,16 @@ function IntensiveExampleAudio({
   example: IntensiveExample; 
   allExamples?: IntensiveExample[];
   currentIndex?: number;
-  duplicateInfo?: { reason: string; otherId: string; otherIndex: number };
+  duplicateInfo?: {
+    type: 'duplicate' | 'different_verb';
+    badgeLabel?: string;
+    reason: string;
+    otherId: string;
+    otherIndex: number;
+    commonPrefix?: string;
+    tailThis?: string;
+    tailOther?: string;
+  };
   onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void;
   onTransferAudio?: (sourceId: string, targetId: string, mode: 'move' | 'copy') => Promise<void>;
 }) {
@@ -2879,7 +3065,7 @@ function IntensiveExampleAudio({
             {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
           </button>
 
-          {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp */}
+          {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp hoặc câu khác động từ */}
           {counterpart && counterpartHasAudio && onTransferAudio && (
             <button
               type="button"
@@ -2887,11 +3073,23 @@ function IntensiveExampleAudio({
                 e.stopPropagation();
                 await onTransferAudio(counterpart.id, example.id, 'copy');
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-              title={`Lấy trực tiếp file MP3 từ câu trùng #${duplicateInfo?.otherIndex}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border ${
+                duplicateInfo?.type === 'different_verb'
+                  ? "bg-indigo-500/15 hover:bg-indigo-500/25 border-indigo-500/40 text-indigo-700 dark:text-indigo-300"
+                  : "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+              }`}
+              title={
+                duplicateInfo?.type === 'different_verb'
+                  ? `Tham khảo file MP3 từ câu #${duplicateInfo?.otherIndex} (Lưu ý: 2 câu khác động từ)`
+                  : `Lấy trực tiếp file MP3 từ câu trùng #${duplicateInfo?.otherIndex}`
+              }
             >
-              <Volume2 className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Lấy MP3 từ câu #{duplicateInfo?.otherIndex}</span>
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>
+                {duplicateInfo?.type === 'different_verb'
+                  ? `Tham khảo MP3 câu #${duplicateInfo?.otherIndex}`
+                  : `Lấy MP3 từ câu #${duplicateInfo?.otherIndex}`}
+              </span>
             </button>
           )}
 
@@ -2916,7 +3114,7 @@ function IntensiveExampleAudio({
         <div className="flex flex-wrap items-center gap-3 w-full bg-theme-base/40 p-2 sm:p-2.5 rounded-lg border border-theme-subtle/60">
           <audio controls src={audioUrl} className="h-9 w-full sm:w-auto min-w-[280px] sm:min-w-[340px] max-w-[440px] rounded shadow-2xs" />
           
-          {/* Nút nhanh chuyển/sao chép sang câu trùng lặp */}
+          {/* Nút nhanh chuyển/sao chép sang câu trùng lặp hoặc câu khác động từ */}
           {counterpart && onTransferAudio && (
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
@@ -2925,8 +3123,16 @@ function IntensiveExampleAudio({
                   e.stopPropagation();
                   await onTransferAudio(example.id, counterpart.id, 'copy');
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-700 dark:text-blue-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                title={`Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border ${
+                  duplicateInfo?.type === 'different_verb'
+                    ? "bg-indigo-500/15 hover:bg-indigo-500/25 border-indigo-500/40 text-indigo-700 dark:text-indigo-300"
+                    : "bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/40 text-blue-700 dark:text-blue-300"
+                }`}
+                title={
+                  duplicateInfo?.type === 'different_verb'
+                    ? `Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (Lưu ý: 2 câu khác động từ)`
+                    : `Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`
+                }
               >
                 <Copy className="w-3 h-3" />
                 <span>Chép sang câu #{duplicateInfo?.otherIndex}</span>
@@ -2935,7 +3141,8 @@ function IntensiveExampleAudio({
                 type="button"
                 onClick={async (e) => {
                   e.stopPropagation();
-                  if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} (và gỡ khỏi câu này)?`)) {
+                  const note = duplicateInfo?.type === 'different_verb' ? ' (Lưu ý: 2 câu này khác động từ đuôi câu)' : '';
+                  if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex}${note} (và gỡ khỏi câu này)?`)) {
                     await onTransferAudio(example.id, counterpart.id, 'move');
                   }
                 }}
@@ -3059,11 +3266,12 @@ function IntensiveExampleAudio({
                   <option value="">-- Chọn câu ví dụ đích --</option>
                   {allExamples.filter(e => e.id !== example.id).map((e) => {
                     const idx = allExamples.findIndex(x => x.id === e.id);
-                    const isDup = duplicateInfo?.otherId === e.id;
+                    const isCounterpart = duplicateInfo?.otherId === e.id;
+                    const relationTag = isCounterpart ? (duplicateInfo?.type === 'duplicate' ? '⚠️ [CÂU TRÙNG NỘI DUNG]' : '🔀 [KHÁC ĐỘNG TỪ]') : '';
                     const hasAud = !!(e.hasAudio || e.audioUrl);
                     return (
                       <option key={e.id} value={e.id}>
-                        {`Câu #${idx + 1}: ${e.sentence.slice(0, 40)}${e.sentence.length > 40 ? '...' : ''} ${isDup ? '⚠️ [CÂU TRÙNG NỘI DUNG]' : ''} ${hasAud ? '🔊 [ĐÃ CÓ MP3]' : ''}`}
+                        {`Câu #${idx + 1}: ${e.sentence.slice(0, 40)}${e.sentence.length > 40 ? '...' : ''} ${relationTag} ${hasAud ? '🔊 [ĐÃ CÓ MP3]' : ''}`}
                       </option>
                     );
                   })}
@@ -3146,10 +3354,11 @@ function IntensiveExampleAudio({
                   <option value="">-- Chọn câu có sẵn âm thanh --</option>
                   {otherExamplesWithAudio.map((e) => {
                     const idx = allExamples.findIndex(x => x.id === e.id);
-                    const isDup = duplicateInfo?.otherId === e.id;
+                    const isCounterpart = duplicateInfo?.otherId === e.id;
+                    const relationTag = isCounterpart ? (duplicateInfo?.type === 'duplicate' ? '⚠️ [CÂU TRÙNG NỘI DUNG]' : '🔀 [KHÁC ĐỘNG TỪ]') : '';
                     return (
                       <option key={e.id} value={e.id}>
-                        {`Câu #${idx + 1}: ${e.sentence.slice(0, 45)}${e.sentence.length > 45 ? '...' : ''} ${isDup ? '⚠️ [CÂU TRÙNG NỘI DUNG]' : ''}`}
+                        {`Câu #${idx + 1}: ${e.sentence.slice(0, 45)}${e.sentence.length > 45 ? '...' : ''} ${relationTag}`}
                       </option>
                     );
                   })}

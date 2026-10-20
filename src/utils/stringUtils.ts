@@ -61,6 +61,156 @@ export function calculateSimilarity(s1: string, s2: string): number {
   return (longer.length - costs[shorter.length]) / longer.length;
 }
 
+export interface SentenceRelationResult {
+  type: 'duplicate' | 'different_verb';
+  badgeLabel: string;
+  reason: string;
+  commonPrefix?: string;
+  tail1?: string;
+  tail2?: string;
+}
+
+/**
+ * Analyzes two Japanese sentences to distinguish between:
+ * 1. 'duplicate' (CÂU TRÙNG LẶP): 100% exact match or identical reading/translation
+ * 2. 'different_verb' (KHÁC ĐỘNG TỪ): Front part is the same ("phần ngoài trước giống nhau"), but the predicate/verb at the end is different ("động từ khác nhau").
+ * 3. null: completely different sentences.
+ */
+export function compareSentenceRelation(
+  sentence1: string,
+  sentence2: string,
+  translation1?: string,
+  translation2?: string,
+  reading1?: string,
+  reading2?: string
+): SentenceRelationResult | null {
+  const norm1 = normalizeSentence(sentence1);
+  const norm2 = normalizeSentence(sentence2);
+  if (!norm1 || !norm2) return null;
+
+  // 1. 100% exact match in Japanese
+  if (norm1 === norm2) {
+    return {
+      type: 'duplicate',
+      badgeLabel: 'CÂU TRÙNG LẶP',
+      reason: 'Trùng 100% câu tiếng Nhật',
+    };
+  }
+
+  // 2. Reading 100% match (when both provided and long enough)
+  const normR1 = normalizeSentence(reading1 || '');
+  const normR2 = normalizeSentence(reading2 || '');
+  if (normR1 && normR2 && normR1 === normR2 && normR1.length >= 3) {
+    return {
+      type: 'duplicate',
+      badgeLabel: 'CÂU TRÙNG LẶP',
+      reason: 'Trùng cách đọc phiên âm',
+    };
+  }
+
+  // 3. Find Longest Common Prefix (phần ngoài trước giống nhau)
+  let commonLen = 0;
+  const minLen = Math.min(norm1.length, norm2.length);
+  while (commonLen < minLen && norm1[commonLen] === norm2[commonLen]) {
+    commonLen++;
+  }
+
+  const commonPrefix = norm1.slice(0, commonLen);
+  const tail1 = norm1.slice(commonLen);
+  const tail2 = norm2.slice(commonLen);
+
+  const maxLen = Math.max(norm1.length, norm2.length);
+  const prefixRatio = commonLen / maxLen;
+
+  // Also check reading common prefix if available
+  let commonRLen = 0;
+  if (normR1 && normR2) {
+    const minRLen = Math.min(normR1.length, normR2.length);
+    while (commonRLen < minRLen && normR1[commonRLen] === normR2[commonRLen]) {
+      commonRLen++;
+    }
+  }
+
+  // If the front part is the same (commonLen >= 2 with ratio >= 0.3, or commonLen >= 3, or reading commonLen >= 4)
+  // and the tails differ:
+  const hasCommonFront =
+    commonLen >= 3 ||
+    (commonLen >= 2 && prefixRatio >= 0.28) ||
+    commonRLen >= 4;
+
+  if (hasCommonFront && tail1 !== tail2) {
+    // Check if the tail is simply a question/sentence-ending particle on the same verb
+    const isOnlyParticle =
+      (tail1 === '' && (tail2 === 'か' || tail2 === 'ね' || tail2 === 'よ' || tail2 === 'の' || tail2 === 'わ')) ||
+      (tail2 === '' && (tail1 === 'か' || tail1 === 'ね' || tail1 === 'よ' || tail1 === 'の' || tail1 === 'わ')) ||
+      ((tail1 === 'か' || tail1 === 'ね' || tail1 === 'よ') && (tail2 === 'か' || tail2 === 'ね' || tail2 === 'よ'));
+
+    if (!isOnlyParticle) {
+      // The verbs/predicates at the end are different!
+      const verbDetail = tail1 && tail2 ? ` (${tail1} ↔ ${tail2})` : '';
+      return {
+        type: 'different_verb',
+        badgeLabel: 'KHÁC ĐỘNG TỪ',
+        reason: `Khác động từ / vị ngữ${verbDetail}`,
+        commonPrefix: commonPrefix || (normR1 ? normR1.slice(0, commonRLen) : ''),
+        tail1,
+        tail2,
+      };
+    }
+  }
+
+  // 4. Check high Levenshtein similarity
+  const sim = (norm1.length >= 5 && norm2.length >= 5) ? calculateSimilarity(norm1, norm2) : 0;
+  if (sim >= 0.70) {
+    // If tails differ at all, it's a different verb / ending!
+    if (tail1 !== tail2) {
+      const verbDetail = tail1 && tail2 ? ` (${tail1} ↔ ${tail2})` : '';
+      return {
+        type: 'different_verb',
+        badgeLabel: 'KHÁC ĐỘNG TỪ',
+        reason: `Khác động từ${verbDetail}`,
+        commonPrefix,
+        tail1,
+        tail2,
+      };
+    }
+    // If similarity is extremely high (>= 95%) and tails are identical:
+    if (sim >= 0.95) {
+      return {
+        type: 'duplicate',
+        badgeLabel: 'CÂU TRÙNG LẶP',
+        reason: `Tương đồng ${Math.round(sim * 100)}% tiếng Nhật`,
+      };
+    }
+  }
+
+  // 5. Exact match on Vietnamese translation
+  const normVi1 = cleanTextForSearch(translation1 || '');
+  const normVi2 = cleanTextForSearch(translation2 || '');
+  if (normVi1 && normVi2 && normVi1 === normVi2 && normVi1.length >= 6) {
+    // If Japanese has different verbs
+    if (tail1 !== tail2) {
+      return {
+        type: 'different_verb',
+        badgeLabel: 'KHÁC ĐỘNG TỪ',
+        reason: 'Khác động từ (cùng nghĩa dịch)',
+        commonPrefix,
+        tail1,
+        tail2,
+      };
+    }
+    if (norm1 === norm2 || sim >= 0.92) {
+      return {
+        type: 'duplicate',
+        badgeLabel: 'CÂU TRÙNG LẶP',
+        reason: 'Trùng bản dịch tiếng Việt',
+      };
+    }
+  }
+
+  return null;
+}
+
 /**
  * Checks if a conjugation form is genuinely the Dictionary form (Thể từ điển / Thể る / Thể nguyên mẫu).
  * Strictly EXCLUDES any other forms:
