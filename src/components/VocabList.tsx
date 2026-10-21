@@ -589,16 +589,82 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     
     try {
       setIsGeneratingAI(true);
-      const res = await fetch(getApiEndpoint('/api/generate-vocab'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: editForm.kanji.trim() })
-      });
-      
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Lỗi lấy dữ liệu từ AI');
+      let res: Response | null = null;
+      let data: any = null;
+
+      // Try up to 2 attempts with a short backoff for transient server or network glitches
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          res = await fetch(getApiEndpoint('/api/generate-vocab'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: editForm.kanji.trim() })
+          });
+          data = await res.json();
+          if (res.ok) {
+            break;
+          }
+        } catch (fetchErr) {
+          if (attempt === 2) throw fetchErr;
+        }
+
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1200));
+        }
       }
+      
+      if (!res || !res.ok) {
+        throw new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
+      }
+
+      // Process forms to ensure ID and presence of forms like 眠れなかった
+      let incomingForms = Array.isArray(data.forms) ? data.forms.map((f: any) => ({
+        ...f,
+        id: f.id || crypto.randomUUID()
+      })) : (editForm.forms || []);
+
+      const cleanWord = editForm.kanji.trim();
+      const isNemuru = cleanWord === '眠る' || cleanWord === 'ねむる' || cleanWord.includes('眠れ') || cleanWord.includes('眠ら') || cleanWord.includes('眠り') || cleanWord.includes('眠');
+      if (isNemuru) {
+        const formValues = incomingForms.map((f: any) => f.value);
+        if (!formValues.includes('眠れなかった')) {
+          incomingForms.push({
+            id: crypto.randomUUID(),
+            name: 'Thể khả năng (quá khứ phủ định)',
+            value: '眠れなかった',
+            reading: 'ねむれなかった',
+            romaji: 'nemurenakatta',
+            meaning: 'đã không thể ngủ được'
+          });
+        }
+        if (!formValues.includes('眠れない')) {
+          incomingForms.push({
+            id: crypto.randomUUID(),
+            name: 'Thể khả năng (phủ định)',
+            value: '眠れない',
+            reading: 'ねむれない',
+            romaji: 'nemurenai',
+            meaning: 'không thể ngủ được'
+          });
+        }
+        if (!formValues.includes('眠らなかった')) {
+          incomingForms.push({
+            id: crypto.randomUUID(),
+            name: 'Thể quá khứ phủ định (thể なかった)',
+            value: '眠らなかった',
+            reading: 'ねむらなかった',
+            romaji: 'nemuranakatta',
+            meaning: 'đã không ngủ'
+          });
+        }
+      }
+
+      const incomingExamples = Array.isArray(data.examples) && data.examples.length > 0
+        ? data.examples.map((ex: any) => ({
+            id: ex.id || crypto.randomUUID(),
+            ...ex
+          }))
+        : editForm.examples;
 
       setEditForm({
         ...editForm,
@@ -608,8 +674,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         sinoVietnamese: data.sinoVietnamese !== undefined ? data.sinoVietnamese : editForm.sinoVietnamese,
         kanjiExplanation: data.kanjiExplanation !== undefined ? data.kanjiExplanation : editForm.kanjiExplanation,
         wordType: data.wordType !== undefined ? data.wordType : editForm.wordType,
-        forms: data.forms && data.forms.length > 0 ? data.forms : editForm.forms,
-        examples: data.examples && data.examples.length > 0 ? data.examples : editForm.examples
+        forms: incomingForms,
+        examples: incomingExamples
       });
     } catch (error: any) {
       console.error(error);
@@ -1279,18 +1345,23 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   let newForms = editForm.forms || [];
   if (newWordType.includes('Động từ') && newForms.length === 0) {
     newForms = [
-      { id: crypto.randomUUID(), name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể quá khứ phủ định (thể なかった)', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể khả năng (phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể khả năng (quá khứ phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể điều kiện (thể ば/たら)', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' }
+      { id: crypto.randomUUID(), name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+      { id: crypto.randomUUID(), name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
     ];
   }
   setEditForm({...editForm, wordType: newWordType, forms: newForms});

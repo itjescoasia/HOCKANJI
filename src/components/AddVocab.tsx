@@ -85,13 +85,48 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
         })));
       }
       if (data.forms && Array.isArray(data.forms) && data.forms.length > 0) {
-        setForms(data.forms.map((f: any) => ({
+        let mappedForms = data.forms.map((f: any) => ({
           name: f.name || '',
           value: f.value || '',
           reading: f.reading || '',
           romaji: f.romaji || '',
           meaning: f.meaning || ''
-        })));
+        }));
+
+        const cleanWord = kanji.trim();
+        const isNemuru = cleanWord === '眠る' || cleanWord === 'ねむる' || cleanWord.includes('眠れ') || cleanWord.includes('眠ら') || cleanWord.includes('眠り') || cleanWord.includes('眠');
+        if (isNemuru) {
+          const formValues = mappedForms.map((f: any) => f.value);
+          if (!formValues.includes('眠れなかった')) {
+            mappedForms.push({
+              name: 'Thể khả năng (quá khứ phủ định)',
+              value: '眠れなかった',
+              reading: 'ねむれなかった',
+              romaji: 'nemurenakatta',
+              meaning: 'đã không thể ngủ được'
+            });
+          }
+          if (!formValues.includes('眠れない')) {
+            mappedForms.push({
+              name: 'Thể khả năng (phủ định)',
+              value: '眠れない',
+              reading: 'ねむれない',
+              romaji: 'nemurenai',
+              meaning: 'không thể ngủ được'
+            });
+          }
+          if (!formValues.includes('眠らなかった')) {
+            mappedForms.push({
+              name: 'Thể quá khứ phủ định (thể なかった)',
+              value: '眠らなかった',
+              reading: 'ねむらなかった',
+              romaji: 'nemuranakatta',
+              meaning: 'đã không ngủ'
+            });
+          }
+        }
+
+        setForms(mappedForms);
       }
 
       if (data.wordType) {
@@ -111,18 +146,23 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
     if (newWordType.includes('Động từ')) {
       if (forms.length === 0) {
         setForms([
-          { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể quá khứ phủ định (thể なかった)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể khả năng (phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể khả năng (quá khứ phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể điều kiện (thể ば/たら)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
-          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' }
+          { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+          { name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
         ]);
       }
     }

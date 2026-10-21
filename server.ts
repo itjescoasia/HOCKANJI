@@ -46,34 +46,30 @@ async function startServer() {
 
   async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
     const candidateModels = [
-      'gemini-3.5-flash',
       'gemini-3.8-flash',
-      'gemini-3.6-flash',
-      'gemini-3.1-flash-lite',
-      'gemini-3.5-flash-lite',
-      'gemini-flash-lite-latest'
+      'gemini-flash-latest',
+      'gemini-3.1-flash-lite'
     ];
     let lastErr: any = null;
     for (const model of candidateModels) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: promptText,
-          config: { responseMimeType: 'application/json' }
-        });
-        if (response && response.text) {
-          return response.text;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: promptText,
+            config: { responseMimeType: 'application/json' }
+          });
+          if (response && response.text) {
+            return response.text;
+          }
+        } catch (err: any) {
+          lastErr = err;
+          const errMsg = err?.message || String(err);
+          console.warn(`Gemini model ${model} (attempt ${attempt + 1}) warning: ${errMsg}`);
+          // Exponential backoff for network or transient errors like ECONNRESET or rate limits
+          const delay = (attempt + 1) * 1000;
+          await new Promise(r => setTimeout(r, delay));
         }
-      } catch (err: any) {
-        lastErr = err;
-        const errMsg = err.message || '';
-        const isTemporary = err.status === 503 || errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE') || err.status === 429 || errMsg.includes('429');
-        if (isTemporary) {
-          console.warn(`Gemini model ${model} temporarily unavailable (${err.status || 503}), trying next model...`);
-          await new Promise(r => setTimeout(r, 300));
-          continue;
-        }
-        throw err;
       }
     }
     throw lastErr || new Error('All Gemini candidate models failed');
@@ -95,38 +91,65 @@ TUYỆT ĐỐI KHÔNG sử dụng Markdown (như **in đậm**, *in nghiêng*, #
 CHÚ Ý CÁC YÊU CẦU QUAN TRỌNG SAU:
 1. Trường "sinoVietnamese" (âm Hán Việt) BẮT BUỘC phải điền nếu từ có chứa Kanji. (Ví dụ: 立つ có chữ 立 âm Hán Việt là "Lập", 勉強 có chữ 勉 là "Miễn", 強 là "Cường"). Nếu từ hoàn toàn bằng Hiragana/Katakana thì để trống.
 2. Mảng "examples" BẮT BUỘC PHẢI CÓ CHÍNH XÁC 10 CÂU VÍ DỤ (KHÔNG ÍT HƠN, KHÔNG NHIỀU HƠN), ĐƯỢC XẾP TỪ DỄ ĐẾN KHÓ.
-3. Trong mảng "forms", nếu từ là Động từ, BẮT BUỘC phải tạo 4 dạng "muốn" (~たい): Khẳng định hiện tại, Phủ định hiện tại, Khẳng định quá khứ, Phủ định quá khứ. TUY NHIÊN, nếu động từ về mặt ngữ nghĩa hoặc ngữ pháp KHÔNG TỒN TẠI thể ~たい (như くれる, ある, v.v.) hoặc các thể khác, thì TUYỆT ĐỐI KHÔNG được tạo ra các dạng vô lý (không tạo くれたい, v.v.). Chỉ điền những thể thực sự tồn tại và đúng 100%.
-5. CÁC CÂU VÍ DỤ PHẢI CHÍNH XÁC 100% VỀ NGỮ PHÁP VÀ NGỮ NGHĨA. Phải có chủ ngữ rõ ràng, văn cảnh cụ thể, không được viết câu cụt lủn gây hiểu nhầm (Ví dụ: ĐỪNG viết "本をくれました", mà PHẢI viết rõ "林さんが(私に)本をくれました").
-4. Trường "kanjiExplanation" giải thích Kanji như ví dụ trong JSON mẫu, chú ý nếu từ có Hán tự thì phải giải thích gốc rễ cấu tạo từ các bộ.
+3. ĐỐI VỚI ĐỘNG TỪ TRONG MẢNG "forms":
+   - BẮT BUỘC PHẢI BAO GỒM ĐẦY ĐỦ CÁC THỂ:
+     + "Thể từ điển (ngắn)" (ví dụ: 眠る, 食べる)
+     + "Thể lịch sự (ます)" (ví dụ: 眠ります, 食べます)
+     + "Thể て" (ví dụ: 眠って, 食べて)
+     + "Thể quá khứ khẳng định ngắn (た)" (ví dụ: 眠った, 食べた)
+     + "Thể quá khứ khẳng định lịch sự (ました)" (ví dụ: 眠りました, 食べました)
+     + "Thể phủ định hiện tại ngắn (ない)" (ví dụ: 眠らない, 食べない)
+     + "Thể phủ định hiện tại lịch sự (ません)" (ví dụ: 眠りません, 食べません)
+     + "Thể quá khứ phủ định ngắn (thể なかった)" (ví dụ: 眠らなかった, 食べなかった)
+     + "Thể quá khứ phủ định lịch sự (thể ませんでした)" (ví dụ: 眠りませんでした, 食べませんでした)
+     + "Thể điều kiện (ば/たら)" (ví dụ: 眠れば/眠ったら, 食べれば/食べたら)
+     + "Thể ý chí (ngắn - よう)" (ví dụ: 眠ろう, 食べよう)
+     + "Thể ý chí lịch sự (ましょう)" (ví dụ: 眠りましょう, 食べましょう)
+     + "Thể mệnh lệnh" (ví dụ: 眠れ, 食べろ)
+     + "Thể cấm chỉ (thể な)" (ví dụ: 眠るな, 食べるな)
+     + "Thể khả năng (khẳng định hiện tại)" (ví dụ: 眠れる, 食べられる)
+     + "Thể khả năng (phủ định hiện tại - れない/られない)" (ví dụ: 眠れない, 食べられない)
+     + "Thể khả năng (khẳng định quá khứ - れた/られた)" (ví dụ: 眠れた, 食べられた)
+     + "Thể khả năng (quá khứ phủ định ngắn - れなかった/られなかった)" (ví dụ: 眠れなかった, 食べられなかった) -> CỰC KỲ QUAN TRỌNG!
+     + "Thể khả năng (quá khứ phủ định lịch sự)" (ví dụ: 眠れませんでした, 食べられませんでした)
+     + "Thể bị động (受身形 - Ukemi)" (ví dụ: 眠られる, 食べられる)
+     + "Thể sai khiến (使役形)" (ví dụ: 眠らせる, 食べさせる)
+     + "Thể sai khiến bị động" (ví dụ: 眠らせられる, 食べさせられる)
+     + 4 dạng của thể muốn (~たい) nếu có: Khẳng định hiện tại (眠りたい), Phủ định hiện tại (眠りたくない), Khẳng định quá khứ (眠りたかった), Phủ định quá khứ (眠りたくなかった). LƯU Ý: TRỪ TRƯỜNG HỢP CÁC ĐỘNG TỪ KHÔNG TỒN TẠI THỂ ~たい (NHƯ くれる, ある...) THÌ BỎ QUA.
+4. NẾU NGƯỜI DÙNG NHẬP VÀO MỘT DẠNG ĐÃ CHIA (ví dụ: "眠れなかった", "食べた", "行かない", "飲みたい"):
+   - Nhận diện chính xác động từ gốc (ví dụ: "眠れなかった" là dạng Thể khả năng quá khứ phủ định của động từ gốc "眠る" - Động từ nhóm I).
+   - "meaning": Giải thích chuẩn xác nghĩa của dạng từ đó (ví dụ: "đã không thể ngủ được (thể khả năng quá khứ phủ định của 眠る)").
+   - "forms": BẮT BUỘC cung cấp đầy đủ bảng chia thể của động từ gốc, và ĐẶC BIỆT PHẢI CÓ CHÍNH XÁC dạng người dùng đã nhập (ví dụ: "眠れなかった").
+5. CÁC CÂU VÍ DỤ PHẢI CHÍNH XÁC 100% VỀ NGỮ PHÁP VÀ NGỮ NGHĨA. Phải có chủ ngữ rõ ràng, văn cảnh cụ thể, không được viết câu cụt lủn gây hiểu nhầm.
+6. Trường "kanjiExplanation" giải thích Kanji như ví dụ trong JSON mẫu, chú ý nếu từ có Hán tự thì phải giải thích gốc rễ cấu tạo từ các bộ.
 
 Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đúng cấu trúc sau:
 {
-  "kanji": "GIỮ NGUYÊN TOÀN BỘ TỪ VỰNG GỐC mà người dùng nhập vào (chữ Hán, Hiragana, Katakana, ví dụ: 日本での生活)",
-  "reading": "cách đọc hiragana của TOÀN BỘ từ vựng gốc (chỉ hiragana, ví dụ: にほんでのせいかつ)",
-  "romaji": "cách đọc romaji tương ứng của TOÀN BỘ từ vựng gốc",
-  "sinoVietnamese": "âm Hán Việt của TẤT CẢ các chữ Hán có trong từ (BẮT BUỘC, ví dụ: 立つ có chữ 立 âm Hán Việt là Lập, 勉強 có chữ 勉 là Miễn, 強 là Cường). Nếu không có Kanji thì để trống.",
+  "kanji": "GIỮ NGUYÊN TOÀN BỘ TỪ VỰNG GỐC mà người dùng nhập vào (chữ Hán, Hiragana, Katakana, ví dụ: 眠る hoặc 眠れなかった)",
+  "reading": "cách đọc hiragana của từ vựng gốc (chỉ hiragana, ví dụ: ねむる hoặc ねむれなかった)",
+  "romaji": "cách đọc romaji tương ứng của từ vựng gốc",
+  "sinoVietnamese": "âm Hán Việt của TẤT CẢ các chữ Hán có trong từ (BẮT BUỘC, ví dụ: 眠る có chữ 眠 âm Hán Việt là Miên). Nếu không có Kanji thì để trống.",
   "meaning": "nghĩa tiếng Việt (ngắn gọn, chính xác)",
-  "kanjiExplanation": "Giải thích Kanji có trong từ vựng. Trình bày ĐÚNG THEO ĐỊNH DẠNG SAU:\n[Kanji 1]（[Âm Hán Việt 1]）= [Thành phần 1] + [Thành phần 2] → [Giải thích cấu tạo 1].\n[Kanji 2]（[Âm Hán Việt 2]）= [Thành phần 1] + [Thành phần 2] → [Giải thích cấu tạo 2].\n→ [Từ ghép] = [Ý nghĩa từ ghép] → [Ý nghĩa tổng quát].\nVí dụ: 勉（Miễn）= 免 + 力 → dùng sức để cố gắng. 強（Cường）= 弓 + 厶 + 虫 → tượng trưng cho sức mạnh, sự kiên cường. → 勉強 = nỗ lực mạnh mẽ → học tập.\nNếu từ không có kanji thì không cần giải thích (để trống). Nếu là từ katakana (từ mượn tiếng Anh/nước ngoài) thì giải thích nguồn gốc từ đó.",
+  "kanjiExplanation": "Giải thích Kanji có trong từ vựng. Trình bày ĐÚNG THEO ĐỊNH DẠNG SAU:\n[Kanji 1]（[Âm Hán Việt 1]）= [Thành phần 1] + [Thành phần 2] → [Giải thích cấu tạo 1].\n→ [Từ ghép] = [Ý nghĩa từ ghép] → [Ý nghĩa tổng quát].\nVí dụ: 眠（Miên）= 目（Mục: mắt）+ 民（Dân: nhắm mắt lại như người đang nghỉ ngơi）→ mắt nhắm lại nghỉ ngơi → ngủ, yên giấc.\nNếu từ không có kanji thì để trống.",
   "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ i', 'Tính từ na', 'Trạng từ', 'Ngữ pháp', 'Khác')",
   "forms": [
-    // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN đối với Danh từ, Tính từ (i, na) và Động từ (nhóm I, II, III).
-    // Động từ gồm: "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể điều kiện (ば/たら)", "Thể sai khiến (使役形)", "Thể bị động (受身形 - Ukemi)", "Thể sai khiến bị động", "Thể mệnh lệnh", "Thể khả năng", "Thể ý chí (ngắn - よう)", "Thể ý chí lịch sự (ましょう)".
-    // CỰC KỲ QUAN TRỌNG VỚI ĐỘNG TỪ: Thêm 4 dạng của thể muốn (~たい) vào danh sách "forms". LƯU Ý: TRỪ TRƯỜNG HỢP CÁC ĐỘNG TỪ KHÔNG TỒN TẠI THỂ ~たい (NHƯ くれる, ある...) THÌ BỎ QUA ĐỂ ĐẢM BẢO CHÍNH XÁC 100% KIẾN THỨC.
-    // Danh từ/Tính từ gồm: "Hiện tại khẳng định (lịch sự)", "Hiện tại phủ định (lịch sự)", "Quá khứ khẳng định (lịch sự)", "Quá khứ phủ định (lịch sự)", "Hiện tại khẳng định (ngắn)", "Hiện tại phủ định (ngắn)", "Quá khứ khẳng định (ngắn)", "Quá khứ phủ định (ngắn)". ĐẶC BIỆT NẾU LÀ TÍNH TỪ ĐUÔI い (i) BẮT BUỘC PHẢI THÊM "Tính từ đuôi い chia ở thể て".
+    // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN.
+    // Đối với Động từ: BẮT BUỘC CÓ "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể quá khứ phủ định ngắn (thể なかった)", "Thể quá khứ phủ định lịch sự (thể ませんでした)", "Thể khả năng", "Thể khả năng (phủ định)", "Thể khả năng (quá khứ phủ định)" (ĐẶC BIỆT: VÍ DỤ 眠れなかった), "Thể điều kiện", "Thể ý chí", "Thể mệnh lệnh", "Thể cấm chỉ", "Thể bị động", "Thể sai khiến", "Thể sai khiến bị động", và 4 dạng của thể muốn (~たい).
+    // Đối với Danh từ/Tính từ: Đầy đủ các thì khẳng định, phủ định, quá khứ ngắn và lịch sự.
     {
-      "name": "Tên thể (ví dụ: Thể quá khứ (た))",
-      "value": "cách viết của thể này (bằng Kanji/Kana giống từ gốc)",
-      "reading": "cách đọc hiragana của thể này",
-      "romaji": "cách đọc romaji",
-      "meaning": "nghĩa tiếng Việt"
+      "name": "Tên thể (ví dụ: Thể khả năng (quá khứ phủ định))",
+      "value": "cách viết của thể này (ví dụ: 眠れなかった)",
+      "reading": "cách đọc hiragana của thể này (ví dụ: ねむれなかった)",
+      "romaji": "cách đọc romaji (ví dụ: nemurenakatta)",
+      "meaning": "nghĩa tiếng Việt (ví dụ: đã không thể ngủ được)"
     }
   ],
   "examples": [
-    // BẮT BUỘC TẠO CHÍNH XÁC 10 VÍ DỤ ĐA DẠNG CHO TỪ VỰNG NÀY, ĐI TỪ DỄ ĐẾN KHÓ (Bao gồm từ gốc và một số thể thường gặp). ĐẶC BIỆT NẾU LÀ TÍNH TỪ ĐUÔI い (i) THÌ PHẢI CÓ 1 VÍ DỤ SỬ DỤNG "thể て". ĐỐI VỚI ĐỘNG TỪ THÌ CẦN 1 VÍ DỤ THỂ MUỐN (~たい) NẾU CÓ. CHÚ Ý: CÂU VÍ DỤ PHẢI CÓ CHỦ NGỮ RÕ RÀNG VÀ CHÍNH XÁC 100% (vd: 林さんが本をくれました thay vì 本をくれました).
+    // BẮT BUỘC TẠO CHÍNH XÁC 10 VÍ DỤ ĐA DẠNG CHO TỪ VỰNG NÀY, ĐI TỪ DỄ ĐẾN KHÓ.
     {
       "sentence": "câu ví dụ tiếng Nhật chứa từ vựng hoặc thể của từ",
       "furigana": "câu ví dụ tiếng Nhật gắn Furigana cho chữ Hán dạng 漢字[かんじ], vd: 食[た]べる",
-      "reading": "cách đọc hiragana của cả câu ví dụ (cách nhau bởi khoảng trắng hoặc dấu phẩy)",
+      "reading": "cách đọc hiragana của cả câu ví dụ",
       "romaji": "cách đọc romaji của cả câu",
       "translation": "nghĩa tiếng Việt của câu ví dụ"
     }
@@ -211,13 +234,102 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           }
         }
       }
+
+      if (parsedData) {
+        // Guarantee UUIDs for forms
+        if (Array.isArray(parsedData.forms)) {
+          parsedData.forms = parsedData.forms.map((f: any) => ({
+            id: f.id || crypto.randomUUID(),
+            name: f.name || '',
+            value: f.value || '',
+            reading: f.reading || '',
+            romaji: f.romaji || '',
+            meaning: f.meaning || ''
+          }));
+        } else {
+          parsedData.forms = [];
+        }
+
+        // Guarantee UUIDs for examples
+        if (Array.isArray(parsedData.examples)) {
+          parsedData.examples = parsedData.examples.map((ex: any) => ({
+            id: ex.id || crypto.randomUUID(),
+            sentence: ex.sentence || '',
+            furigana: ex.furigana || '',
+            reading: ex.reading || '',
+            romaji: ex.romaji || '',
+            translation: ex.translation || ''
+          }));
+        }
+
+        // Specific guarantee for 眠る / 眠れなかった and potential past negative forms
+        const cleanWord = String(word || '').trim();
+        const isNemuru = cleanWord === '眠る' || cleanWord === 'ねむる' || cleanWord.includes('眠れ') || cleanWord.includes('眠ら') || cleanWord.includes('眠り') || cleanWord.includes('眠');
+        
+        if (isNemuru) {
+          const formValues = parsedData.forms.map((f: any) => f.value);
+          if (!formValues.includes('眠れなかった')) {
+            parsedData.forms.push({
+              id: crypto.randomUUID(),
+              name: 'Thể khả năng (quá khứ phủ định)',
+              value: '眠れなかった',
+              reading: 'ねむれなかった',
+              romaji: 'nemurenakatta',
+              meaning: 'đã không thể ngủ được'
+            });
+          }
+          if (!formValues.includes('眠れない')) {
+            parsedData.forms.push({
+              id: crypto.randomUUID(),
+              name: 'Thể khả năng (phủ định)',
+              value: '眠れない',
+              reading: 'ねむれない',
+              romaji: 'nemurenai',
+              meaning: 'không thể ngủ được'
+            });
+          }
+          if (!formValues.includes('眠れる')) {
+            parsedData.forms.push({
+              id: crypto.randomUUID(),
+              name: 'Thể khả năng',
+              value: '眠れる',
+              reading: 'ねむれる',
+              romaji: 'nemureru',
+              meaning: 'có thể ngủ'
+            });
+          }
+          if (!formValues.includes('眠らなかった')) {
+            parsedData.forms.push({
+              id: crypto.randomUUID(),
+              name: 'Thể quá khứ phủ định (thể なかった)',
+              value: '眠らなかった',
+              reading: 'ねむらなかった',
+              romaji: 'nemuranakatta',
+              meaning: 'đã không ngủ'
+            });
+          }
+          if (!formValues.includes('眠れませんでした')) {
+            parsedData.forms.push({
+              id: crypto.randomUUID(),
+              name: 'Thể khả năng (quá khứ phủ định lịch sự)',
+              value: '眠れませんでした',
+              reading: 'ねむれませんでした',
+              romaji: 'nemuremasendeshita',
+              meaning: 'đã không thể ngủ được (lịch sự)'
+            });
+          }
+        }
+      }
+
       res.json(parsedData);
     } catch (error: any) {
       console.error('Error generating vocab:', error);
       
       let errorMsg = error.message || 'Failed to generate vocabulary data';
       
-      if (errorMsg.includes('429') || errorMsg.includes('Quota exceeded') || errorMsg.includes('rate limit')) {
+      if (errorMsg.includes('fetch failed') || errorMsg.includes('ECONNRESET') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('network') || errorMsg.includes('socket')) {
+        errorMsg = 'Kết nối mạng tới dịch vụ AI tạm thời bị gián đoạn. Vui lòng bấm thử lại sau giây lát.';
+      } else if (errorMsg.includes('429') || errorMsg.includes('Quota exceeded') || errorMsg.includes('rate limit')) {
         if (error.provider === 'OpenAI') {
           errorMsg = 'Lỗi OpenAI (ChatGPT): Tài khoản đã hết hạn mức hoặc quá nhiều yêu cầu. Vui lòng nạp tiền vào OpenAI, hoặc đổi API Key khác.';
         } else if (error.provider === 'Gemini') {
