@@ -2013,19 +2013,6 @@ function StudyView({
                   placeholder="e.g. この情報は大切です。"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium flex items-center justify-between">
-                  <span>Furigana 漢字[かんじ] (Tự động hoặc tùy chỉnh)</span>
-                  <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động gắn phiên âm chữ Hán</span>
-                </label>
-                <input
-                  type="text"
-                  value={newFurigana}
-                  onChange={(e) => setNewFurigana(e.target.value)}
-                  className="w-full bg-theme-panel border border-theme-subtle rounded px-4 py-2.5 text-theme-primary focus:outline-none focus:border-theme-accent font-mono text-sm transition-colors placeholder:text-theme-primary/40"
-                  placeholder="e.g. この情報[じょうほう]は大切[たいせつ]です。"
-                />
-              </div>
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 space-y-2">
                   <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
