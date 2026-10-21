@@ -1,5 +1,5 @@
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, generateAndUploadTTS, playAudioUrl } from '../utils/playTTS';
+import { playTTS, playAudioUrl } from '../utils/playTTS';
 
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -29,7 +29,7 @@ import {
   Lock,
   Unlock,
   Volume2,
-  CopyPlus, Copy, Music,
+  CopyPlus, Copy,
   CheckCircle,
   CheckCircle2,
   Circle,
@@ -2128,7 +2128,7 @@ function StudyView({
                           duplicateExampleMap.has(ex.id)
                             ? "border-amber-500/90 border-l-[10px] border-l-amber-500 bg-amber-500/[0.06] ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
                             : differentVerbExampleMap.has(ex.id)
-                              ? "border-indigo-500/90 border-l-[10px] border-l-indigo-500 bg-indigo-500/[0.04] ring-2 ring-indigo-500/40 shadow-lg shadow-indigo-500/10"
+                              ? "border-indigo-400/50 border-l-4 border-l-indigo-500 bg-indigo-500/[0.02]"
                               : snapshot.isDragging
                                 ? "border-theme-accent shadow-2xl z-50 scale-[1.02]"
                                 : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"
@@ -2141,15 +2141,6 @@ function StudyView({
                             <div className="bg-gradient-to-r from-amber-500 to-red-500 text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 shadow-md flex items-center gap-1 rounded-bl-lg">
                               <AlertTriangle className="w-3 h-3 stroke-[2.5]" />
                               <span>TRÙNG NỘI DUNG</span>
-                            </div>
-                          </div>
-                        )}
-                        {/* Corner Ribbon for Different Verb */}
-                        {differentVerbExampleMap.has(ex.id) && (
-                          <div className="absolute top-0 right-0 z-20 pointer-events-none">
-                            <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 shadow-md flex items-center gap-1.5 rounded-bl-lg">
-                              <GitFork className="w-3 h-3 stroke-[2.5]" />
-                              <span>KHÁC ĐỘNG TỪ</span>
                             </div>
                           </div>
                         )}
@@ -2330,7 +2321,7 @@ function StudyView({
                             </form>
                           ) : (
                             <>
-                              <div className="absolute top-2 right-2 flex gap-1 z-10">
+                              <div className={`absolute top-2 ${duplicateExampleMap.has(ex.id) ? 'right-28 sm:right-32' : 'right-2'} flex gap-1 z-10`}>
                                 {ex.specialNote && (
                                   <button
                                     onClick={(e) => {
@@ -2521,36 +2512,16 @@ function StudyView({
                                   );
                                 }
 
-                                // rel.type === 'different_verb' - Chỉ hiển thị nhãn gọn gàng, không giải thích dài dòng
+                                // rel.type === 'different_verb' - Nhãn "Khác động từ" siêu gọn, không nút bấm, không giải thích dài dòng
                                 return (
-                                  <div className="py-2 px-3 mb-3.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between gap-3 flex-wrap">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-bold text-xs uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30 flex items-center gap-1.5 shadow-2xs">
-                                        <GitFork className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.5]" />
-                                        <span>KHÁC ĐỘNG TỪ</span>
+                                  <div className="mb-2">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 text-xs font-semibold">
+                                      <GitFork className="w-3 h-3 text-indigo-500 shrink-0" />
+                                      <span>Khác động từ</span>
+                                      <span className="text-[11px] font-normal opacity-70">
+                                        (câu #{rel.otherIndex})
                                       </span>
-                                      <span className="text-xs text-indigo-800/80 dark:text-indigo-300/80 font-medium">
-                                        (với Câu #{rel.otherIndex})
-                                      </span>
-                                    </div>
-
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const el = document.getElementById(`example-${rel.otherId}`);
-                                        if (el) {
-                                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                          setHighlightedExampleId(rel.otherId);
-                                          setTimeout(() => setHighlightedExampleId(null), 3000);
-                                        }
-                                      }}
-                                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-800 dark:text-indigo-200 font-medium text-xs cursor-pointer transition-colors shadow-2xs"
-                                      title={`Bấm để cuộn và xem câu #${rel.otherIndex}`}
-                                    >
-                                      <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                      <span>So sánh câu #{rel.otherIndex}</span>
-                                    </button>
+                                    </span>
                                   </div>
                                 );
                               })()}
@@ -2826,7 +2797,6 @@ function IntensiveExampleAudio({
 }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   // Transfer Modals
@@ -2845,42 +2815,6 @@ function IntensiveExampleAudio({
   const isTrueDuplicate = duplicateInfo?.type === 'duplicate';
   const counterpart = isTrueDuplicate && duplicateInfo?.otherId ? allExamples.find(e => e.id === duplicateInfo.otherId) : null;
   const counterpartHasAudio = !!(counterpart?.audioUrl || counterpart?.hasAudio);
-
-  const handleGenerateAI = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!example.sentence) return;
-    setIsGenerating(true);
-    try {
-      const url = await generateAndUploadTTS(example.sentence);
-      if (url) {
-        onUpdateExample(example.id, { hasAudio: true, audioUrl: url });
-        setAudioUrl(url);
-        try {
-          if (auth.currentUser) {
-            const cardRef = doc(db, 'global_intensiveVocab', wordId);
-            const currentDoc = await getDoc(cardRef);
-            if (currentDoc.exists()) {
-              const currentData = currentDoc.data();
-              const updatedExs = (currentData.examples || []).map((exItem: any) => 
-                exItem.id === example.id ? { ...exItem, hasAudio: true, audioUrl: url } : exItem
-              );
-              await setDoc(cardRef, { examples: updatedExs }, { merge: true });
-            }
-          }
-        } catch (dbErr) {
-          console.warn("Direct Firestore save warning in IntensiveStudy:", dbErr);
-        }
-        playAudioUrl(url, example.sentence);
-      } else {
-        alert("Không thể tạo file âm thanh AI lúc này. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.");
-      }
-    } catch(err: any) {
-      console.error("AI TTS error:", err);
-      alert("Lỗi khi gọi AI tạo âm thanh: " + (err?.message || "Vui lòng thử lại."));
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   useEffect(() => {
     let active = true;
@@ -2982,14 +2916,6 @@ function IntensiveExampleAudio({
           >
             <Volume2 className="w-3 h-3" />
             {isUploading ? 'Đang tải...' : 'Thêm MP3'}
-          </button>
-          <button 
-            onClick={handleGenerateAI}
-            disabled={isGenerating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/10 text-theme-accent rounded text-[11px] hover:bg-theme-accent hover:text-theme-inverted transition-colors font-medium uppercase tracking-wider disabled:opacity-50 cursor-pointer"
-          >
-            <Music className="w-3 h-3" />
-            {isGenerating ? 'Đang tạo...' : 'Tải âm thanh (AI)'}
           </button>
 
           {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp */}
