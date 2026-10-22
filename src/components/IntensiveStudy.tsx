@@ -1928,26 +1928,6 @@ function StudyView({
                 </button>
               </>
             )}
-            {!isAddingExample && (
-              <button
-                id="btn-sticky-add-example"
-                onClick={() => {
-                  setIsAddingExample(true);
-                  setTimeout(() => {
-                    const formEl = document.getElementById('add-example-form-section');
-                    if (formEl) {
-                      formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      const inputEl = document.getElementById('new-sentence-input');
-                      if (inputEl) inputEl.focus();
-                    }
-                  }, 80);
-                }}
-                className="text-theme-accent hover:text-theme-accent-hover flex items-center gap-1 text-xs sm:text-sm uppercase tracking-wider font-bold transition-all px-3 py-1.5 rounded-lg border border-theme-accent/40 bg-theme-accent/10 hover:bg-theme-accent/20 cursor-pointer shadow-xs"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>Thêm mới</span>
-              </button>
-            )}
           </div>
         </div>
 
