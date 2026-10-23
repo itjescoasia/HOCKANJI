@@ -383,19 +383,13 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const info = [
-      `【${currentCard.kanji || currentCard.reading}】`,
-      currentCard.reading && `Cách đọc: ${currentCard.reading}`,
-      currentCard.romaji && `Romaji: ${currentCard.romaji}`,
-      currentCard.sinoVietnamese && `Hán Việt: ${currentCard.sinoVietnamese}`,
-      currentCard.wordType && `Loại từ: ${currentCard.wordType}`,
-      currentCard.meaning && `Ý nghĩa: ${currentCard.meaning}`,
-      currentCard.kanjiExplanation && `\n--- Giải thích chi tiết ---\n${cleanMarkdownForDisplay(currentCard.kanjiExplanation)}`,
-    ].filter(Boolean).join('\n');
+    const wordToCopy = (currentCard.kanji || currentCard.reading || '').trim();
+    if (!wordToCopy) return;
 
-    navigator.clipboard.writeText(info).then(() => {
+    navigator.clipboard.writeText(wordToCopy).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      showToast(`Đã sao chép từ vựng: ${wordToCopy}`);
     }).catch(err => console.error("Copy error:", err));
   };
 
@@ -500,17 +494,17 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
               id="word-detail-copy-btn"
               onClick={handleCopy}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-theme-primary/80 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-subtle/50 border border-theme-subtle transition-all cursor-pointer shadow-xs"
-              title="Sao chép thông tin từ vựng"
+              title={`Sao chép từ vựng: ${currentCard.kanji || currentCard.reading}`}
             >
               {copied ? (
                 <>
                   <CheckCircle className="w-3.5 h-3.5 text-theme-success" />
-                  <span className="text-theme-success font-semibold">Đã chép</span>
+                  <span className="text-theme-success font-semibold">Đã chép từ</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Sao chép</span>
+                  <span>Sao chép từ</span>
                 </>
               )}
             </button>
