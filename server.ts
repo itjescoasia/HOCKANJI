@@ -44,15 +44,25 @@ async function startServer() {
     }
   }));
 
+  const modelCooldownMap = new Map<string, number>();
+
   async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
+    // gemini-3.1-flash-lite is prioritized because of high free-tier quotas and near-instant speed
     const candidateModels = [
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
-      'gemini-3.1-flash-lite'
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash'
     ];
     let lastErr: any = null;
+    const now = Date.now();
+
     for (const model of candidateModels) {
-      for (let attempt = 0; attempt < 3; attempt++) {
+      const cooldownUntil = modelCooldownMap.get(model) || 0;
+      if (now < cooldownUntil) {
+        console.warn(`Skipping model ${model} (in cooldown due to quota limit until ${new Date(cooldownUntil).toLocaleTimeString()})`);
+        continue;
+      }
+
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const response = await ai.models.generateContent({
             model,
@@ -65,10 +75,20 @@ async function startServer() {
         } catch (err: any) {
           lastErr = err;
           const errMsg = err?.message || String(err);
-          console.warn(`Gemini model ${model} (attempt ${attempt + 1}) warning: ${errMsg}`);
-          // Exponential backoff for network or transient errors like ECONNRESET or rate limits
-          const delay = (attempt + 1) * 1000;
-          await new Promise(r => setTimeout(r, delay));
+          const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded') || errMsg.includes('rate limit');
+          
+          console.warn(`Gemini model ${model} (attempt ${attempt + 1}) warning: ${errMsg.slice(0, 160)}`);
+          
+          if (isQuota) {
+            // Cool down this model for 30 minutes and immediately fall back to next model without wasting attempts
+            modelCooldownMap.set(model, Date.now() + 30 * 60 * 1000);
+            break;
+          }
+
+          // If network glitch (ECONNRESET, ETIMEDOUT, fetch failed), wait briefly before retry
+          if (attempt === 0) {
+            await new Promise(r => setTimeout(r, 600));
+          }
         }
       }
     }
