@@ -1968,21 +1968,9 @@ function StudyView({
             )}
             <form onSubmit={handleAddExample} className="space-y-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
-                    Câu ví dụ (nên có chứa từ "{word.word}") *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleGenerateAINewFurigana}
-                    disabled={isGeneratingFurigana || !newSentence.trim()}
-                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded transition-all disabled:opacity-50 cursor-pointer"
-                    title="Dùng Gemini AI để tạo Furigana tự động theo ngữ cảnh"
-                  >
-                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />
-                    <span>{isGeneratingFurigana ? 'Đang tạo...' : 'Tạo Furigana AI'}</span>
-                  </button>
-                </div>
+                <label className="block text-xs uppercase tracking-wider text-theme-primary/60 font-medium">
+                  Câu ví dụ (nên có chứa từ "{word.word}") *
+                </label>
                 <textarea
                   id="new-sentence-input"
                   required
