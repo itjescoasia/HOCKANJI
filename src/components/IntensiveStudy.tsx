@@ -82,17 +82,17 @@ export function isWordMastered(word: IntensiveWord): boolean {
 export function getCategoryBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
   if (!typeStr) return defaultClasses;
   const type = typeStr.trim();
-  if (type === "Động từ nhóm I") {
+  if (type.startsWith("Động từ nhóm I")) {
     return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-blue-bg)] text-[var(--badge-blue-text)] border-[var(--badge-blue-border)]";
-  } else if (type === "Động từ nhóm II") {
+  } else if (type.startsWith("Động từ nhóm II")) {
     return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-purple-bg)] text-[var(--badge-purple-text)] border-[var(--badge-purple-border)]";
-  } else if (type === "Động từ nhóm III") {
+  } else if (type.startsWith("Động từ nhóm III")) {
     return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-pink-bg)] text-[var(--badge-pink-text)] border-[var(--badge-pink-border)]";
-  } else if (type === "Danh từ") {
+  } else if (type.startsWith("Danh từ")) {
     return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-emerald-bg)] text-[var(--badge-emerald-text)] border-[var(--badge-emerald-border)]";
-  } else if (type === "Tính từ đuôi-i" || type === "Tính từ i") {
+  } else if (type.startsWith("Tính từ đuôi-i") || type.startsWith("Tính từ i")) {
     return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-amber-bg)] text-[var(--badge-amber-text)] border-[var(--badge-amber-border)]";
-  } else if (type === "Tính từ đuôi-na" || type === "Tính từ na") {
+  } else if (type.startsWith("Tính từ đuôi-na") || type.startsWith("Tính từ na")) {
     return "text-[10px] font-bold px-2 py-1 uppercase tracking-wider whitespace-nowrap rounded-sm border bg-[var(--badge-orange-bg)] text-[var(--badge-orange-text)] border-[var(--badge-orange-border)]";
   }
   return defaultClasses;

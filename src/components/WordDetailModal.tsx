@@ -23,6 +23,7 @@ import { playTTS, playAudioUrl } from '../utils/playTTS';
 import { cleanMarkdownForDisplay, isDictionaryForm, getEffectiveCardAudioUrl, getEffectiveFormAudioUrl } from '../utils/stringUtils';
 import { FuriganaSentence, FuriganaToggle } from './FuriganaSentence';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { WordTypeBadges } from './VocabList';
 
 interface WordDetailModalProps {
   word: IntensiveWord;
@@ -169,14 +170,12 @@ export default function WordDetailModal({
                 Hay quên
               </span>
             )}
-            <span className={getCategoryBadgeStyle(word.category, "text-[10px] font-bold px-2 py-0.5 rounded-full border border-theme-subtle bg-theme-hover text-theme-primary/70")}>
-              {word.category}
-            </span>
-            {matchedCard?.wordType && matchedCard.wordType !== word.category && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-theme-accent/30 bg-theme-accent/10 text-theme-accent">
-                {matchedCard.wordType}
-              </span>
-            )}
+            <WordTypeBadges
+              wordType={matchedCard?.wordType || word.category}
+              kanji={word.word || matchedCard?.kanji}
+              reading={word.reading || matchedCard?.reading}
+              meaning={matchedCard?.meaning || word.explanation}
+            />
             {onToggleStatus && (
               <button
                 type="button"

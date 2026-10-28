@@ -31,7 +31,13 @@ export function useVocabDeck() {
   useEffect(() => {
     deckStorage.getItem<KanjiCard[]>('kanji_srs_deck').then((cached) => {
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        setDeck(prev => prev.length === 0 ? cached : prev);
+        const upgraded = cached.map(c => {
+          if ((c.id === '81556a75-57cd-467d-a9fd-04c234980a2c' || c.kanji === '乾かす') && c.wordType === 'Động từ nhóm I') {
+            return { ...c, wordType: 'Động từ nhóm I (Tha động từ)' };
+          }
+          return c;
+        });
+        setDeck(prev => prev.length === 0 ? upgraded : prev);
       }
     }).catch(() => {});
   }, []);
@@ -43,7 +49,14 @@ export function useVocabDeck() {
     const unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       const loadedDeck: KanjiCard[] = [];
       snapshot.forEach((docSnap) => {
-        loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as KanjiCard);
+        const card = { id: docSnap.id, ...docSnap.data() } as KanjiCard;
+        if ((card.id === '81556a75-57cd-467d-a9fd-04c234980a2c' || card.kanji === '乾かす') && card.wordType === 'Động từ nhóm I') {
+          card.wordType = 'Động từ nhóm I (Tha động từ)';
+          // Persist to Firestore asynchronously
+          setDoc(doc(db, 'global_kanjiDeck', card.id), { wordType: 'Động từ nhóm I (Tha động từ)' }, { merge: true })
+            .catch(err => console.warn('Could not auto-update 乾かす wordType:', err));
+        }
+        loadedDeck.push(card);
       });
       const sorted = loadedDeck.sort((a, b) => b.createdAt - a.createdAt);
       setDeck(sorted);

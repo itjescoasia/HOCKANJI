@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { renderExampleHighlight, RelatedHighlight, HighlightVietnamese, HighlightProvider } from '../utils/highlight';
 import ReviewEditForm from './ReviewEditForm';
-import { getWordTypeBadgeStyle } from './VocabList';
+import { getWordTypeBadgeStyle, WordTypeBadges } from './VocabList';
 
 interface ReviewSessionProps {
   deck?: KanjiCard[];
@@ -689,11 +689,12 @@ export default function ReviewSession({
                       <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent">
                         {showAnswer ? 'Mặt sau (Đáp án & Chi tiết)' : 'Mặt trước (Từ vựng)'}
                       </span>
-                      {currentCard.wordType && (
-                        <span className={getWordTypeBadgeStyle(currentCard.wordType, "text-[10px] px-2.5 py-0.5 rounded-full font-medium")}>
-                          {currentCard.wordType}
-                        </span>
-                      )}
+                      <WordTypeBadges
+                        wordType={currentCard.wordType}
+                        kanji={currentCard.kanji}
+                        reading={currentCard.reading}
+                        meaning={currentCard.meaning}
+                      />
                     </div>
 
                     <div className="flex items-center gap-2 text-[11px] font-mono text-theme-primary/60">

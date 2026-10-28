@@ -181,8 +181,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
   "romaji": "cách đọc romaji tương ứng của từ vựng gốc",
   "sinoVietnamese": "âm Hán Việt của TẤT CẢ các chữ Hán có trong từ (BẮT BUỘC, ví dụ: 眠る có chữ 眠 âm Hán Việt là Miên, 朝 là Triều). Nếu không có Kanji thì để trống.",
   "meaning": "nghĩa tiếng Việt (ngắn gọn, chính xác)",
-  "kanjiExplanation": "Giải thích Kanji có trong từ vựng. Trình bày ĐÚNG THEO ĐỊNH DẠNG SAU:\n[Kanji 1]（[Âm Hán Việt 1]）= [Thành phần 1] + [Thành phần 2] → [Giải thích cấu tạo 1].\n→ [Từ ghép] = [Ý nghĩa từ ghép] → [Ý nghĩa tổng quát].\nVí dụ: 眠（Miên）= 目（Mục: mắt）+ 民（Dân: nhắm mắt lại như người đang nghỉ ngơi）→ mắt nhắm lại nghỉ ngơi → ngủ, yên giấc.\nNếu từ không có kanji thì để trống.",
-  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ i', 'Tính từ na', 'Trạng từ', 'Ngữ pháp', 'Khác')",
+  "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ: 'Danh từ', 'Động từ nhóm I (Tha động từ)', 'Động từ nhóm I (Tự động từ)', 'Động từ nhóm I', 'Động từ nhóm II (Tha động từ)', 'Động từ nhóm II (Tự động từ)', 'Động từ nhóm II', 'Động từ nhóm III (Tha động từ)', 'Động từ nhóm III (Tự động từ)', 'Động từ nhóm III', 'Tính từ i', 'Tính từ na', 'Trạng từ', 'Ngữ pháp', 'Khác'). Nếu là động từ, BẮT BUỘC chỉ rõ là Tha động từ hay Tự động từ (ví dụ: 乾かす là 'Động từ nhóm I (Tha động từ)', 乾く là 'Động từ nhóm I (Tự động từ)').",
   "forms": [
     // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN.
     // Đối với Động từ: "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể quá khứ phủ định ngắn (thể なかった)", "Thể quá khứ phủ định lịch sự (thể ませんでした)", "Thể khả năng", "Thể khả năng (phủ định)", "Thể khả năng (quá khứ phủ định)" (ĐẶC BIỆT: 眠れなかった), "Thể điều kiện", "Thể ý chí", "Thể mệnh lệnh", "Thể cấm chỉ", "Thể bị động", "Thể sai khiến", "Thể sai khiến bị động", và 4 dạng của thể muốn (~たい).
@@ -505,6 +504,27 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
                 parsedData.forms.push({ id: crypto.randomUUID(), ...std });
               }
             });
+          }
+        }
+
+        // Guarantee transitivity detection for verbs (especially 乾かす, 乾く, etc.)
+        const checkKanji = String(parsedData.kanji || cleanWord).trim();
+        const checkReading = String(parsedData.reading || '').trim();
+        if (checkKanji === '乾かす' || checkReading === 'かわかす' || checkKanji.endsWith('かす') || checkKanji === '沸かす' || checkKanji === '冷やす') {
+          if (parsedData.wordType?.startsWith('Động từ')) {
+            if (!parsedData.wordType.includes('Tha động từ') && !parsedData.wordType.includes('Tự động từ')) {
+              parsedData.wordType = `${parsedData.wordType} (Tha động từ)`;
+            }
+          } else if (!parsedData.wordType) {
+            parsedData.wordType = 'Động từ nhóm I (Tha động từ)';
+          }
+        } else if (checkKanji === '乾く' || checkReading === 'かわく' || checkKanji === '沸く') {
+          if (parsedData.wordType?.startsWith('Động từ')) {
+            if (!parsedData.wordType.includes('Tha động từ') && !parsedData.wordType.includes('Tự động từ')) {
+              parsedData.wordType = `${parsedData.wordType} (Tự động từ)`;
+            }
+          } else if (!parsedData.wordType) {
+            parsedData.wordType = 'Động từ nhóm I (Tự động từ)';
           }
         }
       }

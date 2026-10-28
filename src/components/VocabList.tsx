@@ -23,29 +23,77 @@ import { scoreKanjiCardMatch } from '../utils/searchMatcher';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
 import AudioUpload from './AudioUpload';
+import { 
+  getVerbTransitivity, 
+  getBaseWordType, 
+  getTransitivityBadgeStyle, 
+  getTransitivityBadgeLabel 
+} from '../utils/verbTransitivity';
 
 export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
   if (!typeStr) return defaultClasses;
   const type = typeStr.trim();
   const base = "text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap ";
-  if (type === "Động từ nhóm I") {
+  if (type.startsWith("Động từ nhóm I")) {
     return base + "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
-  } else if (type === "Động từ nhóm II") {
+  } else if (type.startsWith("Động từ nhóm II")) {
     return base + "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300";
-  } else if (type === "Động từ nhóm III") {
+  } else if (type.startsWith("Động từ nhóm III")) {
     return base + "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300";
-  } else if (type === "Danh từ") {
+  } else if (type.startsWith("Danh từ")) {
     return base + "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
-  } else if (type === "Tính từ đuôi-i" || type === "Tính từ i") {
+  } else if (type.startsWith("Tính từ đuôi-i") || type.startsWith("Tính từ i")) {
     return base + "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
-  } else if (type === "Tính từ đuôi-na" || type === "Tính từ na") {
+  } else if (type.startsWith("Tính từ đuôi-na") || type.startsWith("Tính từ na")) {
     return base + "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300";
-  } else if (type === "Trạng từ" || type === "Trạng từ (副詞)") {
+  } else if (type.startsWith("Trạng từ")) {
     return base + "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300";
-  } else if (type === "Ngữ pháp") {
+  } else if (type.startsWith("Ngữ pháp")) {
     return base + "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300";
   }
   return base + "bg-theme-base-alt text-theme-primary opacity-80 border border-theme-subtle";
+}
+
+export function WordTypeBadges({ 
+  wordType, 
+  kanji, 
+  reading, 
+  meaning, 
+  badgeSize = "normal",
+  className = "" 
+}: { 
+  wordType?: string; 
+  kanji?: string; 
+  reading?: string; 
+  meaning?: string; 
+  badgeSize?: "normal" | "small" | "large";
+  className?: string; 
+}) {
+  if (!wordType && !kanji) return null;
+
+  const transitivity = getVerbTransitivity(kanji, reading, meaning, wordType);
+  const baseType = getBaseWordType(wordType);
+
+  const padClass = badgeSize === "small" 
+    ? "text-[10px] px-1.5 py-0.5" 
+    : badgeSize === "large" 
+    ? "text-xs px-2.5 py-1" 
+    : "text-[10px] px-2.5 py-0.5";
+
+  return (
+    <div className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
+      {baseType && (
+        <span className={getWordTypeBadgeStyle(baseType, `${padClass} rounded-full border border-theme-subtle bg-theme-hover font-bold`)}>
+          {baseType}
+        </span>
+      )}
+      {transitivity && (
+        <span className={`${getTransitivityBadgeStyle(transitivity)} ${padClass}`}>
+          {getTransitivityBadgeLabel(transitivity)}
+        </span>
+      )}
+    </div>
+  );
 }
 
 
@@ -922,7 +970,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
     // 1. Filter by category/wordType and audio status
     const baseList = deck.filter(c => {
-      const matchesFilter = filterType === 'all' || c.wordType === filterType;
+      const matchesFilter = filterType === 'all' 
+        || c.wordType === filterType 
+        || (filterType.startsWith('Động từ') && (c.wordType?.startsWith(filterType) || false));
       let matchesAudio = true;
       if (audioFilter === 'has_audio') matchesAudio = !!c.audioUrl;
       else if (audioFilter === 'no_audio') matchesAudio = !c.audioUrl;
@@ -1240,11 +1290,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         {card.sinoVietnamese}
                       </span>
                     )}
-                    {card.wordType && (
-                      <span className={getWordTypeBadgeStyle(card.wordType, "text-[10px] px-2 py-0.5 rounded-full border border-theme-subtle bg-theme-hover")}>
-                        {card.wordType}
-                      </span>
-                    )}
+                    <WordTypeBadges
+                      wordType={card.wordType}
+                      kanji={card.kanji}
+                      reading={card.reading}
+                      meaning={card.meaning}
+                    />
                   </div>
 
                   {/* Meaning */}
@@ -1441,8 +1492,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                 className="w-32 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent appearance-none"
                               >
                                 <option value="">Loại từ</option>
+                                <option value="Động từ nhóm I (Tha động từ)">Động từ nhóm I (Tha động từ)</option>
+                                <option value="Động từ nhóm I (Tự động từ)">Động từ nhóm I (Tự động từ)</option>
                                 <option value="Động từ nhóm I">Động từ nhóm I</option>
+                                <option value="Động từ nhóm II (Tha động từ)">Động từ nhóm II (Tha động từ)</option>
+                                <option value="Động từ nhóm II (Tự động từ)">Động từ nhóm II (Tự động từ)</option>
                                 <option value="Động từ nhóm II">Động từ nhóm II</option>
+                                <option value="Động từ nhóm III (Tha động từ)">Động từ nhóm III (Tha động từ)</option>
+                                <option value="Động từ nhóm III (Tự động từ)">Động từ nhóm III (Tự động từ)</option>
                                 <option value="Động từ nhóm III">Động từ nhóm III</option>
                                 <option value="Danh từ">Danh từ</option>
                                 <option value="Tính từ i">Tính từ i</option>
@@ -1854,9 +1911,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           {card.romaji && (
                             <div className="text-xs font-serif text-theme-primary opacity-50 italic">{card.romaji}</div>
                           )}
-                          {card.wordType && (
-                            <span className={getWordTypeBadgeStyle(card.wordType, "text-[10px] text-theme-muted bg-theme-hover px-1.5 py-0.5 rounded-sm border border-theme-subtle")}>{card.wordType}</span>
-                          )}
+                          <WordTypeBadges 
+                            wordType={card.wordType} 
+                            kanji={card.kanji} 
+                            reading={card.reading} 
+                            meaning={card.meaning} 
+                            badgeSize="small" 
+                          />
                           {card.sinoVietnamese && (
                             <span className="text-[10px] text-theme-accent uppercase tracking-widest border border-theme-accent/30 px-1.5 py-0.5 rounded-sm">{card.sinoVietnamese}</span>
                           )}
@@ -2054,9 +2115,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                       {viewingCard.sinoVietnamese}
                     </span>
                   )}
-                  {viewingCard.wordType && (
-                    <span className={getWordTypeBadgeStyle(viewingCard.wordType, "text-xs px-2 py-1")}>{viewingCard.wordType}</span>
-                  )}
+                  <WordTypeBadges 
+                    wordType={viewingCard.wordType} 
+                    kanji={viewingCard.kanji} 
+                    reading={viewingCard.reading} 
+                    meaning={viewingCard.meaning} 
+                    badgeSize="large" 
+                  />
                 </div>
                 <div className="text-xl text-theme-primary font-medium mt-3 uppercase tracking-wide">
                   {viewingCard.meaning}

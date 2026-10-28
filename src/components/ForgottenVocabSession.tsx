@@ -25,7 +25,7 @@ import {
 import { cleanMarkdownForDisplay } from '../utils/stringUtils';
 import { FuriganaSentence, FuriganaToggle } from './FuriganaSentence';
 import { HighlightProvider, renderExampleHighlight, HighlightVietnamese, RelatedHighlight } from '../utils/highlight';
-import { getWordTypeBadgeStyle } from './VocabList';
+import { getWordTypeBadgeStyle, WordTypeBadges } from './VocabList';
 
 interface ForgottenVocabSessionProps {
   deck: KanjiCard[];
@@ -528,11 +528,13 @@ export default function ForgottenVocabSession({
               {/* Card Top Information Bar */}
               <div className="p-4 sm:p-6 pb-2 border-b border-theme-subtle/50 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  {currentCard.wordType && (
-                    <span className={getWordTypeBadgeStyle(currentCard.wordType, "text-xs px-2.5 py-0.5")}>
-                      {currentCard.wordType}
-                    </span>
-                  )}
+                  <WordTypeBadges
+                    wordType={currentCard.wordType}
+                    kanji={currentCard.kanji}
+                    reading={currentCard.reading}
+                    meaning={currentCard.meaning}
+                    badgeSize="large"
+                  />
                   {currentCard.sinoVietnamese && (
                     <span className="text-xs font-bold uppercase tracking-wider bg-theme-accent/15 text-theme-accent border border-theme-accent/30 px-2 py-0.5 rounded-md">
                       {currentCard.sinoVietnamese}

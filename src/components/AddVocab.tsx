@@ -381,8 +381,14 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
             className="w-full px-5 py-3 bg-theme-base border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-center"
           >
             <option value="">-- Chọn từ loại --</option>
+            <option value="Động từ nhóm I (Tha động từ)">Động từ nhóm I (Tha động từ)</option>
+            <option value="Động từ nhóm I (Tự động từ)">Động từ nhóm I (Tự động từ)</option>
             <option value="Động từ nhóm I">Động từ nhóm I</option>
+            <option value="Động từ nhóm II (Tha động từ)">Động từ nhóm II (Tha động từ)</option>
+            <option value="Động từ nhóm II (Tự động từ)">Động từ nhóm II (Tự động từ)</option>
             <option value="Động từ nhóm II">Động từ nhóm II</option>
+            <option value="Động từ nhóm III (Tha động từ)">Động từ nhóm III (Tha động từ)</option>
+            <option value="Động từ nhóm III (Tự động từ)">Động từ nhóm III (Tự động từ)</option>
             <option value="Động từ nhóm III">Động từ nhóm III</option>
             <option value="Danh từ">Danh từ</option>
             <option value="Tính từ i">Tính từ i</option>
