@@ -126,7 +126,44 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           }
         }
 
+        // Guarantee for Nouns (Danh từ) like 朝 -> 朝だ
+        const isNoun = data.wordType === 'Danh từ' || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
+        if (isNoun) {
+          let rootKanji = (data.kanji || cleanWord).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || cleanWord;
+          let rootReading = (data.reading || reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || reading);
+          let rootRomaji = (data.romaji || romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || romaji);
+          const cleanM = (data.meaning || meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
+
+          const daVal = `${rootKanji}だ`;
+          if (!mappedForms.some((f: any) => f.value === daVal)) {
+            mappedForms.unshift({
+              name: 'Khẳng định hiện tại (thể ngắn - だ)',
+              value: daVal,
+              reading: rootReading ? `${rootReading}だ` : '',
+              romaji: rootRomaji ? `${rootRomaji} da` : '',
+              meaning: `là ${cleanM || rootKanji}`
+            });
+          }
+        }
+
         setForms(mappedForms);
+      } else if (data.wordType === 'Danh từ' || kanji.trim() === '朝') {
+        const rootKanji = (data.kanji || kanji).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || kanji.trim();
+        const rootReading = (data.reading || reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || reading);
+        const rootRomaji = (data.romaji || romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || romaji);
+        const cleanM = (data.meaning || meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
+
+        setForms([
+          { name: 'Khẳng định hiện tại (thể ngắn - だ)', value: `${rootKanji}だ`, reading: rootReading ? `${rootReading}だ` : '', romaji: rootRomaji ? `${rootRomaji} da` : '', meaning: `là ${cleanM || rootKanji}` },
+          { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: `${rootKanji}です`, reading: rootReading ? `${rootReading}です` : '', romaji: rootRomaji ? `${rootRomaji} desu` : '', meaning: `là ${cleanM || rootKanji} (lịch sự)` },
+          { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: `${rootKanji}ではない`, reading: rootReading ? `${rootReading}ではない` : '', romaji: rootRomaji ? `${rootRomaji} dewa nai` : '', meaning: `không phải là ${cleanM || rootKanji}` },
+          { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: `${rootKanji}ではありません`, reading: rootReading ? `${rootReading}ではありません` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen` : '', meaning: `không phải là ${cleanM || rootKanji} (lịch sự)` },
+          { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: `${rootKanji}だった`, reading: rootReading ? `${rootReading}だった` : '', romaji: rootRomaji ? `${rootRomaji} datta` : '', meaning: `đã là ${cleanM || rootKanji}` },
+          { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: `${rootKanji}でした`, reading: rootReading ? `${rootReading}でした` : '', romaji: rootRomaji ? `${rootRomaji} deshita` : '', meaning: `đã là ${cleanM || rootKanji} (lịch sự)` },
+          { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: `${rootKanji}ではなかった`, reading: rootReading ? `${rootReading}ではなかった` : '', romaji: rootRomaji ? `${rootRomaji} dewa nakatta` : '', meaning: `đã không phải là ${cleanM || rootKanji}` },
+          { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: `${rootKanji}ではありませんでした`, reading: rootReading ? `${rootReading}ではありませんでした` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen deshita` : '', meaning: `đã không phải là ${cleanM || rootKanji} (lịch sự)` },
+          { name: 'Thể て (thể nối - で)', value: `${rootKanji}で`, reading: rootReading ? `${rootReading}で` : '', romaji: rootRomaji ? `${rootRomaji} de` : '', meaning: `là ${cleanM || rootKanji} và...` }
+        ]);
       }
 
       if (data.wordType) {
@@ -163,6 +200,43 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           { name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
           { name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
+        ]);
+      }
+    } else if (newWordType === 'Danh từ') {
+      if (forms.length === 0) {
+        const rootK = kanji.trim();
+        const rootR = reading.trim();
+        const rootRom = romaji.trim();
+        const rootM = meaning.trim();
+        setForms([
+          { name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `là ${rootM}` : '' },
+          { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `là ${rootM} (lịch sự)` : '' },
+          { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không phải là ${rootM}` : '' },
+          { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không phải là ${rootM} (lịch sự)` : '' },
+          { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã là ${rootM}` : '' },
+          { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã là ${rootM} (lịch sự)` : '' },
+          { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không phải là ${rootM}` : '' },
+          { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không phải là ${rootM} (lịch sự)` : '' },
+          { name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `là ${rootM} và...` : '' }
+        ]);
+      }
+    } else if (newWordType === 'Tính từ na') {
+      if (forms.length === 0) {
+        const rootK = kanji.trim();
+        const rootR = reading.trim();
+        const rootRom = romaji.trim();
+        const rootM = meaning.trim();
+        setForms([
+          { name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `(thể ngắn) ${rootM}` : '' },
+          { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `(thể lịch sự) ${rootM}` : '' },
+          { name: 'Bổ nghĩa danh từ (thể な)', value: rootK ? `${rootK}な` : '', reading: rootR ? `${rootR}な` : '', romaji: rootRom ? `${rootRom} na` : '', meaning: rootM ? `(bổ nghĩa) ${rootM}` : '' },
+          { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không ${rootM}` : '' },
+          { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không ${rootM} (lịch sự)` : '' },
+          { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã ${rootM}` : '' },
+          { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã ${rootM} (lịch sự)` : '' },
+          { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không ${rootM}` : '' },
+          { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không ${rootM} (lịch sự)` : '' },
+          { name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `${rootM} và...` : '' }
         ]);
       }
     }

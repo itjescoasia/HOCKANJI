@@ -21,22 +21,20 @@ export const removeUndefined = (obj: any): any => {
 };
 
 
+import { deckStorage } from '../utils/cleanupStorage';
+
 export function useVocabDeck() {
-  const [deck, setDeck] = useState<KanjiCard[]>(() => {
-    try {
-      const stored = localStorage.getItem('kanji_srs_deck');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn("Failed to load kanji_srs_deck from localStorage", e);
-    }
-    return [];
-  });
+  const [deck, setDeck] = useState<KanjiCard[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Fast offline load from IndexedDB
+  useEffect(() => {
+    deckStorage.getItem<KanjiCard[]>('kanji_srs_deck').then((cached) => {
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setDeck(prev => prev.length === 0 ? cached : prev);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Listen directly to Firestore global_kanjiDeck (allow read: if true)
@@ -50,11 +48,7 @@ export function useVocabDeck() {
       const sorted = loadedDeck.sort((a, b) => b.createdAt - a.createdAt);
       setDeck(sorted);
       setIsLoaded(true);
-      try {
-        localStorage.setItem('kanji_srs_deck', JSON.stringify(sorted));
-      } catch (e) {
-        console.warn("Failed to cache kanji_srs_deck to localStorage", e);
-      }
+      deckStorage.setItem('kanji_srs_deck', sorted).catch(() => {});
       
       if (snapshot.metadata.hasPendingWrites) {
         console.log("Local changes haven't synced to server yet.");
@@ -71,14 +65,10 @@ export function useVocabDeck() {
     };
   }, []);
 
-  // Sync to localStorage whenever deck changes and has data
+  // Sync to IndexedDB whenever deck changes and has data
   useEffect(() => {
     if (deck.length > 0) {
-      try {
-        localStorage.setItem('kanji_srs_deck', JSON.stringify(deck));
-      } catch (e) {
-        console.warn("Error saving deck to localStorage", e);
-      }
+      deckStorage.setItem('kanji_srs_deck', deck).catch(() => {});
     }
   }, [deck]);
 

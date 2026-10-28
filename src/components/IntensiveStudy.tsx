@@ -1,5 +1,6 @@
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, playAudioUrl } from '../utils/playTTS';
+import { playTTS, playAudioUrl, deleteCloudAudio } from '../utils/playTTS';
+import { resolveExampleAudioUrl, loadAudioContent, uploadResilientAudio } from '../utils/audioRegistry';
 
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -1454,6 +1455,8 @@ function StudyView({
           romaji: String(editExampleData.romaji || "").trim(),
           translation: String(editExampleData.translation || "").trim(),
           specialNote: String(editExampleData.specialNote || "").trim(),
+          audioUrl: ex.audioUrl || null,
+          hasAudio: ex.hasAudio || !!ex.audioUrl,
         };
       }
       return ex;
@@ -2563,6 +2566,7 @@ function StudyView({
                                     allExamples={word.examples || []}
                                     currentIndex={index}
                                     duplicateInfo={sentenceRelationMap.get(ex.id)}
+                                    mainDeck={mainDeck}
                                     onUpdateExample={(exId, updates) => {
                                       const updatedExamples = word.examples.map(e => e.id === exId ? { ...e, ...updates } : e);
                                       onUpdateWord(word.id, { examples: updatedExamples });
@@ -2742,6 +2746,7 @@ function IntensiveExampleAudio({
   allExamples = [],
   currentIndex = 0,
   duplicateInfo,
+  mainDeck,
   onUpdateExample,
   onTransferAudio
 }: { 
@@ -2759,6 +2764,7 @@ function IntensiveExampleAudio({
     tailThis?: string;
     tailOther?: string;
   };
+  mainDeck?: KanjiCard[];
   onUpdateExample: (id: string, updates: Partial<IntensiveExample>) => void;
   onTransferAudio?: (sourceId: string, targetId: string, mode: 'move' | 'copy') => Promise<void>;
 }) {
@@ -2785,83 +2791,66 @@ function IntensiveExampleAudio({
 
   useEffect(() => {
     let active = true;
-    if (example.audioUrl) {
-      if (example.audioUrl.startsWith('firestore:')) {
-        const audioId = example.audioUrl.split(':')[1];
-        getDoc(doc(db, 'global_audio', audioId)).then((docSnap) => {
-           if (docSnap.exists() && active) {
-              setAudioUrl(docSnap.data().data);
-           }
-        }).catch(err => console.error("Failed to load audio from firestore", err));
-      } else {
-        setAudioUrl(example.audioUrl);
-      }
-    } else if (example.hasAudio) {
-      localforage.getItem<Blob>(`audio_intensive_${wordId}_${example.id}`).then((blob) => {
-        if (blob && active) {
-          setAudioUrl(URL.createObjectURL(blob));
+
+    async function loadAudio() {
+      const resolvedUrl = await resolveExampleAudioUrl(example, wordId, mainDeck);
+      
+      if (!active) return;
+
+      if (resolvedUrl) {
+        if (!example.audioUrl || !example.hasAudio) {
+          onUpdateExample(example.id, { hasAudio: true, audioUrl: resolvedUrl });
         }
-      });
-    } else {
-      setAudioUrl(null);
+
+        const content = await loadAudioContent(resolvedUrl);
+        if (active && content) {
+          setAudioUrl(content);
+          return;
+        }
+      }
+
+      if (active) {
+        setAudioUrl(null);
+      }
     }
+
+    loadAudio();
+
     return () => {
       active = false;
     };
-  }, [wordId, example.id, example.hasAudio, example.audioUrl]);
+  }, [wordId, example.id, example.hasAudio, example.audioUrl, example.sentence, mainDeck]);
 
   const handleUploadAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploading(true);
       try {
-        let uploadedToStorage = false;
-        if (auth.currentUser) {
-          try {
-            const base64 = await fileToBase64(file);
-            const audioId = `intensive_${wordId}_${example.id}`;
-            const audioDocRef = doc(db, 'global_audio', audioId);
-            await setDoc(audioDocRef, { data: base64, createdAt: Date.now() });
-            onUpdateExample(example.id, { hasAudio: true, audioUrl: 'firestore:' + audioId });
-            setAudioUrl(base64);
-            uploadedToStorage = true;
-          } catch (storageErr) {
-            console.warn("Firestore audio upload failed, falling back to local", storageErr);
-          }
-        }
-        
-        if (!uploadedToStorage) {
-          await localforage.setItem(`audio_intensive_${wordId}_${example.id}`, file);
-          const url = URL.createObjectURL(file);
-          onUpdateExample(example.id, { hasAudio: true, audioUrl: null });
-          setAudioUrl(url);
-        }
+        const { audioUrl: uploadedUrl, audioContent } = await uploadResilientAudio(file, example.id, wordId);
+        onUpdateExample(example.id, { hasAudio: true, audioUrl: uploadedUrl });
+        setAudioUrl(audioContent);
       } catch (err) {
         console.error("Upload error", err);
+      } finally {
+        setIsUploading(false);
       }
-      setIsUploading(false);
     }
     if (e.target) {
-        e.target.value = '';
+      e.target.value = '';
     }
   };
   
   const handleRemoveAudio = async () => {
-    if (auth.currentUser && example.audioUrl) {
-      try {
-        if (example.audioUrl.startsWith('firestore:')) {
-           const audioId = example.audioUrl.split(':')[1];
-           await deleteDoc(doc(db, 'global_audio', audioId));
-        } else {
-           // local storage
-        }
-      } catch (e) {
-        console.error("Delete error", e);
-      }
-    } else {
-      await localforage.removeItem(`audio_intensive_${wordId}_${example.id}`);
+    if (example.audioUrl) {
+      deleteCloudAudio(example.audioUrl).catch(() => {});
     }
-    if (audioUrl && !audioUrl.startsWith('http')) URL.revokeObjectURL(audioUrl);
+    const cleanId = example.id.replace(/^example-/, '').replace(/^ex-/, '');
+    await localforage.removeItem(`audio_intensive_${wordId}_${example.id}`).catch(() => {});
+    await localforage.removeItem(`audio_intensive_${wordId}_${cleanId}`).catch(() => {});
+    await localforage.removeItem(`audio_intensive_${example.id}`).catch(() => {});
+    if (audioUrl && !audioUrl.startsWith('http')) {
+      try { URL.revokeObjectURL(audioUrl); } catch (e) {}
+    }
     setAudioUrl(null);
     onUpdateExample(example.id, { hasAudio: false, audioUrl: null }); 
   };

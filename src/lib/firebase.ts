@@ -1,13 +1,17 @@
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import firebaseConfig from "../../firebase-applet-config.json";
+import { cleanupAndMigrateStorage } from "../utils/cleanupStorage";
+
+// Purge any bloated keys from localStorage before initializing Firestore
+cleanupAndMigrateStorage();
 
 export const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(
   app, 
-  { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) },
+  { localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }) },
   (firebaseConfig as any).firestoreDatabaseId
 );
 

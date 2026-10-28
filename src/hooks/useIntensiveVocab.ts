@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { IntensiveWord } from '../types';
 import { db, auth, removeUndefined } from '../lib/firebase';
 import { deleteCloudAudio } from '../utils/playTTS';
+import { deckStorage } from '../utils/cleanupStorage';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
 
 enum OperationType {
@@ -38,17 +39,17 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 export function useIntensiveVocab() {
-  const [intensiveDeck, setIntensiveDeck] = useState<IntensiveWord[]>(() => {
-    try {
-      const stored = localStorage.getItem('intensive_vocab_deck_v1');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return [];
-  });
+  const [intensiveDeck, setIntensiveDeck] = useState<IntensiveWord[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Fast offline load from IndexedDB
+  useEffect(() => {
+    deckStorage.getItem<IntensiveWord[]>('intensive_vocab_deck_v1').then((cached) => {
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setIntensiveDeck(prev => prev.length === 0 ? cached : prev);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'global_intensiveVocab'));
@@ -67,9 +68,7 @@ export function useIntensiveVocab() {
       });
       setIntensiveDeck(sorted);
       setIsLoaded(true);
-      try {
-        localStorage.setItem('intensive_vocab_deck_v1', JSON.stringify(sorted));
-      } catch (e) {}
+      deckStorage.setItem('intensive_vocab_deck_v1', sorted).catch(() => {});
     }, (error) => {
       setIsLoaded(true);
       console.warn("Firestore error in onSnapshot global_intensiveVocab:", error);
@@ -82,22 +81,24 @@ export function useIntensiveVocab() {
 
   useEffect(() => {
     if (intensiveDeck.length > 0) {
-      try {
-        localStorage.setItem('intensive_vocab_deck_v1', JSON.stringify(intensiveDeck));
-      } catch (e) {}
+      deckStorage.setItem('intensive_vocab_deck_v1', intensiveDeck).catch(() => {});
     }
   }, [intensiveDeck]);
 
   const addWord = async (word: IntensiveWord) => {
+    setIntensiveDeck(prev => {
+      const updated = [word, ...prev];
+      deckStorage.setItem('intensive_vocab_deck_v1', updated).catch(() => {});
+      return updated;
+    });
+
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${word.id}`;
       try {
         await setDoc(doc(db, 'global_intensiveVocab', word.id), removeUndefined(word));
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, path);
+        console.warn("Firestore addWord error:", err);
       }
-    } else {
-      setIntensiveDeck(prev => [word, ...prev]);
     }
   };
 
@@ -113,14 +114,18 @@ export function useIntensiveVocab() {
     }
 
     // Optimistic UI update
-    setIntensiveDeck(prev => prev.filter(c => c.id !== id));
+    setIntensiveDeck(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      deckStorage.setItem('intensive_vocab_deck_v1', updated).catch(() => {});
+      return updated;
+    });
     
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
         await deleteDoc(doc(db, 'global_intensiveVocab', id));
       } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, path);
+        console.warn("Firestore removeWord error:", err);
       }
     }
   };
@@ -128,31 +133,36 @@ export function useIntensiveVocab() {
   const updateWord = async (id: string, updates: Partial<IntensiveWord>) => {
     if (!id) return;
     
-    // Check for deleted audio in examples or main word
     const oldWord = intensiveDeck.find(w => w.id === id);
-    if (oldWord) {
-       if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldWord.audioUrl)) {
-          if (oldWord.audioUrl) await deleteCloudAudio(oldWord.audioUrl);
-       }
-       if (updates.examples) {
-          const newAudioUrls = new Set(updates.examples.map(ex => ex.audioUrl).filter(Boolean));
-          for (const ex of oldWord.examples || []) {
-             if (ex.audioUrl && !newAudioUrls.has(ex.audioUrl)) {
-                 await deleteCloudAudio(ex.audioUrl);
-             }
-          }
-       }
+    let finalUpdates = { ...updates };
+
+    // Protect existing example audio URLs if not provided in updates
+    if (oldWord && updates.examples && oldWord.examples) {
+      const oldAudioMap = new Map(oldWord.examples.map(ex => [ex.id, { audioUrl: ex.audioUrl, hasAudio: ex.hasAudio }]));
+      finalUpdates.examples = updates.examples.map(ex => {
+        const oldAudio = oldAudioMap.get(ex.id);
+        return {
+          ...ex,
+          audioUrl: ex.audioUrl !== undefined ? ex.audioUrl : (oldAudio?.audioUrl || null),
+          hasAudio: ex.hasAudio !== undefined ? ex.hasAudio : (oldAudio?.hasAudio || false)
+        };
+      });
     }
+
+    // Optimistic UI update
+    setIntensiveDeck(prev => {
+      const updated = prev.map(word => word.id === id ? { ...word, ...finalUpdates } : word);
+      deckStorage.setItem('intensive_vocab_deck_v1', updated).catch(() => {});
+      return updated;
+    });
 
     if (auth.currentUser) {
       const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
-        await setDoc(doc(db, 'global_intensiveVocab', id), removeUndefined(updates), { merge: true });
+        await setDoc(doc(db, 'global_intensiveVocab', id), removeUndefined(finalUpdates), { merge: true });
       } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, path);
+        console.warn("Firestore updateWord error:", err);
       }
-    } else {
-      setIntensiveDeck(prev => prev.map(word => word.id === id ? { ...word, ...updates } : word));
     }
   };
 

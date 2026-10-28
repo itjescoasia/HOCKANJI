@@ -61,7 +61,7 @@ interface VocabListProps {
   onStartSentenceReview?: (mode: 'JA_TO_VI' | 'VI_TO_JA', targetDeck?: any[] | null, forceAll?: boolean, isRandom?: boolean) => void;
 }
 
-function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => void }) {
+function VocabCardExamples({ card, deck, playAudio, onEditCard }: { card: KanjiCard; deck: KanjiCard[]; playAudio: (e: React.MouseEvent, text: string | undefined | null, audioUrl?: string | null) => void; onEditCard?: (card: KanjiCard) => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -88,7 +88,7 @@ function VocabCardExamples({ card, deck, playAudio }: { card: KanjiCard; deck: K
 
   return (
     <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 w-full sm:min-w-[300px] lg:min-w-[500px]">
-      <HighlightProvider><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
+      <HighlightProvider onEditCard={onEditCard}><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
         <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
           <span title={ex.sentence}>{renderExampleHighlight(ex.sentence, card.kanji || card.reading, deck, card)}</span>
           <div className="flex items-center gap-1 shrink-0 -mt-0.5">
@@ -655,6 +655,45 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             reading: 'ねむらなかった',
             romaji: 'nemuranakatta',
             meaning: 'đã không ngủ'
+          });
+        }
+      }
+
+      // Guarantee for Nouns (Danh từ) like 朝 -> 朝だ
+      const isNoun = (data.wordType === 'Danh từ' || editForm.wordType === 'Danh từ') || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
+      if (isNoun) {
+        let rootKanji = (data.kanji || cleanWord).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || cleanWord;
+        let rootReading = (data.reading || editForm.reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || editForm.reading || '');
+        let rootRomaji = (data.romaji || editForm.romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || editForm.romaji || '');
+        const cleanM = (data.meaning || editForm.meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
+
+        const daVal = `${rootKanji}だ`;
+        if (!incomingForms.some((f: any) => f.value === daVal)) {
+          incomingForms.unshift({
+            id: crypto.randomUUID(),
+            name: 'Khẳng định hiện tại (thể ngắn - だ)',
+            value: daVal,
+            reading: rootReading ? `${rootReading}だ` : '',
+            romaji: rootRomaji ? `${rootRomaji} da` : '',
+            meaning: `là ${cleanM || rootKanji}`
+          });
+        }
+
+        if (incomingForms.length < 5) {
+          const standardNounForms = [
+            { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: `${rootKanji}です`, reading: rootReading ? `${rootReading}です` : '', romaji: rootRomaji ? `${rootRomaji} desu` : '', meaning: `là ${cleanM || rootKanji} (lịch sự)` },
+            { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: `${rootKanji}ではない`, reading: rootReading ? `${rootReading}ではない` : '', romaji: rootRomaji ? `${rootRomaji} dewa nai` : '', meaning: `không phải là ${cleanM || rootKanji}` },
+            { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: `${rootKanji}ではありません`, reading: rootReading ? `${rootReading}ではありません` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen` : '', meaning: `không phải là ${cleanM || rootKanji} (lịch sự)` },
+            { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: `${rootKanji}だった`, reading: rootReading ? `${rootReading}だった` : '', romaji: rootRomaji ? `${rootRomaji} datta` : '', meaning: `đã là ${cleanM || rootKanji}` },
+            { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: `${rootKanji}でした`, reading: rootReading ? `${rootReading}でした` : '', romaji: rootRomaji ? `${rootRomaji} deshita` : '', meaning: `đã là ${cleanM || rootKanji} (lịch sự)` },
+            { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: `${rootKanji}ではなかった`, reading: rootReading ? `${rootReading}ではなかった` : '', romaji: rootRomaji ? `${rootRomaji} dewa nakatta` : '', meaning: `đã không phải là ${cleanM || rootKanji}` },
+            { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: `${rootKanji}ではありませんでした`, reading: rootReading ? `${rootReading}ではありませんでした` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen deshita` : '', meaning: `đã không phải là ${cleanM || rootKanji} (lịch sự)` },
+            { name: 'Thể て (thể nối - で)', value: `${rootKanji}で`, reading: rootReading ? `${rootReading}で` : '', romaji: rootRomaji ? `${rootRomaji} de` : '', meaning: `là ${cleanM || rootKanji} và...` }
+          ];
+          standardNounForms.forEach(std => {
+            if (!incomingForms.some((f: any) => f.value === std.value)) {
+              incomingForms.push({ id: crypto.randomUUID(), ...std });
+            }
           });
         }
       }
@@ -1363,6 +1402,39 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       { id: crypto.randomUUID(), name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
       { id: crypto.randomUUID(), name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
     ];
+  } else if (newWordType === 'Danh từ' && newForms.length === 0) {
+    const rootK = editForm.kanji?.trim() || '';
+    const rootR = editForm.reading?.trim() || '';
+    const rootRom = editForm.romaji?.trim() || '';
+    const rootM = editForm.meaning?.trim() || '';
+    newForms = [
+      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `là ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `là ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không phải là ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không phải là ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã là ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã là ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không phải là ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không phải là ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `là ${rootM} và...` : '' }
+    ];
+  } else if (newWordType === 'Tính từ na' && newForms.length === 0) {
+    const rootK = editForm.kanji?.trim() || '';
+    const rootR = editForm.reading?.trim() || '';
+    const rootRom = editForm.romaji?.trim() || '';
+    const rootM = editForm.meaning?.trim() || '';
+    newForms = [
+      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `(thể ngắn) ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `(thể lịch sự) ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Bổ nghĩa danh từ (thể な)', value: rootK ? `${rootK}な` : '', reading: rootR ? `${rootR}な` : '', romaji: rootRom ? `${rootRom} na` : '', meaning: rootM ? `(bổ nghĩa) ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không ${rootM}` : '' },
+      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không ${rootM} (lịch sự)` : '' },
+      { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `${rootM} và...` : '' }
+    ];
   }
   setEditForm({...editForm, wordType: newWordType, forms: newForms});
 }}
@@ -1798,12 +1870,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         
                         {/* Display multiple examples if present */}
                         {card.examples && card.examples.length > 0 ? (
-                          <VocabCardExamples card={card} deck={deck} playAudio={playAudio} />
+                          <VocabCardExamples card={card} deck={deck} playAudio={playAudio} onEditCard={startEdit} />
                         ) : (
                           /* Legacy single example fallback */
                           (card.example || card.exampleTranslation) && (
                             <div className="mt-3 space-y-2 border-t border-theme-subtle pt-3 w-full sm:min-w-[300px] lg:min-w-[500px]">
-                              <HighlightProvider><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
+                              <HighlightProvider onEditCard={startEdit}><div className="bg-theme-base-alt p-3 rounded-sm border border-theme-subtle group/ex relative">
                                 {card.example && (
                                   <div className="text-sm sm:text-base text-theme-primary opacity-90 mb-2 flex items-start gap-2 justify-between">
                                     <span title={card.example}>{renderExampleHighlight(card.example, card.kanji || card.reading, deck, card)}</span>
@@ -2016,6 +2088,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   <span>{viewingCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cardToEdit = viewingCard;
+                    setViewingCard(null);
+                    startEdit(cardToEdit);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-theme-subtle bg-theme-base-alt hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-all cursor-pointer shadow-xs"
+                  title="Chỉnh sửa nội dung từ vựng này"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Sửa</span>
+                </button>
+
                 <button 
                   onClick={() => setViewingCard(null)}
                   className="p-2 text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
@@ -2163,7 +2249,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div key={idx} className="bg-theme-hover p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm">
                           <div className="pr-24 text-lg text-theme-primary mb-3 flex flex-col gap-1.5">
                             <span className="font-serif leading-relaxed">
-                              <HighlightProvider>
+                              <HighlightProvider onEditCard={startEdit}>
                                 {renderExampleHighlight(ex.sentence, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
                               </HighlightProvider>
                             </span>
@@ -2175,7 +2261,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             )}
                           </div>
                           <div className="text-base text-theme-accent/90 italic border-t border-theme-subtle/50 pt-3">
-                            <HighlightProvider>
+                            <HighlightProvider onEditCard={startEdit}>
                               <HighlightVietnamese text={ex.translation || ""} />
                             </HighlightProvider>
                           </div>

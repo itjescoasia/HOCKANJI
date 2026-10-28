@@ -111,8 +111,8 @@ TUYỆT ĐỐI KHÔNG sử dụng Markdown (như **in đậm**, *in nghiêng*, #
 CHÚ Ý CÁC YÊU CẦU QUAN TRỌNG SAU:
 1. Trường "sinoVietnamese" (âm Hán Việt) BẮT BUỘC phải điền nếu từ có chứa Kanji. (Ví dụ: 立つ có chữ 立 âm Hán Việt là "Lập", 勉強 có chữ 勉 là "Miễn", 強 là "Cường"). Nếu từ hoàn toàn bằng Hiragana/Katakana thì để trống.
 2. Mảng "examples" BẮT BUỘC PHẢI CÓ CHÍNH XÁC 10 CÂU VÍ DỤ (KHÔNG ÍT HƠN, KHÔNG NHIỀU HƠN), ĐƯỢC XẾP TỪ DỄ ĐẾN KHÓ.
-3. ĐỐI VỚI ĐỘNG TỪ TRONG MẢNG "forms":
-   - BẮT BUỘC PHẢI BAO GỒM ĐẦY ĐỦ CÁC THỂ:
+3. ĐỐI VỚI BẢNG CHIA CÁC THỂ / CÁC THÌ TRONG MẢNG "forms" (BẮT BUỘC PHẢI ĐẦY ĐỦ CẢ THỂ LỊCH SỰ VÀ THỂ NGẮN):
+   - NẾU LÀ ĐỘNG TỪ:
      + "Thể từ điển (ngắn)" (ví dụ: 眠る, 食べる)
      + "Thể lịch sự (ます)" (ví dụ: 眠ります, 食べます)
      + "Thể て" (ví dụ: 眠って, 食べて)
@@ -136,32 +136,64 @@ CHÚ Ý CÁC YÊU CẦU QUAN TRỌNG SAU:
      + "Thể sai khiến (使役形)" (ví dụ: 眠らせる, 食べさせる)
      + "Thể sai khiến bị động" (ví dụ: 眠らせられる, 食べさせられる)
      + 4 dạng của thể muốn (~たい) nếu có: Khẳng định hiện tại (眠りたい), Phủ định hiện tại (眠りたくない), Khẳng định quá khứ (眠りたかった), Phủ định quá khứ (眠りたくなかった). LƯU Ý: TRỪ TRƯỜNG HỢP CÁC ĐỘNG TỪ KHÔNG TỒN TẠI THỂ ~たい (NHƯ くれる, ある...) THÌ BỎ QUA.
-4. NẾU NGƯỜI DÙNG NHẬP VÀO MỘT DẠNG ĐÃ CHIA (ví dụ: "眠れなかった", "食べた", "行かない", "飲みたい"):
-   - Nhận diện chính xác động từ gốc (ví dụ: "眠れなかった" là dạng Thể khả năng quá khứ phủ định của động từ gốc "眠る" - Động từ nhóm I).
-   - "meaning": Giải thích chuẩn xác nghĩa của dạng từ đó (ví dụ: "đã không thể ngủ được (thể khả năng quá khứ phủ định của 眠る)").
-   - "forms": BẮT BUỘC cung cấp đầy đủ bảng chia thể của động từ gốc, và ĐẶC BIỆT PHẢI CÓ CHÍNH XÁC dạng người dùng đã nhập (ví dụ: "眠れなかった").
+   - NẾU LÀ DANH TỪ (BẮT BUỘC ĐẦY ĐỦ 9 THÌ SAU, ĐẶC BIỆT THỂ THÔNG THƯỜNG / THỂ NGẮN LÀ [TỪ]だ):
+     + "Khẳng định hiện tại (thể ngắn - だ)" (ví dụ với 朝: 朝だ, đọc: あさだ, romaji: asa da, nghĩa: là buổi sáng) -> CỰC KỲ QUAN TRỌNG, BẮT BUỘC PHẢI CÓ [TỪ]だ!
+     + "Khẳng định hiện tại (thể lịch sự - です)" (ví dụ: 朝です, đọc: あさです, romaji: asa desu, nghĩa: là buổi sáng (lịch sự))
+     + "Phủ định hiện tại (thể ngắn - ではない)" (ví dụ: 朝ではない, đọc: あさではない, romaji: asa dewa nai, nghĩa: không phải là buổi sáng)
+     + "Phủ định hiện tại (thể lịch sự - ではありません)" (ví dụ: 朝ではありません, đọc: あさではありません, romaji: asa dewa arimasen, nghĩa: không phải là buổi sáng (lịch sự))
+     + "Quá khứ khẳng định (thể ngắn - だった)" (ví dụ: 朝だった, đọc: あさだった, romaji: asa datta, nghĩa: đã là buổi sáng)
+     + "Quá khứ khẳng định (thể lịch sự - でした)" (ví dụ: 朝でした, đọc: あさでした, romaji: asa deshita, nghĩa: đã là buổi sáng (lịch sự))
+     + "Quá khứ phủ định (thể ngắn - ではなかった)" (ví dụ: 朝ではなかった, đọc: あさではなかった, romaji: asa dewa nakatta, nghĩa: đã không phải là buổi sáng)
+     + "Quá khứ phủ định (thể lịch sự - ではありませんでした)" (ví dụ: 朝ではありませんでした, đọc: あさではありませんでした, romaji: asa dewa arimasen deshita, nghĩa: đã không phải là buổi sáng (lịch sự))
+     + "Thể て (thể nối - で)" (ví dụ: 朝で, đọc: あさで, romaji: asa de, nghĩa: là buổi sáng và...)
+   - NẾU LÀ TÍNH TỪ NA:
+     + "Khẳng định hiện tại (thể ngắn - だ)" (ví dụ: 静かだ)
+     + "Khẳng định hiện tại (thể lịch sự - です)" (ví dụ: 静かです)
+     + "Bổ nghĩa danh từ (thể な)" (ví dụ: 静かな)
+     + "Phủ định hiện tại (thể ngắn - ではない)" (ví dụ: 静かではない)
+     + "Phủ định hiện tại (thể lịch sự - ではありません)" (ví dụ: 静かではありません)
+     + "Quá khứ khẳng định (thể ngắn - だった)" (ví dụ: 静かだった)
+     + "Quá khứ khẳng định (thể lịch sự - でした)" (ví dụ: 静かでした)
+     + "Quá khứ phủ định (thể ngắn - ではなかった)" (ví dụ: 静かではなかった)
+     + "Quá khứ phủ định (thể lịch sự - ではありませんでした)" (ví dụ: 静かではありませんでした)
+     + "Thể て (thể nối - で)" (ví dụ: 静かで)
+   - NẾU LÀ TÍNH TỪ I:
+     + "Khẳng định hiện tại (thể ngắn)" (ví dụ: 寒い)
+     + "Khẳng định hiện tại (thể lịch sự - です)" (ví dụ: 寒いです)
+     + "Phủ định hiện tại (thể ngắn - くない)" (ví dụ: 寒くない)
+     + "Phủ định hiện tại (thể lịch sự - くないです)" (ví dụ: 寒くないです)
+     + "Quá khứ khẳng định (thể ngắn - かった)" (ví dụ: 寒かった)
+     + "Quá khứ khẳng định (thể lịch sự - かったです)" (ví dụ: 寒かったです)
+     + "Quá khứ phủ định (thể ngắn - くなかった)" (ví dụ: 寒くなかった)
+     + "Quá khứ phủ định (thể lịch sự - くなかったです)" (ví dụ: 寒くなかったです)
+     + "Thể て (thể nối - くて)" (ví dụ: 寒くて)
+4. NẾU NGƯỜI DÙNG NHẬP VÀO MỘT DẠNG ĐÃ CHIA (ví dụ: "眠れなかった", "食べた", "行かない", "飲みたい", hoặc "朝だ", "朝だった"):
+   - Nhận diện chính xác từ gốc (ví dụ: "眠れなかった" là dạng Thể khả năng quá khứ phủ định của "眠る"; "朝だ" là thể ngắn khẳng định hiện tại của danh từ "朝").
+   - "meaning": Giải thích chuẩn xác nghĩa của dạng từ đó.
+   - "forms": BẮT BUỘC cung cấp đầy đủ bảng chia thể của từ gốc, và ĐẶC BIỆT PHẢI CÓ CHÍNH XÁC dạng người dùng đã nhập (ví dụ: "眠れなかった" hoặc "朝だ").
 5. CÁC CÂU VÍ DỤ PHẢI CHÍNH XÁC 100% VỀ NGỮ PHÁP VÀ NGỮ NGHĨA. Phải có chủ ngữ rõ ràng, văn cảnh cụ thể, không được viết câu cụt lủn gây hiểu nhầm.
 6. Trường "kanjiExplanation" giải thích Kanji như ví dụ trong JSON mẫu, chú ý nếu từ có Hán tự thì phải giải thích gốc rễ cấu tạo từ các bộ.
 
 Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đúng cấu trúc sau:
 {
-  "kanji": "GIỮ NGUYÊN TOÀN BỘ TỪ VỰNG GỐC mà người dùng nhập vào (chữ Hán, Hiragana, Katakana, ví dụ: 眠る hoặc 眠れなかった)",
-  "reading": "cách đọc hiragana của từ vựng gốc (chỉ hiragana, ví dụ: ねむる hoặc ねむれなかった)",
+  "kanji": "GIỮ NGUYÊN TOÀN BỘ TỪ VỰNG GỐC mà người dùng nhập vào (chữ Hán, Hiragana, Katakana, ví dụ: 眠る, 朝, hoặc 眠れなかった, 朝だ)",
+  "reading": "cách đọc hiragana của từ vựng gốc (chỉ hiragana, ví dụ: ねむる hoặc あさ)",
   "romaji": "cách đọc romaji tương ứng của từ vựng gốc",
-  "sinoVietnamese": "âm Hán Việt của TẤT CẢ các chữ Hán có trong từ (BẮT BUỘC, ví dụ: 眠る có chữ 眠 âm Hán Việt là Miên). Nếu không có Kanji thì để trống.",
+  "sinoVietnamese": "âm Hán Việt của TẤT CẢ các chữ Hán có trong từ (BẮT BUỘC, ví dụ: 眠る có chữ 眠 âm Hán Việt là Miên, 朝 là Triều). Nếu không có Kanji thì để trống.",
   "meaning": "nghĩa tiếng Việt (ngắn gọn, chính xác)",
   "kanjiExplanation": "Giải thích Kanji có trong từ vựng. Trình bày ĐÚNG THEO ĐỊNH DẠNG SAU:\n[Kanji 1]（[Âm Hán Việt 1]）= [Thành phần 1] + [Thành phần 2] → [Giải thích cấu tạo 1].\n→ [Từ ghép] = [Ý nghĩa từ ghép] → [Ý nghĩa tổng quát].\nVí dụ: 眠（Miên）= 目（Mục: mắt）+ 民（Dân: nhắm mắt lại như người đang nghỉ ngơi）→ mắt nhắm lại nghỉ ngơi → ngủ, yên giấc.\nNếu từ không có kanji thì để trống.",
   "wordType": "loại từ (CHỌN 1 TRONG CÁC GIÁ TRỊ SAU: 'Danh từ', 'Động từ nhóm I', 'Động từ nhóm II', 'Động từ nhóm III', 'Tính từ i', 'Tính từ na', 'Trạng từ', 'Ngữ pháp', 'Khác')",
   "forms": [
     // BẮT BUỘC TRẢ VỀ ĐẦY ĐỦ CÁC THỂ LỊCH SỰ VÀ THỂ NGẮN.
-    // Đối với Động từ: BẮT BUỘC CÓ "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể quá khứ phủ định ngắn (thể なかった)", "Thể quá khứ phủ định lịch sự (thể ませんでした)", "Thể khả năng", "Thể khả năng (phủ định)", "Thể khả năng (quá khứ phủ định)" (ĐẶC BIỆT: VÍ DỤ 眠れなかった), "Thể điều kiện", "Thể ý chí", "Thể mệnh lệnh", "Thể cấm chỉ", "Thể bị động", "Thể sai khiến", "Thể sai khiến bị động", và 4 dạng của thể muốn (~たい).
-    // Đối với Danh từ/Tính từ: Đầy đủ các thì khẳng định, phủ định, quá khứ ngắn và lịch sự.
+    // Đối với Động từ: "Thể từ điển (ngắn)", "Thể lịch sự (ます)", "Thể て", "Thể quá khứ ngắn (た)", "Thể quá khứ lịch sự (ました)", "Thể phủ định ngắn (ない)", "Thể phủ định lịch sự (ません)", "Thể quá khứ phủ định ngắn (thể なかった)", "Thể quá khứ phủ định lịch sự (thể ませんでした)", "Thể khả năng", "Thể khả năng (phủ định)", "Thể khả năng (quá khứ phủ định)" (ĐẶC BIỆT: 眠れなかった), "Thể điều kiện", "Thể ý chí", "Thể mệnh lệnh", "Thể cấm chỉ", "Thể bị động", "Thể sai khiến", "Thể sai khiến bị động", và 4 dạng của thể muốn (~たい).
+    // Đối với Danh từ: "Khẳng định hiện tại (thể ngắn - だ)" (ví dụ: 朝だ), "Khẳng định hiện tại (thể lịch sự - です)" (ví dụ: 朝です), "Phủ định hiện tại (thể ngắn - ではない)", "Phủ định hiện tại (thể lịch sự - ではありません)", "Quá khứ khẳng định (thể ngắn - だった)", "Quá khứ khẳng định (thể lịch sự - でした)", "Quá khứ phủ định (thể ngắn - ではなかった)", "Quá khứ phủ định (thể lịch sự - ではありませんでした)", "Thể て (thể nối - で)".
+    // Đối với Tính từ na/i: Đầy đủ các thì khẳng định, phủ định, quá khứ ngắn và lịch sự.
     {
-      "name": "Tên thể (ví dụ: Thể khả năng (quá khứ phủ định))",
-      "value": "cách viết của thể này (ví dụ: 眠れなかった)",
-      "reading": "cách đọc hiragana của thể này (ví dụ: ねむれなかった)",
-      "romaji": "cách đọc romaji (ví dụ: nemurenakatta)",
-      "meaning": "nghĩa tiếng Việt (ví dụ: đã không thể ngủ được)"
+      "name": "Tên thể (ví dụ: Khẳng định hiện tại (thể ngắn - だ) hoặc Thể khả năng (quá khứ phủ định))",
+      "value": "cách viết của thể này (ví dụ: 朝だ hoặc 眠れなかった)",
+      "reading": "cách đọc hiragana của thể này (ví dụ: あさだ hoặc ねむれなかった)",
+      "romaji": "cách đọc romaji (ví dụ: asa da hoặc nemurenakatta)",
+      "meaning": "nghĩa tiếng Việt (ví dụ: là buổi sáng hoặc đã không thể ngủ được)"
     }
   ],
   "examples": [
@@ -336,6 +368,142 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
               reading: 'ねむれませんでした',
               romaji: 'nemuremasendeshita',
               meaning: 'đã không thể ngủ được (lịch sự)'
+            });
+          }
+        }
+
+        // Specific guarantee for Nouns (Danh từ) like 朝 (asa), ensuring 朝だ is always present
+        const isNoun = parsedData.wordType === 'Danh từ' || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
+        if (isNoun) {
+          // Identify root noun without copula suffix if user entered 朝だ or 朝だった
+          let rootKanji = (parsedData.kanji || cleanWord).trim();
+          rootKanji = rootKanji.replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || rootKanji;
+          
+          let rootReading = (parsedData.reading || '').trim();
+          rootReading = rootReading.replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || rootReading;
+
+          let rootRomaji = (parsedData.romaji || '').trim();
+          rootRomaji = rootRomaji.replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || rootRomaji;
+
+          const baseMeaning = (parsedData.meaning || '').trim();
+          const cleanMeaning = baseMeaning.replace(/^(là|đã là|không phải là|đã không phải là)\s+/i, '').replace(/\s*\([^)]*\)$/, '').trim() || baseMeaning;
+
+          const standardNounForms = [
+            {
+              name: 'Khẳng định hiện tại (thể ngắn - だ)',
+              value: `${rootKanji}だ`,
+              reading: rootReading ? `${rootReading}だ` : '',
+              romaji: rootRomaji ? `${rootRomaji} da` : '',
+              meaning: `là ${cleanMeaning}`
+            },
+            {
+              name: 'Khẳng định hiện tại (thể lịch sự - です)',
+              value: `${rootKanji}です`,
+              reading: rootReading ? `${rootReading}です` : '',
+              romaji: rootRomaji ? `${rootRomaji} desu` : '',
+              meaning: `là ${cleanMeaning} (lịch sự)`
+            },
+            {
+              name: 'Phủ định hiện tại (thể ngắn - ではない)',
+              value: `${rootKanji}ではない`,
+              reading: rootReading ? `${rootReading}ではない` : '',
+              romaji: rootRomaji ? `${rootRomaji} dewa nai` : '',
+              meaning: `không phải là ${cleanMeaning}`
+            },
+            {
+              name: 'Phủ định hiện tại (thể lịch sự - ではありません)',
+              value: `${rootKanji}ではありません`,
+              reading: rootReading ? `${rootReading}ではありません` : '',
+              romaji: rootRomaji ? `${rootRomaji} dewa arimasen` : '',
+              meaning: `không phải là ${cleanMeaning} (lịch sự)`
+            },
+            {
+              name: 'Quá khứ khẳng định (thể ngắn - だった)',
+              value: `${rootKanji}だった`,
+              reading: rootReading ? `${rootReading}だった` : '',
+              romaji: rootRomaji ? `${rootRomaji} datta` : '',
+              meaning: `đã là ${cleanMeaning}`
+            },
+            {
+              name: 'Quá khứ khẳng định (thể lịch sự - でした)',
+              value: `${rootKanji}でした`,
+              reading: rootReading ? `${rootReading}でした` : '',
+              romaji: rootRomaji ? `${rootRomaji} deshita` : '',
+              meaning: `đã là ${cleanMeaning} (lịch sự)`
+            },
+            {
+              name: 'Quá khứ phủ định (thể ngắn - ではなかった)',
+              value: `${rootKanji}ではなかった`,
+              reading: rootReading ? `${rootReading}ではなかった` : '',
+              romaji: rootRomaji ? `${rootRomaji} dewa nakatta` : '',
+              meaning: `đã không phải là ${cleanMeaning}`
+            },
+            {
+              name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)',
+              value: `${rootKanji}ではありませんでした`,
+              reading: rootReading ? `${rootReading}ではありませんでした` : '',
+              romaji: rootRomaji ? `${rootRomaji} dewa arimasen deshita` : '',
+              meaning: `đã không phải là ${cleanMeaning} (lịch sự)`
+            },
+            {
+              name: 'Thể て (thể nối - で)',
+              value: `${rootKanji}で`,
+              reading: rootReading ? `${rootReading}で` : '',
+              romaji: rootRomaji ? `${rootRomaji} de` : '',
+              meaning: `là ${cleanMeaning} và...`
+            }
+          ];
+
+          // Ensure 朝だ (value: `${rootKanji}だ`) is always present
+          const hasShortDa = parsedData.forms.some((f: any) => f.value === `${rootKanji}だ`);
+          if (!hasShortDa) {
+            parsedData.forms.unshift({
+              id: crypto.randomUUID(),
+              ...standardNounForms[0]
+            });
+          }
+
+          // If forms list is missing other forms, complement them
+          if (parsedData.forms.length < 5) {
+            standardNounForms.forEach(std => {
+              if (!parsedData.forms.some((f: any) => f.value === std.value)) {
+                parsedData.forms.push({
+                  id: crypto.randomUUID(),
+                  ...std
+                });
+              }
+            });
+          }
+        }
+
+        // Specific guarantee for Na-adjectives (Tính từ na)
+        if (parsedData.wordType === 'Tính từ na') {
+          let rootKanji = (parsedData.kanji || cleanWord).trim().replace(/[だな]$/, '') || cleanWord;
+          let rootReading = (parsedData.reading || '').trim().replace(/[だな]$/, '') || parsedData.reading;
+          let rootRomaji = (parsedData.romaji || '').trim().replace(/\s*(da|na)$/i, '') || parsedData.romaji;
+          const cleanMeaning = (parsedData.meaning || '').trim();
+
+          const naForms = [
+            { name: 'Khẳng định hiện tại (thể ngắn - だ)', value: `${rootKanji}だ`, reading: `${rootReading}だ`, romaji: `${rootRomaji} da`, meaning: `(thể ngắn) ${cleanMeaning}` },
+            { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: `${rootKanji}です`, reading: `${rootReading}です`, romaji: `${rootRomaji} desu`, meaning: `(thể lịch sự) ${cleanMeaning}` },
+            { name: 'Bổ nghĩa danh từ (thể な)', value: `${rootKanji}な`, reading: `${rootReading}な`, romaji: `${rootRomaji} na`, meaning: `(bổ nghĩa) ${cleanMeaning}` },
+            { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: `${rootKanji}ではない`, reading: `${rootReading}ではない`, romaji: `${rootRomaji} dewa nai`, meaning: `không ${cleanMeaning}` },
+            { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: `${rootKanji}ではありません`, reading: `${rootReading}ではありません`, romaji: `${rootRomaji} dewa arimasen`, meaning: `không ${cleanMeaning} (lịch sự)` },
+            { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: `${rootKanji}だった`, reading: `${rootReading}だった`, romaji: `${rootRomaji} datta`, meaning: `đã ${cleanMeaning}` },
+            { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: `${rootKanji}でした`, reading: `${rootReading}でした`, romaji: `${rootRomaji} deshita`, meaning: `đã ${cleanMeaning} (lịch sự)` },
+            { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: `${rootKanji}ではなかった`, reading: `${rootReading}ではなかった`, romaji: `${rootRomaji} dewa nakatta`, meaning: `đã không ${cleanMeaning}` },
+            { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: `${rootKanji}ではありませんでした`, reading: `${rootReading}ではありませんでした`, romaji: `${rootRomaji} dewa arimasen deshita`, meaning: `đã không ${cleanMeaning} (lịch sự)` },
+            { name: 'Thể て (thể nối - で)', value: `${rootKanji}で`, reading: `${rootReading}で`, romaji: `${rootRomaji} de`, meaning: `${cleanMeaning} và...` }
+          ];
+
+          if (!parsedData.forms.some((f: any) => f.value === `${rootKanji}だ`)) {
+            parsedData.forms.unshift({ id: crypto.randomUUID(), ...naForms[0] });
+          }
+          if (parsedData.forms.length < 5) {
+            naForms.forEach(std => {
+              if (!parsedData.forms.some((f: any) => f.value === std.value)) {
+                parsedData.forms.push({ id: crypto.randomUUID(), ...std });
+              }
             });
           }
         }

@@ -1,7 +1,7 @@
 import localforage from 'localforage';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, auth, db } from '../lib/firebase';
-import { doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, deleteDoc, setDoc, getDoc, getDocFromCache } from 'firebase/firestore';
 
 export const ttsCache = localforage.createInstance({
   name: 'tts-cache',
@@ -396,8 +396,22 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null, al
       if (cached) {
         finalUrl = cached.startsWith('data:') ? cached : `data:audio/mp3;base64,${cached}`;
       } else {
-        const docSnap = await getDoc(doc(db, 'global_audio', audioId));
-        if (docSnap.exists()) {
+        let docSnap = null;
+        try {
+          docSnap = await getDocFromCache(doc(db, 'global_audio', audioId));
+        } catch (cacheErr) {
+          // not in offline cache
+        }
+
+        if (!docSnap || !docSnap.exists()) {
+          try {
+            docSnap = await getDoc(doc(db, 'global_audio', audioId));
+          } catch (netErr) {
+            console.warn('[TTS] Firestore network read failed:', netErr);
+          }
+        }
+
+        if (docSnap && docSnap.exists()) {
           finalUrl = docSnap.data().data;
           // Cache locally
           if (finalUrl) {

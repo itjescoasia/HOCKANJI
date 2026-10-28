@@ -49,38 +49,47 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '', o
         const url = await getDownloadURL(storageRef);
         onAudioChange(url);
       } catch (err) {
-        console.warn("Firebase Storage failed, falling back to Base64", err);
-        // Fallback to saving Base64 string in Firestore 'audio' collection
-        if (file.size > 800 * 1024) { 
-           alert('File mp3 quá lớn (Vượt quá 800KB). Vui lòng cắt mp3 ngắn hơn hoặc dùng file chất lượng thấp.');
-           return;
-        }
+        console.warn("Firebase Storage failed, falling back to server disk and Firestore", err);
+        try {
+          const base64Str = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
 
-        await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-             try {
-                const uid = auth.currentUser?.uid;
-                if (uid) {
-                   const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
-                   const audioDocRef = doc(db, 'global_audio', audioId);
-                   await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
-                   onAudioChange('firestore:' + audioId);
-                } else {
-                   onAudioChange(reader.result as string);
-                }
-             } catch(e) {
-                console.error("Firestore fallback save failed:", e);
-                alert("Lỗi khi lưu audio. Vui lòng thử lại.");
-             }
-             resolve(null);
-          };
-          reader.onerror = () => { 
-             alert('Lỗi đọc file âm thanh nội bộ.');
-             reject(new Error("Lỗi đọc file"));
-          };
-          reader.readAsDataURL(file);
-        });
+          // Upload to server disk (/api/upload-audio)
+          try {
+            const res = await fetch('/api/upload-audio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ base64Data: base64Str, filename: file.name })
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.audioUrl) {
+                onAudioChange(data.audioUrl);
+                return;
+              }
+            }
+          } catch (serverErr) {
+            console.warn("Server upload-audio failed, trying Firestore:", serverErr);
+          }
+
+          // Fallback to Firestore
+          const uid = auth.currentUser?.uid;
+          if (uid) {
+            const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
+            const audioDocRef = doc(db, 'global_audio', audioId);
+            await setDoc(audioDocRef, { data: base64Str, createdAt: Date.now() });
+            onAudioChange('firestore:' + audioId);
+          } else {
+            onAudioChange(base64Str);
+          }
+        } catch (e) {
+          console.error("Firestore/local fallback save failed:", e);
+          alert("Lỗi khi lưu audio. Vui lòng thử lại.");
+        }
       }
     } finally {
       setIsUploading(false);

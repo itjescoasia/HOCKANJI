@@ -1,4 +1,4 @@
-import { playTTS , playAudioUrl} from '../utils/playTTS';
+import { playTTS , playAudioUrl, getApiEndpoint } from '../utils/playTTS';
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 export const HighlightContext = React.createContext<{
@@ -138,7 +138,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
 };
 
 import { KanjiCard } from '../types';
-import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, Check, CheckCircle, Upload, Loader2, Flame } from 'lucide-react';
+import { Volume2, Edit2, Eye, X, BookOpen, Sparkles, Lightbulb, Copy, Check, CheckCircle, Upload, Loader2, Flame, Save, Plus, Trash2, Layers } from 'lucide-react';
 import Markdown from 'react-markdown';
 import {
   cleanMarkdownForDisplay,
@@ -179,10 +179,23 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
   const [uploadingFormKey, setUploadingFormKey] = useState<string | null>(null);
   const [uploadingExIdx, setUploadingExIdx] = useState<number | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<KanjiCard>>({
+    ...card,
+    forms: card.forms ? JSON.parse(JSON.stringify(card.forms)) : [],
+    examples: card.examples ? JSON.parse(JSON.stringify(card.examples)) : []
+  });
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   useEffect(() => {
     setCurrentCard(card);
     setCurrentMatchedForm(matchedForm);
+    setEditForm({
+      ...card,
+      forms: card.forms ? JSON.parse(JSON.stringify(card.forms)) : [],
+      examples: card.examples ? JSON.parse(JSON.stringify(card.examples)) : []
+    });
+    setIsEditing(false);
   }, [card, matchedForm]);
 
   useEffect(() => {
@@ -421,6 +434,205 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
     );
   };
 
+  const handleSaveEdit = async () => {
+    const rawKanji = (editForm.kanji || '').trim();
+    const rawReading = (editForm.reading || '').trim();
+    if (!rawKanji && !rawReading) {
+      alert('Vui lòng nhập Kanji hoặc Cách đọc cho từ vựng!');
+      return;
+    }
+
+    const updatedForms = (editForm.forms || [])
+      .filter((f: any) => (f.name && f.name.trim()) || (f.value && f.value.trim()))
+      .map((f: any) => ({
+        id: f.id || crypto.randomUUID(),
+        name: (f.name || '').trim(),
+        value: (f.value || '').trim(),
+        reading: (f.reading || '').trim(),
+        romaji: (f.romaji || '').trim(),
+        meaning: (f.meaning || '').trim(),
+        audioUrl: f.audioUrl || null,
+        hasAudio: !!f.audioUrl
+      }));
+
+    const updatedExamples = (editForm.examples || [])
+      .filter((ex: any) => (ex.sentence && ex.sentence.trim()) || (ex.translation && ex.translation.trim()))
+      .map((ex: any) => ({
+        id: ex.id || crypto.randomUUID(),
+        sentence: (ex.sentence || '').trim(),
+        furigana: (ex.furigana || '').trim(),
+        reading: (ex.reading || '').trim(),
+        romaji: (ex.romaji || '').trim(),
+        translation: (ex.translation || '').trim(),
+        audioUrl: ex.audioUrl || null,
+        hasAudio: !!ex.audioUrl
+      }));
+
+    const updated: KanjiCard = {
+      ...currentCard,
+      kanji: rawKanji,
+      reading: rawReading,
+      romaji: (editForm.romaji || '').trim(),
+      sinoVietnamese: (editForm.sinoVietnamese || '').trim(),
+      meaning: (editForm.meaning || '').trim(),
+      wordType: editForm.wordType || '',
+      kanjiExplanation: (editForm.kanjiExplanation || '').trim(),
+      forms: updatedForms,
+      examples: updatedExamples
+    };
+
+    try {
+      await persistCardUpdate(updated);
+      setIsEditing(false);
+      showToast('Đã cập nhật nội dung từ vựng thành công!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi lưu từ vựng');
+    }
+  };
+
+  const autoFillAI = async () => {
+    const targetWord = (editForm.kanji || editForm.reading || '').trim();
+    if (!targetWord) {
+      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi dùng AI tự động điền.');
+      return;
+    }
+    
+    try {
+      setIsGeneratingAI(true);
+      let res: Response | null = null;
+      let data: any = null;
+
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          res = await fetch(getApiEndpoint('/api/generate-vocab'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: targetWord })
+          });
+          data = await res.json();
+          if (res.ok) break;
+        } catch (fetchErr) {
+          if (attempt === 2) throw fetchErr;
+        }
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1200));
+      }
+
+      if (!res || !res.ok) {
+        throw new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
+      }
+
+      let incomingForms = Array.isArray(data.forms) ? data.forms.map((f: any) => ({
+        ...f,
+        id: f.id || crypto.randomUUID()
+      })) : (editForm.forms || []);
+
+      const cleanWord = targetWord;
+      const isNoun = (data.wordType === 'Danh từ' || editForm.wordType === 'Danh từ') || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
+      if (isNoun) {
+        let rootKanji = (data.kanji || cleanWord).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || cleanWord;
+        let rootReading = (data.reading || editForm.reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || editForm.reading || '');
+        let rootRomaji = (data.romaji || editForm.romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || editForm.romaji || '');
+        const cleanM = (data.meaning || editForm.meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
+
+        const daVal = `${rootKanji}だ`;
+        if (!incomingForms.some((f: any) => f.value === daVal)) {
+          incomingForms.unshift({
+            id: crypto.randomUUID(),
+            name: 'Khẳng định hiện tại (thể ngắn - だ)',
+            value: daVal,
+            reading: rootReading ? `${rootReading}だ` : '',
+            romaji: rootRomaji ? `${rootRomaji} da` : '',
+            meaning: `là ${cleanM || rootKanji}`
+          });
+        }
+      }
+
+      const incomingExamples = Array.isArray(data.examples) && data.examples.length > 0
+        ? data.examples.map((ex: any) => ({
+            id: ex.id || crypto.randomUUID(),
+            ...ex
+          }))
+        : editForm.examples;
+
+      setEditForm(prev => ({
+        ...prev,
+        reading: data.reading !== undefined ? data.reading : prev.reading,
+        romaji: data.romaji !== undefined ? data.romaji : prev.romaji,
+        meaning: data.meaning !== undefined ? data.meaning : prev.meaning,
+        sinoVietnamese: data.sinoVietnamese !== undefined ? data.sinoVietnamese : prev.sinoVietnamese,
+        kanjiExplanation: data.kanjiExplanation !== undefined ? data.kanjiExplanation : prev.kanjiExplanation,
+        wordType: data.wordType !== undefined ? data.wordType : prev.wordType,
+        forms: incomingForms,
+        examples: incomingExamples
+      }));
+      showToast('Đã tải thông tin từ AI thành công!');
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || 'Có lỗi xảy ra khi gọi AI.');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const handleWordTypeChange = (newWordType: string) => {
+    let newForms = editForm.forms ? [...editForm.forms] : [];
+    if (newWordType.includes('Động từ') && newForms.length === 0) {
+      newForms = [
+        { id: crypto.randomUUID(), name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể quá khứ phủ định (thể なかった)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể khả năng (phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể khả năng (quá khứ phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể điều kiện (thể ば/たら)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+        { id: crypto.randomUUID(), name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
+      ];
+    } else if (newWordType === 'Danh từ' && newForms.length === 0) {
+      const rootK = editForm.kanji?.trim() || '';
+      const rootR = editForm.reading?.trim() || '';
+      const rootRom = editForm.romaji?.trim() || '';
+      const rootM = editForm.meaning?.trim() || '';
+      newForms = [
+        { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `là ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `là ${rootM} (lịch sự)` : '' },
+        { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không phải là ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không phải là ${rootM} (lịch sự)` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã là ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã là ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không phải là ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không phải là ${rootM} (lịch sự)` : '' },
+        { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `là ${rootM} và...` : '' }
+      ];
+    } else if (newWordType === 'Tính từ na' && newForms.length === 0) {
+      const rootK = editForm.kanji?.trim() || '';
+      const rootR = editForm.reading?.trim() || '';
+      const rootRom = editForm.romaji?.trim() || '';
+      const rootM = editForm.meaning?.trim() || '';
+      newForms = [
+        { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `(thể ngắn) ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `(thể lịch sự) ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Bổ nghĩa danh từ (thể な)', value: rootK ? `${rootK}な` : '', reading: rootR ? `${rootR}な` : '', romaji: rootRom ? `${rootRom} na` : '', meaning: rootM ? `(bổ nghĩa) ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không ${rootM}` : '' },
+        { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `${rootM} và...` : '' }
+      ];
+    }
+    setEditForm(prev => ({ ...prev, wordType: newWordType, forms: newForms }));
+  };
+
   const modalTarget = typeof document !== 'undefined' ? (document.getElementById('root') || document.body) : null;
   if (!modalTarget) return null;
 
@@ -442,10 +654,17 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
         {/* Header */}
         <div id="word-detail-modal-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-theme-subtle bg-theme-panel/95 shrink-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-theme-primary/80">
-              <BookOpen className="w-4 h-4 text-theme-accent" />
-              Chi Tiết Từ Vựng
-            </span>
+            {isEditing ? (
+              <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-amber-500 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full">
+                <Edit2 className="w-3.5 h-3.5" />
+                Chỉnh Sửa Từ Vựng
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest font-bold text-theme-primary/80">
+                <BookOpen className="w-4 h-4 text-theme-accent" />
+                Chi Tiết Từ Vựng
+              </span>
+            )}
             {currentCard.isForgotten && (
               <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                 <Flame className="w-3 h-3 fill-rose-500/40" />
@@ -470,44 +689,94 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
           </div>
 
           <div className="flex items-center gap-2 justify-end shrink-0">
-            {/* Nút QUÊN / HAY QUÊN */}
-            <button
-              id="word-detail-toggle-forgotten-btn"
-              type="button"
-              onClick={handleToggleForgotten}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
-                currentCard.isForgotten
-                  ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
-                  : 'bg-theme-base-alt text-theme-primary/75 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40 hover:bg-rose-500/5'
-              }`}
-              title={
-                currentCard.isForgotten
-                  ? "Từ này đang được gán nhãn HAY QUÊN (Bấm để gỡ bỏ)"
-                  : "Bấm để gán nhãn QUÊN - Từ này sẽ được đưa vào chuyên mục 'Ôn các từ vựng hay quên' ở trang chủ"
-              }
-            >
-              <Flame className={`w-3.5 h-3.5 ${currentCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
-              <span>{currentCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
-            </button>
+            {isEditing ? (
+              <>
+                <button
+                  id="word-detail-cancel-edit-btn"
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditForm({
+                      ...currentCard,
+                      forms: currentCard.forms ? JSON.parse(JSON.stringify(currentCard.forms)) : [],
+                      examples: currentCard.examples ? JSON.parse(JSON.stringify(currentCard.examples)) : []
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold border border-theme-subtle text-theme-primary/70 hover:bg-theme-subtle/40 transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  id="word-detail-save-btn"
+                  type="button"
+                  onClick={handleSaveEdit}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted transition-all cursor-pointer shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu thay đổi</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Nút Sửa trực tiếp từ vựng */}
+                <button
+                  id="word-detail-edit-btn"
+                  type="button"
+                  onClick={() => {
+                    setEditForm({
+                      ...currentCard,
+                      forms: currentCard.forms ? JSON.parse(JSON.stringify(currentCard.forms)) : [],
+                      examples: currentCard.examples ? JSON.parse(JSON.stringify(currentCard.examples)) : []
+                    });
+                    setIsEditing(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-theme-subtle bg-theme-base-alt hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-all cursor-pointer shadow-xs"
+                  title="Chỉnh sửa nội dung từ vựng này"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Sửa</span>
+                </button>
 
-            <button
-              id="word-detail-copy-btn"
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-theme-primary/80 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-subtle/50 border border-theme-subtle transition-all cursor-pointer shadow-xs"
-              title={`Sao chép từ vựng: ${currentCard.kanji || currentCard.reading}`}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle className="w-3.5 h-3.5 text-theme-success" />
-                  <span className="text-theme-success font-semibold">Đã chép từ</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Sao chép từ</span>
-                </>
-              )}
-            </button>
+                {/* Nút QUÊN / HAY QUÊN */}
+                <button
+                  id="word-detail-toggle-forgotten-btn"
+                  type="button"
+                  onClick={handleToggleForgotten}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+                    currentCard.isForgotten
+                      ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
+                      : 'bg-theme-base-alt text-theme-primary/75 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40 hover:bg-rose-500/5'
+                  }`}
+                  title={
+                    currentCard.isForgotten
+                      ? "Từ này đang được gán nhãn HAY QUÊN (Bấm để gỡ bỏ)"
+                      : "Bấm để gán nhãn QUÊN - Từ này sẽ được đưa vào chuyên mục 'Ôn các từ vựng hay quên' ở trang chủ"
+                  }
+                >
+                  <Flame className={`w-3.5 h-3.5 ${currentCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
+                  <span>{currentCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
+                </button>
+
+                <button
+                  id="word-detail-copy-btn"
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-theme-primary/80 hover:text-theme-accent bg-theme-base-alt hover:bg-theme-subtle/50 border border-theme-subtle transition-all cursor-pointer shadow-xs"
+                  title={`Sao chép từ vựng: ${currentCard.kanji || currentCard.reading}`}
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5 text-theme-success" />
+                      <span className="text-theme-success font-semibold">Đã chép từ</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Sao chép từ</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
             <button
               id="word-detail-close-btn"
               onClick={onClose}
@@ -528,12 +797,383 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
             </div>
           )}
 
-          {/* Hero Section */}
-          {(() => {
-            const effectiveMainAudio = getEffectiveCardAudioUrl(currentCard);
-            const isMainAudioSharedFromDict = !currentCard.audioUrl && !!effectiveMainAudio;
-            return (
-              <div id="word-detail-hero-section" className="bg-theme-base-alt border border-theme-subtle rounded-xl p-5 sm:p-6 shadow-inner flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+          {isEditing ? (
+            <div id="word-detail-edit-form" className="space-y-6">
+              {/* Notice & AI autofill banner */}
+              <div className="bg-theme-base-alt border border-theme-subtle rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div>
+                  <h4 className="text-sm font-bold text-theme-primary flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-theme-accent" />
+                    <span>AI tự động tra cứu & điền nội dung</span>
+                  </h4>
+                  <p className="text-xs text-theme-primary/70 mt-0.5">
+                    Nhập Kanji hoặc Cách đọc rồi bấm nút để AI tự động phân tích loại từ, tạo các thể chia và câu ví dụ minh họa chuẩn.
+                  </p>
+                </div>
+                <button
+                  id="word-detail-ai-autofill-btn"
+                  type="button"
+                  disabled={isGeneratingAI}
+                  onClick={autoFillAI}
+                  className="px-3.5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 disabled:opacity-50"
+                >
+                  {isGeneratingAI ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang tra cứu AI...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>AI Tự Động Điền</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Basic Info Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                    Kanji / Từ vựng gốc <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.kanji || ''}
+                    onChange={(e) => setEditForm({ ...editForm, kanji: e.target.value })}
+                    placeholder="vd: 眠る, 朝, 食べる..."
+                    className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl px-3.5 py-2.5 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors font-serif"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                    Cách đọc (Hiragana / Katakana) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.reading || ''}
+                    onChange={(e) => setEditForm({ ...editForm, reading: e.target.value })}
+                    placeholder="vd: ねむる, あさ, たべる..."
+                    className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl px-3.5 py-2.5 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors font-serif"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                    Romaji
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.romaji || ''}
+                    onChange={(e) => setEditForm({ ...editForm, romaji: e.target.value })}
+                    placeholder="vd: nemuru, asa, taberu..."
+                    className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl px-3.5 py-2.5 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                    Âm Hán Việt
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.sinoVietnamese || ''}
+                    onChange={(e) => setEditForm({ ...editForm, sinoVietnamese: e.target.value })}
+                    placeholder="vd: MIÊN, TRIỀU, THỰC..."
+                    className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl px-3.5 py-2.5 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                    Loại từ
+                  </label>
+                  <select
+                    value={editForm.wordType || ''}
+                    onChange={(e) => handleWordTypeChange(e.target.value)}
+                    className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl px-3.5 py-2.5 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors"
+                  >
+                    <option value="">-- Chọn loại từ --</option>
+                    <option value="Danh từ">Danh từ (Noun)</option>
+                    <option value="Động từ nhóm 1">Động từ nhóm 1 (Godan)</option>
+                    <option value="Động từ nhóm 2">Động từ nhóm 2 (Ichidan)</option>
+                    <option value="Động từ nhóm 3">Động từ nhóm 3 (Bất quy tắc)</option>
+                    <option value="Tính từ i">Tính từ đuôi い</option>
+                    <option value="Tính từ na">Tính từ đuôi な</option>
+                    <option value="Phó từ">Phó từ</option>
+                    <option value="Trợ từ">Trợ từ</option>
+                    <option value="Cụm từ">Cụm từ</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                    Ý nghĩa Tiếng Việt <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.meaning || ''}
+                    onChange={(e) => setEditForm({ ...editForm, meaning: e.target.value })}
+                    placeholder="vd: ngủ, buổi sáng, ăn..."
+                    className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl px-3.5 py-2.5 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Kanji Explanation */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-theme-primary/70 mb-1.5">
+                  Giải thích chữ Hán
+                </label>
+                <textarea
+                  rows={3}
+                  value={editForm.kanjiExplanation || ''}
+                  onChange={(e) => setEditForm({ ...editForm, kanjiExplanation: e.target.value })}
+                  placeholder="Giải thích bộ thủ, ý nghĩa chiết tự của chữ Hán..."
+                  className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl p-3 text-sm text-theme-primary focus:outline-none focus:border-theme-accent transition-colors leading-relaxed"
+                />
+              </div>
+
+              {/* Forms / Conjugation Editor */}
+              <div className="space-y-3 pt-2 border-t border-theme-subtle">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase tracking-widest font-bold text-theme-primary/80 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-theme-accent" />
+                    <span>Các dạng chia / Thể từ ({editForm.forms?.length || 0})</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newForm = {
+                        id: crypto.randomUUID(),
+                        name: '',
+                        value: '',
+                        reading: '',
+                        romaji: '',
+                        meaning: ''
+                      };
+                      setEditForm(prev => ({
+                        ...prev,
+                        forms: [...(prev.forms || []), newForm]
+                      }));
+                    }}
+                    className="flex items-center gap-1 text-xs font-bold text-theme-accent hover:underline cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Thêm dạng chia</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                  {(!editForm.forms || editForm.forms.length === 0) ? (
+                    <div className="text-center py-4 text-xs text-theme-primary/50 bg-theme-base-alt rounded-xl border border-dashed border-theme-subtle">
+                      Chưa có dạng chia nào. Nhấn "Thêm dạng chia" hoặc chọn Loại từ / dùng AI tự động điền.
+                    </div>
+                  ) : (
+                    editForm.forms.map((f: any, idx: number) => (
+                      <div key={f.id || idx} className="bg-theme-base-alt border border-theme-subtle rounded-xl p-3 space-y-2 relative">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-theme-accent uppercase tracking-wider">
+                            #{idx + 1} Dạng chia
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditForm(prev => ({
+                                ...prev,
+                                forms: prev.forms?.filter((_, fIdx) => fIdx !== idx)
+                              }));
+                            }}
+                            className="p-1 text-theme-primary/40 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa dạng chia này"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={f.name || ''}
+                            onChange={(e) => {
+                              const newForms = [...(editForm.forms || [])];
+                              newForms[idx] = { ...newForms[idx], name: e.target.value };
+                              setEditForm({ ...editForm, forms: newForms });
+                            }}
+                            placeholder="Tên thể (vd: Thể quá khứ, Thể từ điển...)"
+                            className="bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                          />
+                          <input
+                            type="text"
+                            value={f.value || ''}
+                            onChange={(e) => {
+                              const newForms = [...(editForm.forms || [])];
+                              newForms[idx] = { ...newForms[idx], value: e.target.value };
+                              setEditForm({ ...editForm, forms: newForms });
+                            }}
+                            placeholder="Từ sau khi chia (vd: 眠った, 朝だ...)"
+                            className="bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent font-serif"
+                          />
+                          <input
+                            type="text"
+                            value={f.reading || ''}
+                            onChange={(e) => {
+                              const newForms = [...(editForm.forms || [])];
+                              newForms[idx] = { ...newForms[idx], reading: e.target.value };
+                              setEditForm({ ...editForm, forms: newForms });
+                            }}
+                            placeholder="Cách đọc Hiragana"
+                            className="bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent font-serif"
+                          />
+                          <input
+                            type="text"
+                            value={f.meaning || ''}
+                            onChange={(e) => {
+                              const newForms = [...(editForm.forms || [])];
+                              newForms[idx] = { ...newForms[idx], meaning: e.target.value };
+                              setEditForm({ ...editForm, forms: newForms });
+                            }}
+                            placeholder="Ý nghĩa của thể này"
+                            className="bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Examples Editor */}
+              <div className="space-y-3 pt-2 border-t border-theme-subtle">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase tracking-widest font-bold text-theme-primary/80 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-theme-accent" />
+                    <span>Câu ví dụ minh họa ({editForm.examples?.length || 0})</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newEx = {
+                        id: crypto.randomUUID(),
+                        sentence: '',
+                        reading: '',
+                        translation: ''
+                      };
+                      setEditForm(prev => ({
+                        ...prev,
+                        examples: [...(prev.examples || []), newEx]
+                      }));
+                    }}
+                    className="flex items-center gap-1 text-xs font-bold text-theme-accent hover:underline cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Thêm ví dụ</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                  {(!editForm.examples || editForm.examples.length === 0) ? (
+                    <div className="text-center py-4 text-xs text-theme-primary/50 bg-theme-base-alt rounded-xl border border-dashed border-theme-subtle">
+                      Chưa có câu ví dụ nào. Nhấn "Thêm ví dụ" hoặc dùng AI tự động điền.
+                    </div>
+                  ) : (
+                    editForm.examples.map((ex: any, idx: number) => (
+                      <div key={ex.id || idx} className="bg-theme-base-alt border border-theme-subtle rounded-xl p-3 space-y-2 relative">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-theme-accent uppercase tracking-wider">
+                            #{idx + 1} Câu ví dụ
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditForm(prev => ({
+                                ...prev,
+                                examples: prev.examples?.filter((_, exIdx) => exIdx !== idx)
+                              }));
+                            }}
+                            className="p-1 text-theme-primary/40 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa ví dụ này"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={ex.sentence || ''}
+                            onChange={(e) => {
+                              const newExs = [...(editForm.examples || [])];
+                              newExs[idx] = { ...newExs[idx], sentence: e.target.value };
+                              setEditForm({ ...editForm, examples: newExs });
+                            }}
+                            placeholder="Câu tiếng Nhật (vd: 昨日はよく眠れなかった。)"
+                            className="w-full bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent font-serif"
+                          />
+                          <input
+                            type="text"
+                            value={ex.reading || ''}
+                            onChange={(e) => {
+                              const newExs = [...(editForm.examples || [])];
+                              newExs[idx] = { ...newExs[idx], reading: e.target.value };
+                              setEditForm({ ...editForm, examples: newExs });
+                            }}
+                            placeholder="Cách đọc Hiragana / Phiên âm"
+                            className="w-full bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent font-serif"
+                          />
+                          <input
+                            type="text"
+                            value={ex.translation || ''}
+                            onChange={(e) => {
+                              const newExs = [...(editForm.examples || [])];
+                              newExs[idx] = { ...newExs[idx], translation: e.target.value };
+                              setEditForm({ ...editForm, examples: newExs });
+                            }}
+                            placeholder="Dịch nghĩa tiếng Việt"
+                            className="w-full bg-theme-panel border border-theme-subtle rounded-lg px-2.5 py-1.5 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Action buttons inside form */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-theme-subtle">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditForm({
+                      ...currentCard,
+                      forms: currentCard.forms ? JSON.parse(JSON.stringify(currentCard.forms)) : [],
+                      examples: currentCard.examples ? JSON.parse(JSON.stringify(currentCard.examples)) : []
+                    });
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-theme-subtle text-theme-primary/70 hover:bg-theme-subtle/40 transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted transition-all cursor-pointer shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu thay đổi</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Hero Section */}
+              {(() => {
+                const effectiveMainAudio = getEffectiveCardAudioUrl(currentCard);
+                const isMainAudioSharedFromDict = !currentCard.audioUrl && !!effectiveMainAudio;
+                return (
+                  <div id="word-detail-hero-section" className="bg-theme-base-alt border border-theme-subtle rounded-xl p-5 sm:p-6 shadow-inner flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
                 <div className="flex-1 text-center sm:text-left space-y-2">
                   <div className="flex items-center justify-center sm:justify-start gap-2.5 flex-wrap">
                     <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif text-theme-primary font-bold tracking-tight">
@@ -958,6 +1598,8 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
 
         {/* Footer */}
@@ -966,28 +1608,61 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
             Bấm ESC hoặc nhấn ra ngoài để đóng cửa sổ
           </span>
           <div className="flex items-center gap-2 ml-auto">
-            {onEditCard && (
-              <button
-                id="word-detail-edit-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose();
-                  onEditCard(currentCard);
-                  window.dispatchEvent(new CustomEvent('editCard', { detail: currentCard }));
-                }}
-                className="px-4 py-2 rounded-xl text-xs font-bold border border-theme-subtle hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Chỉnh sửa từ vựng</span>
-              </button>
+            {isEditing ? (
+              <>
+                <button
+                  id="word-detail-footer-cancel-btn"
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditForm({
+                      ...currentCard,
+                      forms: currentCard.forms ? JSON.parse(JSON.stringify(currentCard.forms)) : [],
+                      examples: currentCard.examples ? JSON.parse(JSON.stringify(currentCard.examples)) : []
+                    });
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-theme-subtle hover:bg-theme-subtle/40 text-theme-primary/80 transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  id="word-detail-footer-save-btn"
+                  type="button"
+                  onClick={handleSaveEdit}
+                  className="px-5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Lưu thay đổi</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  id="word-detail-footer-edit-btn"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditForm({
+                      ...currentCard,
+                      forms: currentCard.forms ? JSON.parse(JSON.stringify(currentCard.forms)) : [],
+                      examples: currentCard.examples ? JSON.parse(JSON.stringify(currentCard.examples)) : []
+                    });
+                    setIsEditing(true);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-theme-subtle hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Chỉnh sửa từ vựng</span>
+                </button>
+                <button
+                  id="word-detail-close-footer-btn"
+                  onClick={onClose}
+                  className="px-5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-xs"
+                >
+                  Đóng
+                </button>
+              </>
             )}
-            <button
-              id="word-detail-close-footer-btn"
-              onClick={onClose}
-              className="px-5 py-2 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer shadow-xs"
-            >
-              Đóng
-            </button>
           </div>
         </div>
       </div>
