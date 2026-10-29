@@ -1,7 +1,7 @@
 import { playTTS , playAudioUrl} from '../utils/playTTS';
 import React, { useState } from 'react';
 import { KanjiCard } from '../types';
-import { ArrowLeft, Volume2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Volume2, RotateCcw, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ShortStudySessionProps {
@@ -20,6 +20,7 @@ interface ShortStudyCardProps {
 
 function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardProps) {
   const [flipDegree, setFlipDegree] = useState(0);
+  const [copied, setCopied] = useState(false);
   const isMeaningShown = Math.abs(flipDegree / 180) % 2 === 1;
 
   const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
@@ -29,6 +30,17 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
       return;
     }
     if (text) playTTS(text);
+  };
+
+  const handleCopyWord = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const targetText = currentWord.kanji || currentWord.reading || '';
+    if (targetText) {
+      navigator.clipboard.writeText(targetText).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
   };
 
   const handleFlip = () => {
@@ -60,6 +72,31 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
               className={`absolute inset-0 bg-theme-hover border border-theme-subtle p-8 md:p-12 rounded-lg flex flex-col items-center justify-center shadow-xl group ${isMeaningShown ? 'pointer-events-none' : ''}`}
               style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
             >
+              <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20">
+                <button
+                  type="button"
+                  onClick={handleCopyWord}
+                  className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-xs ${
+                    copied
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                      : 'bg-theme-base hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent border-theme-subtle'
+                  }`}
+                  title="Sao chép từ vựng"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                      <span className="text-[11px] font-bold">Đã chép</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">Sao chép</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               {currentWord.wordType && (
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 text-xs text-theme-accent tracking-widest uppercase mb-4 font-bold opacity-80">{currentWord.wordType}</div>
               )}
@@ -88,6 +125,30 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
               className={`absolute inset-0 bg-theme-hover border border-theme-subtle p-6 md:p-10 rounded-lg flex flex-col items-center shadow-xl group overflow-y-auto custom-scrollbar ${!isMeaningShown ? 'pointer-events-none' : ''}`}
               style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
             >
+               <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20">
+                 <button
+                   type="button"
+                   onClick={handleCopyWord}
+                   className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-xs ${
+                     copied
+                       ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                       : 'bg-theme-base hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent border-theme-subtle'
+                   }`}
+                   title="Sao chép từ vựng"
+                 >
+                   {copied ? (
+                     <>
+                       <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                       <span className="text-[11px] font-bold">Đã chép</span>
+                     </>
+                   ) : (
+                     <>
+                       <Copy className="w-3.5 h-3.5" />
+                       <span className="text-[11px]">Sao chép</span>
+                     </>
+                   )}
+                 </button>
+               </div>
                <div className="flex flex-col items-center gap-1 w-full mt-2">
                  <div className="flex items-center gap-2">
                    <div className="text-3xl md:text-5xl text-theme-accent font-medium font-serif">{currentWord.reading}</div>

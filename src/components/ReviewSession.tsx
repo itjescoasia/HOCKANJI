@@ -95,6 +95,19 @@ export default function ReviewSession({
   const [editingExampleId, setEditingExampleId] = useState<string | null>(null);
   const [editExampleForm, setEditExampleForm] = useState<{ sentence: string; translation?: string; reading?: string; romaji?: string }>({ sentence: "" });
   const [copiedExampleId, setCopiedExampleId] = useState<string | null>(null);
+  const [copiedWord, setCopiedWord] = useState(false);
+
+  const handleCopyCurrentWord = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!currentCard) return;
+    const textToCopy = currentCard.kanji || currentCard.reading || '';
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedWord(true);
+    setTimeout(() => {
+      setCopiedWord(false);
+    }, 2000);
+  };
 
   const handleCopySentence = (e: React.MouseEvent, text: string, id: string) => {
     e.stopPropagation();
@@ -248,6 +261,14 @@ export default function ReviewSession({
         e.preventDefault();
         if (currentCard) {
           startEdit();
+        }
+        return;
+      }
+
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        if (currentCard) {
+          handleCopyCurrentWord();
         }
         return;
       }
@@ -617,6 +638,7 @@ export default function ReviewSession({
             </button>
           )}
 
+
           {/* Quick Edit */}
           {!isEditing && (
             <button
@@ -697,20 +719,45 @@ export default function ReviewSession({
                       />
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] font-mono text-theme-primary/60">
-                      {isFreeStudy && (
-                        <div className="flex items-center gap-1 mr-2">
-                          {[0, 1, 2].map(i => (
-                            <span 
-                              key={i} 
-                              className={`w-1.5 h-1.5 rounded-full ${i < currentCardProgress ? 'bg-theme-accent' : 'bg-theme-subtle'}`} 
-                            />
-                          ))}
-                        </div>
-                      )}
-                      <span className="text-theme-accent font-bold">{safeIndex + 1}</span>
-                      <span>/</span>
-                      <span>{reviewQueue.length}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopyCurrentWord}
+                        className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                          copiedWord
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                            : 'bg-theme-base-alt hover:bg-theme-hover text-theme-primary/80 hover:text-theme-accent border-theme-subtle'
+                        }`}
+                        title="Sao chép từ vựng (Phím C)"
+                      >
+                        {copiedWord ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">Đã chép từ</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span className="text-[11px]">Sao chép</span>
+                          </>
+                        )}
+                      </button>
+
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-theme-primary/60">
+                        {isFreeStudy && (
+                          <div className="flex items-center gap-1 mr-2">
+                            {[0, 1, 2].map(i => (
+                              <span 
+                                key={i} 
+                                className={`w-1.5 h-1.5 rounded-full ${i < currentCardProgress ? 'bg-theme-accent' : 'bg-theme-subtle'}`} 
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <span className="text-theme-accent font-bold">{safeIndex + 1}</span>
+                        <span>/</span>
+                        <span>{reviewQueue.length}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -788,6 +835,7 @@ export default function ReviewSession({
                                 </span>
                               </div>
                             )}
+
                           </div>
                         </div>
 
@@ -862,6 +910,7 @@ export default function ReviewSession({
                                 />
                               </label>
                             )}
+
                           </div>
 
                           {/* Reading & Romaji & Sino-Vietnamese */}

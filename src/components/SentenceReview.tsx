@@ -1645,11 +1645,27 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               </div>
             )}
             
-            <div className="mt-4 pt-3 border-t border-theme-subtle/50 text-xs text-theme-primary/40 flex gap-2 items-center justify-center w-full">
+            <div className="mt-4 pt-3 border-t border-theme-subtle/50 text-xs text-theme-primary/60 flex gap-2 items-center justify-center w-full">
               <span>Từ vựng gốc:</span>
-              <strong className="text-theme-primary/70 font-serif text-sm">
+              <strong className="text-theme-primary font-serif text-sm">
                 {currentExample.word}
               </strong>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(currentExample.word);
+                  const btn = e.currentTarget;
+                  const originalText = btn.innerHTML;
+                  btn.innerHTML = '<span class="text-emerald-500 font-bold">Đã chép!</span>';
+                  setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+                }}
+                className="px-2 py-0.5 rounded text-[10px] font-semibold border border-theme-subtle hover:border-theme-accent hover:text-theme-accent bg-theme-base hover:bg-theme-hover transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                title="Sao chép từ vựng gốc này"
+              >
+                <Copy className="w-3 h-3" />
+                <span>Chép từ</span>
+              </button>
             </div>
           </div>
         </HighlightProvider>

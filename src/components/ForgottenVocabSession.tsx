@@ -161,6 +161,8 @@ export default function ForgottenVocabSession({
         if (currentCard) {
           playAudioUrl(currentCard.audioUrl, currentCard.kanji || currentCard.reading);
         }
+      } else if (e.key === 'c' || e.key === 'C') {
+        handleCopyWord();
       } else if (e.key === 'Escape') {
         onClose();
       }
@@ -169,6 +171,18 @@ export default function ForgottenVocabSession({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentCard, isFlipped, queue, currentIndex]);
+
+  const handleCopyWord = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!currentCard) return;
+    const textToCopy = currentCard.kanji || currentCard.reading || '';
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedKey('card-word');
+    setTimeout(() => {
+      setCopiedKey(prev => prev === 'card-word' ? null : prev);
+    }, 2000);
+  };
 
   const handleCopy = (e: React.MouseEvent, text: string, key: string) => {
     e.stopPropagation();
@@ -543,6 +557,20 @@ export default function ForgottenVocabSession({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyWord}
+                    className={`p-2 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5 border ${
+                      copiedKey === 'card-word'
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 font-bold'
+                        : 'bg-theme-hover/60 hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent border-theme-subtle'
+                    }`}
+                    title="Sao chép từ vựng này (Phím C)"
+                  >
+                    {copiedKey === 'card-word' ? <Check className="w-4 h-4 text-emerald-500 stroke-[3]" /> : <Copy className="w-4 h-4" />}
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{copiedKey === 'card-word' ? 'Đã chép' : 'Chép từ'}</span>
+                  </button>
+
                   {currentCard.audioUrl && (
                     <button
                       type="button"

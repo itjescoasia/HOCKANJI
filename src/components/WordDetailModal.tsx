@@ -24,6 +24,12 @@ import { cleanMarkdownForDisplay, isDictionaryForm, getEffectiveCardAudioUrl, ge
 import { FuriganaSentence, FuriganaToggle } from './FuriganaSentence';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { WordTypeBadges } from './VocabList';
+import { 
+  getVerbPairInfo, 
+  getTransitivityBadgeStyle, 
+  getTransitivityBadgeLabel, 
+  getTransitivityDescription 
+} from '../utils/verbTransitivity';
 
 interface WordDetailModalProps {
   word: IntensiveWord;
@@ -54,6 +60,14 @@ export default function WordDetailModal({
   const [copiedSentenceIdx, setCopiedSentenceIdx] = useState<number | null>(null);
   const [searchExampleText, setSearchExampleText] = useState('');
   const [activeAudioText, setActiveAudioText] = useState<string | null>(null);
+
+  const effectiveWordType = matchedCard?.wordType || word.category;
+  const verbPairInfo = getVerbPairInfo(
+    word.word || matchedCard?.kanji,
+    word.reading || matchedCard?.reading,
+    matchedCard?.meaning || word.explanation,
+    effectiveWordType
+  );
 
   // Close on ESC key
   useEffect(() => {
@@ -324,6 +338,17 @@ export default function WordDetailModal({
                 )}
               </div>
 
+              {/* Word Type & Transitivity Badges inside Hero Card */}
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap pt-1">
+                <WordTypeBadges
+                  wordType={effectiveWordType}
+                  kanji={word.word || matchedCard?.kanji}
+                  reading={word.reading || matchedCard?.reading}
+                  meaning={matchedCard?.meaning || word.explanation}
+                  badgeSize="normal"
+                />
+              </div>
+
               {/* Core Meaning from matched card if available */}
               {matchedCard?.meaning && (
                 <div className="pt-2 text-theme-primary/90 text-sm sm:text-base font-medium flex items-center gap-2 justify-center sm:justify-start">
@@ -386,8 +411,36 @@ export default function WordDetailModal({
             </div>
           </div>
 
+          {/* Dedicated Verb Transitivity & Counterpart Pair Banner */}
+          {verbPairInfo && (
+            <div className="bg-theme-base-alt border border-theme-subtle rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className={getTransitivityBadgeStyle(verbPairInfo.transitivity)}>
+                  {getTransitivityBadgeLabel(verbPairInfo.transitivity)}
+                </span>
+                <span className="text-xs text-theme-primary/80 font-medium">
+                  {getTransitivityDescription(verbPairInfo.transitivity)}
+                </span>
+              </div>
+              {verbPairInfo.counterpart && (
+                <div className="flex items-center gap-2 text-xs text-theme-primary/90 bg-theme-base px-3 py-1.5 rounded-lg border border-theme-subtle shrink-0">
+                  <span className="text-theme-primary/60">Cặp từ tương ứng:</span>
+                  <strong className="font-serif text-sm text-theme-accent">{verbPairInfo.counterpart.kanji}</strong>
+                  <span className="text-[11px] font-mono text-theme-primary/60">({verbPairInfo.counterpart.reading})</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    verbPairInfo.counterpart.transitivity === 'transitive' 
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                  }`}>
+                    {verbPairInfo.counterpart.transitivity === 'transitive' ? 'Tha ĐT' : 'Tự ĐT'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Section 2: Detailed Explanation & Grammar Structure */}
-          {(word.explanation || word.category) && (
+          {(word.explanation || word.category || matchedCard?.wordType) && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-accent">
                 <Sparkles className="w-4 h-4" />
@@ -395,8 +448,9 @@ export default function WordDetailModal({
               </div>
               <div className="text-theme-primary/95 text-sm sm:text-base leading-relaxed bg-theme-hover/40 p-5 sm:p-6 rounded-xl border border-theme-subtle border-l-4 border-l-theme-accent shadow-inner markdown-body whitespace-pre-wrap">
                 <Markdown>
-                  {(word.category ? `**Phân loại từ**: ${word.category}\n\n` : '') +
-                    cleanMarkdownForDisplay(word.explanation || '')}
+                  {((word.category || matchedCard?.wordType) 
+                    ? `**Phân loại từ**: ${matchedCard?.wordType || word.category}${verbPairInfo ? ` • **${getTransitivityBadgeLabel(verbPairInfo.transitivity)}**` : ''}\n\n` 
+                    : '') + cleanMarkdownForDisplay(word.explanation || '')}
                 </Markdown>
               </div>
             </div>
