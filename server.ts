@@ -52,12 +52,11 @@ async function startServer() {
   const modelCooldownMap = new Map<string, number>();
 
   async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
-    // Multi-tier model candidates to withstand regional cluster overloads (503) or rate limits (429)
+    // Current supported Google GenAI models (prioritizing gemini-3.8-flash as primary)
     const candidateModels = [
-      'gemini-3.1-flash-lite',
       'gemini-3.8-flash',
+      'gemini-3.1-flash-lite',
       'gemini-flash-latest',
-      'gemini-2.5-flash',
     ];
     let lastErr: any = null;
     const now = Date.now();
@@ -65,7 +64,7 @@ async function startServer() {
     for (const model of candidateModels) {
       const cooldownUntil = modelCooldownMap.get(model) || 0;
       if (now < cooldownUntil) {
-        console.warn(`Skipping model ${model} (in cooldown due to recent quota/overload until ${new Date(cooldownUntil).toLocaleTimeString()})`);
+        console.warn(`Skipping model ${model} (in cooldown until ${new Date(cooldownUntil).toLocaleTimeString()})`);
         continue;
       }
 
@@ -84,13 +83,20 @@ async function startServer() {
         } catch (err: any) {
           lastErr = err;
           const errMsg = err?.message || String(err);
+          const is404 = err?.status === 404 || errMsg.includes('404') || errMsg.includes('no longer available') || errMsg.includes('NOT_FOUND');
           const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded') || errMsg.includes('rate limit');
           const is503 = err?.status === 503 || errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE') || errMsg.includes('overloaded');
           
           console.warn(`Gemini model ${model} (attempt ${attempt + 1}) warning: ${errMsg.slice(0, 160)}`);
           
+          if (is404) {
+            // Deprecated / unavailable model: permanently disable this model
+            modelCooldownMap.set(model, Infinity);
+            break;
+          }
+
           if (isQuota) {
-            // Temporary 60s cooldown, immediately fail over to next model pool
+            // Temporary 60s cooldown, immediately fail over to next model
             modelCooldownMap.set(model, Date.now() + 60 * 1000);
             break;
           }
@@ -283,39 +289,74 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       if (!success) {
         console.warn('[AI] All AI providers failed or busy. Generating resilient fallback vocab data for word:', word, lastError?.message);
         const cleanWord = String(word || '').trim();
-        let detectedType = 'Danh từ';
-        if (cleanWord.endsWith('る') || cleanWord.endsWith('う') || cleanWord.endsWith('く') || cleanWord.endsWith('ぐ') || cleanWord.endsWith('す') || cleanWord.endsWith('つ') || cleanWord.endsWith('ぬ') || cleanWord.endsWith('ぶ') || cleanWord.endsWith('む')) {
-          if (cleanWord.endsWith('かす') || cleanWord === '乾かす' || cleanWord === '沸かす' || cleanWord === '冷やす') {
-            detectedType = 'Động từ nhóm I (Tha động từ)';
-          } else if (cleanWord.endsWith('く') || cleanWord === '乾く' || cleanWord === '沸く') {
-            detectedType = 'Động từ nhóm I (Tự động từ)';
-          } else if (cleanWord === '寝る') {
-            detectedType = 'Động từ nhóm II (Tự động từ)';
-          } else {
-            detectedType = 'Động từ';
+        const COMMON_WORD_MAP: Record<string, { reading: string; romaji: string; sino: string; meaning: string; type: string }> = {
+          '入れる': { reading: 'いれる', romaji: 'ireru', sino: 'Nhập', meaning: 'cho vào, bỏ vào', type: 'Động từ nhóm II (Tha động từ)' },
+          '入る': { reading: 'はいる', romaji: 'hairu', sino: 'Nhập', meaning: 'đi vào, vào', type: 'Động từ nhóm I (Tự động từ)' },
+          '寝る': { reading: 'ねる', romaji: 'neru', sino: 'Tẩm', meaning: 'ngủ, đi ngủ', type: 'Động từ nhóm II (Tự động từ)' },
+          '眠る': { reading: 'ねむる', romaji: 'nemuru', sino: 'Miên', meaning: 'ngủ, chợp mắt', type: 'Động từ nhóm I (Tự động từ)' },
+          '乾かす': { reading: 'かわかす', romaji: 'kawakasu', sino: 'Can', meaning: 'làm khô, phơi khô', type: 'Động từ nhóm I (Tha động từ)' },
+          '乾く': { reading: 'かわく', romaji: 'kawaku', sino: 'Can', meaning: 'khô', type: 'Động từ nhóm I (Tự động từ)' },
+          '食べる': { reading: 'たべる', romaji: 'taberu', sino: 'Thực', meaning: 'ăn', type: 'Động từ nhóm II (Tha động từ)' },
+          '飲む': { reading: 'のむ', romaji: 'nomu', sino: 'Ẩm', meaning: 'uống', type: 'Động từ nhóm I (Tha động từ)' },
+          '行く': { reading: 'いく', romaji: 'iku', sino: 'Hành', meaning: 'đi', type: 'Động từ nhóm I (Tự động từ)' },
+          '来る': { reading: 'くる', romaji: 'kuru', sino: 'Lai', meaning: 'đến', type: 'Động từ nhóm III (Tự động từ)' },
+          'する': { reading: 'する', romaji: 'suru', sino: '', meaning: 'làm', type: 'Động từ nhóm III (Tha động từ)' },
+          '見る': { reading: 'みる', romaji: 'miru', sino: 'Kiến', meaning: 'nhìn, xem', type: 'Động từ nhóm II (Tha động từ)' },
+          '聞く': { reading: 'きく', romaji: 'kiku', sino: 'Văn', meaning: 'nghe, hỏi', type: 'Động từ nhóm I (Tha động từ)' },
+          '話す': { reading: 'はなす', romaji: 'hanasu', sino: 'Thoại', meaning: 'nói chuyện', type: 'Động từ nhóm I (Tha động từ)' },
+          '読む': { reading: 'よむ', romaji: 'yomu', sino: 'Độc', meaning: 'đọc', type: 'Động từ nhóm I (Tha động từ)' },
+          '書く': { reading: 'かく', romaji: 'kaku', sino: 'Thư', meaning: 'viết', type: 'Động từ nhóm I (Tha động từ)' },
+          '買う': { reading: 'かう', romaji: 'kau', sino: 'Mãi', meaning: 'mua', type: 'Động từ nhóm I (Tha động từ)' },
+          '待つ': { reading: 'まつ', romaji: 'matsu', sino: 'Đãi', meaning: 'đợi', type: 'Động từ nhóm I (Tha động từ)' },
+          '起きる': { reading: 'おきる', romaji: 'okiru', sino: 'Khởi', meaning: 'thức dậy', type: 'Động từ nhóm II (Tự động từ)' },
+          '忘れる': { reading: 'わすれる', romaji: 'wasureru', sino: 'Vong', meaning: 'quên', type: 'Động từ nhóm II (Tha động từ)' },
+          '覚える': { reading: 'おぼえる', romaji: 'oboeru', sino: 'Giác', meaning: 'nhớ', type: 'Động từ nhóm II (Tha động từ)' },
+          '教える': { reading: 'おしえる', romaji: 'oshieru', sino: 'Giáo', meaning: 'dạy, chỉ bảo', type: 'Động từ nhóm II (Tha động từ)' },
+          '開ける': { reading: 'あける', romaji: 'akeru', sino: 'Khai', meaning: 'mở', type: 'Động từ nhóm II (Tha động từ)' },
+          '閉める': { reading: 'しめる', romaji: 'shimeru', sino: 'Bế', meaning: 'đóng', type: 'Động từ nhóm II (Tha động từ)' },
+          '開く': { reading: 'あく', romaji: 'aku', sino: 'Khai', meaning: 'mở ra', type: 'Động từ nhóm I (Tự động từ)' },
+          '閉まる': { reading: 'しまる', romaji: 'shimaru', sino: 'Bế', meaning: 'đóng lại', type: 'Động từ nhóm I (Tự động từ)' },
+        };
+
+        const mapped = COMMON_WORD_MAP[cleanWord];
+        let detectedType = mapped?.type || 'Danh từ';
+        let reading = mapped?.reading || (wanakana.isKana(cleanWord) ? cleanWord : cleanWord);
+        let romaji = mapped?.romaji || wanakana.toRomaji(reading || cleanWord);
+        let sinoVietnamese = mapped?.sino || '';
+        let meaning = mapped?.meaning || `(Từ vựng: ${cleanWord})`;
+
+        if (!mapped) {
+          if (cleanWord.endsWith('る') || cleanWord.endsWith('う') || cleanWord.endsWith('く') || cleanWord.endsWith('ぐ') || cleanWord.endsWith('す') || cleanWord.endsWith('つ') || cleanWord.endsWith('ぬ') || cleanWord.endsWith('ぶ') || cleanWord.endsWith('む')) {
+            if (cleanWord.endsWith('かす') || cleanWord === '乾かす' || cleanWord === '沸かす' || cleanWord === '冷やす') {
+              detectedType = 'Động từ nhóm I (Tha động từ)';
+            } else if (cleanWord.endsWith('く') || cleanWord === '乾く' || cleanWord === '沸く') {
+              detectedType = 'Động từ nhóm I (Tự động từ)';
+            } else if (/[いきぎしじちぢにひびぴみりえけげせぜてでねへべぺめれ]る$/.test(cleanWord)) {
+              detectedType = 'Động từ nhóm II';
+            } else {
+              detectedType = 'Động từ nhóm I';
+            }
+          } else if (cleanWord.endsWith('い')) {
+            detectedType = 'Tính từ i';
           }
-        } else if (cleanWord.endsWith('い')) {
-          detectedType = 'Tính từ i';
         }
 
-        const reading = wanakana.isKana(cleanWord) ? cleanWord : wanakana.toHiragana(cleanWord);
-        const romaji = wanakana.toRomaji(cleanWord);
         const forms = ensureCompleteForms({
           word: cleanWord,
           reading,
           romaji,
           wordType: detectedType,
-          meaning: cleanWord,
+          meaning,
           forms: []
         });
 
         parsedData = {
           kanji: cleanWord,
-          reading: reading || cleanWord,
-          romaji: romaji || cleanWord,
-          sinoVietnamese: '',
+          reading,
+          romaji,
+          sinoVietnamese,
           kanjiExplanation: '',
-          meaning: `(Từ vựng: ${cleanWord})`,
+          meaning,
           wordType: detectedType,
           forms,
           examples: [
@@ -323,8 +364,8 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
               id: crypto.randomUUID(),
               sentence: `${cleanWord}を練習しましょう。`,
               furigana: `${cleanWord}を練習[れんしゅう]しましょう。`,
-              reading: `${reading || cleanWord}をれんしゅうしましょう。`,
-              romaji: `${romaji || cleanWord} o renshuu shimashou.`,
+              reading: `${reading}をれんしゅうしましょう。`,
+              romaji: `${romaji} o renshuu shimashou.`,
               translation: `Chúng ta hãy cùng luyện tập từ ${cleanWord}.`
             }
           ],

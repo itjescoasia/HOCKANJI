@@ -331,11 +331,19 @@ function deriveNegativePast(kanji: string, reading: string, romaji: string, word
     };
   }
 
-  // Ichidan (Group 2) verbs - e.g. 寝る, 食べる, 起きる, 忘れる
+  // Ichidan (Group 2) verbs - e.g. 入れる, 寝る, 食べる, 起きる, 忘れる
   const isGroup2 = wordType.includes('nhóm II') || wordType.includes('nhóm 2') || (
     k.endsWith('る') && (
-      r.endsWith('いる') || r.endsWith('える') || r.endsWith('ねる') ||
-      k.endsWith('いる') || k.endsWith('える') || k.endsWith('寝る') || k.endsWith('食べる') || k.endsWith('起きる') || k.endsWith('見る')
+      /[いきぎしじちぢにひびぴみりえけげせぜてでねへべぺめれ]る$/.test(k) ||
+      /[いきぎしじちぢにひびぴみりえけげせぜてでねへべぺめれ]る$/.test(r) ||
+      r.endsWith('いる') || r.endsWith('える') || r.endsWith('ねる') || r.endsWith('れる') ||
+      k.endsWith('いる') || k.endsWith('える') || k.endsWith('ねる') || k.endsWith('れる') ||
+      k.endsWith('寝る') || k.endsWith('食べる') || k.endsWith('起きる') || k.endsWith('見る') || k.endsWith('入れる')
+    ) && !(
+      // Godan (Group 1) exceptions that end in -iru / -eru
+      k === '帰る' || k === 'かえる' || k === '切る' || k === 'きる' || k === '知る' || k === 'しる' ||
+      k === '走る' || k === 'はしる' || k === '入る' || k === 'はいる' || k === '減る' || k === 'へる' ||
+      k === '散る' || k === 'ちる' || k === '滑る' || k === 'すべる' || k === '蹴る' || k === 'ける'
     )
   );
 
