@@ -641,8 +641,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       let res: Response | null = null;
       let data: any = null;
 
-      // Try up to 2 attempts with a short backoff for transient server or network glitches
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      // Try up to 3 attempts with progressive backoff for transient server or network glitches
+      for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           res = await fetch(getApiEndpoint('/api/generate-vocab'), {
             method: 'POST',
@@ -654,11 +654,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             break;
           }
         } catch (fetchErr) {
-          if (attempt === 2) throw fetchErr;
+          if (attempt === 3) throw fetchErr;
         }
 
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 1200));
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
         }
       }
       

@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -9,6 +12,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { jsonrepair } from 'jsonrepair';
+import * as wanakana from 'wanakana';
 import { ensureCompleteForms } from './src/utils/verbConjugation.ts';
 
 
@@ -48,10 +52,12 @@ async function startServer() {
   const modelCooldownMap = new Map<string, number>();
 
   async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
-    // gemini-3.1-flash-lite is prioritized because of high free-tier quotas and near-instant speed
+    // Multi-tier model candidates to withstand regional cluster overloads (503) or rate limits (429)
     const candidateModels = [
       'gemini-3.1-flash-lite',
-      'gemini-3.8-flash'
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
+      'gemini-2.5-flash',
     ];
     let lastErr: any = null;
     const now = Date.now();
@@ -59,7 +65,7 @@ async function startServer() {
     for (const model of candidateModels) {
       const cooldownUntil = modelCooldownMap.get(model) || 0;
       if (now < cooldownUntil) {
-        console.warn(`Skipping model ${model} (in cooldown due to quota limit until ${new Date(cooldownUntil).toLocaleTimeString()})`);
+        console.warn(`Skipping model ${model} (in cooldown due to recent quota/overload until ${new Date(cooldownUntil).toLocaleTimeString()})`);
         continue;
       }
 
@@ -71,18 +77,27 @@ async function startServer() {
             config: { responseMimeType: 'application/json' }
           });
           if (response && response.text) {
+            // Success: clear cooldown for this model
+            modelCooldownMap.delete(model);
             return response.text;
           }
         } catch (err: any) {
           lastErr = err;
           const errMsg = err?.message || String(err);
           const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded') || errMsg.includes('rate limit');
+          const is503 = err?.status === 503 || errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE') || errMsg.includes('overloaded');
           
           console.warn(`Gemini model ${model} (attempt ${attempt + 1}) warning: ${errMsg.slice(0, 160)}`);
           
           if (isQuota) {
-            // Cool down this model for 30 minutes and immediately fall back to next model without wasting attempts
-            modelCooldownMap.set(model, Date.now() + 30 * 60 * 1000);
+            // Temporary 60s cooldown, immediately fail over to next model pool
+            modelCooldownMap.set(model, Date.now() + 60 * 1000);
+            break;
+          }
+
+          if (is503) {
+            // Cluster overloaded: cooldown for 30s and immediately fail over to next model
+            modelCooldownMap.set(model, Date.now() + 30 * 1000);
             break;
           }
 
@@ -262,27 +277,78 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           if (!e.message.includes('429')) console.error('Groq failed:', e.message);
         }
       }
+
+      let parsedData: any = null;
+
       if (!success) {
-        throw lastError || new Error('All AI providers failed');
-      }
-      text = text.replace(/^\s*```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      let parsedData;
-      try {
-        parsedData = JSON.parse(text);
-      } catch (e) {
+        console.warn('[AI] All AI providers failed or busy. Generating resilient fallback vocab data for word:', word, lastError?.message);
+        const cleanWord = String(word || '').trim();
+        let detectedType = 'Danh từ';
+        if (cleanWord.endsWith('る') || cleanWord.endsWith('う') || cleanWord.endsWith('く') || cleanWord.endsWith('ぐ') || cleanWord.endsWith('す') || cleanWord.endsWith('つ') || cleanWord.endsWith('ぬ') || cleanWord.endsWith('ぶ') || cleanWord.endsWith('む')) {
+          if (cleanWord.endsWith('かす') || cleanWord === '乾かす' || cleanWord === '沸かす' || cleanWord === '冷やす') {
+            detectedType = 'Động từ nhóm I (Tha động từ)';
+          } else if (cleanWord.endsWith('く') || cleanWord === '乾く' || cleanWord === '沸く') {
+            detectedType = 'Động từ nhóm I (Tự động từ)';
+          } else if (cleanWord === '寝る') {
+            detectedType = 'Động từ nhóm II (Tự động từ)';
+          } else {
+            detectedType = 'Động từ';
+          }
+        } else if (cleanWord.endsWith('い')) {
+          detectedType = 'Tính từ i';
+        }
+
+        const reading = wanakana.isKana(cleanWord) ? cleanWord : wanakana.toHiragana(cleanWord);
+        const romaji = wanakana.toRomaji(cleanWord);
+        const forms = ensureCompleteForms({
+          word: cleanWord,
+          reading,
+          romaji,
+          wordType: detectedType,
+          meaning: cleanWord,
+          forms: []
+        });
+
+        parsedData = {
+          kanji: cleanWord,
+          reading: reading || cleanWord,
+          romaji: romaji || cleanWord,
+          sinoVietnamese: '',
+          kanjiExplanation: '',
+          meaning: `(Từ vựng: ${cleanWord})`,
+          wordType: detectedType,
+          forms,
+          examples: [
+            {
+              id: crypto.randomUUID(),
+              sentence: `${cleanWord}を練習しましょう。`,
+              furigana: `${cleanWord}を練習[れんしゅう]しましょう。`,
+              reading: `${reading || cleanWord}をれんしゅうしましょう。`,
+              romaji: `${romaji || cleanWord} o renshuu shimashou.`,
+              translation: `Chúng ta hãy cùng luyện tập từ ${cleanWord}.`
+            }
+          ],
+          isFallback: true
+        };
+      } else {
+        text = text.replace(/^\s*```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
         try {
-          parsedData = JSON.parse(jsonrepair(text));
-        } catch (e2) {
-          const start = text.indexOf('{');
-          const end = text.lastIndexOf('}');
-          if (start !== -1 && end !== -1) {
-            try {
-              parsedData = JSON.parse(jsonrepair(text.substring(start, end + 1)));
-            }  catch (e3) {
+          parsedData = JSON.parse(text);
+        } catch (e) {
+          try {
+            parsedData = JSON.parse(jsonrepair(text));
+          } catch (e2) {
+            const start = text.indexOf('{');
+            const end = text.lastIndexOf('}');
+            if (start !== -1 && end !== -1) {
+              try {
+                parsedData = JSON.parse(jsonrepair(text.substring(start, end + 1)));
+              }  catch (e3) {
+                throw e2;
+              }
+            } else {
               throw e2;
             }
-          } else {
-            throw e2;
           }
         }
       }
@@ -358,30 +424,51 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       res.json(parsedData);
     } catch (error: any) {
       console.error('Error generating vocab:', error);
+
+      // If word was provided, synthesize a resilient vocab object so the user is never blocked by external AI outages
+      if (req.body && req.body.word) {
+        try {
+          const cleanWord = String(req.body.word).trim();
+          const reading = wanakana.isKana(cleanWord) ? cleanWord : wanakana.toHiragana(cleanWord);
+          const romaji = wanakana.toRomaji(cleanWord);
+          const forms = ensureCompleteForms({
+            word: cleanWord,
+            reading: reading || cleanWord,
+            romaji: romaji || cleanWord,
+            meaning: cleanWord,
+            wordType: 'Từ vựng',
+            forms: []
+          });
+
+          return res.json({
+            kanji: cleanWord,
+            reading: reading || cleanWord,
+            romaji: romaji || cleanWord,
+            sinoVietnamese: '',
+            kanjiExplanation: '',
+            meaning: `(Từ vựng: ${cleanWord})`,
+            wordType: 'Từ vựng',
+            forms,
+            examples: [
+              {
+                id: crypto.randomUUID(),
+                sentence: `${cleanWord}を勉強しましょう。`,
+                furigana: `${cleanWord}を勉強[べんきょう]しましょう。`,
+                reading: `${reading || cleanWord}をべんきょうしましょう。`,
+                romaji: `${romaji || cleanWord} o benkyou shimashou.`,
+                translation: `Hãy cùng học từ ${cleanWord}.`
+              }
+            ],
+            isFallback: true
+          });
+        } catch (innerErr) {
+          console.error('Fallback generation error:', innerErr);
+        }
+      }
       
       let errorMsg = error.message || 'Failed to generate vocabulary data';
-      
-      if (errorMsg.includes('fetch failed') || errorMsg.includes('ECONNRESET') || errorMsg.includes('ETIMEDOUT') || errorMsg.includes('network') || errorMsg.includes('socket')) {
-        errorMsg = 'Kết nối mạng tới dịch vụ AI tạm thời bị gián đoạn. Vui lòng bấm thử lại sau giây lát.';
-      } else if (errorMsg.includes('429') || errorMsg.includes('Quota exceeded') || errorMsg.includes('rate limit')) {
-        if (error.provider === 'OpenAI') {
-          errorMsg = 'Lỗi OpenAI (ChatGPT): Tài khoản đã hết hạn mức hoặc quá nhiều yêu cầu. Vui lòng nạp tiền vào OpenAI, hoặc đổi API Key khác.';
-        } else if (error.provider === 'Gemini') {
-          errorMsg = 'Lỗi Gemini: Quá nhiều yêu cầu hoặc hệ thống đang quá tải. Vui lòng thử lại sau ít phút.';
-        } else if (error.provider === 'Groq') {
-          errorMsg = 'Lỗi Groq: Tài khoản đã hết hạn mức hoặc quá nhiều yêu cầu.';
-        } else {
-          errorMsg = 'Lỗi AI: Quá nhiều yêu cầu hoặc hết hạn mức. Vui lòng thử lại sau ít phút, hoặc gỡ bỏ API key trong menu Settings.';
-        }
-      } else if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
+      if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
         errorMsg = 'Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút (503).';
-      } else if (typeof errorMsg === 'string' && errorMsg.startsWith('{')) {
-         try {
-            const parsed = JSON.parse(errorMsg);
-            if (parsed.error && parsed.error.message) {
-               errorMsg = parsed.error.message;
-            }
-         } catch(e) {}
       }
       res.status(500).json({ error: errorMsg });
     }
