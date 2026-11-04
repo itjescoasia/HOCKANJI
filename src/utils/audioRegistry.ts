@@ -83,12 +83,23 @@ export async function resolveExampleAudioUrl(
   wordId: string,
   mainDeck?: KanjiCard[]
 ): Promise<string | null> {
-  if (example.audioUrl) {
-    return example.audioUrl;
-  }
-
   const rawId = example.id || '';
   const cleanId = rawId.replace(/^example-/, '').replace(/^ex-/, '');
+
+  if (example.audioUrl) {
+    if (example.audioUrl.startsWith('blob:')) {
+      try {
+        const check = await fetch(example.audioUrl);
+        if (check.ok) {
+          return example.audioUrl;
+        }
+      } catch (e) {
+        // Blob expired across reloads, fall through to recover from localforage / cloud
+      }
+    } else {
+      return example.audioUrl;
+    }
+  }
 
   // 1. Direct match in KNOWN_CLOUD_AUDIO_MAPPING
   if (KNOWN_CLOUD_AUDIO_MAPPING[rawId]) {
@@ -98,7 +109,7 @@ export async function resolveExampleAudioUrl(
     return KNOWN_CLOUD_AUDIO_MAPPING[cleanId];
   }
 
-  // 2. Check localforage keys for this example
+  // 2. Check localforage keys for this example to recover fresh blob URL
   try {
     const keysToCheck = [
       `audio_intensive_${wordId}_${rawId}`,
@@ -108,9 +119,14 @@ export async function resolveExampleAudioUrl(
       `audio_intensive_a6aba8e8-074b-4bca-a3c1-ff933ef96109_${cleanId}`,
     ];
     for (const key of keysToCheck) {
-      const blob = await localforage.getItem<Blob>(key);
-      if (blob) {
-        return URL.createObjectURL(blob);
+      const item: any = await localforage.getItem(key);
+      if (item) {
+        if (typeof item === 'string' && (item.startsWith('data:') || item.startsWith('/api/audio/'))) {
+          return item;
+        }
+        if (item instanceof Blob || item instanceof File) {
+          return URL.createObjectURL(item);
+        }
       }
     }
   } catch (err) {
@@ -144,8 +160,20 @@ export async function resolveExampleAudioUrl(
 export async function loadAudioContent(url: string): Promise<string | null> {
   if (!url) return null;
 
-  // Direct data: URL or HTTP URL
-  if (url.startsWith('data:') || url.startsWith('blob:')) {
+  // Direct data: URL
+  if (url.startsWith('data:')) {
+    return url;
+  }
+
+  // Blob URL: verify it is not dead/revoked before passing to audio element
+  if (url.startsWith('blob:')) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) return url;
+    } catch (e) {
+      console.warn('[AudioRegistry] Dead blob URL detected:', url);
+      return null;
+    }
     return url;
   }
 

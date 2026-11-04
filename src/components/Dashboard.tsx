@@ -282,15 +282,22 @@ export default function Dashboard({
       mastered: 0,
       newLearned: 0,
       freeStudyTime: 0,
+      audioListens: 0,
     };
     return {
       date: d.toLocaleDateString("vi-VN", { weekday: "short" }),
+      fullDate: dStr,
+      audioListens: Number(s.audioListens) || 0,
       reviewed: Number(s.reviewed) || 0,
       correct: Number(s.correct) || 0,
       newLearned: Number(s.newLearned) || 0,
       freeStudyTimeMinutes: Math.ceil((Number(s.freeStudyTime) || 0) / 60),
     };
   });
+
+  const todayAudioListens = Number(todayStats.audioListens) || 0;
+  const totalWeekAudioListens = studyHistoryData.reduce((acc, curr) => acc + curr.audioListens, 0);
+  const busiestListeningDay = [...studyHistoryData].sort((a, b) => b.audioListens - a.audioListens)[0];
 
   // Calculate Sentence of the Day
   const todayForSeed = getVietnamDate();
@@ -660,15 +667,40 @@ export default function Dashboard({
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
-          <h3 className="text-[11px] font-sans text-theme-primary opacity-60 tracking-widest uppercase mb-8">
-            Lịch sử ôn tập (7 ngày qua)
-          </h3>
+        <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Headphones className="w-4 h-4 text-theme-accent shrink-0" />
+                <h3 className="text-[12px] font-sans font-bold text-theme-primary uppercase tracking-wider">
+                  Hành vi học tập theo lượt nghe MP3 (7 ngày qua)
+                </h3>
+              </div>
+              <p className="text-[10px] text-theme-primary/60 mt-1">
+                Ghi nhận +1 mỗi khi bấm biểu tượng 🔊 Loa của câu ví dụ / từ vựng có MP3
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="px-2.5 py-1 bg-theme-accent/15 border border-theme-accent/30 rounded-full flex items-center gap-1.5 shadow-2xs">
+                <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
+                <span className="text-[11px] font-mono font-bold text-theme-accent">
+                  Hôm nay: {todayAudioListens} lượt
+                </span>
+              </div>
+              {totalWeekAudioListens > 0 && (
+                <div className="px-2 py-1 bg-theme-base border border-theme-subtle rounded-full text-[10px] text-theme-primary/70 font-mono">
+                  Tuần: {totalWeekAudioListens}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="h-[250px] w-full flex-1 relative">
             <ResponsiveContainer width="100%" height={250}>
               <LineChart
                 data={studyHistoryData}
-                margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
                 <XAxis
                   dataKey="date"
@@ -685,39 +717,57 @@ export default function Dashboard({
                   allowDecimals={false}
                 />
                 <RechartsTooltip
-                  cursor={{ fill: "var(--bg-hover)" }}
+                  cursor={{ stroke: "var(--border-subtle)", strokeWidth: 1 }}
                   contentStyle={{
                     backgroundColor: "var(--bg-panel)",
                     borderColor: "var(--border-subtle)",
-                    borderRadius: "4px",
+                    borderRadius: "6px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   }}
-                  itemStyle={{ color: "var(--text-primary)", fontSize: "12px" }}
+                  itemStyle={{ fontSize: "12px" }}
                   labelStyle={{
                     color: "var(--text-muted)",
                     fontSize: "12px",
                     marginBottom: "4px",
+                    fontWeight: "bold",
                   }}
                 />
                 <Line
                   type="monotone"
-                  dataKey="reviewed"
-                  name="Đã ôn"
-                  stroke="var(--text-muted)"
-                  strokeWidth={2}
-                  dot={{ fill: "var(--text-muted)", r: 4 }}
-                  activeDot={{ r: 6 }}
+                  dataKey="audioListens"
+                  name="Lượt nghe MP3"
+                  stroke="#38bdf8"
+                  strokeWidth={3}
+                  dot={{ fill: "#38bdf8", r: 4 }}
+                  activeDot={{ r: 6, stroke: "#38bdf8", strokeWidth: 2 }}
                 />
                 <Line
                   type="monotone"
-                  dataKey="newLearned"
-                  name="Đã nhớ"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={{ fill: "#10b981", r: 4 }}
-                  activeDot={{ r: 6 }}
+                  dataKey="reviewed"
+                  name="Từ vựng đã ôn"
+                  stroke="var(--text-muted)"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                  dot={{ fill: "var(--text-muted)", r: 3 }}
+                  activeDot={{ r: 5 }}
                 />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-theme-subtle/60 flex items-center justify-between text-[11px] text-theme-primary/70">
+            {totalWeekAudioListens > 0 ? (
+              <span className="truncate">
+                💡 Ngày nghe nhiều nhất: <strong className="text-theme-accent">{busiestListeningDay.date}</strong> ({busiestListeningDay.audioListens} lượt nghe)
+              </span>
+            ) : (
+              <span className="text-theme-primary/50 italic">
+                💡 Bấm biểu tượng 🔊 Loa ở câu ví dụ hoặc từ vựng để theo dõi biểu đồ học tập hàng ngày
+              </span>
+            )}
+            <span className="text-[10px] font-mono text-theme-primary/50 shrink-0">
+              Đơn vị: Lần bấm
+            </span>
           </div>
         </div>
 

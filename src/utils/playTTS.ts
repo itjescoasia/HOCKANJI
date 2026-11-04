@@ -3,6 +3,8 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { storage, auth, db } from '../lib/firebase';
 import { doc, deleteDoc, setDoc, getDoc, getDocFromCache } from 'firebase/firestore';
 
+import { recordAudioListen } from './activityTracker';
+
 export const ttsCache = localforage.createInstance({
   name: 'tts-cache',
   storeName: 'audio_cache'
@@ -445,6 +447,11 @@ export const playAudioUrl = async (url: string, fallbackText?: string | null, al
   try {
     const audio = new Audio(finalUrl);
     currentActiveAudio = audio;
+
+    // Track audio listening behavior for daily study activity chart
+    try {
+      recordAudioListen();
+    } catch (e) {}
 
     window.dispatchEvent(new CustomEvent('app-audio-started', { detail: { audio, url: finalUrl } }));
 

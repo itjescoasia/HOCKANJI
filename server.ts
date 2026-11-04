@@ -9,6 +9,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { jsonrepair } from 'jsonrepair';
+import { ensureCompleteForms } from './src/utils/verbConjugation.ts';
 
 
 async function startServer() {
@@ -120,8 +121,8 @@ CHÚ Ý CÁC YÊU CẦU QUAN TRỌNG SAU:
      + "Thể quá khứ khẳng định lịch sự (ました)" (ví dụ: 眠りました, 食べました)
      + "Thể phủ định hiện tại ngắn (ない)" (ví dụ: 眠らない, 食べない)
      + "Thể phủ định hiện tại lịch sự (ません)" (ví dụ: 眠りません, 食べません)
-     + "Thể quá khứ phủ định ngắn (thể なかった)" (ví dụ: 眠らなかった, 食べなかった)
-     + "Thể quá khứ phủ định lịch sự (thể ませんでした)" (ví dụ: 眠りませんでした, 食べませんでした)
+     + "Thể quá khứ phủ định ngắn (thể なかった)" (BẮT BUỘC ĐỐI VỚI MỌI ĐỘNG TỪ, ví dụ: 寝る -> 寝なかった, 眠る -> 眠らなかった, 食べる -> 食べなかった, 行く -> 行かなかった, 飲む -> 飲まなかった, する -> しなかった, 来る -> 来なかった)
+     + "Thể quá khứ phủ định lịch sự (thể ませんでした)" (ví dụ: 寝ませんでした, 眠りませんでした, 食べませんでした)
      + "Thể điều kiện (ば/たら)" (ví dụ: 眠れば/眠ったら, 食べれば/食べたら)
      + "Thể ý chí (ngắn - よう)" (ví dụ: 眠ろう, 食べよう)
      + "Thể ý chí lịch sự (ましょう)" (ví dụ: 眠りましょう, 食べましょう)
@@ -313,201 +314,10 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           }));
         }
 
-        // Specific guarantee for 眠る / 眠れなかった and potential past negative forms
+        // Specific guarantee for transitivity and complete forms (including 寝なかった, 眠らなかった, 朝だ, etc.)
         const cleanWord = String(word || '').trim();
-        const isNemuru = cleanWord === '眠る' || cleanWord === 'ねむる' || cleanWord.includes('眠れ') || cleanWord.includes('眠ら') || cleanWord.includes('眠り') || cleanWord.includes('眠');
-        
-        if (isNemuru) {
-          const formValues = parsedData.forms.map((f: any) => f.value);
-          if (!formValues.includes('眠れなかった')) {
-            parsedData.forms.push({
-              id: crypto.randomUUID(),
-              name: 'Thể khả năng (quá khứ phủ định)',
-              value: '眠れなかった',
-              reading: 'ねむれなかった',
-              romaji: 'nemurenakatta',
-              meaning: 'đã không thể ngủ được'
-            });
-          }
-          if (!formValues.includes('眠れない')) {
-            parsedData.forms.push({
-              id: crypto.randomUUID(),
-              name: 'Thể khả năng (phủ định)',
-              value: '眠れない',
-              reading: 'ねむれない',
-              romaji: 'nemurenai',
-              meaning: 'không thể ngủ được'
-            });
-          }
-          if (!formValues.includes('眠れる')) {
-            parsedData.forms.push({
-              id: crypto.randomUUID(),
-              name: 'Thể khả năng',
-              value: '眠れる',
-              reading: 'ねむれる',
-              romaji: 'nemureru',
-              meaning: 'có thể ngủ'
-            });
-          }
-          if (!formValues.includes('眠らなかった')) {
-            parsedData.forms.push({
-              id: crypto.randomUUID(),
-              name: 'Thể quá khứ phủ định (thể なかった)',
-              value: '眠らなかった',
-              reading: 'ねむらなかった',
-              romaji: 'nemuranakatta',
-              meaning: 'đã không ngủ'
-            });
-          }
-          if (!formValues.includes('眠れませんでした')) {
-            parsedData.forms.push({
-              id: crypto.randomUUID(),
-              name: 'Thể khả năng (quá khứ phủ định lịch sự)',
-              value: '眠れませんでした',
-              reading: 'ねむれませんでした',
-              romaji: 'nemuremasendeshita',
-              meaning: 'đã không thể ngủ được (lịch sự)'
-            });
-          }
-        }
 
-        // Specific guarantee for Nouns (Danh từ) like 朝 (asa), ensuring 朝だ is always present
-        const isNoun = parsedData.wordType === 'Danh từ' || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
-        if (isNoun) {
-          // Identify root noun without copula suffix if user entered 朝だ or 朝だった
-          let rootKanji = (parsedData.kanji || cleanWord).trim();
-          rootKanji = rootKanji.replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || rootKanji;
-          
-          let rootReading = (parsedData.reading || '').trim();
-          rootReading = rootReading.replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || rootReading;
-
-          let rootRomaji = (parsedData.romaji || '').trim();
-          rootRomaji = rootRomaji.replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || rootRomaji;
-
-          const baseMeaning = (parsedData.meaning || '').trim();
-          const cleanMeaning = baseMeaning.replace(/^(là|đã là|không phải là|đã không phải là)\s+/i, '').replace(/\s*\([^)]*\)$/, '').trim() || baseMeaning;
-
-          const standardNounForms = [
-            {
-              name: 'Khẳng định hiện tại (thể ngắn - だ)',
-              value: `${rootKanji}だ`,
-              reading: rootReading ? `${rootReading}だ` : '',
-              romaji: rootRomaji ? `${rootRomaji} da` : '',
-              meaning: `là ${cleanMeaning}`
-            },
-            {
-              name: 'Khẳng định hiện tại (thể lịch sự - です)',
-              value: `${rootKanji}です`,
-              reading: rootReading ? `${rootReading}です` : '',
-              romaji: rootRomaji ? `${rootRomaji} desu` : '',
-              meaning: `là ${cleanMeaning} (lịch sự)`
-            },
-            {
-              name: 'Phủ định hiện tại (thể ngắn - ではない)',
-              value: `${rootKanji}ではない`,
-              reading: rootReading ? `${rootReading}ではない` : '',
-              romaji: rootRomaji ? `${rootRomaji} dewa nai` : '',
-              meaning: `không phải là ${cleanMeaning}`
-            },
-            {
-              name: 'Phủ định hiện tại (thể lịch sự - ではありません)',
-              value: `${rootKanji}ではありません`,
-              reading: rootReading ? `${rootReading}ではありません` : '',
-              romaji: rootRomaji ? `${rootRomaji} dewa arimasen` : '',
-              meaning: `không phải là ${cleanMeaning} (lịch sự)`
-            },
-            {
-              name: 'Quá khứ khẳng định (thể ngắn - だった)',
-              value: `${rootKanji}だった`,
-              reading: rootReading ? `${rootReading}だった` : '',
-              romaji: rootRomaji ? `${rootRomaji} datta` : '',
-              meaning: `đã là ${cleanMeaning}`
-            },
-            {
-              name: 'Quá khứ khẳng định (thể lịch sự - でした)',
-              value: `${rootKanji}でした`,
-              reading: rootReading ? `${rootReading}でした` : '',
-              romaji: rootRomaji ? `${rootRomaji} deshita` : '',
-              meaning: `đã là ${cleanMeaning} (lịch sự)`
-            },
-            {
-              name: 'Quá khứ phủ định (thể ngắn - ではなかった)',
-              value: `${rootKanji}ではなかった`,
-              reading: rootReading ? `${rootReading}ではなかった` : '',
-              romaji: rootRomaji ? `${rootRomaji} dewa nakatta` : '',
-              meaning: `đã không phải là ${cleanMeaning}`
-            },
-            {
-              name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)',
-              value: `${rootKanji}ではありませんでした`,
-              reading: rootReading ? `${rootReading}ではありませんでした` : '',
-              romaji: rootRomaji ? `${rootRomaji} dewa arimasen deshita` : '',
-              meaning: `đã không phải là ${cleanMeaning} (lịch sự)`
-            },
-            {
-              name: 'Thể て (thể nối - で)',
-              value: `${rootKanji}で`,
-              reading: rootReading ? `${rootReading}で` : '',
-              romaji: rootRomaji ? `${rootRomaji} de` : '',
-              meaning: `là ${cleanMeaning} và...`
-            }
-          ];
-
-          // Ensure 朝だ (value: `${rootKanji}だ`) is always present
-          const hasShortDa = parsedData.forms.some((f: any) => f.value === `${rootKanji}だ`);
-          if (!hasShortDa) {
-            parsedData.forms.unshift({
-              id: crypto.randomUUID(),
-              ...standardNounForms[0]
-            });
-          }
-
-          // If forms list is missing other forms, complement them
-          if (parsedData.forms.length < 5) {
-            standardNounForms.forEach(std => {
-              if (!parsedData.forms.some((f: any) => f.value === std.value)) {
-                parsedData.forms.push({
-                  id: crypto.randomUUID(),
-                  ...std
-                });
-              }
-            });
-          }
-        }
-
-        // Specific guarantee for Na-adjectives (Tính từ na)
-        if (parsedData.wordType === 'Tính từ na') {
-          let rootKanji = (parsedData.kanji || cleanWord).trim().replace(/[だな]$/, '') || cleanWord;
-          let rootReading = (parsedData.reading || '').trim().replace(/[だな]$/, '') || parsedData.reading;
-          let rootRomaji = (parsedData.romaji || '').trim().replace(/\s*(da|na)$/i, '') || parsedData.romaji;
-          const cleanMeaning = (parsedData.meaning || '').trim();
-
-          const naForms = [
-            { name: 'Khẳng định hiện tại (thể ngắn - だ)', value: `${rootKanji}だ`, reading: `${rootReading}だ`, romaji: `${rootRomaji} da`, meaning: `(thể ngắn) ${cleanMeaning}` },
-            { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: `${rootKanji}です`, reading: `${rootReading}です`, romaji: `${rootRomaji} desu`, meaning: `(thể lịch sự) ${cleanMeaning}` },
-            { name: 'Bổ nghĩa danh từ (thể な)', value: `${rootKanji}な`, reading: `${rootReading}な`, romaji: `${rootRomaji} na`, meaning: `(bổ nghĩa) ${cleanMeaning}` },
-            { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: `${rootKanji}ではない`, reading: `${rootReading}ではない`, romaji: `${rootRomaji} dewa nai`, meaning: `không ${cleanMeaning}` },
-            { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: `${rootKanji}ではありません`, reading: `${rootReading}ではありません`, romaji: `${rootRomaji} dewa arimasen`, meaning: `không ${cleanMeaning} (lịch sự)` },
-            { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: `${rootKanji}だった`, reading: `${rootReading}だった`, romaji: `${rootRomaji} datta`, meaning: `đã ${cleanMeaning}` },
-            { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: `${rootKanji}でした`, reading: `${rootReading}でした`, romaji: `${rootRomaji} deshita`, meaning: `đã ${cleanMeaning} (lịch sự)` },
-            { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: `${rootKanji}ではなかった`, reading: `${rootReading}ではなかった`, romaji: `${rootRomaji} dewa nakatta`, meaning: `đã không ${cleanMeaning}` },
-            { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: `${rootKanji}ではありませんでした`, reading: `${rootReading}ではありませんでした`, romaji: `${rootRomaji} dewa arimasen deshita`, meaning: `đã không ${cleanMeaning} (lịch sự)` },
-            { name: 'Thể て (thể nối - で)', value: `${rootKanji}で`, reading: `${rootReading}で`, romaji: `${rootRomaji} de`, meaning: `${cleanMeaning} và...` }
-          ];
-
-          if (!parsedData.forms.some((f: any) => f.value === `${rootKanji}だ`)) {
-            parsedData.forms.unshift({ id: crypto.randomUUID(), ...naForms[0] });
-          }
-          if (parsedData.forms.length < 5) {
-            naForms.forEach(std => {
-              if (!parsedData.forms.some((f: any) => f.value === std.value)) {
-                parsedData.forms.push({ id: crypto.randomUUID(), ...std });
-              }
-            });
-          }
-        }
-
-        // Guarantee transitivity detection for verbs (especially 乾かす, 乾く, etc.)
+        // Guarantee transitivity detection for verbs (especially 乾かす, 乾く, 寝る, etc.)
         const checkKanji = String(parsedData.kanji || cleanWord).trim();
         const checkReading = String(parsedData.reading || '').trim();
         if (checkKanji === '乾かす' || checkReading === 'かわかす' || checkKanji.endsWith('かす') || checkKanji === '沸かす' || checkKanji === '冷やす') {
@@ -526,7 +336,23 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           } else if (!parsedData.wordType) {
             parsedData.wordType = 'Động từ nhóm I (Tự động từ)';
           }
+        } else if (checkKanji === '寝る' || checkReading === 'ねる') {
+          if (!parsedData.wordType || parsedData.wordType === 'Động từ') {
+            parsedData.wordType = 'Động từ nhóm II (Tự động từ)';
+          } else if (!parsedData.wordType.includes('Tha động từ') && !parsedData.wordType.includes('Tự động từ')) {
+            parsedData.wordType = `${parsedData.wordType} (Tự động từ)`;
+          }
         }
+
+        // Comprehensive & robust guarantee for ALL forms (especially 寝なかった for 寝る, 眠らなかった for 眠る, 朝だ for 朝, etc.)
+        parsedData.forms = ensureCompleteForms({
+          word: parsedData.kanji || cleanWord,
+          reading: parsedData.reading,
+          romaji: parsedData.romaji,
+          meaning: parsedData.meaning,
+          wordType: parsedData.wordType,
+          forms: parsedData.forms
+        });
       }
 
       res.json(parsedData);

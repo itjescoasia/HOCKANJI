@@ -29,6 +29,7 @@ import {
   getTransitivityBadgeStyle, 
   getTransitivityBadgeLabel 
 } from '../utils/verbTransitivity';
+import { ensureCompleteForms } from '../utils/verbConjugation';
 
 export function getWordTypeBadgeStyle(typeStr: string | undefined, defaultClasses: string) {
   if (!typeStr) return defaultClasses;
@@ -665,86 +666,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         throw new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
       }
 
-      // Process forms to ensure ID and presence of forms like 眠れなかった
+      // Process forms and guarantee complete forms (including 寝なかった, 眠らなかった, 朝だ, etc.)
       let incomingForms = Array.isArray(data.forms) ? data.forms.map((f: any) => ({
         ...f,
         id: f.id || crypto.randomUUID()
       })) : (editForm.forms || []);
 
-      const cleanWord = editForm.kanji.trim();
-      const isNemuru = cleanWord === '眠る' || cleanWord === 'ねむる' || cleanWord.includes('眠れ') || cleanWord.includes('眠ら') || cleanWord.includes('眠り') || cleanWord.includes('眠');
-      if (isNemuru) {
-        const formValues = incomingForms.map((f: any) => f.value);
-        if (!formValues.includes('眠れなかった')) {
-          incomingForms.push({
-            id: crypto.randomUUID(),
-            name: 'Thể khả năng (quá khứ phủ định)',
-            value: '眠れなかった',
-            reading: 'ねむれなかった',
-            romaji: 'nemurenakatta',
-            meaning: 'đã không thể ngủ được'
-          });
-        }
-        if (!formValues.includes('眠れない')) {
-          incomingForms.push({
-            id: crypto.randomUUID(),
-            name: 'Thể khả năng (phủ định)',
-            value: '眠れない',
-            reading: 'ねむれない',
-            romaji: 'nemurenai',
-            meaning: 'không thể ngủ được'
-          });
-        }
-        if (!formValues.includes('眠らなかった')) {
-          incomingForms.push({
-            id: crypto.randomUUID(),
-            name: 'Thể quá khứ phủ định (thể なかった)',
-            value: '眠らなかった',
-            reading: 'ねむらなかった',
-            romaji: 'nemuranakatta',
-            meaning: 'đã không ngủ'
-          });
-        }
-      }
-
-      // Guarantee for Nouns (Danh từ) like 朝 -> 朝だ
-      const isNoun = (data.wordType === 'Danh từ' || editForm.wordType === 'Danh từ') || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
-      if (isNoun) {
-        let rootKanji = (data.kanji || cleanWord).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || cleanWord;
-        let rootReading = (data.reading || editForm.reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || editForm.reading || '');
-        let rootRomaji = (data.romaji || editForm.romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || editForm.romaji || '');
-        const cleanM = (data.meaning || editForm.meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
-
-        const daVal = `${rootKanji}だ`;
-        if (!incomingForms.some((f: any) => f.value === daVal)) {
-          incomingForms.unshift({
-            id: crypto.randomUUID(),
-            name: 'Khẳng định hiện tại (thể ngắn - だ)',
-            value: daVal,
-            reading: rootReading ? `${rootReading}だ` : '',
-            romaji: rootRomaji ? `${rootRomaji} da` : '',
-            meaning: `là ${cleanM || rootKanji}`
-          });
-        }
-
-        if (incomingForms.length < 5) {
-          const standardNounForms = [
-            { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: `${rootKanji}です`, reading: rootReading ? `${rootReading}です` : '', romaji: rootRomaji ? `${rootRomaji} desu` : '', meaning: `là ${cleanM || rootKanji} (lịch sự)` },
-            { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: `${rootKanji}ではない`, reading: rootReading ? `${rootReading}ではない` : '', romaji: rootRomaji ? `${rootRomaji} dewa nai` : '', meaning: `không phải là ${cleanM || rootKanji}` },
-            { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: `${rootKanji}ではありません`, reading: rootReading ? `${rootReading}ではありません` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen` : '', meaning: `không phải là ${cleanM || rootKanji} (lịch sự)` },
-            { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: `${rootKanji}だった`, reading: rootReading ? `${rootReading}だった` : '', romaji: rootRomaji ? `${rootRomaji} datta` : '', meaning: `đã là ${cleanM || rootKanji}` },
-            { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: `${rootKanji}でした`, reading: rootReading ? `${rootReading}でした` : '', romaji: rootRomaji ? `${rootRomaji} deshita` : '', meaning: `đã là ${cleanM || rootKanji} (lịch sự)` },
-            { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: `${rootKanji}ではなかった`, reading: rootReading ? `${rootReading}ではなかった` : '', romaji: rootRomaji ? `${rootRomaji} dewa nakatta` : '', meaning: `đã không phải là ${cleanM || rootKanji}` },
-            { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: `${rootKanji}ではありませんでした`, reading: rootReading ? `${rootReading}ではありませんでした` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen deshita` : '', meaning: `đã không phải là ${cleanM || rootKanji} (lịch sự)` },
-            { name: 'Thể て (thể nối - で)', value: `${rootKanji}で`, reading: rootReading ? `${rootReading}で` : '', romaji: rootRomaji ? `${rootRomaji} de` : '', meaning: `là ${cleanM || rootKanji} và...` }
-          ];
-          standardNounForms.forEach(std => {
-            if (!incomingForms.some((f: any) => f.value === std.value)) {
-              incomingForms.push({ id: crypto.randomUUID(), ...std });
-            }
-          });
-        }
-      }
+      incomingForms = ensureCompleteForms({
+        word: editForm.kanji.trim() || data.kanji || '',
+        reading: data.reading || editForm.reading || '',
+        romaji: data.romaji || editForm.romaji || '',
+        meaning: data.meaning || editForm.meaning || '',
+        wordType: data.wordType || editForm.wordType || '',
+        forms: incomingForms
+      });
 
       const incomingExamples = Array.isArray(data.examples) && data.examples.length > 0
         ? data.examples.map((ex: any) => ({

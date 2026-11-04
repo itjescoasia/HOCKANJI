@@ -1,5 +1,6 @@
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, playAudioUrl, deleteCloudAudio } from '../utils/playTTS';
+import { recordAudioListen } from '../utils/activityTracker';
 import { resolveExampleAudioUrl, loadAudioContent, uploadResilientAudio } from '../utils/audioRegistry';
 
 import localforage from 'localforage';
@@ -43,6 +44,7 @@ import {
   FileText,
   Sparkles,
   AlertTriangle,
+  AlertCircle,
   ArrowRightLeft,
   GitFork
 } from "lucide-react";
@@ -2757,6 +2759,7 @@ function IntensiveExampleAudio({
   onTransferAudio?: (sourceId: string, targetId: string, mode: 'move' | 'copy') => Promise<void>;
 }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioLoadError, setAudioLoadError] = useState(false);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -2896,65 +2899,136 @@ function IntensiveExampleAudio({
           )}
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3 w-full bg-theme-base/40 p-2 sm:p-2.5 rounded-lg border border-theme-subtle/60">
-          <audio controls src={audioUrl} className="h-9 w-full sm:w-auto min-w-[280px] sm:min-w-[340px] max-w-[440px] rounded shadow-2xs" />
-          
-          {/* Nút nhanh chuyển/sao chép sang câu trùng lặp (chỉ áp dụng cho câu trùng 100%) */}
-          {counterpart && onTransferAudio && (
-            <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-wrap items-center gap-3 w-full bg-theme-base/40 p-2 sm:p-2.5 rounded-lg border border-theme-subtle/60">
+            <audio 
+              controls 
+              src={audioUrl} 
+              onPlay={() => {
+                try {
+                  recordAudioListen();
+                } catch (e) {}
+              }}
+              onError={(e) => {
+                console.warn(`[Audio] Audio failed to load for example ${example.id}:`, audioUrl, e);
+                setAudioLoadError(true);
+              }}
+              className={`h-9 w-full sm:w-auto min-w-[280px] sm:min-w-[340px] max-w-[440px] rounded shadow-2xs ${
+                audioLoadError ? 'opacity-40 grayscale' : ''
+              }`} 
+            />
+            
+            {/* Nút nhanh chuyển/sao chép sang câu trùng lặp (chỉ áp dụng cho câu trùng 100%) */}
+            {counterpart && onTransferAudio && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await onTransferAudio(example.id, counterpart.id, 'copy');
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/40 text-blue-700 dark:text-blue-300"
+                  title={`Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`}
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Chép sang câu #{duplicateInfo?.otherIndex}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} (và gỡ khỏi câu này)?`)) {
+                      await onTransferAudio(example.id, counterpart.id, 'move');
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-700 dark:text-amber-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
+                  title={`Chuyển hẳn file MP3 này sang Câu #${duplicateInfo?.otherIndex} (gỡ khỏi câu này)`}
+                >
+                  <ArrowRightLeft className="w-3 h-3" />
+                  <span>Chuyển sang câu #{duplicateInfo?.otherIndex}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Nút mở hộp thoại chuyển sang câu bất kỳ */}
+            {allExamples.length > 1 && onTransferAudio && (
               <button
                 type="button"
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation();
-                  await onTransferAudio(example.id, counterpart.id, 'copy');
+                  setSelectedTargetId((isTrueDuplicate && duplicateInfo?.otherId) || allExamples.find(e => e.id !== example.id)?.id || '');
+                  setShowTransferModal(true);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95 border bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/40 text-blue-700 dark:text-blue-300"
-                title={`Sao chép file MP3 này sang Câu #${duplicateInfo?.otherIndex} (giữ lại ở câu này)`}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-theme-primary/10 hover:bg-theme-accent hover:text-theme-inverted text-theme-primary/70 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+                title="Chuyển hoặc sao chép âm thanh sang một câu khác trong chuyên đề"
               >
-                <Copy className="w-3 h-3" />
-                <span>Chép sang câu #{duplicateInfo?.otherIndex}</span>
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                <span>Chuyển âm thanh...</span>
               </button>
-              <button
-                type="button"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} (và gỡ khỏi câu này)?`)) {
-                    await onTransferAudio(example.id, counterpart.id, 'move');
-                  }
-                }}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-700 dark:text-amber-300 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs hover:scale-105 active:scale-95"
-                title={`Chuyển hẳn file MP3 này sang Câu #${duplicateInfo?.otherIndex} (gỡ khỏi câu này)`}
-              >
-                <ArrowRightLeft className="w-3 h-3" />
-                <span>Chuyển sang câu #{duplicateInfo?.otherIndex}</span>
-              </button>
+            )}
+
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleRemoveAudio(); }}
+              className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors ml-auto cursor-pointer"
+              title="Xóa MP3"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Hộp thoại thông báo rõ ràng khi file âm thanh bị mờ hoặc không phát được */}
+          {audioLoadError && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/40 text-amber-900 dark:text-amber-200 text-xs shadow-xs animate-in fade-in duration-200">
+              <div className="flex items-start sm:items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
+                <div>
+                  <span className="font-bold">Âm thanh bị mờ và không phát được:</span>
+                  <span className="opacity-90 ml-1">
+                    Do đường dẫn file tạm đã hết hạn hoặc file chưa tồn tại trên máy chủ. Bạn hãy tải lại file MP3 chuẩn hoặc nghe thử bằng giọng đọc.
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    audioInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold cursor-pointer transition-colors shadow-xs"
+                  title="Chọn file MP3 từ máy của bạn"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>Tải lại MP3</span>
+                </button>
+                {example.sentence && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playTTS(example.sentence);
+                      try { recordAudioListen(); } catch (err) {}
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold cursor-pointer transition-colors shadow-xs"
+                    title="Nghe bằng giọng đọc máy"
+                  >
+                    <span>Nghe máy</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveAudio();
+                  }}
+                  className="px-2 py-1.5 text-red-500 hover:bg-red-500/15 rounded text-[11px] font-medium cursor-pointer transition-colors"
+                  title="Gỡ file MP3 bị hỏng"
+                >
+                  Gỡ file
+                </button>
+              </div>
             </div>
           )}
-
-          {/* Nút mở hộp thoại chuyển sang câu bất kỳ */}
-          {allExamples.length > 1 && onTransferAudio && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedTargetId((isTrueDuplicate && duplicateInfo?.otherId) || allExamples.find(e => e.id !== example.id)?.id || '');
-                setShowTransferModal(true);
-              }}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-theme-primary/10 hover:bg-theme-accent hover:text-theme-inverted text-theme-primary/70 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs"
-              title="Chuyển hoặc sao chép âm thanh sang một câu khác trong chuyên đề"
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-              <span>Chuyển âm thanh...</span>
-            </button>
-          )}
-
-          <button 
-            onClick={(e) => { e.stopPropagation(); handleRemoveAudio(); }}
-            className="p-1.5 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors ml-auto cursor-pointer"
-            title="Xóa MP3"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       )}
 

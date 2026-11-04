@@ -4,6 +4,7 @@ import { KanjiExample, KanjiCard } from '../types';
 import { Plus, X, AlertTriangle } from 'lucide-react';
 import { toRomaji } from 'wanakana';
 import { getApiEndpoint } from '../utils/playTTS';
+import { ensureCompleteForms } from '../utils/verbConjugation';
 
 interface AddVocabProps {
   deck?: KanjiCard[];
@@ -84,91 +85,28 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
           translation: ex.translation || ''
         })));
       }
-      if (data.forms && Array.isArray(data.forms) && data.forms.length > 0) {
-        let mappedForms = data.forms.map((f: any) => ({
-          name: f.name || '',
-          value: f.value || '',
-          reading: f.reading || '',
-          romaji: f.romaji || '',
-          meaning: f.meaning || ''
-        }));
-
-        const cleanWord = kanji.trim();
-        const isNemuru = cleanWord === '眠る' || cleanWord === 'ねむる' || cleanWord.includes('眠れ') || cleanWord.includes('眠ら') || cleanWord.includes('眠り') || cleanWord.includes('眠');
-        if (isNemuru) {
-          const formValues = mappedForms.map((f: any) => f.value);
-          if (!formValues.includes('眠れなかった')) {
-            mappedForms.push({
-              name: 'Thể khả năng (quá khứ phủ định)',
-              value: '眠れなかった',
-              reading: 'ねむれなかった',
-              romaji: 'nemurenakatta',
-              meaning: 'đã không thể ngủ được'
-            });
-          }
-          if (!formValues.includes('眠れない')) {
-            mappedForms.push({
-              name: 'Thể khả năng (phủ định)',
-              value: '眠れない',
-              reading: 'ねむれない',
-              romaji: 'nemurenai',
-              meaning: 'không thể ngủ được'
-            });
-          }
-          if (!formValues.includes('眠らなかった')) {
-            mappedForms.push({
-              name: 'Thể quá khứ phủ định (thể なかった)',
-              value: '眠らなかった',
-              reading: 'ねむらなかった',
-              romaji: 'nemuranakatta',
-              meaning: 'đã không ngủ'
-            });
-          }
-        }
-
-        // Guarantee for Nouns (Danh từ) like 朝 -> 朝だ
-        const isNoun = data.wordType === 'Danh từ' || cleanWord === '朝' || cleanWord === 'あさ' || cleanWord === '朝だ';
-        if (isNoun) {
-          let rootKanji = (data.kanji || cleanWord).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || cleanWord;
-          let rootReading = (data.reading || reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || reading);
-          let rootRomaji = (data.romaji || romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || romaji);
-          const cleanM = (data.meaning || meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
-
-          const daVal = `${rootKanji}だ`;
-          if (!mappedForms.some((f: any) => f.value === daVal)) {
-            mappedForms.unshift({
-              name: 'Khẳng định hiện tại (thể ngắn - だ)',
-              value: daVal,
-              reading: rootReading ? `${rootReading}だ` : '',
-              romaji: rootRomaji ? `${rootRomaji} da` : '',
-              meaning: `là ${cleanM || rootKanji}`
-            });
-          }
-        }
-
-        setForms(mappedForms);
-      } else if (data.wordType === 'Danh từ' || kanji.trim() === '朝') {
-        const rootKanji = (data.kanji || kanji).trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || kanji.trim();
-        const rootReading = (data.reading || reading || '').trim().replace(/(ではなかった|じゃなかった|ではありませんでした|ではない|じゃない|ではありません|だった|でした|です|だ)$/, '') || (data.reading || reading);
-        const rootRomaji = (data.romaji || romaji || '').trim().replace(/(dewa nakatta|ja nakatta|dewa arimasen deshita|dewa nai|ja nai|dewa arimasen|datta|deshita|desu|da)$/i, '').trim() || (data.romaji || romaji);
-        const cleanM = (data.meaning || meaning || '').trim().replace(/^(là|đã là|không phải là)\s+/i, '');
-
-        setForms([
-          { name: 'Khẳng định hiện tại (thể ngắn - だ)', value: `${rootKanji}だ`, reading: rootReading ? `${rootReading}だ` : '', romaji: rootRomaji ? `${rootRomaji} da` : '', meaning: `là ${cleanM || rootKanji}` },
-          { name: 'Khẳng định hiện tại (thể lịch sự - です)', value: `${rootKanji}です`, reading: rootReading ? `${rootReading}です` : '', romaji: rootRomaji ? `${rootRomaji} desu` : '', meaning: `là ${cleanM || rootKanji} (lịch sự)` },
-          { name: 'Phủ định hiện tại (thể ngắn - ではない)', value: `${rootKanji}ではない`, reading: rootReading ? `${rootReading}ではない` : '', romaji: rootRomaji ? `${rootRomaji} dewa nai` : '', meaning: `không phải là ${cleanM || rootKanji}` },
-          { name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: `${rootKanji}ではありません`, reading: rootReading ? `${rootReading}ではありません` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen` : '', meaning: `không phải là ${cleanM || rootKanji} (lịch sự)` },
-          { name: 'Quá khứ khẳng định (thể ngắn - だった)', value: `${rootKanji}だった`, reading: rootReading ? `${rootReading}だった` : '', romaji: rootRomaji ? `${rootRomaji} datta` : '', meaning: `đã là ${cleanM || rootKanji}` },
-          { name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: `${rootKanji}でした`, reading: rootReading ? `${rootReading}でした` : '', romaji: rootRomaji ? `${rootRomaji} deshita` : '', meaning: `đã là ${cleanM || rootKanji} (lịch sự)` },
-          { name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: `${rootKanji}ではなかった`, reading: rootReading ? `${rootReading}ではなかった` : '', romaji: rootRomaji ? `${rootRomaji} dewa nakatta` : '', meaning: `đã không phải là ${cleanM || rootKanji}` },
-          { name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: `${rootKanji}ではありませんでした`, reading: rootReading ? `${rootReading}ではありませんでした` : '', romaji: rootRomaji ? `${rootRomaji} dewa arimasen deshita` : '', meaning: `đã không phải là ${cleanM || rootKanji} (lịch sự)` },
-          { name: 'Thể て (thể nối - で)', value: `${rootKanji}で`, reading: rootReading ? `${rootReading}で` : '', romaji: rootRomaji ? `${rootRomaji} de` : '', meaning: `là ${cleanM || rootKanji} và...` }
-        ]);
-      }
-
       if (data.wordType) {
-         setWordType(data.wordType);
+        setWordType(data.wordType);
       }
+
+      let rawForms = (data.forms && Array.isArray(data.forms)) ? data.forms.map((f: any) => ({
+        name: f.name || '',
+        value: f.value || '',
+        reading: f.reading || '',
+        romaji: f.romaji || '',
+        meaning: f.meaning || ''
+      })) : [];
+
+      const completeForms = ensureCompleteForms({
+        word: kanji.trim() || data.kanji || '',
+        reading: data.reading || reading,
+        romaji: data.romaji || romaji,
+        meaning: data.meaning || meaning,
+        wordType: data.wordType || wordType,
+        forms: rawForms
+      });
+
+      setForms(completeForms);
     } catch (err: any) {
       console.error(err);
       alert(err.message || 'Có lỗi xảy ra khi dùng AI.');

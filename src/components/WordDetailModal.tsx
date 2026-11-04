@@ -30,6 +30,7 @@ import {
   getTransitivityBadgeLabel, 
   getTransitivityDescription 
 } from '../utils/verbTransitivity';
+import { ensureCompleteForms } from '../utils/verbConjugation';
 
 interface WordDetailModalProps {
   word: IntensiveWord;
@@ -470,70 +471,86 @@ export default function WordDetailModal({
           )}
 
           {/* Section 4: Verb / Adjective Forms (if present in matched card) */}
-          {matchedCard?.forms && matchedCard.forms.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-accent">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Các Thể Biến Đổi Của Từ ({matchedCard.forms.length} thể)</span>
-                </div>
-                <span className="text-[11px] text-theme-accent font-medium">
-                  Chỉ riêng Thể từ điển (ngắn) tự động sài chung MP3 với từ vựng lớn. Thể phủ định, quá khứ,... hoàn toàn độc lập.
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {matchedCard.forms.map((f, idx) => {
-                  const isDict = isDictionaryForm(f.name, f.value, matchedCard.kanji, matchedCard.reading);
-                  const effectiveFormAudio = getEffectiveFormAudioUrl(f, word.audioUrl || matchedCard?.audioUrl, matchedCard.forms, matchedCard.kanji, matchedCard.reading);
-                  const isSharedAudio = isDict && !f.audioUrl && !!(word.audioUrl || matchedCard?.audioUrl);
+          {(() => {
+            const rawForms = matchedCard?.forms || [];
+            const displayForms = (rawForms.length > 0 || (effectiveWordType && effectiveWordType.includes('Động từ')))
+              ? ensureCompleteForms({
+                  word: word.word || matchedCard?.kanji || '',
+                  reading: word.reading || matchedCard?.reading,
+                  romaji: word.romaji || matchedCard?.romaji,
+                  meaning: matchedCard?.meaning || word.explanation,
+                  wordType: effectiveWordType,
+                  forms: rawForms as any[]
+                })
+              : rawForms;
 
-                  return (
-                    <div
-                      key={f.id || idx}
-                      className="flex items-center justify-between p-3 rounded-lg bg-theme-base-alt border border-theme-subtle hover:border-theme-accent/40 transition-colors"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-theme-primary/50 block">
-                            {f.name}
+            if (displayForms.length === 0) return null;
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-accent">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Các Thể Biến Đổi Của Từ ({displayForms.length} thể)</span>
+                  </div>
+                  <span className="text-[11px] text-theme-accent font-medium">
+                    Chỉ riêng Thể từ điển (ngắn) tự động sài chung MP3 với từ vựng lớn. Thể phủ định, quá khứ,... hoàn toàn độc lập.
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {displayForms.map((f, idx) => {
+                    const isDict = isDictionaryForm(f.name, f.value, matchedCard?.kanji || word.word, matchedCard?.reading || word.reading);
+                    const effectiveFormAudio = getEffectiveFormAudioUrl(f, word.audioUrl || matchedCard?.audioUrl, matchedCard?.forms, matchedCard?.kanji || word.word, matchedCard?.reading || word.reading);
+                    const isSharedAudio = isDict && !f.audioUrl && !!(word.audioUrl || matchedCard?.audioUrl);
+
+                    return (
+                      <div
+                        key={f.id || idx}
+                        className="flex items-center justify-between p-3 rounded-lg bg-theme-base-alt border border-theme-subtle hover:border-theme-accent/40 transition-colors"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-theme-primary/50 block">
+                              {f.name}
+                            </span>
+                            {isDict && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-theme-accent/15 text-theme-accent border border-theme-accent/25">
+                                Sài chung MP3 (Thể từ điển)
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-base font-serif font-semibold text-theme-primary block">
+                            {f.value}
                           </span>
-                          {isDict && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-theme-accent/15 text-theme-accent border border-theme-accent/25">
-                              Sài chung MP3 (Thể từ điển)
+                          {(f.reading || f.romaji) && (
+                            <span className="text-xs text-theme-accent block">
+                              {f.reading} {f.romaji ? `[${f.romaji}]` : ''}
+                            </span>
+                          )}
+                          {f.meaning && (
+                            <span className="text-xs text-theme-primary/70 italic block">
+                              {f.meaning}
                             </span>
                           )}
                         </div>
-                        <span className="text-base font-serif font-semibold text-theme-primary block">
-                          {f.value}
-                        </span>
-                        {(f.reading || f.romaji) && (
-                          <span className="text-xs text-theme-accent block">
-                            {f.reading} {f.romaji ? `[${f.romaji}]` : ''}
-                          </span>
-                        )}
-                        {f.meaning && (
-                          <span className="text-xs text-theme-primary/70 italic block">
-                            {f.meaning}
-                          </span>
-                        )}
+                        <button
+                          onClick={(e) => playAudio(e, f.value, effectiveFormAudio)}
+                          className={`p-2 rounded-full cursor-pointer transition-colors ${
+                            effectiveFormAudio
+                              ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20'
+                              : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
+                          }`}
+                          title={effectiveFormAudio ? (isSharedAudio ? "Nghe phát âm (sài chung MP3 với từ vựng lớn)" : "Nghe thể này") : "Nghe phát âm"}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => playAudio(e, f.value, effectiveFormAudio)}
-                        className={`p-2 rounded-full cursor-pointer transition-colors ${
-                          effectiveFormAudio
-                            ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20'
-                            : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
-                        }`}
-                        title={effectiveFormAudio ? (isSharedAudio ? "Nghe phát âm (sài chung MP3 với từ vựng lớn)" : "Nghe thể này") : "Nghe phát âm"}
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Section 5: Examples List */}
           <div className="space-y-4 pt-2">

@@ -3,6 +3,8 @@ import { db, auth, removeUndefined } from "../lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getLocalDateString } from "../lib/dateUtils";
 
+import { recordAudioListen } from "../utils/activityTracker";
+
 export interface DailyStats {
   remembered?: number;
   wotdId?: string;
@@ -12,6 +14,7 @@ export interface DailyStats {
   newLearned: number;
   freeStudyTime?: number;
   wotdUpdatedAt?: number;
+  audioListens?: number;
 }
 
 export interface UserStats {
@@ -55,9 +58,34 @@ export function useStudyStats() {
       }
     });
 
+    const handleAudioRecorded = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      const date = customEvt.detail?.date || getLocalDateString();
+      setStats((prevStats) => {
+        const todayStats = prevStats[date] || {
+          reviewed: 0,
+          correct: 0,
+          mastered: 0,
+          newLearned: 0,
+          remembered: 0,
+          freeStudyTime: 0,
+          audioListens: 0,
+        };
+        return {
+          ...prevStats,
+          [date]: {
+            ...todayStats,
+            audioListens: customEvt.detail?.count ?? ((todayStats.audioListens || 0) + 1),
+          },
+        };
+      });
+    };
+    window.addEventListener('app-audio-listen-recorded', handleAudioRecorded);
+
     return () => {
       unsubscribeAuth();
       if (unsubscribe) unsubscribe();
+      window.removeEventListener('app-audio-listen-recorded', handleAudioRecorded);
     };
   }, []);
 
@@ -224,5 +252,6 @@ export function useStudyStats() {
     recordReview,
     recordFreeStudyTime,
     recordWordOfTheDay,
+    recordAudioListen,
   };
 }
