@@ -32,6 +32,7 @@ import {
   Unlock,
   Volume2,
   CopyPlus, Copy,
+  Check,
   CheckCircle,
   CheckCircle2,
   Circle,
@@ -312,6 +313,59 @@ export function _cleanMarkdownForDisplay(text: string | undefined | null) {
   // Remove markdown headers like ###, **, *
   return text.replace(/^#{1,6}\s*/gm, '').replace(/\*\*/g, '').replace(/\*/g, '');
 }
+
+export function formatExplanationForDisplay(rawText?: string | null): string {
+  if (!rawText) return '';
+  let text = String(rawText).trim();
+
+  // 1. Remove legacy artifact prefixes:
+  // e.g. "Loại từ: ...\nn\n" or "Loại từ: ...\n\n"
+  text = text.replace(/^Loại từ:\s*[^\n]+\nn\n/gi, '');
+  text = text.replace(/^Loại từ:\s*[^\n]+(?:\r?\n)+/gi, '');
+
+  // 2. Normalize line breaks
+  text = text.replace(/\r\n/g, '\n');
+
+  // 3. Highlight standard section keywords with clear markdown tags if not already bolded:
+  text = text.replace(/(?:^|\n)(?:[-*•]\s*)?(?:Ý nghĩa|Nghĩa|Định nghĩa):\s*/gi, (m) => {
+    const isLineStart = m.startsWith('\n') ? '\n\n' : '';
+    return `${isLineStart}**Ý nghĩa:** `;
+  });
+
+  text = text.replace(/(?:^|\n)(?:[-*•]\s*)?(?:Âm Hán Việt|Hán Việt):\s*/gi, (m) => {
+    const isLineStart = m.startsWith('\n') ? '\n\n' : '';
+    return `${isLineStart}**Hán Việt:** `;
+  });
+
+  text = text.replace(/(?:^|\n)(?:[-*•]\s*)?(?:Chiết tự chữ Hán|Chiết tự|Giải thích chữ Hán|Chữ Hán):\s*/gi, (m) => {
+    const isLineStart = m.startsWith('\n') ? '\n\n' : '';
+    return `${isLineStart}**Chiết tự:** `;
+  });
+
+  text = text.replace(/(?:^|\n)(?:[-*•]\s*)?(?:Cách dùng|Ngữ cảnh|Cấu trúc|Mẫu câu):\s*/gi, (m) => {
+    const isLineStart = m.startsWith('\n') ? '\n\n' : '';
+    return `${isLineStart}**Cách dùng:** `;
+  });
+
+  text = text.replace(/(?:^|\n)(?:[-*•]\s*)?(?:Lưu ý|Chú ý|Điểm lưu ý):\s*/gi, (m) => {
+    const isLineStart = m.startsWith('\n') ? '\n\n' : '';
+    return `${isLineStart}**Lưu ý:** `;
+  });
+
+  text = text.replace(/(?:^|\n)(?:[-*•]\s*)?(?:Phân biệt|So sánh):\s*/gi, (m) => {
+    const isLineStart = m.startsWith('\n') ? '\n\n' : '';
+    return `${isLineStart}**Phân biệt:** `;
+  });
+
+  // 4. Ensure blank line before bullet points or numbered lists
+  text = text.replace(/([^\n])\n([•\-\*]|\d+\.)\s/g, '$1\n\n$2 ');
+
+  // 5. Clean up multiple consecutive newlines
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  return text.trim();
+}
+
 
 export default function IntensiveStudy({
   deck,
@@ -1287,6 +1341,26 @@ function StudyView({
     category: word.category as WordCategory,
     explanation: word.explanation || "",
   });
+  const [copiedExplanation, setCopiedExplanation] = useState(false);
+
+  const displayExplanation = React.useMemo(() => {
+    return formatExplanationForDisplay(word.explanation);
+  }, [word.explanation]);
+
+  const handleCopyExplanation = () => {
+    const parts: string[] = [];
+    if (word.word) parts.push(`【${word.word}】${word.reading ? ` (${word.reading})` : ''}`);
+    if (word.category) parts.push(`Loại từ: ${word.category}`);
+    if (matchedCard?.sinoVietnamese) parts.push(`Hán Việt: ${matchedCard.sinoVietnamese}`);
+    if (word.explanation) parts.push(word.explanation.trim());
+    if (matchedCard?.kanjiExplanation && !word.explanation?.includes(matchedCard.kanjiExplanation.slice(0, 15))) {
+      parts.push(`Chiết tự chữ Hán: ${matchedCard.kanjiExplanation.trim()}`);
+    }
+    const textToCopy = parts.join('\n\n');
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedExplanation(true);
+    setTimeout(() => setCopiedExplanation(false), 2000);
+  };
 
   // Real-time duplicate detection for adding
   useEffect(() => {
@@ -1849,9 +1923,138 @@ function StudyView({
                   <span>Xem chi tiết</span>
                 </button>
               </div>
-              { (word.explanation || word.category) && (
-                <div className="text-theme-primary/90 text-sm sm:text-base leading-relaxed bg-theme-hover/50 p-5 rounded-lg border border-theme-subtle border-l-4 border-l-[#c5a059] mt-3 shadow-inner max-h-64 overflow-y-auto custom-scrollbar markdown-body whitespace-pre-wrap">
-                  <Markdown>{(word.category ? `Loại từ: ${word.category}\nn\n` : "") + cleanMarkdownForDisplay(word.explanation || "")}</Markdown>
+              { (word.explanation || word.category || matchedCard?.sinoVietnamese || matchedCard?.kanjiExplanation) && (
+                <div className="relative group/expl bg-theme-panel/90 dark:bg-theme-panel/75 backdrop-blur-xs p-4 sm:p-5 rounded-xl border border-theme-subtle/80 border-l-4 border-l-[#c5a059] mt-3 shadow-xs transition-all hover:border-theme-subtle">
+                  {/* Header bar: Title, Category Badge, Hán Việt Badge, and Action buttons */}
+                  <div className="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b border-theme-subtle/60 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#c5a059]">
+                        <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                        <span>Giải thích & Ghi chú từ vựng</span>
+                      </div>
+                      {word.category && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-theme-accent/10 text-theme-accent border border-theme-accent/25">
+                          {word.category}
+                        </span>
+                      )}
+                      {matchedCard?.sinoVietnamese && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          Hán Việt: {matchedCard.sinoVietnamese}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleCopyExplanation}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded-md border border-theme-subtle transition-all cursor-pointer shadow-2xs"
+                        title="Sao chép toàn bộ nội dung giải thích"
+                      >
+                        {copiedExplanation ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-green-500" />
+                            <span className="text-green-500 font-semibold">Đã chép</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-theme-primary/60" />
+                            <span>Sao chép</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(true)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-md transition-colors cursor-pointer"
+                        title="Chỉnh sửa giải thích này"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Sửa</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Body content with rich typography and proper Markdown rendering */}
+                  <div className="text-sm sm:text-[15px] leading-relaxed max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                    {displayExplanation ? (
+                      <div className="space-y-2 font-sans">
+                        <Markdown
+                          components={{
+                            p: ({ children }) => (
+                              <p className="mb-2.5 last:mb-0 text-theme-primary/90 leading-relaxed text-sm sm:text-[15px]">
+                                {children}
+                              </p>
+                            ),
+                            strong: ({ children }) => (
+                              <strong className="font-semibold text-theme-accent dark:text-amber-400">
+                                {children}
+                              </strong>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="space-y-1.5 my-2 pl-4 list-disc marker:text-theme-accent/80 text-sm sm:text-[15px]">
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className="space-y-1.5 my-2 pl-4 list-decimal marker:text-theme-accent/80 text-sm sm:text-[15px]">
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li className="leading-relaxed text-theme-primary/90 pl-1">
+                                {children}
+                              </li>
+                            ),
+                            h1: ({ children }) => (
+                              <h5 className="font-bold text-sm sm:text-base text-theme-accent uppercase tracking-wide mt-3 mb-1.5 border-b border-theme-subtle/50 pb-1">
+                                {children}
+                              </h5>
+                            ),
+                            h2: ({ children }) => (
+                              <h5 className="font-bold text-sm sm:text-base text-theme-accent uppercase tracking-wide mt-3 mb-1.5 border-b border-theme-subtle/50 pb-1">
+                                {children}
+                              </h5>
+                            ),
+                            h3: ({ children }) => (
+                              <h6 className="font-semibold text-xs sm:text-sm text-[#c5a059] uppercase tracking-wider mt-2.5 mb-1">
+                                {children}
+                              </h6>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-2 border-[#c5a059]/60 pl-3 italic text-theme-primary/80 my-2 bg-theme-base-alt/40 py-1.5 rounded-r">
+                                {children}
+                              </blockquote>
+                            ),
+                            code: ({ children }) => (
+                              <code className="px-1.5 py-0.5 rounded bg-theme-hover text-theme-accent text-xs font-mono border border-theme-subtle">
+                                {children}
+                              </code>
+                            ),
+                          }}
+                        >
+                          {displayExplanation}
+                        </Markdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm italic text-theme-primary/50">
+                        Chưa có ghi chú giải thích bổ sung cho từ vựng này.
+                      </p>
+                    )}
+
+                    {/* Integrated Kanji Component/Etymology Callout (if available and not duplicated) */}
+                    {matchedCard?.kanjiExplanation && !displayExplanation.includes(matchedCard.kanjiExplanation.slice(0, 15)) && (
+                      <div className="mt-3 pt-3 border-t border-theme-subtle/60 flex flex-col gap-1.5 bg-amber-500/5 dark:bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
+                        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                          <FileText className="w-3.5 h-3.5 shrink-0" />
+                          <span>Chiết tự chữ Hán ({word.word})</span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-theme-primary/85 leading-relaxed">
+                          {matchedCard.kanjiExplanation}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
