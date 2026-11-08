@@ -38,6 +38,39 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+export const INITIAL_CONVERSATION_SAMPLE: IntensiveWord = {
+  id: 'conv-sample-kaigi-01',
+  word: 'Chuẩn bị tài liệu cuộc họp (会議の資料準備)',
+  reading: 'かいぎの しりょう じゅんび',
+  romaji: 'kaigi no shiryou junbi',
+  category: 'Hội thoại',
+  topicType: 'conversation',
+  explanation: `Tình huống hội thoại nơi công sở giữa 2 đồng nghiệp: trao đổi nhanh về tiến độ chuẩn bị tài liệu cho cuộc họp ngày mai.\n\n**Điểm ngữ pháp:**\n- Dạng rút gọn khẩu ngữ **〜といた** (từ **〜ておいた**): thể hiện hành động chuẩn bị sẵn sàng trước.\n- **今日のうちに**: trong ngày hôm nay, trước khi hết ngày.`,
+  examples: [
+    {
+      id: 'turn-kaigi-a-1',
+      sentence: '明日の会議の資料、もう準備した？',
+      furigana: '明日[あした]の 会議[かいぎ]の 資料[しりょう]、もう 準備[じゅんび]した？',
+      reading: 'あしたの かいぎの しりょう、もう じゅんびした？',
+      romaji: 'Ashita no kaigi no shiryou, mou junbi shita?',
+      translation: 'Tài liệu cuộc họp ngày mai đã chuẩn bị chưa?',
+      speaker: 'A',
+      specialNote: 'Người A hỏi thăm tiến độ. Lên giọng ở cuối câu thể hiện câu hỏi thân mật.'
+    },
+    {
+      id: 'turn-kaigi-b-1',
+      sentence: 'うん、今日のうちにコピーしといたよ。',
+      furigana: 'うん、今日[きょう]のうちにコピーしといたよ。',
+      reading: 'うん、きょうの うちに コピーしといたよ。',
+      romaji: 'Un, kyou no uchi ni kopiishitoita yo.',
+      translation: 'Ừ, hôm nay tôi đã photo sẵn rồi.',
+      speaker: 'B',
+      specialNote: 'コピーしといた = コピーしておいた (đã photo sẵn). Khẩu ngữ thường dùng 〜とく thay cho 〜ておく.'
+    }
+  ],
+  createdAt: 1730000000000,
+};
+
 export function useIntensiveVocab() {
   const [intensiveDeck, setIntensiveDeck] = useState<IntensiveWord[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -46,7 +79,9 @@ export function useIntensiveVocab() {
   useEffect(() => {
     deckStorage.getItem<IntensiveWord[]>('intensive_vocab_deck_v1').then((cached) => {
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        setIntensiveDeck(prev => prev.length === 0 ? cached : prev);
+        const hasConv = cached.some(w => w.category === 'Hội thoại' || w.id === INITIAL_CONVERSATION_SAMPLE.id);
+        const finalCached = hasConv ? cached : [...cached, INITIAL_CONVERSATION_SAMPLE];
+        setIntensiveDeck(prev => prev.length === 0 ? finalCached : prev);
       }
     }).catch(() => {});
   }, []);
@@ -58,6 +93,10 @@ export function useIntensiveVocab() {
       snapshot.forEach((docSnap) => {
         loadedDeck.push({ id: docSnap.id, ...docSnap.data() } as IntensiveWord);
       });
+      const hasConv = loadedDeck.some(w => w.category === 'Hội thoại' || w.id === INITIAL_CONVERSATION_SAMPLE.id);
+      if (!hasConv) {
+        loadedDeck.push(INITIAL_CONVERSATION_SAMPLE);
+      }
       const sorted = loadedDeck.sort((a, b) => {
         if (a.order !== undefined && b.order !== undefined) {
           return a.order - b.order;

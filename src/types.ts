@@ -11,6 +11,9 @@ export interface KanjiExample {
   hasAudio?: boolean;
   specialNote?: string;
   memo?: string;
+  linkedExampleId?: string;
+  linkType?: 'same_meaning' | 'pair';
+  linkNote?: string;
   mastered?: boolean;
   jaToViMastered?: boolean;
   viToJaMastered?: boolean;
@@ -69,6 +72,10 @@ export interface IntensiveExample {
   hasAudio?: boolean;
   specialNote?: string;
   memo?: string;
+  speaker?: 'A' | 'B' | string;
+  linkedExampleId?: string;
+  linkType?: 'same_meaning' | 'pair';
+  linkNote?: string;
   mastered?: boolean; // legacy
   jaToViMastered?: boolean;
   viToJaMastered?: boolean;
@@ -93,6 +100,7 @@ export interface IntensiveWord {
   explanation: string;
   examples: IntensiveExample[];
   createdAt: number;
+  topicType?: 'vocabulary' | 'conversation' | 'grammar' | string;
   reviewScore?: number;
   order?: number;
   hasAudio?: boolean;

@@ -47,7 +47,11 @@ import {
   AlertTriangle,
   AlertCircle,
   ArrowRightLeft,
-  GitFork
+  GitFork,
+  Link2,
+  Unlink,
+  Zap,
+  ArrowDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import WordDetailModal from "./WordDetailModal";
@@ -366,6 +370,446 @@ export function formatExplanationForDisplay(rawText?: string | null): string {
   return text.trim();
 }
 
+
+export interface PairColorTheme {
+  id: string;
+  name: string;
+  label: string; // "Cặp A", "Cặp B", "Cặp C", etc.
+  letter: string; // 'A', 'B', 'C', 'D', 'E', 'F'
+  cardBorder: string;
+  leftStripe: string;
+  cardBg: string;
+  ring: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  numberBg: string;
+  pipeColor: string;
+  pipeGradientStart: string;
+  pipeGradientEnd: string;
+  btnBg: string;
+  btnHover: string;
+}
+
+export const PAIR_COLOR_THEMES: Omit<PairColorTheme, 'label' | 'letter'>[] = [
+  {
+    id: 'emerald',
+    name: 'Xanh Lục',
+    cardBorder: 'border-emerald-500/80',
+    leftStripe: 'border-l-[8px] border-l-emerald-500',
+    cardBg: 'bg-emerald-500/[0.04]',
+    ring: 'ring-2 ring-emerald-500/30',
+    badgeBg: 'bg-emerald-500/15',
+    badgeText: 'text-emerald-700 dark:text-emerald-300',
+    badgeBorder: 'border-emerald-500/40',
+    numberBg: 'bg-emerald-600 text-white border-2 border-emerald-400 shadow-sm',
+    pipeColor: '#10b981',
+    pipeGradientStart: '#10b981',
+    pipeGradientEnd: '#059669',
+    btnBg: 'bg-emerald-600 text-white',
+    btnHover: 'hover:bg-emerald-700',
+  },
+  {
+    id: 'purple',
+    name: 'Tím',
+    cardBorder: 'border-purple-500/80',
+    leftStripe: 'border-l-[8px] border-l-purple-500',
+    cardBg: 'bg-purple-500/[0.04]',
+    ring: 'ring-2 ring-purple-500/30',
+    badgeBg: 'bg-purple-500/15',
+    badgeText: 'text-purple-700 dark:text-purple-300',
+    badgeBorder: 'border-purple-500/40',
+    numberBg: 'bg-purple-600 text-white border-2 border-purple-400 shadow-sm',
+    pipeColor: '#a855f7',
+    pipeGradientStart: '#a855f7',
+    pipeGradientEnd: '#7c3aed',
+    btnBg: 'bg-purple-600 text-white',
+    btnHover: 'hover:bg-purple-700',
+  },
+  {
+    id: 'amber',
+    name: 'Vàng Hổ Phách',
+    cardBorder: 'border-amber-500/80',
+    leftStripe: 'border-l-[8px] border-l-amber-500',
+    cardBg: 'bg-amber-500/[0.04]',
+    ring: 'ring-2 ring-amber-500/30',
+    badgeBg: 'bg-amber-500/15',
+    badgeText: 'text-amber-800 dark:text-amber-200',
+    badgeBorder: 'border-amber-500/40',
+    numberBg: 'bg-amber-600 text-white border-2 border-amber-400 shadow-sm',
+    pipeColor: '#f59e0b',
+    pipeGradientStart: '#f59e0b',
+    pipeGradientEnd: '#d97706',
+    btnBg: 'bg-amber-600 text-white',
+    btnHover: 'hover:bg-amber-700',
+  },
+  {
+    id: 'cyan',
+    name: 'Xanh Lam',
+    cardBorder: 'border-cyan-500/80',
+    leftStripe: 'border-l-[8px] border-l-cyan-500',
+    cardBg: 'bg-cyan-500/[0.04]',
+    ring: 'ring-2 ring-cyan-500/30',
+    badgeBg: 'bg-cyan-500/15',
+    badgeText: 'text-cyan-700 dark:text-cyan-300',
+    badgeBorder: 'border-cyan-500/40',
+    numberBg: 'bg-cyan-600 text-white border-2 border-cyan-400 shadow-sm',
+    pipeColor: '#06b6d4',
+    pipeGradientStart: '#06b6d4',
+    pipeGradientEnd: '#0284c7',
+    btnBg: 'bg-cyan-600 text-white',
+    btnHover: 'hover:bg-cyan-700',
+  },
+  {
+    id: 'rose',
+    name: 'Đỏ Hồng Ngọc',
+    cardBorder: 'border-rose-500/80',
+    leftStripe: 'border-l-[8px] border-l-rose-500',
+    cardBg: 'bg-rose-500/[0.04]',
+    ring: 'ring-2 ring-rose-500/30',
+    badgeBg: 'bg-rose-500/15',
+    badgeText: 'text-rose-700 dark:text-rose-300',
+    badgeBorder: 'border-rose-500/40',
+    numberBg: 'bg-rose-600 text-white border-2 border-rose-400 shadow-sm',
+    pipeColor: '#f43f5e',
+    pipeGradientStart: '#f43f5e',
+    pipeGradientEnd: '#e11d48',
+    btnBg: 'bg-rose-600 text-white',
+    btnHover: 'hover:bg-rose-700',
+  },
+  {
+    id: 'teal',
+    name: 'Xanh Mòng Két',
+    cardBorder: 'border-teal-500/80',
+    leftStripe: 'border-l-[8px] border-l-teal-500',
+    cardBg: 'bg-teal-500/[0.04]',
+    ring: 'ring-2 ring-teal-500/30',
+    badgeBg: 'bg-teal-500/15',
+    badgeText: 'text-teal-700 dark:text-teal-300',
+    badgeBorder: 'border-teal-500/40',
+    numberBg: 'bg-teal-600 text-white border-2 border-teal-400 shadow-sm',
+    pipeColor: '#14b8a6',
+    pipeGradientStart: '#14b8a6',
+    pipeGradientEnd: '#0d9488',
+    btnBg: 'bg-teal-600 text-white',
+    btnHover: 'hover:bg-teal-700',
+  },
+];
+
+export function LiquidPipeConnector({
+  upperExample,
+  lowerExample,
+  upperIndex,
+  lowerIndex,
+  theme,
+  onPlaySequential,
+  isPlaying,
+}: {
+  upperExample: IntensiveExample;
+  lowerExample: IntensiveExample;
+  upperIndex: number;
+  lowerIndex: number;
+  theme: PairColorTheme;
+  onPlaySequential: () => void;
+  isPlaying: boolean;
+}) {
+  return (
+    <div className="relative z-30 my-2 px-3 py-1 flex items-center justify-center">
+      {/* Structural Visual Pipeline joining Card 1 to Card 2 */}
+      <div 
+        className="w-full max-w-2xl flex items-center justify-between gap-3 bg-theme-panel/95 rounded-xl border-2 px-4 py-2.5 shadow-md relative"
+        style={{ borderColor: theme.pipeColor }}
+      >
+        {/* Left Side Mechanical Pipe Joint (Khớp nối ống bên trái) */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center">
+            <div className="w-3 h-1.5 rounded-t-sm" style={{ backgroundColor: theme.pipeColor }} />
+            <div 
+              className="w-5 h-6 rounded-md border-2 relative overflow-hidden flex items-center justify-center"
+              style={{ borderColor: theme.pipeColor, backgroundColor: `${theme.pipeColor}20` }}
+            >
+              <div className="w-2.5 h-full steady-pipe-stream" />
+            </div>
+            <div className="w-3 h-1.5 rounded-b-sm" style={{ backgroundColor: theme.pipeColor }} />
+          </div>
+
+          {/* Pair Tag Identifier Badge */}
+          <div 
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider text-white shadow-xs"
+            style={{ backgroundColor: theme.pipeColor }}
+          >
+            <span>🔗 {theme.label}</span>
+          </div>
+        </div>
+
+        {/* Central Info & Flowing Conduit Tube */}
+        <div className="flex-1 flex flex-col items-center text-center px-2">
+          <div className="text-xs font-bold text-theme-primary flex items-center gap-1.5">
+            <span>CÂU #{upperIndex + 1}</span>
+            <span className="text-sm font-black" style={{ color: theme.pipeColor }}>➔ ỐNG NỐI TRỰC QUAN ➔</span>
+            <span>CÂU #{lowerIndex + 1}</span>
+          </div>
+          <div className="text-[11px] text-theme-primary/70 font-medium">
+            2 câu cùng nghĩa · Đọc nối tiếp để hiểu sâu ngữ cảnh
+          </div>
+        </div>
+
+        {/* Action Button: Sequential Audio Playback */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onPlaySequential}
+            disabled={isPlaying}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm cursor-pointer transition-all active:scale-95"
+            style={{ backgroundColor: theme.pipeColor }}
+            title="Tự động phát âm thanh Câu 1 rồi phát tiếp Câu 2"
+          >
+            <Volume2 className="w-4 h-4 shrink-0" />
+            <span>{isPlaying ? 'Đang phát...' : 'Nghe nối tiếp (1➔2)'}</span>
+          </button>
+
+          {/* Right Side Pipe Flange */}
+          <div className="flex flex-col items-center">
+            <div className="w-3 h-1.5 rounded-t-sm" style={{ backgroundColor: theme.pipeColor }} />
+            <div 
+              className="w-5 h-6 rounded-md border-2 relative overflow-hidden flex items-center justify-center"
+              style={{ borderColor: theme.pipeColor, backgroundColor: `${theme.pipeColor}20` }}
+            >
+              <div className="w-2.5 h-full steady-pipe-stream" />
+            </div>
+            <div className="w-3 h-1.5 rounded-b-sm" style={{ backgroundColor: theme.pipeColor }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LinkSentenceModal({
+  sourceExample,
+  allExamples,
+  examplePairThemeMap,
+  onClose,
+  onLink,
+  onUnlink,
+  onReorderPairAdjacent,
+}: {
+  sourceExample: IntensiveExample;
+  allExamples: IntensiveExample[];
+  examplePairThemeMap: Map<string, PairColorTheme>;
+  onClose: () => void;
+  onLink: (sourceId: string, targetId: string) => void;
+  onUnlink: (sourceId: string) => void;
+  onReorderPairAdjacent: (id1: string, id2: string) => void;
+}) {
+  const sourceIndex = allExamples.findIndex(e => e.id === sourceExample.id);
+  const companionExample = allExamples.find(e => e.id === sourceExample.linkedExampleId);
+  const companionIndex = companionExample ? allExamples.findIndex(e => e.id === companionExample.id) : -1;
+  const isAdjacent = companionIndex !== -1 && Math.abs(companionIndex - sourceIndex) === 1;
+  const currentPairTheme = examplePairThemeMap.get(sourceExample.id);
+
+  return (
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-theme-panel border border-theme-subtle rounded-2xl w-full max-w-xl shadow-2xl p-5 sm:p-6 relative max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 pb-4 border-b border-theme-subtle">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md font-bold"
+              style={{ backgroundColor: currentPairTheme ? currentPairTheme.pipeColor : '#06b6d4' }}
+            >
+              <Link2 className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-theme-primary">
+                Ghép Cặp Câu Ví Dụ (Cùng Nghĩa / Đọc Kèm)
+              </h3>
+              <p className="text-xs text-theme-primary/60">
+                Mỗi cặp câu được phân biệt riêng 1 màu và nhãn chữ (Cặp A, Cặp B...)
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-theme-primary/40 hover:text-theme-primary rounded-lg hover:bg-theme-hover transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Current Sentence Target Info */}
+        <div className="my-4 p-3.5 rounded-xl bg-theme-hover/60 border border-theme-subtle">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-theme-accent mb-1 flex items-center gap-2">
+            <span>Câu đang chọn: Câu #{sourceIndex + 1}</span>
+            {currentPairTheme && (
+              <span 
+                className="px-2 py-0.5 rounded text-[10px] font-bold text-white"
+                style={{ backgroundColor: currentPairTheme.pipeColor }}
+              >
+                {currentPairTheme.label}
+              </span>
+            )}
+          </div>
+          <div className="text-base font-serif font-medium text-theme-primary">
+            {sourceExample.sentence}
+          </div>
+          <div className="text-xs text-theme-primary/70 italic mt-0.5">
+            {sourceExample.translation}
+          </div>
+        </div>
+
+        {/* Existing Link Status */}
+        {companionExample ? (
+          <div 
+            className="mb-4 p-4 rounded-xl border-2 flex flex-col gap-3"
+            style={{ 
+              borderColor: currentPairTheme ? currentPairTheme.pipeColor : '#06b6d4',
+              backgroundColor: currentPairTheme ? `${currentPairTheme.pipeColor}10` : 'transparent' 
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span 
+                  className="px-2.5 py-1 rounded-md text-xs font-black uppercase text-white shadow-xs"
+                  style={{ backgroundColor: currentPairTheme ? currentPairTheme.pipeColor : '#06b6d4' }}
+                >
+                  {currentPairTheme ? currentPairTheme.label : 'Cặp đã liên kết'}
+                </span>
+                <span className="text-xs font-bold text-theme-primary">
+                  Đang ghép đôi với Câu #{companionIndex + 1}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onUnlink(sourceExample.id);
+                  onClose();
+                }}
+                className="text-xs text-red-400 hover:text-red-300 underline font-semibold cursor-pointer"
+              >
+                Hủy liên kết cặp này
+              </button>
+            </div>
+            <div className="text-sm font-serif text-theme-primary">
+              {companionExample.sentence}
+            </div>
+            <div className="text-xs text-theme-primary/70 italic">
+              {companionExample.translation}
+            </div>
+
+            {!isAdjacent ? (
+              <div className="pt-2 border-t border-theme-subtle/50 flex flex-col gap-2">
+                <div className="text-xs text-amber-500 font-medium">
+                  ⚠️ Hai câu đang nằm cách xa nhau ({Math.abs(companionIndex - sourceIndex) - 1} câu ở giữa) nên chưa nối ống trực tiếp được.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onReorderPairAdjacent(sourceExample.id, companionExample.id);
+                    onClose();
+                  }}
+                  className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-white font-bold text-xs shadow-md cursor-pointer transition-all"
+                  style={{ backgroundColor: currentPairTheme ? currentPairTheme.pipeColor : '#06b6d4' }}
+                >
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span>Kéo 2 câu kề nhau ngay (Hiện ống nối trực quan)</span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5">
+                <Check className="w-4 h-4" />
+                <span>2 câu đang nằm liền kề — Ống nối trực quan đang hiển thị giữa 2 câu!</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-xs font-bold uppercase tracking-wider text-theme-primary/50 mb-2">
+            Chọn một câu bên dưới để ghép cặp:
+          </div>
+        )}
+
+        {/* Candidate Sentences List */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 min-h-[140px] max-h-64">
+          {allExamples
+            .filter(e => e.id !== sourceExample.id)
+            .map((item) => {
+              const itemIdx = allExamples.findIndex(e => e.id === item.id);
+              const isCurrentlyLinked = item.id === sourceExample.linkedExampleId;
+              const itemPairTheme = examplePairThemeMap.get(item.id);
+              const isAdjacentToSource = Math.abs(itemIdx - sourceIndex) === 1;
+
+              return (
+                <div
+                  key={item.id}
+                  className="p-3 rounded-xl border transition-all flex items-center justify-between gap-3 bg-theme-panel hover:bg-theme-hover border-theme-subtle"
+                  style={itemPairTheme ? { borderColor: `${itemPairTheme.pipeColor}50` } : {}}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold text-theme-accent">
+                        Câu #{itemIdx + 1}
+                      </span>
+                      {itemPairTheme && (
+                        <span 
+                          className="text-[10px] font-black px-1.5 py-0.5 rounded text-white"
+                          style={{ backgroundColor: itemPairTheme.pipeColor }}
+                        >
+                          {itemPairTheme.label}
+                        </span>
+                      )}
+                      {isAdjacentToSource && (
+                        <span className="text-[10px] font-semibold text-cyan-400 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                          ✨ Liền kề
+                        </span>
+                      )}
+                      {item.linkedExampleId && !isCurrentlyLinked && (
+                        <span className="text-[10px] text-theme-primary/50 italic">
+                          (Đang thuộc cặp khác)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-serif text-theme-primary truncate">
+                      {item.sentence}
+                    </div>
+                    <div className="text-xs text-theme-primary/60 truncate italic">
+                      {item.translation}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onLink(sourceExample.id, item.id);
+                      onClose();
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer text-white"
+                    style={{
+                      backgroundColor: isCurrentlyLinked
+                        ? (currentPairTheme ? currentPairTheme.pipeColor : '#06b6d4')
+                        : '#3b82f6',
+                    }}
+                  >
+                    {isCurrentlyLinked ? "Đang ghép" : "Ghép đôi"}
+                  </button>
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Footer */}
+        <div className="pt-4 mt-3 border-t border-theme-subtle flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-theme-hover text-theme-primary text-xs font-bold uppercase tracking-wider hover:bg-theme-active transition-colors cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function IntensiveStudy({
   deck,
@@ -1362,6 +1806,140 @@ function StudyView({
     setTimeout(() => setCopiedExplanation(false), 2000);
   };
 
+  const [linkingExample, setLinkingExample] = useState<IntensiveExample | null>(null);
+  const [isPlayingSequentialId, setIsPlayingSequentialId] = useState<string | null>(null);
+
+  // Distinct color palette and tag map for each paired sentence group (Cặp A, Cặp B, Cặp C...)
+  const examplePairThemeMap = React.useMemo(() => {
+    const map = new Map<string, PairColorTheme>();
+    const visited = new Set<string>();
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    let clusterIdx = 0;
+
+    for (const ex of word.examples || []) {
+      if (!ex.linkedExampleId || visited.has(ex.id)) continue;
+      const companion = (word.examples || []).find(e => e.id === ex.linkedExampleId);
+      if (!companion) continue;
+
+      const baseTheme = PAIR_COLOR_THEMES[clusterIdx % PAIR_COLOR_THEMES.length];
+      const letter = letters[clusterIdx % letters.length];
+      const theme: PairColorTheme = {
+        ...baseTheme,
+        label: `Cặp ${letter}`,
+        letter,
+      };
+
+      map.set(ex.id, theme);
+      map.set(companion.id, theme);
+      visited.add(ex.id);
+      visited.add(companion.id);
+      clusterIdx++;
+    }
+
+    return map;
+  }, [word.examples]);
+
+  // Auto-link the user's specific companion pair if present in deck and not yet linked
+  useEffect(() => {
+    const ex1 = (word.examples || []).find(e => e.id === '68f410fa-cbd0-467a-935b-51f1543aa8b5');
+    const ex2 = (word.examples || []).find(e => e.id === '4ebfa1c7-6483-43fa-b144-2ee9870fc713');
+    if (ex1 && ex2 && (ex1.linkedExampleId !== ex2.id || ex2.linkedExampleId !== ex1.id)) {
+      const updated = (word.examples || []).map(e => {
+        if (e.id === ex1.id) return { ...e, linkedExampleId: ex2.id, linkType: 'same_meaning' as const };
+        if (e.id === ex2.id) return { ...e, linkedExampleId: ex1.id, linkType: 'same_meaning' as const };
+        return e;
+      });
+      onUpdateWord(word.id, { examples: updated });
+    }
+  }, [word.examples, word.id]);
+
+  const handleLinkExample = (sourceId: string, targetId: string) => {
+    const updatedExamples = (word.examples || []).map(e => {
+      if (e.id === sourceId) {
+        return { ...e, linkedExampleId: targetId, linkType: 'same_meaning' as const };
+      }
+      if (e.id === targetId) {
+        return { ...e, linkedExampleId: sourceId, linkType: 'same_meaning' as const };
+      }
+      if (e.linkedExampleId === sourceId || e.linkedExampleId === targetId) {
+        return { ...e, linkedExampleId: undefined, linkType: undefined, linkNote: undefined };
+      }
+      return e;
+    });
+    onUpdateWord(word.id, { examples: updatedExamples });
+  };
+
+  const handleUnlinkExample = (exampleId: string) => {
+    const target = (word.examples || []).find(e => e.id === exampleId);
+    const companionId = target?.linkedExampleId;
+    const updatedExamples = (word.examples || []).map(e => {
+      if (e.id === exampleId || (companionId && e.id === companionId)) {
+        return { ...e, linkedExampleId: undefined, linkType: undefined, linkNote: undefined };
+      }
+      return e;
+    });
+    onUpdateWord(word.id, { examples: updatedExamples });
+  };
+
+  const handleReorderPairAdjacent = (id1: string, id2: string) => {
+    const list = Array.from(word.examples || []);
+    const idx1 = list.findIndex(e => e.id === id1);
+    const idx2 = list.findIndex(e => e.id === id2);
+    if (idx1 === -1 || idx2 === -1) return;
+    
+    const [item2] = list.splice(idx2, 1);
+    const newIdx1 = list.findIndex(e => e.id === id1);
+    list.splice(newIdx1 + 1, 0, item2);
+    onUpdateWord(word.id, { examples: list });
+  };
+
+  const handlePlaySequentialPair = async (ex1: IntensiveExample, ex2: IntensiveExample) => {
+    if (isPlayingSequentialId) return;
+    try {
+      setIsPlayingSequentialId(ex1.id);
+      
+      // 1. Play first sentence
+      if (ex1.audioUrl) {
+        const audio1 = await playAudioUrl(ex1.audioUrl, ex1.sentence, true);
+        if (audio1) {
+          await new Promise<void>((resolve) => {
+            audio1.onended = () => resolve();
+            audio1.onerror = () => resolve();
+            setTimeout(resolve, 8000);
+          });
+        }
+      } else {
+        await playTTS(ex1.sentence);
+        await new Promise(r => setTimeout(r, 2600));
+      }
+
+      // Breathing pause between companion sentences
+      await new Promise(r => setTimeout(r, 650));
+
+      setIsPlayingSequentialId(ex2.id);
+
+      // 2. Play second companion sentence
+      if (ex2.audioUrl) {
+        const audio2 = await playAudioUrl(ex2.audioUrl, ex2.sentence, true);
+        if (audio2) {
+          await new Promise<void>((resolve) => {
+            audio2.onended = () => resolve();
+            audio2.onerror = () => resolve();
+            setTimeout(resolve, 8000);
+          });
+        }
+      } else {
+        await playTTS(ex2.sentence);
+        await new Promise(r => setTimeout(r, 2600));
+      }
+    } catch (err) {
+      console.warn('Sequential play error:', err);
+    } finally {
+      setIsPlayingSequentialId(null);
+    }
+  };
+
+
   // Real-time duplicate detection for adding
   useEffect(() => {
     if (String(newSentence || "").trim()) {
@@ -2274,7 +2852,9 @@ function StudyView({
           <Droppable droppableId="examples">
             {(provided) => (
               <div {...provided.droppableProps} ref={provided.innerRef}>
-                {filteredExamples.map((ex, index) => (
+                {filteredExamples.map((ex, index) => {
+                  const pairTheme = examplePairThemeMap.get(ex.id);
+                  return (
                   <Draggable
                     // @ts-ignore
                     key={ex.id || 'ex-' + index}
@@ -2287,15 +2867,21 @@ function StudyView({
                         id={`example-${ex.id}`}
                         ref={provided.innerRef}
                         {...provided.draggableProps}
-                        className={`relative overflow-hidden rounded-lg border transition-all duration-300 ease-out ${
+                        className={`relative ${
+                          ex.linkedExampleId && filteredExamples[index + 1]?.id === ex.linkedExampleId ? "overflow-visible" : "overflow-hidden"
+                        } rounded-lg border transition-all duration-300 ease-out ${
                           duplicateExampleMap.has(ex.id)
                             ? "border-amber-500/90 border-l-[10px] border-l-amber-500 bg-amber-500/[0.06] ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10"
                             : differentVerbExampleMap.has(ex.id)
                               ? "border-indigo-400/50 border-l-4 border-l-indigo-500 bg-indigo-500/[0.02]"
-                              : snapshot.isDragging
-                                ? "border-theme-accent shadow-2xl z-50 scale-[1.02]"
-                                : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"
-                        } ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} bg-theme-panel group mb-4`}
+                              : pairTheme
+                                ? `${pairTheme.cardBorder} ${pairTheme.leftStripe} ${pairTheme.cardBg} ${pairTheme.ring} shadow-md`
+                                : snapshot.isDragging
+                                  ? "border-theme-accent shadow-2xl z-50 scale-[1.02]"
+                                  : "border-theme-subtle hover:-translate-y-1 hover:shadow-xl hover:border-theme-accent/50 hover:shadow-theme-accent/10 hover:z-40 focus-within:z-40"
+                        } ${highlightedExampleId === ex.id ? "ring-2 ring-red-500 shadow-lg shadow-red-500/20" : ""} ${
+                          isPlayingSequentialId === ex.id && pairTheme ? `ring-4 shadow-lg scale-[1.01]` : ""
+                        } bg-theme-panel group mb-4`}
                         style={provided.draggableProps.style}
                       >
                         {/* Corner Ribbon for Duplicate - Nhận biết ngay lập tức */}
@@ -2551,6 +3137,26 @@ function StudyView({
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setLinkingExample(ex);
+                                    }}
+                                    className={`p-2 rounded transition-all cursor-pointer ${
+                                      pairTheme
+                                        ? "shadow-xs"
+                                        : "text-theme-primary/40 hover:text-theme-primary rounded hover:bg-theme-panel"
+                                    }`}
+                                    style={
+                                      pairTheme
+                                        ? { color: pairTheme.pipeColor, backgroundColor: `${pairTheme.pipeColor}20`, border: `1px solid ${pairTheme.pipeColor}40` }
+                                        : {}
+                                    }
+                                    title={pairTheme ? `Đã ghép ${pairTheme.label} (Bấm để xem/quản lý)` : "Ghép cặp với câu khác (cùng nghĩa / đọc kèm)"}
+                                  >
+                                    <Link2 className="w-4 h-4" />
+                                  </button>
                                   {deleteEnabled && (
                                     confirmingDeleteId === ex.id ? (
                                       <div className="flex flex-col sm:flex-row gap-1 bg-red-500/10 p-1 rounded border border-red-500/20">
@@ -2580,6 +3186,122 @@ function StudyView({
                                   )}
                                 </div>
                               </div>
+
+                              {/* Companion Linked Sentence Banner (Cặp câu đồng nghĩa / đọc kèm) */}
+                              {ex.linkedExampleId && pairTheme && (() => {
+                                const companionEx = (word.examples || []).find(e => e.id === ex.linkedExampleId);
+                                if (!companionEx) return null;
+                                const companionIndex = (word.examples || []).findIndex(e => e.id === companionEx.id);
+                                const isAdjacent = Math.abs(companionIndex - index) === 1;
+                                const isPlayingThisOrCompanion = isPlayingSequentialId === ex.id || isPlayingSequentialId === companionEx.id;
+
+                                return (
+                                  <div 
+                                    className="p-3 sm:p-3.5 mb-4 rounded-xl border-2 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                    style={{ 
+                                      borderColor: `${pairTheme.pipeColor}80`, 
+                                      backgroundColor: `${pairTheme.pipeColor}10` 
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2.5">
+                                      <div 
+                                        className="p-2 text-white rounded-lg shadow-sm shrink-0 font-black text-xs"
+                                        style={{ backgroundColor: pairTheme.pipeColor }}
+                                      >
+                                        {pairTheme.label}
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span 
+                                            className="font-bold text-[10px] sm:text-[11px] uppercase tracking-wider px-2 py-0.5 rounded border"
+                                            style={{ 
+                                              color: pairTheme.pipeColor, 
+                                              borderColor: `${pairTheme.pipeColor}50`, 
+                                              backgroundColor: `${pairTheme.pipeColor}20` 
+                                            }}
+                                          >
+                                            🔗 {pairTheme.label} • CÙNG NGHĨA
+                                          </span>
+                                          <span className="text-xs font-semibold text-theme-primary">
+                                            Ghép đôi trực tiếp với <strong>Câu #{companionIndex + 1}</strong>
+                                          </span>
+                                          {!isAdjacent && (
+                                            <span className="text-[10px] text-amber-500 font-semibold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                              (Đang cách {Math.abs(companionIndex - index) - 1} câu)
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-theme-primary/80 italic mt-1 line-clamp-1">
+                                          "{companionEx.sentence}" — {companionEx.translation}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                                      {!isAdjacent && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleReorderPairAdjacent(ex.id, companionEx.id);
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white font-bold text-xs shadow-xs cursor-pointer transition-all active:scale-95"
+                                          style={{ backgroundColor: pairTheme.pipeColor }}
+                                          title="Sắp xếp 2 câu kề nhau để nối ống trực quan"
+                                        >
+                                          <Zap className="w-3.5 h-3.5 fill-current" />
+                                          <span>Kéo 2 câu kề nhau</span>
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handlePlaySequentialPair(ex, companionEx);
+                                        }}
+                                        disabled={isPlayingThisOrCompanion}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white font-bold text-xs cursor-pointer transition-all shadow-xs active:scale-95"
+                                        style={{ backgroundColor: pairTheme.pipeColor }}
+                                        title="Tự động phát câu này rồi nghe tiếp câu liên kết"
+                                      >
+                                        <Volume2 className="w-3.5 h-3.5" />
+                                        <span>{isPlayingThisOrCompanion ? 'Đang phát...' : 'Nghe 2 câu liên hoàn'}</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const el = document.getElementById(`example-${companionEx.id}`);
+                                          if (el) {
+                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            setHighlightedExampleId(companionEx.id);
+                                            setTimeout(() => setHighlightedExampleId(null), 3000);
+                                          }
+                                        }}
+                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-theme-hover text-theme-primary hover:text-white font-medium text-xs border border-theme-subtle cursor-pointer transition-all"
+                                        title={`Cuộn xem Câu #${companionIndex + 1}`}
+                                      >
+                                        <ArrowDown className="w-3.5 h-3.5" />
+                                        <span>Xem Câu #{companionIndex + 1}</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setLinkingExample(ex);
+                                        }}
+                                        className="p-1.5 text-theme-primary/50 hover:text-theme-primary hover:bg-theme-panel rounded transition-colors"
+                                        title="Quản lý liên kết cặp câu này"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
 
                               {sentenceRelationMap.has(ex.id) && (() => {
                                 const rel = sentenceRelationMap.get(ex.id)!;
@@ -2696,7 +3418,9 @@ function StudyView({
                                       ? "bg-amber-500 text-white border-2 border-amber-600"
                                       : differentVerbExampleMap.has(ex.id)
                                         ? "bg-indigo-600 text-white border-2 border-indigo-700"
-                                        : "bg-theme-panel border border-theme-subtle text-theme-accent font-bold"
+                                        : pairTheme
+                                          ? pairTheme.numberBg
+                                          : "bg-theme-panel border border-theme-subtle text-theme-accent font-bold"
                                   }`}>
                                     {index + 1}
                                   </div>
@@ -2711,6 +3435,15 @@ function StudyView({
                                       <span className="relative inline-flex items-center justify-center rounded-full h-3.5 w-3.5 bg-indigo-600 border border-white text-[8px] text-white font-bold">
                                         🔀
                                       </span>
+                                    </span>
+                                  )}
+                                  {pairTheme && (
+                                    <span 
+                                      className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full text-[9px] font-black uppercase text-white shadow-xs border border-white"
+                                      style={{ backgroundColor: pairTheme.pipeColor }}
+                                      title={`Thuộc ${pairTheme.label}`}
+                                    >
+                                      {pairTheme.letter}
                                     </span>
                                   )}
                                 </div>
@@ -2797,16 +3530,41 @@ function StudyView({
                             </>
                           )}
                         </div>
+                        {/* Liquid Pipe Connector if this example is linked directly to the NEXT example */}
+                        {ex.linkedExampleId && filteredExamples[index + 1]?.id === ex.linkedExampleId && pairTheme && (
+                          <LiquidPipeConnector
+                            upperExample={ex}
+                            lowerExample={filteredExamples[index + 1]}
+                            upperIndex={index}
+                            lowerIndex={index + 1}
+                            theme={pairTheme}
+                            onPlaySequential={() => handlePlaySequentialPair(ex, filteredExamples[index + 1])}
+                            isPlaying={isPlayingSequentialId === ex.id || isPlayingSequentialId === filteredExamples[index + 1].id}
+                          />
+                        )}
                       </div>
                     )}
                   </Draggable>
-                ))}
+                  );
+                })}
                 {provided.placeholder}
               </div>
             )}
           </Droppable>
         </DragDropContext>
       </div>
+
+      {linkingExample && (
+        <LinkSentenceModal
+          sourceExample={linkingExample}
+          allExamples={word.examples || []}
+          examplePairThemeMap={examplePairThemeMap}
+          onClose={() => setLinkingExample(null)}
+          onLink={handleLinkExample}
+          onUnlink={handleUnlinkExample}
+          onReorderPairAdjacent={handleReorderPairAdjacent}
+        />
+      )}
 
       {copyingExample && (
         <div id="copy-example-modal-overlay" className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">

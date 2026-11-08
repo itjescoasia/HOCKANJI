@@ -710,3 +710,39 @@ input[type="submit"],
   max-height: 90dvh;
 }
 
+/* Steady, calm liquid flow for connected sentences (No blinking / No flashing) */
+@keyframes steadyLiquidFlow {
+  0% {
+    stroke-dashoffset: 48;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes steadyFluidStream {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
+.animate-liquid-flow {
+  animation: steadyLiquidFlow 2.8s linear infinite;
+}
+
+.steady-pipe-stream {
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.22) 10px,
+    rgba(255, 255, 255, 0.05) 20px
+  );
+  background-size: 100% 40px;
+  animation: steadyFluidStream 3.5s linear infinite;
+}
+
+
+
