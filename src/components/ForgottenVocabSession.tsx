@@ -101,7 +101,7 @@ export default function ForgottenVocabSession({
     }
   }, [pool]);
 
-  const currentCard = queue[currentIndex] || pool[0];
+  const currentCard = queue[currentIndex];
 
   // Generate 4 MCQ options when currentCard changes
   useEffect(() => {
@@ -232,12 +232,6 @@ export default function ForgottenVocabSession({
         return;
       }
     } else {
-      // Spaced Retrieval insertion: Re-insert 2 to 3 cards later in the queue
-      const newQueue = [...queue];
-      const reInsertPos = Math.min(newQueue.length, currentIndex + 3);
-      newQueue.splice(reInsertPos, 0, currentCard);
-      setQueue(newQueue);
-
       if (onUpdateCard) {
         onUpdateCard(cardId, {
           difficultScore: (currentCard.difficultScore || 0) - 1,
@@ -246,13 +240,9 @@ export default function ForgottenVocabSession({
       }
     }
 
-    // Advance to next card
-    if (currentIndex < queue.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setIsFlipped(false);
-    } else {
-      setIsFlipped(true); // completed last card
-    }
+    // Advance to next card immediately
+    setCurrentIndex(prev => prev + 1);
+    setIsFlipped(false);
   };
 
   // Graduate a word (remove isForgotten tag, restore confidence)
@@ -278,10 +268,8 @@ export default function ForgottenVocabSession({
 
     setTimeout(() => {
       setShowCelebration(null);
-      if (currentIndex < queue.length - 1) {
-        setCurrentIndex(prev => prev + 1);
-        setIsFlipped(false);
-      }
+      setCurrentIndex(prev => prev + 1);
+      setIsFlipped(false);
     }, 1800);
   };
 
@@ -773,7 +761,23 @@ export default function ForgottenVocabSession({
               </div>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="my-auto max-w-md w-full bg-theme-panel border border-theme-subtle rounded-3xl p-8 text-center shadow-xl flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 stroke-[2.2]" />
+            </div>
+            <h3 className="text-xl font-bold font-serif text-theme-primary mb-2">Không có từ vựng cần ôn</h3>
+            <p className="text-xs text-theme-primary/70 mb-6">
+              Hiện không có từ vựng nào bị đánh dấu "Hay Quên" hoặc cần phục hồi trí nhớ.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 bg-theme-accent text-theme-inverted font-bold rounded-xl text-xs uppercase tracking-wider cursor-pointer"
+            >
+              Quay lại danh sách
+            </button>
+          </div>
+        )}
 
         {/* Bottom Response Controls (Active Recall Feedback) */}
         {!isCompleted && currentCard && (
@@ -802,7 +806,7 @@ export default function ForgottenVocabSession({
                     <span>Vẫn chưa nhớ</span>
                     <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-500/20">1</kbd>
                   </div>
-                  <span className="text-[11px] opacity-75">Lặp lại ngay sau 2 - 3 thẻ</span>
+                  <span className="text-[11px] opacity-75">Ghi nhận chưa nhớ &amp; chuyển tiếp</span>
                 </button>
 
                 {/* Button 2: Remembered */}

@@ -51,7 +51,8 @@ import {
   Link2,
   Unlink,
   Zap,
-  ArrowDown
+  ArrowDown,
+  Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import WordDetailModal from "./WordDetailModal";
@@ -3723,6 +3724,8 @@ function IntensiveExampleAudio({
   const [audioLoadError, setAudioLoadError] = useState(false);
   const audioInputRef = React.useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingEleven, setIsGeneratingEleven] = useState(false);
+  const [elevenProgress, setElevenProgress] = useState<{ percent: number; text: string } | null>(null);
 
   // Transfer Modals
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -3825,6 +3828,76 @@ function IntensiveExampleAudio({
             <Volume2 className="w-3 h-3" />
             {isUploading ? 'Đang tải...' : 'Thêm MP3'}
           </button>
+
+          {/* Nút Tạo MP3 nhanh bằng ElevenLabs có thanh tiến độ */}
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              disabled={isGeneratingEleven || isUploading}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!example.sentence || !example.sentence.trim()) return;
+                setIsGeneratingEleven(true);
+                setElevenProgress({ percent: 25, text: 'Kết nối ElevenLabs (Giọng: Lily)...' });
+                try {
+                  const timer = setTimeout(() => {
+                    setElevenProgress({ percent: 70, text: 'Đang tổng hợp MP3 AI 128kbps...' });
+                  }, 600);
+
+                  const res = await fetch('/api/elevenlabs/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: example.sentence.trim() })
+                  });
+                  clearTimeout(timer);
+                  const data = await res.json();
+                  if (res.ok && data.audioUrl) {
+                    setElevenProgress({ percent: 100, text: 'Hoàn tất! Đã lưu Database.' });
+                    onUpdateExample(example.id, { hasAudio: true, audioUrl: data.audioUrl });
+                    setAudioUrl(data.audioUrl);
+                    // Auto-play newly generated sound immediately
+                    try {
+                      playAudioUrl(data.audioUrl, example.sentence);
+                    } catch (playErr) {}
+                    setTimeout(() => setElevenProgress(null), 1500);
+                  } else {
+                    setElevenProgress(null);
+                    alert(data.error || 'Lỗi khi tạo âm thanh ElevenLabs');
+                  }
+                } catch (err: any) {
+                  setElevenProgress(null);
+                  alert('Lỗi kết nối tạo ElevenLabs: ' + err.message);
+                } finally {
+                  setIsGeneratingEleven(false);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95 border bg-purple-500/15 hover:bg-purple-500/25 border-purple-500/40 text-purple-700 dark:text-purple-300 disabled:opacity-50"
+              title="Tự động tạo âm thanh phát âm chuẩn bản xứ cho câu này bằng ElevenLabs API"
+            >
+              {isGeneratingEleven ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-500" />
+              ) : (
+                <Zap className="w-3.5 h-3.5 text-purple-500" />
+              )}
+              <span>{isGeneratingEleven ? (elevenProgress ? `${elevenProgress.percent}%` : 'Đang tạo...') : '⚡ ElevenLabs MP3'}</span>
+            </button>
+
+            {/* Thanh tiến độ trực quan mini */}
+            {elevenProgress && (
+              <div className="w-48 bg-purple-950/20 rounded-md p-1.5 border border-purple-500/30 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between text-[10px] font-bold text-purple-700 dark:text-purple-300 mb-1">
+                  <span className="truncate">{elevenProgress.text}</span>
+                  <span>{elevenProgress.percent}%</span>
+                </div>
+                <div className="w-full bg-black/30 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${elevenProgress.percent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Nút nhanh: Lấy trực tiếp file MP3 từ câu trùng lặp */}
           {counterpart && counterpartHasAudio && onTransferAudio && (

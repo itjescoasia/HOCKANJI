@@ -12,7 +12,7 @@ import {
 } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy, Flame } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy, Flame, Zap } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -23,6 +23,7 @@ import { scoreKanjiCardMatch } from '../utils/searchMatcher';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
 import AudioUpload from './AudioUpload';
+import ElevenLabsBatchModal from './ElevenLabsBatchModal';
 import { 
   getVerbTransitivity, 
   getBaseWordType, 
@@ -194,6 +195,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingCard, setViewingCard] = useState<KanjiCard | null>(null);
+  const [elevenLabsModalCard, setElevenLabsModalCard] = useState<KanjiCard | null>(null);
   const [copiedSentenceKey, setCopiedSentenceKey] = useState<string | null>(null);
 
   const handleCopySentence = (e: React.MouseEvent, text: string, key: string) => {
@@ -903,8 +905,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const filteredDeck = React.useMemo(() => {
     const q = String(search || "").trim();
 
+    // Deduplicate cards by id in deck first
+    const seen = new Set<string>();
+    const uniqueDeck: KanjiCard[] = [];
+    for (const card of deck) {
+      if (!card || !card.id) continue;
+      if (!seen.has(card.id)) {
+        seen.add(card.id);
+        uniqueDeck.push(card);
+      }
+    }
+
     // 1. Filter by category/wordType and audio status
-    const baseList = deck.filter(c => {
+    const baseList = uniqueDeck.filter(c => {
       const matchesFilter = filterType === 'all' 
         || c.wordType === filterType 
         || (filterType.startsWith('Động từ') && (c.wordType?.startsWith(filterType) || false));
@@ -1139,11 +1152,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-md sm:rounded-[20px] rounded-xl">
           {/* Mobile Card List (Visible on iPhone & mobile < md) */}
           <div className="block md:hidden divide-y divide-theme-subtle">
-            {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card) => {
+            {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card, idx) => {
               const isEditing = editingId === card.id;
               if (isEditing) {
                 return (
-                  <div key={`mob-edit-${card.id}`} className="p-4 bg-theme-hover space-y-3">
+                  <div key={`mob-edit-${card.id}-${idx}`} className="p-4 bg-theme-hover space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase text-theme-accent">Đang sửa thẻ</span>
                       <div className="flex items-center gap-1.5">
@@ -1178,7 +1191,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
               }
 
               return (
-                <div key={`mob-${card.id}`} className="p-4 flex flex-col gap-2.5 hover:bg-theme-hover/40 transition-colors">
+                <div key={`mob-${card.id}-${idx}`} className="p-4 flex flex-col gap-2.5 hover:bg-theme-hover/40 transition-colors">
                   {/* Top Header Row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
@@ -1307,7 +1320,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 </tr>
               </thead>
               <tbody className="divide-y divide-theme-subtle">
-                {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card) => {
+                {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card, idx) => {
                   const endOfToday = new Date();
                   endOfToday.setHours(23, 59, 59, 999);
                   const isDue = card.nextReviewDate <= endOfToday.getTime();
@@ -1315,7 +1328,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
                   if (isEditing) {
                     return (
-                      <tr key={card.id} className="bg-theme-hover shadow-inner">
+                      <tr key={`desk-edit-${card.id}-${idx}`} className="bg-theme-hover shadow-inner">
                         <td className="px-4 py-4 w-32 align-top">
                           <div className="flex flex-col gap-2">
                             <input 
@@ -1736,47 +1749,71 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             
                             {/* BULK AUDIO BUTTON IN EDIT MODE */}
                             {((editForm.forms && editForm.forms.length > 0) || (editForm.examples && editForm.examples.length > 0) || editForm.example) && (
-                               <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-theme-subtle items-end">
-                                 {(() => {
-                                    const hasMissingMp3s = (editForm.forms?.some(f => f.value && !f.audioUrl)) || 
-                                                           (editForm.examples?.some(ex => ex.sentence && !ex.audioUrl)) ||
-                                                           (editForm.example && !editForm.audioUrl && (!editForm.examples || editForm.examples.length === 0));
-                                    
-                                    if (!hasMissingMp3s && !isBulkGenerating) {
-                                       return (
+                               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-theme-subtle items-end">
+                                 <div className="flex flex-wrap items-center gap-2 justify-end">
+                                   <button
+                                     type="button"
+                                     onClick={() => {
+                                       const curCard = deck.find(c => c.id === card.id) || card;
+                                       const cardToProcess: KanjiCard = {
+                                         ...curCard,
+                                         kanji: editForm.kanji || curCard.kanji,
+                                         reading: editForm.reading || curCard.reading,
+                                         meaning: editForm.meaning || curCard.meaning,
+                                         forms: editForm.forms || curCard.forms,
+                                         examples: editForm.examples || curCard.examples
+                                       };
+                                       setElevenLabsModalCard(cardToProcess);
+                                     }}
+                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 rounded-md transition-all shadow-xs cursor-pointer active:scale-95"
+                                     title="Tự động tạo toàn bộ MP3 cho các thể và câu ví dụ bằng ElevenLabs API"
+                                   >
+                                     <Zap className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                                     <span>⚡ ElevenLabs Hàng Loạt</span>
+                                   </button>
+
+                                   {(() => {
+                                      const hasMissingMp3s = (editForm.forms?.some(f => f.value && !f.audioUrl)) || 
+                                                             (editForm.examples?.some(ex => ex.sentence && !ex.audioUrl)) ||
+                                                             (editForm.example && !editForm.audioUrl && (!editForm.examples || editForm.examples.length === 0));
+                                      
+                                      if (!hasMissingMp3s && !isBulkGenerating) {
+                                         return (
+                                           <button
+                                             type="button"
+                                             disabled
+                                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-md transition-colors min-w-[120px] justify-center cursor-default shadow-xs"
+                                             title="Tất cả các thể và câu ví dụ đều đã có MP3"
+                                           >
+                                             <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                             <span>Đã đủ MP3</span>
+                                           </button>
+                                         );
+                                      }
+                                      return (
                                          <button
-                                           type="button"
-                                           disabled
-                                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-md transition-colors min-w-[140px] justify-center cursor-default shadow-xs"
-                                           title="Tất cả các thể và câu ví dụ đều đã có MP3"
+                                            type="button"
+                                            onClick={handleEditBulkGenerateAudio}
+                                            disabled={isBulkGenerating}
+                                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 rounded-md transition-all disabled:opacity-50 min-w-[150px] justify-center shadow-xs cursor-pointer"
+                                            title="Tự động tạo MP3 bằng AI và lưu vào Database"
                                          >
-                                           <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                           <span>Đã đủ MP3</span>
+                                           {isBulkGenerating ? (
+                                             <span className="flex items-center gap-2">
+                                               <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                               <span>{bulkProgress ? `Tạo MP3 (${bulkProgress.current}/${bulkProgress.total})...` : 'Đang xử lý...'}</span>
+                                             </span>
+                                           ) : (
+                                             <span className="flex items-center gap-1.5">
+                                               <Brain className="w-3.5 h-3.5" />
+                                               <span>Tải MP3 Hàng Loạt (AI)</span>
+                                             </span>
+                                           )}
                                          </button>
-                                       );
-                                    }
-                                    return (
-                                       <button
-                                          type="button"
-                                          onClick={handleEditBulkGenerateAudio}
-                                          disabled={isBulkGenerating}
-                                          className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 rounded-md transition-all disabled:opacity-50 min-w-[170px] justify-center shadow-md hover:shadow-lg cursor-pointer"
-                                          title="Tự động tạo MP3 bằng AI và lưu vào Database cho tất cả các Thể và Ví dụ chưa có âm thanh"
-                                       >
-                                         {isBulkGenerating ? (
-                                           <span className="flex items-center gap-2">
-                                             <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                             <span>{bulkProgress ? `Tạo MP3 (${bulkProgress.current}/${bulkProgress.total})...` : 'Đang xử lý...'}</span>
-                                           </span>
-                                         ) : (
-                                           <span className="flex items-center gap-1.5">
-                                             <Brain className="w-4 h-4" />
-                                             <span>Tải MP3 Hàng Loạt (AI)</span>
-                                           </span>
-                                         )}
-                                       </button>
-                                    );
-                                 })()}
+                                      );
+                                   })()}
+                                 </div>
+
                                  {isBulkGenerating && bulkProgress && (
                                    <div className="w-full max-w-[170px] bg-theme-subtle/40 rounded-full h-1.5 overflow-hidden relative mt-0.5">
                                       <div 
@@ -1817,7 +1854,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   }
                   
                   return (
-                    <tr key={card.id} className="hover:bg-theme-hover transition-colors group">
+                    <tr key={`desk-${card.id}-${idx}`} className="hover:bg-theme-hover transition-colors group">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
                           <div className="text-3xl font-serif text-theme-primary bg-theme-base-alt px-3 py-1.5 rounded-xl shadow-sm border border-theme-subtle/50 inline-block">{card.kanji}</div>
@@ -2086,6 +2123,16 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 >
                   <Flame className={`w-3.5 h-3.5 ${viewingCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
                   <span>{viewingCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setElevenLabsModalCard(viewingCard)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Tự động tạo MP3 hàng loạt cho từ này bằng ElevenLabs API"
+                >
+                  <Zap className="w-3.5 h-3.5 text-purple-500" />
+                  <span>ElevenLabs MP3</span>
                 </button>
 
                 <button
@@ -2403,6 +2450,29 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             </div>
           </div>
         </div>
+      )}
+
+      {/* ElevenLabs Batch Audio Modal */}
+      {elevenLabsModalCard && (
+        <ElevenLabsBatchModal
+          isOpen={!!elevenLabsModalCard}
+          onClose={() => setElevenLabsModalCard(null)}
+          card={elevenLabsModalCard}
+          onCardUpdated={async (updatedCard) => {
+            if (onUpdate) await onUpdate(updatedCard.id, updatedCard);
+            if (viewingCard && viewingCard.id === updatedCard.id) {
+              setViewingCard(updatedCard);
+            }
+            if (editingId === updatedCard.id) {
+              setEditForm(prev => ({
+                ...prev,
+                audioUrl: updatedCard.audioUrl,
+                forms: updatedCard.forms,
+                examples: updatedCard.examples
+              }));
+            }
+          }}
+        />
       )}
     </div>
   );

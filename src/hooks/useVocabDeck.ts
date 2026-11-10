@@ -31,13 +31,18 @@ export function useVocabDeck() {
   useEffect(() => {
     deckStorage.getItem<KanjiCard[]>('kanji_srs_deck').then((cached) => {
       if (cached && Array.isArray(cached) && cached.length > 0) {
-        const upgraded = cached.map(c => {
+        const seenIds = new Set<string>();
+        const uniqueCached: KanjiCard[] = [];
+        for (const c of cached) {
+          if (!c || !c.id || seenIds.has(c.id)) continue;
+          seenIds.add(c.id);
           if ((c.id === '81556a75-57cd-467d-a9fd-04c234980a2c' || c.kanji === '乾かす') && c.wordType === 'Động từ nhóm I') {
-            return { ...c, wordType: 'Động từ nhóm I (Tha động từ)' };
+            uniqueCached.push({ ...c, wordType: 'Động từ nhóm I (Tha động từ)' });
+          } else {
+            uniqueCached.push(c);
           }
-          return c;
-        });
-        setDeck(prev => prev.length === 0 ? upgraded : prev);
+        }
+        setDeck(prev => prev.length === 0 ? uniqueCached : prev);
       }
     }).catch(() => {});
   }, []);
@@ -48,8 +53,15 @@ export function useVocabDeck() {
     
     const unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       const loadedDeck: KanjiCard[] = [];
+      const seenIds = new Set<string>();
       snapshot.forEach((docSnap) => {
-        const card = { id: docSnap.id, ...docSnap.data() } as KanjiCard;
+        const data = docSnap.data() || {};
+        const cardId = docSnap.id || data.id;
+        if (!cardId || seenIds.has(cardId)) {
+          return;
+        }
+        seenIds.add(cardId);
+        const card = { ...data, id: cardId } as KanjiCard;
         if ((card.id === '81556a75-57cd-467d-a9fd-04c234980a2c' || card.kanji === '乾かす') && card.wordType === 'Động từ nhóm I') {
           card.wordType = 'Động từ nhóm I (Tha động từ)';
           // Persist to Firestore asynchronously

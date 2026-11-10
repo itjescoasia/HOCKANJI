@@ -862,7 +862,247 @@ QUY TẮC BẮT BUỘC:
     }
   });
 
-  // API to fetch verb forms from OJAD
+  // ==================== ELEVENLABS TTS API ROUTES ====================
+
+  const CURATED_ELEVENLABS_VOICES = [
+    { voice_id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily (Nữ tính, nhẹ nhàng - 100% Miễn phí)', category: 'curated', accent: 'japanese' },
+    { voice_id: 'cjVigY5qzO86Huf0OWal', name: 'Eric (Nam tính, tự nhiên - 100% Miễn phí)', category: 'curated', accent: 'japanese' },
+    { voice_id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice (Nữ, rõ ràng, phát âm chuẩn)', category: 'curated', accent: 'japanese' },
+    { voice_id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica (Nữ trẻ trung, biểu cảm)', category: 'curated', accent: 'japanese' },
+    { voice_id: 'MXKtCrra8fvlDUbfKUT1', name: 'Giọng tùy chọn MXKtCrra8fvlDUbfKUT1 (Cần tài khoản trả phí)', category: 'user_selected', accent: 'japanese' },
+    { voice_id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George (Nam trầm ấm)', category: 'curated', accent: 'multilingual' }
+  ];
+
+  // Helper to synthesize single audio via ElevenLabs
+  async function synthesizeElevenLabsAudio(
+    text: string, 
+    voiceId: string = (process.env.ELEVENLABS_VOICE_ID || 'pFZP5JQG7iQjIQuC4Bku'), 
+    modelId: string = (process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2')
+  ): Promise<{ buffer: Buffer; filename: string; audioUrl: string; fromCache: boolean }> {
+    const cleanText = text.trim();
+    if (!cleanText) {
+      throw new Error('Văn bản phát âm không được để trống');
+    }
+
+    const hash = crypto.createHash('md5').update(`eleven_${cleanText}_${voiceId}_${modelId}`).digest('hex');
+    const filename = `eleven_${hash}.mp3`;
+    const filePath = path.join(AUDIO_DIR, filename);
+    const audioUrl = `/api/audio/${filename}`;
+
+    // 1. Return cached audio if already generated previously
+    if (fs.existsSync(filePath)) {
+      const buffer = fs.readFileSync(filePath);
+      return { buffer, filename, audioUrl, fromCache: true };
+    }
+
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      throw new Error('Chưa thiết lập ELEVENLABS_API_KEY trong file .env hoặc biến môi trường server.');
+    }
+
+    // 2. Call ElevenLabs REST API
+    try {
+      const response = await axios({
+        method: 'POST',
+        url: `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'audio/mpeg'
+        },
+        data: {
+          text: cleanText,
+          model_id: modelId,
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+            style: 0.0,
+            use_speaker_boost: true
+          }
+        },
+        responseType: 'arraybuffer',
+        timeout: 30000
+      });
+
+      const buffer = Buffer.from(response.data);
+      fs.writeFileSync(filePath, buffer);
+      return { buffer, filename, audioUrl, fromCache: false };
+    } catch (err: any) {
+      let customMsg = err.message || 'Lỗi khi gọi ElevenLabs API';
+      if (err.response && err.response.data) {
+        try {
+          const raw = Buffer.isBuffer(err.response.data)
+            ? err.response.data.toString('utf8')
+            : (err.response.data instanceof ArrayBuffer
+                ? Buffer.from(err.response.data).toString('utf8')
+                : String(err.response.data));
+          const parsed = JSON.parse(raw);
+          if (parsed.detail && parsed.detail.message) {
+            customMsg = parsed.detail.message;
+            if (customMsg.includes('Free users cannot use library voices')) {
+              customMsg = 'Tài khoản ElevenLabs miễn phí không được dùng giọng từ Thư viện (Library Voice ' + voiceId + ') qua API. Vui lòng nâng cấp gói ElevenLabs hoặc chọn các giọng tiếng Nhật mặc định (như Lily hoặc Eric) trong danh sách.';
+            }
+          }
+        } catch (e) {}
+      }
+      throw new Error(customMsg);
+    }
+  }
+
+  // 1. Check ElevenLabs configuration status
+  app.get('/api/elevenlabs/status', (req, res) => {
+    const isConfigured = !!process.env.ELEVENLABS_API_KEY;
+    res.json({
+      configured: isConfigured,
+      defaultVoiceId: process.env.ELEVENLABS_VOICE_ID || 'pFZP5JQG7iQjIQuC4Bku',
+      defaultModelId: process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2',
+      curatedVoices: CURATED_ELEVENLABS_VOICES
+    });
+  });
+
+  // 2. List available voices from user's ElevenLabs account (or fallback curated)
+  app.get('/api/elevenlabs/voices', async (req, res) => {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      return res.json({
+        configured: false,
+        voices: CURATED_ELEVENLABS_VOICES
+      });
+    }
+
+    try {
+      const response = await axios.get('https://api.elevenlabs.io/v1/voices', {
+        headers: { 'xi-api-key': apiKey },
+        timeout: 10000
+      });
+
+      const userVoices = response.data?.voices || [];
+      const formattedUserVoices = userVoices.map((v: any) => ({
+        voice_id: v.voice_id,
+        name: v.name,
+        category: v.category,
+        accent: v.labels?.accent || v.labels?.language || 'multilingual',
+        preview_url: v.preview_url
+      }));
+
+      // Combine user voices with curated ones, avoiding duplicates
+      const seenIds = new Set(formattedUserVoices.map((v: any) => v.voice_id));
+      const combined = [
+        ...formattedUserVoices,
+        ...CURATED_ELEVENLABS_VOICES.filter(cv => !seenIds.has(cv.voice_id))
+      ];
+
+      res.json({
+        configured: true,
+        voices: combined
+      });
+    } catch (err: any) {
+      console.warn('Failed to fetch ElevenLabs account voices, returning curated list:', err.message);
+      res.json({
+        configured: true,
+        voices: CURATED_ELEVENLABS_VOICES,
+        warning: 'Không thể tải danh sách giọng từ tài khoản, dùng danh sách giọng chuẩn.'
+      });
+    }
+  });
+
+  // 3. Synthesize single text
+  app.post('/api/elevenlabs/tts', async (req, res) => {
+    try {
+      const { text, voiceId, modelId } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: 'Văn bản (text) là bắt buộc' });
+      }
+
+      const result = await synthesizeElevenLabsAudio(text, voiceId, modelId);
+      res.json({
+        audioUrl: result.audioUrl,
+        filename: result.filename,
+        audioContent: result.buffer.toString('base64'),
+        fromCache: result.fromCache
+      });
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail?.message || err?.message || String(err);
+      console.error('ElevenLabs TTS error:', errMsg);
+      res.status(500).json({ error: 'Lỗi tạo âm thanh ElevenLabs: ' + errMsg });
+    }
+  });
+
+  // 4. Batch synthesize multiple items for a word (word, forms, examples)
+  app.post('/api/elevenlabs/batch', async (req, res) => {
+    try {
+      const { items, voiceId, modelId } = req.body;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Danh sách items không hợp lệ' });
+      }
+
+      const apiKey = process.env.ELEVENLABS_API_KEY;
+      if (!apiKey) {
+        return res.status(400).json({
+          error: 'Chưa thiết lập ELEVENLABS_API_KEY trong file .env hoặc biến môi trường server.'
+        });
+      }
+
+      const results: any[] = [];
+      let successCount = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const cleanText = String(item.text || '').trim();
+
+        if (!cleanText) {
+          results.push({
+            id: item.id,
+            type: item.type,
+            index: item.index,
+            text: '',
+            success: false,
+            error: 'Văn bản trống'
+          });
+          continue;
+        }
+
+        try {
+          const synth = await synthesizeElevenLabsAudio(cleanText, voiceId, modelId);
+          results.push({
+            id: item.id,
+            type: item.type,
+            index: item.index,
+            text: cleanText,
+            audioUrl: synth.audioUrl,
+            fromCache: synth.fromCache,
+            success: true
+          });
+          successCount++;
+
+          // If freshly fetched from ElevenLabs API, wait 250ms to respect rate limits
+          if (!synth.fromCache && i < items.length - 1) {
+            await new Promise(r => setTimeout(r, 250));
+          }
+        } catch (itemErr: any) {
+          const msg = itemErr?.response?.data?.detail?.message || itemErr?.message || 'Lỗi tạo âm thanh';
+          console.warn(`ElevenLabs batch error for item "${cleanText}":`, msg);
+          results.push({
+            id: item.id,
+            type: item.type,
+            index: item.index,
+            text: cleanText,
+            success: false,
+            error: msg
+          });
+        }
+      }
+
+      res.json({
+        total: items.length,
+        successCount,
+        results
+      });
+    } catch (err: any) {
+      console.error('ElevenLabs batch error:', err);
+      res.status(500).json({ error: 'Lỗi xử lý hàng loạt: ' + err.message });
+    }
+  });
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
