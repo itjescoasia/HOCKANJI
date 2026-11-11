@@ -1,6 +1,6 @@
 import { usePersistentState } from './hooks/usePersistentState';
 import { useState, useEffect, useRef } from 'react';
-import { ViewState } from './types';
+import { ViewState, KanjiCard } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import { useStudyStats } from './hooks/useStudyStats';
 import { useIntensiveVocab } from './hooks/useIntensiveVocab';
@@ -249,6 +249,16 @@ export default function App() {
   const [sentenceReviewForceAll, setSentenceReviewForceAll] = usePersistentState('app_sentenceReviewForceAll', false);
   const [sentenceReviewIsRandom, setSentenceReviewIsRandom] = usePersistentState('app_sentenceReviewIsRandom', false);
   const [isSentenceReviewOpen, setIsSentenceReviewOpen] = usePersistentState('app_isSentenceReviewOpen', false);
+
+  const [topicVocabReviewCards, setTopicVocabReviewCards] = useState<KanjiCard[] | null>(null);
+  const [topicVocabReviewTitle, setTopicVocabReviewTitle] = useState<string>('');
+  const [isTopicVocabReviewOpen, setIsTopicVocabReviewOpen] = useState(false);
+
+  const handleStartTopicVocabReview = (cards: KanjiCard[], title?: string) => {
+    setTopicVocabReviewCards(cards);
+    setTopicVocabReviewTitle(title || '');
+    setIsTopicVocabReviewOpen(true);
+  };
 
   const [listSearchQuery, setListSearchQuery] = usePersistentState('app_listSearchQuery', '');
   const [intensiveSearchQuery, setIntensiveSearchQuery] = usePersistentState('app_intensiveSearchQuery', '');
@@ -802,6 +812,7 @@ export default function App() {
             onUpdateWord={updateIntensiveWord}
             onReorderDeck={reorderIntensiveWords}
             onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
+            onStartTopicVocabReview={handleStartTopicVocabReview}
             initialSearchQuery={intensiveSearchQuery}
             initialSelectedWordId={intensiveSelectedWordId}
           />
@@ -866,6 +877,24 @@ export default function App() {
           isDifficultReview={isDifficultReviewMode}
           onUpdateCard={updateCard}
         />
+      )}
+
+      {/* Topic Vocab Review Overlay */}
+      {isTopicVocabReviewOpen && topicVocabReviewCards && (
+        <div id="topic-vocab-review-overlay" className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
+          <ReviewSession 
+            deck={deck} 
+            dueCards={topicVocabReviewCards}
+            onReview={handleReviewCard}
+            onFreeStudyReview={handleFreeStudyReview}
+            onClose={() => setIsTopicVocabReviewOpen(false)}
+            onRemoveCard={removeCard}
+            isFreeStudy={true}
+            isTopicReview={true}
+            topicTitle={topicVocabReviewTitle}
+            onUpdateCard={updateCard}
+          />
+        </div>
       )}
 
         {isSentenceReviewOpen && (

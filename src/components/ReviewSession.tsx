@@ -48,6 +48,8 @@ interface ReviewSessionProps {
   onUpdateCard?: (id: string, data: Partial<KanjiCard>) => void;
   isFreeStudy?: boolean;
   isDifficultReview?: boolean;
+  isTopicReview?: boolean;
+  topicTitle?: string;
 }
 
 export default function ReviewSession({
@@ -59,7 +61,9 @@ export default function ReviewSession({
   onRemoveCard,
   onUpdateCard,
   isFreeStudy = false,
-  isDifficultReview = false
+  isDifficultReview = false,
+  isTopicReview = false,
+  topicTitle = ''
 }: ReviewSessionProps) {
   // Always ensure reviewQueue has cards if deck has cards
   const [reviewQueue, setReviewQueue] = useState<KanjiCard[]>(() => {
@@ -68,8 +72,16 @@ export default function ReviewSession({
     return [];
   });
 
-  const [currentIndexRaw, setCurrentIndex] = usePersistentState('app_reviewsession_currentIndex', 0);
-  const [flippedState, setFlippedState] = usePersistentState<Record<number, boolean>>('app_reviewsession_flippedState', {});
+  const [persistentCurrentIndex, setPersistentCurrentIndex] = usePersistentState('app_reviewsession_currentIndex', 0);
+  const [persistentFlippedState, setPersistentFlippedState] = usePersistentState<Record<number, boolean>>('app_reviewsession_flippedState', {});
+  const [topicCurrentIndex, setTopicCurrentIndex] = useState(0);
+  const [topicFlippedState, setTopicFlippedState] = useState<Record<number, boolean>>({});
+
+  const currentIndexRaw = isTopicReview ? topicCurrentIndex : persistentCurrentIndex;
+  const setCurrentIndex = isTopicReview ? setTopicCurrentIndex : setPersistentCurrentIndex;
+  const flippedState = isTopicReview ? topicFlippedState : persistentFlippedState;
+  const setFlippedState = isTopicReview ? setTopicFlippedState : setPersistentFlippedState;
+
   const [autoPlayAudio, setAutoPlayAudio] = usePersistentState<boolean>('app_reviewsession_autoplay_audio', true);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
 
@@ -77,10 +89,14 @@ export default function ReviewSession({
   useEffect(() => {
     if (dueCards && dueCards.length > 0) {
       setReviewQueue(dueCards);
+      if (isTopicReview) {
+        setTopicCurrentIndex(0);
+        setTopicFlippedState({});
+      }
     } else if (deck && deck.length > 0 && reviewQueue.length === 0) {
       setReviewQueue(deck);
     }
-  }, [dueCards, deck]);
+  }, [dueCards, deck, isTopicReview]);
 
   // Safe index calculation
   const safeIndex = reviewQueue.length > 0 ? Math.min(Math.max(0, currentIndexRaw), reviewQueue.length - 1) : 0;
@@ -337,7 +353,10 @@ export default function ReviewSession({
           </h2>
 
           <p className="text-theme-primary/70 mb-8 text-xs sm:text-sm leading-relaxed max-w-sm mx-auto">
-            Bạn đã ôn tập xong toàn bộ <strong>{reviewQueue.length} từ vựng</strong> trong phiên này. Sự kiên trì mỗi ngày là chìa khóa để phản xạ tự nhiên.
+            {isTopicReview 
+              ? <>Bạn đã ôn tập xong toàn bộ <strong>{reviewQueue.length} từ vựng</strong> trong chuyên đề này!</>
+              : <>Bạn đã ôn tập xong toàn bộ <strong>{reviewQueue.length} từ vựng</strong> trong phiên này. Sự kiên trì mỗi ngày là chìa khóa để phản xạ tự nhiên.</>
+            }
           </p>
 
           <div className="grid grid-cols-2 gap-3 mb-8 bg-theme-base-alt/70 p-4 rounded-2xl border border-theme-subtle">
@@ -558,11 +577,13 @@ export default function ReviewSession({
     setIsEditing(false);
   };
 
-  const modeTitle = isDifficultReview 
-    ? 'Ôn từ hay quên (Khó)'
-    : isFreeStudy 
-      ? 'Ôn tập tự do (Học nhồi)' 
-      : 'Ôn tập ngắt quãng SRS';
+  const modeTitle = isTopicReview
+    ? `Ôn từ vựng chuyên đề${topicTitle ? `: ${topicTitle}` : ''}`
+    : isDifficultReview 
+      ? 'Ôn từ hay quên (Khó)'
+      : isFreeStudy 
+        ? 'Ôn tập tự do (Học nhồi)' 
+        : 'Ôn tập ngắt quãng SRS';
 
   // Fallback word display
   const primaryDisplayWord = currentCard.kanji || currentCard.reading || currentCard.meaning || 'Từ vựng';

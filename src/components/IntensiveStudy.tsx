@@ -52,7 +52,8 @@ import {
   Unlink,
   Zap,
   ArrowDown,
-  Loader2
+  Loader2,
+  Brain
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import WordDetailModal from "./WordDetailModal";
@@ -60,6 +61,7 @@ import { renderExampleHighlight as baseRenderExampleHighlight, RelatedHighlight,
 import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
 import { fetchFuriganaWithGemini } from "../utils/furigana";
 import { filterAndRankIntensiveDeck } from "../utils/searchMatcher";
+import { getVerbPairInfo } from "../utils/verbTransitivity";
 
 
 export function calculateMasteryPercent(word: IntensiveWord): number {
@@ -132,8 +134,184 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { formatCreatedAt } from "../lib/dateUtils";
 
+export function getTopicVocabularyCards(
+  word: IntensiveWord,
+  deck: IntensiveWord[] = [],
+  mainDeck: KanjiCard[] = []
+): KanjiCard[] {
+  const cards: KanjiCard[] = [];
+  const addedIds = new Set<string>();
+  const addedKanjis = new Set<string>();
+
+  const cleanWord = (word.word || "").trim();
+  const cleanReading = (word.reading || "").trim();
+
+  // 1. Primary Word: Direct match from mainDeck or create synthesized card
+  const directMatch = mainDeck.find(c => 
+    (c.kanji && c.kanji === cleanWord) ||
+    (c.reading && c.reading === cleanWord) ||
+    (cleanReading && (c.reading === cleanReading || c.kanji === cleanReading))
+  );
+
+  const primaryCard: KanjiCard = directMatch ? { ...directMatch } : {
+    id: `topic-${word.id}`,
+    kanji: word.word,
+    reading: word.reading,
+    meaning: word.explanation || 'Từ vựng chuyên đề',
+    sinoVietnamese: '',
+    wordType: word.category || 'Chuyên đề',
+    kanjiExplanation: word.explanation || '',
+    romaji: word.romaji || '',
+    examples: (word.examples || []).map(ex => ({
+      id: ex.id,
+      sentence: ex.sentence,
+      reading: ex.reading,
+      translation: ex.translation,
+      audioUrl: ex.audioUrl || undefined,
+      hasAudio: ex.hasAudio || !!ex.audioUrl,
+    })),
+    forms: [],
+    interval: 0,
+    repetition: 0,
+    easeFactor: 2.5,
+    nextReviewDate: Date.now(),
+    createdAt: Date.now(),
+    audioUrl: word.audioUrl || undefined,
+    hasAudio: word.hasAudio || !!word.audioUrl,
+  };
+
+  cards.push(primaryCard);
+  addedIds.add(primaryCard.id);
+  if (primaryCard.kanji) addedKanjis.add(primaryCard.kanji);
+
+  // 2. Transitive / Intransitive Pair counterpart (if verb pair exists)
+  try {
+    const pairResult = getVerbPairInfo(word.word, word.reading);
+    if (pairResult?.counterpart) {
+      const cpKanji = pairResult.counterpart.kanji;
+      const cpReading = pairResult.counterpart.reading;
+      
+      const cpMatch = mainDeck.find(c => 
+        (c.kanji && c.kanji === cpKanji) ||
+        (c.reading && (c.reading === cpReading || c.reading === cpKanji))
+      );
+      
+      if (cpMatch && !addedIds.has(cpMatch.id)) {
+        cards.push(cpMatch);
+        addedIds.add(cpMatch.id);
+        if (cpMatch.kanji) addedKanjis.add(cpMatch.kanji);
+      } else if (!cpMatch) {
+        // Check if intensive deck has this word
+        const cpTopic = deck.find(w => w.word === cpKanji || w.reading === cpReading);
+        if (cpTopic && !addedIds.has(cpTopic.id)) {
+          cards.push({
+            id: `topic-pair-${cpTopic.id}`,
+            kanji: cpTopic.word,
+            reading: cpTopic.reading,
+            meaning: cpTopic.explanation || `${pairResult.counterpart.transitivity === 'transitive' ? 'Tha động từ' : 'Tự động từ'} tương ứng`,
+            sinoVietnamese: '',
+            wordType: cpTopic.category || (pairResult.counterpart.transitivity === 'transitive' ? 'Tha động từ' : 'Tự động từ'),
+            kanjiExplanation: cpTopic.explanation || '',
+            romaji: cpTopic.romaji || '',
+            examples: (cpTopic.examples || []).map(ex => ({
+              id: ex.id,
+              sentence: ex.sentence,
+              reading: ex.reading,
+              translation: ex.translation,
+              audioUrl: ex.audioUrl || undefined,
+              hasAudio: ex.hasAudio || !!ex.audioUrl,
+            })),
+            forms: [],
+            interval: 0,
+            repetition: 0,
+            easeFactor: 2.5,
+            nextReviewDate: Date.now(),
+            createdAt: Date.now(),
+            audioUrl: cpTopic.audioUrl || undefined,
+            hasAudio: cpTopic.hasAudio || !!cpTopic.audioUrl,
+          });
+          addedIds.add(cpTopic.id);
+          if (cpTopic.word) addedKanjis.add(cpTopic.word);
+        }
+      }
+    }
+  } catch (_err) {
+    // ignore
+  }
+
+  // 3. Other words in the intensive deck sharing the exact same category
+  const isGenericGrammarCategory = (cat?: string) => {
+    if (!cat) return true;
+    const trimmed = cat.trim();
+    return trimmed.startsWith('Động từ') || trimmed.startsWith('Tính từ') || trimmed === 'Danh từ' || trimmed === 'Phó từ' || trimmed === 'Trợ từ';
+  };
+
+  if (word.category && !isGenericGrammarCategory(word.category)) {
+    deck.forEach(otherWord => {
+      if (otherWord.id === word.id) return;
+      if (otherWord.category && otherWord.category.trim().toLowerCase() === word.category.trim().toLowerCase()) {
+        const otherMatch = mainDeck.find(c => 
+          (c.kanji && c.kanji === otherWord.word) || 
+          (c.reading && (c.reading === otherWord.reading || c.reading === otherWord.word))
+        );
+        if (otherMatch && !addedIds.has(otherMatch.id) && !addedKanjis.has(otherMatch.kanji)) {
+          cards.push(otherMatch);
+          addedIds.add(otherMatch.id);
+          if (otherMatch.kanji) addedKanjis.add(otherMatch.kanji);
+        } else if (!otherMatch && !addedIds.has(otherWord.id) && !addedKanjis.has(otherWord.word)) {
+          cards.push({
+            id: `topic-${otherWord.id}`,
+            kanji: otherWord.word,
+            reading: otherWord.reading,
+            meaning: otherWord.explanation,
+            sinoVietnamese: '',
+            wordType: otherWord.category,
+            kanjiExplanation: otherWord.explanation,
+            romaji: otherWord.romaji || '',
+            examples: (otherWord.examples || []).map(ex => ({
+              id: ex.id,
+              sentence: ex.sentence,
+              reading: ex.reading,
+              translation: ex.translation,
+              audioUrl: ex.audioUrl || undefined,
+              hasAudio: ex.hasAudio || !!ex.audioUrl,
+            })),
+            forms: [],
+            interval: 0,
+            repetition: 0,
+            easeFactor: 2.5,
+            nextReviewDate: Date.now(),
+            createdAt: Date.now(),
+            audioUrl: otherWord.audioUrl || undefined,
+            hasAudio: otherWord.hasAudio || !!otherWord.audioUrl,
+          });
+          addedIds.add(otherWord.id);
+          if (otherWord.word) addedKanjis.add(otherWord.word);
+        }
+      }
+    });
+  }
+
+  // 4. Vocabulary cards in mainDeck whose kanji appears in this topic's example sentences
+  if (word.examples && word.examples.length > 0) {
+    const allSentences = word.examples.map(ex => ex.sentence || '').join(' ');
+    mainDeck.forEach(c => {
+      if (addedIds.has(c.id) || (c.kanji && addedKanjis.has(c.kanji))) return;
+      // Require kanji length >= 2 to avoid single characters false-positives
+      if (c.kanji && c.kanji.length >= 2 && allSentences.includes(c.kanji)) {
+        cards.push(c);
+        addedIds.add(c.id);
+        addedKanjis.add(c.kanji);
+      }
+    });
+  }
+
+  return cards;
+}
+
 interface IntensiveStudyProps {
   onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
+  onStartTopicVocabReview?: (topicVocabCards: KanjiCard[], topicTitle?: string) => void;
   deck: IntensiveWord[];
   mainDeck?: KanjiCard[];
   onAddWord: (word: IntensiveWord) => void;
@@ -820,6 +998,7 @@ export default function IntensiveStudy({
   onUpdateWord,
   onReorderDeck,
   onStartTopicReview,
+  onStartTopicVocabReview,
   initialSearchQuery = "",
   initialSelectedWordId = null,
 }: IntensiveStudyProps) {
@@ -1088,6 +1267,7 @@ export default function IntensiveStudy({
             onUpdateWord={onUpdateWord}
             renderHighlight={renderExampleHighlight}
             onStartTopicReview={onStartTopicReview}
+            onStartTopicVocabReview={onStartTopicVocabReview}
           />
         </motion.div>
       )}
@@ -1604,6 +1784,7 @@ function StudyView({
   onUpdateWord,
   renderHighlight,
   onStartTopicReview,
+  onStartTopicVocabReview,
 }: {
   deck: IntensiveWord[];
   mainDeck?: KanjiCard[];
@@ -1615,6 +1796,7 @@ function StudyView({
   onUpdateWord: (id: string, updates: Partial<IntensiveWord>) => void;
   renderHighlight: (text: string | undefined | null, kanji: string) => React.ReactNode;
   onStartTopicReview?: (topicDeck: IntensiveWord[]) => void;
+  onStartTopicVocabReview?: (topicVocabCards: KanjiCard[], topicTitle?: string) => void;
 }) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   
@@ -2420,8 +2602,24 @@ function StudyView({
                 {word.word}
               </span>
               <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+                <button
+                  id={`btn-topic-vocab-review-${word.id}`}
+                  type="button"
+                  onClick={() => {
+                    const topicCards = getTopicVocabularyCards(word, deck, mainDeck || []);
+                    if (onStartTopicVocabReview) {
+                      onStartTopicVocabReview(topicCards, word.word);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-md text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer active:scale-95"
+                  title="Ôn tập các từ vựng có trong chuyên đề hiện tại"
+                >
+                  <Brain className="w-3.5 h-3.5" />
+                  <span>Ôn từ vựng chuyên đề</span>
+                </button>
                 {onStartTopicReview && word.examples.length > 0 && (
                   <button
+                    type="button"
                     onClick={() => onStartTopicReview([word])}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-primary text-theme-base rounded-md text-xs font-bold uppercase tracking-wider hover:bg-theme-accent transition-colors shadow-sm cursor-pointer"
                   >
@@ -2431,6 +2629,7 @@ function StudyView({
                 )}
                 <button
                   id={`btn-detail-modal-${word.id}`}
+                  type="button"
                   onClick={() => setShowDetailModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/15 border border-theme-accent/30 text-theme-accent hover:bg-theme-accent hover:text-white rounded-md text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                   title="Xem toàn bộ chi tiết từ vựng này"
