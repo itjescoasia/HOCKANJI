@@ -423,81 +423,129 @@
 
 /* High-Contrast overrides specifically for Gentle Warm Coffee theme */
 /* Green & Emerald text: Recalculated to deep pine/forest jade green (#0e4b2a) guaranteeing WCAG AAA contrast > 8.8:1 on coffee background */
-.theme-sepia .text-green-300,
-.theme-sepia .text-green-400,
-.theme-sepia .text-green-500,
-.theme-sepia .text-green-600,
-.theme-sepia .text-green-700,
-.theme-sepia .text-green-800,
-.theme-sepia .text-emerald-300,
-.theme-sepia .text-emerald-400,
-.theme-sepia .text-emerald-500,
-.theme-sepia .text-emerald-600,
-.theme-sepia .text-emerald-700,
-.theme-sepia .text-emerald-800,
-.theme-sepia .text-teal-400,
-.theme-sepia .text-teal-500,
-.theme-sepia .text-teal-600,
-.theme-sepia [class*="text-green-"],
-.theme-sepia [class*="text-emerald-"],
-.theme-sepia [class*="dark:text-green-"],
-.theme-sepia [class*="dark:text-emerald-"] {
-  color: #0e4b2a !important;
+.theme-sepia .text-green-300:not(:hover),
+.theme-sepia .text-green-400:not(:hover),
+.theme-sepia .text-green-500:not(:hover),
+.theme-sepia .text-green-600:not(:hover),
+.theme-sepia .text-green-700:not(:hover),
+.theme-sepia .text-green-800:not(:hover),
+.theme-sepia .text-emerald-300:not(:hover),
+.theme-sepia .text-emerald-400:not(:hover),
+.theme-sepia .text-emerald-500:not(:hover),
+.theme-sepia .text-emerald-600:not(:hover),
+.theme-sepia .text-emerald-700:not(:hover),
+.theme-sepia .text-emerald-800:not(:hover),
+.theme-sepia .text-teal-400:not(:hover),
+.theme-sepia .text-teal-500:not(:hover),
+.theme-sepia .text-teal-600:not(:hover),
+.theme-sepia [class*="text-green-"]:not(:hover):not([class*="hover:text-"]),
+.theme-sepia [class*="text-emerald-"]:not(:hover):not([class*="hover:text-"]),
+.theme-sepia [class*="dark:text-green-"]:not(:hover),
+.theme-sepia [class*="dark:text-emerald-"]:not(:hover) {
+  color: #0e4b2a;
   font-weight: 600;
 }
 
 /* Green icon strokes & fills in coffee theme */
-.theme-sepia svg[class*="text-green-"],
-.theme-sepia svg[class*="text-emerald-"],
-.theme-sepia .text-green-500 svg,
-.theme-sepia .text-emerald-500 svg {
-  color: #0e4b2a !important;
-  stroke: #0e4b2a !important;
+.theme-sepia svg[class*="text-green-"]:not(:hover),
+.theme-sepia svg[class*="text-emerald-"]:not(:hover),
+.theme-sepia .text-green-500:not(:hover) svg,
+.theme-sepia .text-emerald-500:not(:hover) svg {
+  color: #0e4b2a;
+  stroke: #0e4b2a;
 }
 
 /* Green badge containers in coffee theme */
-.theme-sepia [class*="bg-green-500/"],
-.theme-sepia [class*="bg-emerald-500/"],
-.theme-sepia [class*="bg-green-600/"],
-.theme-sepia [class*="bg-emerald-600/"] {
-  background-color: rgba(14, 75, 42, 0.12) !important;
-  color: #0e4b2a !important;
+.theme-sepia [class*="bg-green-500/"]:not(:hover),
+.theme-sepia [class*="bg-emerald-500/"]:not(:hover),
+.theme-sepia [class*="bg-green-600/"]:not(:hover),
+.theme-sepia [class*="bg-emerald-600/"]:not(:hover) {
+  background-color: rgba(14, 75, 42, 0.12);
+  color: #0e4b2a;
 }
 
 .theme-sepia [class*="border-green-"],
 .theme-sepia [class*="border-emerald-"] {
-  border-color: rgba(14, 75, 42, 0.35) !important;
+  border-color: rgba(14, 75, 42, 0.35);
 }
 
 /* Red / Danger text overrides */
-.theme-sepia .text-red-400,
-.theme-sepia .text-red-500,
-.theme-sepia [class*="text-red-"] {
-  color: #881313 !important;
+.theme-sepia .text-red-400:not(:hover),
+.theme-sepia .text-red-500:not(:hover),
+.theme-sepia [class*="text-red-"]:not(:hover):not([class*="hover:text-"]) {
+  color: #881313;
   font-weight: 600;
 }
 
 /* High-contrast secondary text: never wash out into pale beige on coffee background */
-.theme-sepia .text-theme-primary\/30,
-.theme-sepia .text-theme-primary\/40,
-.theme-sepia .text-theme-primary\/50 {
-  color: #483523 !important;
+.theme-sepia .text-theme-primary\/30:not(:hover):not([class*="hover:text-"]),
+.theme-sepia .text-theme-primary\/40:not(:hover):not([class*="hover:text-"]),
+.theme-sepia .text-theme-primary\/50:not(:hover):not([class*="hover:text-"]) {
+  color: #483523;
 }
 
-.theme-sepia .text-theme-primary\/60,
-.theme-sepia .text-theme-primary\/70 {
-  color: #352618 !important;
+.theme-sepia .text-theme-primary\/60:not(:hover):not([class*="hover:text-"]),
+.theme-sepia .text-theme-primary\/70:not(:hover):not([class*="hover:text-"]) {
+  color: #352618;
 }
 
 .theme-sepia rt {
-  color: #7c340a !important;
+  color: #7c340a;
   font-weight: 700;
+}
+
+/* Hover fixes: ensure high contrast when user hovers elements with mouse */
+.theme-sepia [class*="hover:bg-red"]:hover,
+.theme-sepia [class*="hover:bg-amber"]:hover,
+.theme-sepia [class*="hover:bg-emerald"]:hover,
+.theme-sepia [class*="hover:bg-green"]:hover,
+.theme-sepia [class*="hover:bg-indigo"]:hover,
+.theme-sepia [class*="hover:bg-blue"]:hover,
+.theme-sepia [class*="hover:bg-purple"]:hover,
+.theme-sepia [class*="hover:bg-theme-accent"]:hover,
+.theme-sepia [class*="hover:bg-rose"]:hover {
+  color: #ffffff !important;
+}
+
+.theme-sepia [class*="hover:bg-red"]:hover *,
+.theme-sepia [class*="hover:bg-amber"]:hover *,
+.theme-sepia [class*="hover:bg-emerald"]:hover *,
+.theme-sepia [class*="hover:bg-green"]:hover *,
+.theme-sepia [class*="hover:bg-indigo"]:hover *,
+.theme-sepia [class*="hover:bg-blue"]:hover *,
+.theme-sepia [class*="hover:bg-purple"]:hover *,
+.theme-sepia [class*="hover:bg-theme-accent"]:hover *,
+.theme-sepia [class*="hover:bg-rose"]:hover * {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Action icons on hover inside cards and tables */
+.theme-sepia [class*="hover:text-theme-accent"]:hover {
+  color: var(--accent) !important;
+}
+
+.theme-sepia [class*="hover:text-theme-accent"]:hover svg {
+  color: var(--accent) !important;
+  stroke: var(--accent) !important;
+}
+
+.theme-sepia [class*="hover:text-red"]:hover,
+.theme-sepia [class*="hover:text-red"]:hover svg {
+  color: #dc2626 !important;
+  stroke: #dc2626 !important;
+}
+
+/* Hover background on table rows and panels in coffee theme */
+.theme-sepia .hover\:bg-theme-hover:hover {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary);
 }
 
 /* Example card inner surfaces in coffee theme: ensure crisp warm cream background */
 .theme-sepia [id^="example-"] > div {
-  background-color: var(--bg-panel) !important;
-  border-color: var(--border-subtle) !important;
+  background-color: var(--bg-panel);
+  border-color: var(--border-subtle);
 }
 
 .theme-dim {

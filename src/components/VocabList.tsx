@@ -23,7 +23,6 @@ import { scoreKanjiCardMatch } from '../utils/searchMatcher';
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from '../utils/highlight';
 import { toRomaji } from 'wanakana';
 import AudioUpload from './AudioUpload';
-import ElevenLabsBatchModal from './ElevenLabsBatchModal';
 import { 
   getVerbTransitivity, 
   getBaseWordType, 
@@ -195,7 +194,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingCard, setViewingCard] = useState<KanjiCard | null>(null);
-  const [elevenLabsModalCard, setElevenLabsModalCard] = useState<KanjiCard | null>(null);
   const [copiedSentenceKey, setCopiedSentenceKey] = useState<string | null>(null);
 
   const handleCopySentence = (e: React.MouseEvent, text: string, key: string) => {
@@ -1751,27 +1749,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             {((editForm.forms && editForm.forms.length > 0) || (editForm.examples && editForm.examples.length > 0) || editForm.example) && (
                                <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-theme-subtle items-end">
                                  <div className="flex flex-wrap items-center gap-2 justify-end">
-                                   <button
-                                     type="button"
-                                     onClick={() => {
-                                       const curCard = deck.find(c => c.id === card.id) || card;
-                                       const cardToProcess: KanjiCard = {
-                                         ...curCard,
-                                         kanji: editForm.kanji || curCard.kanji,
-                                         reading: editForm.reading || curCard.reading,
-                                         meaning: editForm.meaning || curCard.meaning,
-                                         forms: editForm.forms || curCard.forms,
-                                         examples: editForm.examples || curCard.examples
-                                       };
-                                       setElevenLabsModalCard(cardToProcess);
-                                     }}
-                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 rounded-md transition-all shadow-xs cursor-pointer active:scale-95"
-                                     title="Tự động tạo toàn bộ MP3 cho các thể và câu ví dụ bằng ElevenLabs API"
-                                   >
-                                     <Zap className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                                     <span>⚡ ElevenLabs Hàng Loạt</span>
-                                   </button>
-
                                    {(() => {
                                       const hasMissingMp3s = (editForm.forms?.some(f => f.value && !f.audioUrl)) || 
                                                              (editForm.examples?.some(ex => ex.sentence && !ex.audioUrl)) ||
@@ -2127,16 +2104,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
                 <button
                   type="button"
-                  onClick={() => setElevenLabsModalCard(viewingCard)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Tự động tạo MP3 hàng loạt cho từ này bằng ElevenLabs API"
-                >
-                  <Zap className="w-3.5 h-3.5 text-purple-500" />
-                  <span>ElevenLabs MP3</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => {
                     const cardToEdit = viewingCard;
                     setViewingCard(null);
@@ -2450,29 +2417,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             </div>
           </div>
         </div>
-      )}
-
-      {/* ElevenLabs Batch Audio Modal */}
-      {elevenLabsModalCard && (
-        <ElevenLabsBatchModal
-          isOpen={!!elevenLabsModalCard}
-          onClose={() => setElevenLabsModalCard(null)}
-          card={elevenLabsModalCard}
-          onCardUpdated={async (updatedCard) => {
-            if (onUpdate) await onUpdate(updatedCard.id, updatedCard);
-            if (viewingCard && viewingCard.id === updatedCard.id) {
-              setViewingCard(updatedCard);
-            }
-            if (editingId === updatedCard.id) {
-              setEditForm(prev => ({
-                ...prev,
-                audioUrl: updatedCard.audioUrl,
-                forms: updatedCard.forms,
-                examples: updatedCard.examples
-              }));
-            }
-          }}
-        />
       )}
     </div>
   );
