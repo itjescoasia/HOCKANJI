@@ -277,10 +277,10 @@ export default function WordDetailModal({
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6 custom-scrollbar">
           {/* Section 1: Hero Card (Word, Reading, Romaji, Audio) */}
-          <div className="bg-theme-base-alt border border-theme-subtle rounded-xl p-5 sm:p-6 shadow-inner flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 relative">
-            <div className="flex-1 text-center sm:text-left space-y-2.5">
-              <div className="flex items-center justify-center sm:justify-start gap-4 flex-wrap">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif text-theme-primary font-bold tracking-tight">
+          <div className="bg-theme-base-alt border border-theme-subtle rounded-2xl p-6 sm:p-8 shadow-inner flex flex-col sm:flex-row items-center sm:items-center justify-between gap-6 relative">
+            <div className="flex-1 min-w-0 text-center sm:text-left space-y-3">
+              <div className="flex items-baseline justify-center sm:justify-start gap-4 flex-wrap">
+                <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif text-theme-primary font-extrabold tracking-tight leading-none break-words select-all drop-shadow-xs">
                   {word.word}
                 </h2>
                 <div className="flex flex-col items-center gap-0.5">

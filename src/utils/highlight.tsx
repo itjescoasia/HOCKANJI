@@ -1162,14 +1162,14 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
                 const effectiveMainAudio = getEffectiveCardAudioUrl(currentCard);
                 const isMainAudioSharedFromDict = !currentCard.audioUrl && !!effectiveMainAudio;
                 return (
-                  <div id="word-detail-hero-section" className="bg-theme-base-alt border border-theme-subtle rounded-xl p-5 sm:p-6 shadow-inner flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
-                <div className="flex-1 text-center sm:text-left space-y-2">
-                  <div className="flex items-center justify-center sm:justify-start gap-2.5 flex-wrap">
-                    <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif text-theme-primary font-bold tracking-tight">
+                  <div id="word-detail-hero-section" className="bg-theme-base-alt border border-theme-subtle rounded-2xl p-6 sm:p-8 shadow-inner flex flex-col sm:flex-row items-center sm:items-center justify-between gap-6">
+                <div className="flex-1 min-w-0 text-center sm:text-left space-y-3">
+                  <div className="flex items-baseline justify-center sm:justify-start gap-3 flex-wrap">
+                    <h3 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif text-theme-primary font-extrabold tracking-tight leading-none break-words select-all drop-shadow-xs">
                       {currentCard.kanji || currentCard.reading}
                     </h3>
                     {isMainAudioSharedFromDict && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap self-center">
                         Sài chung MP3 thể từ điển (ngắn)
                       </span>
                     )}
