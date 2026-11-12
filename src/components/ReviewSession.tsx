@@ -3,7 +3,7 @@ import { KanjiCard, ReviewGrade } from '../types';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playAudioUrl } from '../utils/playTTS';
 import { isDictionaryForm, getEffectiveCardAudioUrl, getEffectiveFormAudioUrl, syncDictionaryAudioOnCardUpload } from '../utils/stringUtils';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { storage, auth, db } from '../lib/firebase';
 import Markdown from 'react-markdown';
@@ -480,36 +480,82 @@ export default function ReviewSession({
   };
 
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingExampleId, setUploadingExampleId] = useState<string | null>(null);
+  const [exampleUploadProgress, setExampleUploadProgress] = useState(0);
 
-  const uploadAudioFile = async (file: File): Promise<string> => {
+  const uploadAudioFile = async (file: File, onProgress?: (percent: number) => void): Promise<string> => {
     if (!file.type.startsWith('audio/')) {
       throw new Error('Vui lòng chọn file âm thanh hợp lệ (mp3, m4a, wav, v.v.)');
     }
     const uid = auth.currentUser?.uid;
+    onProgress?.(12);
+
     try {
       if (!uid) throw new Error("Chưa đăng nhập");
       const filename = `users/${uid}/audio/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, filename);
-      await Promise.race([
-        uploadBytes(storageRef, file),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout khi upload Cloud")), 8000))
-      ]);
-      return await getDownloadURL(storageRef);
+
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      const downloadUrl = await new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          try { uploadTask.cancel(); } catch {}
+          reject(new Error("Timeout khi upload Cloud"));
+        }, 15000);
+
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            if (snapshot.totalBytes > 0) {
+              const p = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 85);
+              onProgress?.(Math.max(15, p));
+            }
+          },
+          (error) => {
+            clearTimeout(timer);
+            reject(error);
+          },
+          async () => {
+            clearTimeout(timer);
+            onProgress?.(92);
+            try {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              onProgress?.(100);
+              resolve(url);
+            } catch (err) {
+              reject(err);
+            }
+          }
+        );
+      });
+
+      return downloadUrl;
     } catch (err) {
       console.warn("Storage upload failed, falling back to Firestore", err);
       if (file.size > 800 * 1024) {
         throw new Error('File mp3 quá lớn (Vượt quá 800KB). Vui lòng dùng file nhẹ hơn.');
       }
+      onProgress?.(30);
       return new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
+        reader.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            const p = Math.round((event.loaded / event.total) * 55) + 30;
+            onProgress?.(Math.min(85, p));
+          }
+        };
         reader.onloadend = async () => {
           try {
+            onProgress?.(90);
             if (uid) {
               const audioId = Date.now() + "_" + Math.random().toString(36).substring(7);
               const audioDocRef = doc(db, 'global_audio', audioId);
               await setDoc(audioDocRef, { data: reader.result as string, createdAt: Date.now() });
+              onProgress?.(100);
               resolve('firestore:' + audioId);
             } else {
+              onProgress?.(100);
               resolve(reader.result as string);
             }
           } catch (e) {
@@ -527,31 +573,36 @@ export default function ReviewSession({
     if (!file || !currentCard) return;
     try {
       setIsUploadingAudio(true);
-      const url = await uploadAudioFile(file);
+      setUploadProgress(10);
+      const url = await uploadAudioFile(file, (p) => setUploadProgress(p));
+      setUploadProgress(100);
       const updatedCard = syncDictionaryAudioOnCardUpload(currentCard, url);
       const updates = { audioUrl: url, hasAudio: true, forms: updatedCard.forms };
       if (onUpdateCard) {
         onUpdateCard(currentCard.id, updates);
       }
       setReviewQueue(prev => prev.map(c => c.id === currentCard.id ? { ...c, ...updates } : c));
+      
+      // Short delay so user perceives 100% completion before playing
+      await new Promise(r => setTimeout(r, 400));
       playAudioUrl(url, currentCard.kanji || currentCard.reading);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
-
       setIsUploadingAudio(false);
+      setUploadProgress(0);
       if (e.target) e.target.value = '';
     }
   };
-
-  const [uploadingExampleId, setUploadingExampleId] = useState<string | null>(null);
 
   const handleUploadExampleAudio = async (e: React.ChangeEvent<HTMLInputElement>, exampleId: string) => {
     const file = e.target.files?.[0];
     if (!file || !currentCard || !currentCard.examples) return;
     try {
       setUploadingExampleId(exampleId);
-      const url = await uploadAudioFile(file);
+      setExampleUploadProgress(15);
+      const url = await uploadAudioFile(file, (p) => setExampleUploadProgress(p));
+      setExampleUploadProgress(100);
       const updatedExamples = currentCard.examples.map(ex => 
         ex.id === exampleId ? { ...ex, audioUrl: url, hasAudio: true } : ex
       );
@@ -559,11 +610,13 @@ export default function ReviewSession({
         onUpdateCard(currentCard.id, { examples: updatedExamples });
       }
       setReviewQueue(prev => prev.map(c => c.id === currentCard.id ? { ...c, examples: updatedExamples } : c));
+      await new Promise(r => setTimeout(r, 400));
       playAudioUrl(url);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tải file âm thanh câu ví dụ');
     } finally {
       setUploadingExampleId(null);
+      setExampleUploadProgress(0);
       if (e.target) e.target.value = '';
     }
   };
@@ -906,7 +959,7 @@ export default function ReviewSession({
                             </h2>
 
                             {currentCard.audioUrl ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
@@ -915,12 +968,65 @@ export default function ReviewSession({
                                 >
                                   <Volume2 className="w-5 h-5" />
                                 </button>
+
+                                {isUploadingAudio ? (
+                                  <div className="flex flex-col gap-1 min-w-[150px] sm:min-w-[180px] p-2 px-3 rounded-xl bg-theme-base-alt border border-theme-accent/40 shadow-xs animate-in fade-in duration-200">
+                                    <div className="flex items-center justify-between text-[11px] font-semibold text-theme-primary">
+                                      <span className="flex items-center gap-1.5 text-theme-accent">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span>{uploadProgress >= 100 ? 'Đã xong!' : 'Đang đổi MP3...'}</span>
+                                      </span>
+                                      <span className="font-mono font-bold text-theme-accent">{uploadProgress}%</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-theme-panel rounded-full overflow-hidden border border-theme-subtle/50">
+                                      <div 
+                                        className="h-full bg-gradient-to-r from-theme-accent to-emerald-500 rounded-full transition-all duration-300 ease-out"
+                                        style={{ width: `${Math.max(6, uploadProgress)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <label
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded-xl hover:bg-theme-hover cursor-pointer transition-colors"
+                                    title="Đổi file MP3 khác cho từ này"
+                                  >
+                                    <Upload className="w-4 h-4" />
+                                    <input
+                                      type="file"
+                                      accept="audio/*"
+                                      className="hidden"
+                                      disabled={isUploadingAudio}
+                                      onChange={handleUploadCardAudio}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            ) : (
+                              isUploadingAudio ? (
+                                <div className="flex flex-col gap-1.5 min-w-[190px] sm:min-w-[230px] p-2.5 px-4 rounded-2xl bg-theme-base-alt border border-theme-accent/50 shadow-md animate-in fade-in duration-200">
+                                  <div className="flex items-center justify-between text-xs font-semibold text-theme-primary">
+                                    <span className="flex items-center gap-1.5 text-theme-accent">
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      <span>{uploadProgress >= 100 ? 'Đã nạp xong!' : 'Đang tải lên MP3...'}</span>
+                                    </span>
+                                    <span className="font-mono font-bold text-theme-accent text-xs">{uploadProgress}%</span>
+                                  </div>
+                                  <div className="w-full h-2 bg-theme-panel rounded-full overflow-hidden border border-theme-subtle/60">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-theme-accent via-amber-400 to-emerald-500 rounded-full transition-all duration-300 ease-out"
+                                      style={{ width: `${Math.max(6, uploadProgress)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
                                 <label
                                   onClick={(e) => e.stopPropagation()}
-                                  className="p-2 text-theme-primary/40 hover:text-theme-accent rounded-xl hover:bg-theme-hover cursor-pointer transition-colors"
-                                  title="Đổi file MP3 khác cho từ này"
+                                  className="px-3.5 py-2 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold hover:scale-[1.02] active:scale-[0.98] shadow-xs"
+                                  title="Từ vựng này chưa có MP3. Bấm để tải lên file MP3 chuẩn"
                                 >
                                   <Upload className="w-4 h-4" />
+                                  <span>Tải lên MP3</span>
                                   <input
                                     type="file"
                                     accept="audio/*"
@@ -929,23 +1035,7 @@ export default function ReviewSession({
                                     onChange={handleUploadCardAudio}
                                   />
                                 </label>
-                              </div>
-                            ) : (
-                              <label
-                                onClick={(e) => e.stopPropagation()}
-                                className="px-3 py-2 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold"
-                                title="Từ vựng này chưa có MP3. Bấm để tải lên file MP3 chuẩn"
-                              >
-                                {isUploadingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                <span>Tải lên MP3</span>
-                                <input
-                                  type="file"
-                                  accept="audio/*"
-                                  className="hidden"
-                                  disabled={isUploadingAudio}
-                                  onChange={handleUploadCardAudio}
-                                />
-                              </label>
+                              )
                             )}
 
                           </div>
@@ -1121,16 +1211,54 @@ export default function ReviewSession({
                                                       <Volume2 className="w-4 h-4" />
                                                       <span className="text-[9px] font-bold uppercase tracking-wider">MP3</span>
                                                     </button>
+                                                    {uploadingExampleId === ex.id ? (
+                                                      <div className="flex items-center gap-1.5 p-1 px-2.5 rounded-xl bg-theme-panel border border-theme-accent/40 shadow-2xs animate-in fade-in duration-150">
+                                                        <Loader2 className="w-3 h-3 animate-spin text-theme-accent shrink-0" />
+                                                        <div className="w-14 h-1.5 bg-theme-base-alt rounded-full overflow-hidden">
+                                                          <div 
+                                                            className="h-full bg-gradient-to-r from-theme-accent to-emerald-500 rounded-full transition-all duration-300 ease-out" 
+                                                            style={{ width: `${Math.max(8, exampleUploadProgress)}%` }} 
+                                                          />
+                                                        </div>
+                                                        <span className="text-[10px] font-mono font-bold text-theme-accent">{exampleUploadProgress}%</span>
+                                                      </div>
+                                                    ) : (
+                                                      <label
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="p-1.5 rounded-xl text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover cursor-pointer transition-colors"
+                                                        title="Đổi file MP3 cho câu ví dụ này"
+                                                      >
+                                                        <Upload className="w-3.5 h-3.5" />
+                                                        <input
+                                                          type="file"
+                                                          accept="audio/*"
+                                                          className="hidden"
+                                                          disabled={uploadingExampleId !== null}
+                                                          onChange={(e) => handleUploadExampleAudio(e, ex.id)}
+                                                        />
+                                                      </label>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  uploadingExampleId === ex.id ? (
+                                                    <div className="flex items-center gap-2 p-1.5 px-3 rounded-xl bg-theme-base-alt border border-theme-accent/40 shadow-2xs animate-in fade-in duration-150">
+                                                      <Loader2 className="w-3 h-3 animate-spin text-theme-accent shrink-0" />
+                                                      <div className="w-16 h-1.5 bg-theme-panel rounded-full overflow-hidden">
+                                                        <div 
+                                                          className="h-full bg-gradient-to-r from-theme-accent to-emerald-500 rounded-full transition-all duration-300 ease-out" 
+                                                          style={{ width: `${Math.max(8, exampleUploadProgress)}%` }} 
+                                                        />
+                                                      </div>
+                                                      <span className="text-[10px] font-mono font-bold text-theme-accent">{exampleUploadProgress}%</span>
+                                                    </div>
+                                                  ) : (
                                                     <label
                                                       onClick={(e) => e.stopPropagation()}
-                                                      className="p-1.5 rounded-xl text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover cursor-pointer transition-colors"
-                                                      title="Đổi file MP3 cho câu ví dụ này"
+                                                      className="px-2.5 py-1.5 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                                      title="Câu ví dụ này chưa có file MP3. Bấm để tải lên file MP3 chuẩn"
                                                     >
-                                                      {uploadingExampleId === ex.id ? (
-                                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
-                                                      ) : (
-                                                        <Upload className="w-3.5 h-3.5" />
-                                                      )}
+                                                      <Upload className="w-3.5 h-3.5" />
+                                                      <span>Tải lên MP3</span>
                                                       <input
                                                         type="file"
                                                         accept="audio/*"
@@ -1139,27 +1267,7 @@ export default function ReviewSession({
                                                         onChange={(e) => handleUploadExampleAudio(e, ex.id)}
                                                       />
                                                     </label>
-                                                  </div>
-                                                ) : (
-                                                  <label
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="px-2.5 py-1.5 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold shadow-xs"
-                                                    title="Câu ví dụ này chưa có file MP3. Bấm để tải lên file MP3 âm thanh (Tuyệt đối không phát giọng Google)"
-                                                  >
-                                                    {uploadingExampleId === ex.id ? (
-                                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    ) : (
-                                                      <Upload className="w-3.5 h-3.5" />
-                                                    )}
-                                                    <span>Tải lên MP3</span>
-                                                    <input
-                                                      type="file"
-                                                      accept="audio/*"
-                                                      className="hidden"
-                                                      disabled={uploadingExampleId !== null}
-                                                      onChange={(e) => handleUploadExampleAudio(e, ex.id)}
-                                                    />
-                                                  </label>
+                                                  )
                                                 )}
 
                                                 <button
