@@ -141,6 +141,7 @@ export default function ReviewSession({
   const [exerciseType, setExerciseType] = useState<'typing_reading' | 'mcq_meaning' | 'mcq_reading' | 'flip'>('flip');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [showDetailedGrades, setShowDetailedGrades] = useState(false);
   const cardContentRef = useRef<HTMLDivElement>(null);
 
   // Sync TTS events
@@ -291,18 +292,28 @@ export default function ReviewSession({
 
       if (showAnswer) {
         if (!isFreeStudy) {
-          if (e.key === '1') {
-            e.preventDefault();
-            handleGrade('forgot');
-          } else if (e.key === '2') {
-            e.preventDefault();
-            handleGrade('hard');
-          } else if (e.key === '3') {
-            e.preventDefault();
-            handleGrade('good');
-          } else if (e.key === '4') {
-            e.preventDefault();
-            handleGrade('easy');
+          if (showDetailedGrades) {
+            if (e.key === '1') {
+              e.preventDefault();
+              handleGrade('forgot');
+            } else if (e.key === '2') {
+              e.preventDefault();
+              handleGrade('hard');
+            } else if (e.key === '3') {
+              e.preventDefault();
+              handleGrade('good');
+            } else if (e.key === '4') {
+              e.preventDefault();
+              handleGrade('easy');
+            }
+          } else {
+            if (e.key === '1') {
+              e.preventDefault();
+              handleGrade('forgot');
+            } else if (e.key === '2') {
+              e.preventDefault();
+              handleGrade('good');
+            }
           }
         } else {
           if (e.key === '1') {
@@ -692,9 +703,9 @@ export default function ReviewSession({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full overflow-y-auto px-3 sm:px-6 py-4 flex flex-col items-center justify-between">
+      <main className="flex-1 min-h-0 w-full overflow-y-auto px-2.5 sm:px-6 py-2 sm:py-4 flex flex-col items-center">
         
-        <div className="w-full max-w-3xl flex-1 flex flex-col items-center justify-center my-auto py-2">
+        <div className="w-full max-w-3xl flex-1 flex flex-col items-center justify-center my-auto py-1 sm:py-2">
           
           {isEditing ? (
             <ReviewEditForm 
@@ -1279,163 +1290,201 @@ export default function ReviewSession({
           )}
 
         </div>
-
-        {/* Bottom Response & Grading Actions */}
-        <div className="shrink-0 w-full max-w-3xl pt-3 pb-2 z-20">
-          {!showAnswer ? (
-            isFreeStudy && exerciseType !== 'flip' ? (
-              exerciseType === 'typing_reading' ? (
-                <div className="w-full flex flex-col items-center gap-2">
-                  <div className="flex w-full gap-2 relative h-12">
-                    <input 
-                      type="text"
-                      value={readingInput}
-                      onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
-                      placeholder="Nhập Hiragana..."
-                      className={`flex-1 bg-theme-panel border ${inputError ? 'border-red-500' : 'border-theme-accent/40 focus:border-theme-accent'} rounded-2xl text-theme-primary px-5 py-2 focus:outline-none text-center text-lg font-serif shadow-sm`}
-                      autoFocus
-                    />
-                    <button 
-                      onClick={handleCheckReading}
-                      className="bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 rounded-2xl uppercase tracking-wider font-bold text-xs transition-colors cursor-pointer shadow-md"
-                    >
-                      Kiểm tra
-                    </button>
-                  </div>
-                  {inputError && (
-                    <span className="text-red-500 text-xs font-medium">Đáp án chưa chính xác, hãy thử lại!</span>
-                  )}
-                </div>
-              ) : (
-                <div className="w-full flex flex-col gap-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
-                    {mcqOptions.map((opt, i) => {
-                      const isWrong = inputError && wrongMcqOption === opt;
-                      return (
-                        <button 
-                          key={i}
-                          onClick={() => handleMcqSelect(opt)}
-                          className={`p-3.5 sm:p-4 rounded-2xl border transition-all text-left flex items-center gap-3 cursor-pointer ${
-                            isWrong 
-                              ? 'border-red-500 bg-red-500/15 text-red-400' 
-                              : 'border-theme-subtle bg-theme-panel hover:border-theme-accent/60 hover:bg-theme-hover text-theme-primary'
-                          }`}
-                        >
-                          <span className="w-6 h-6 rounded-full bg-theme-base-alt border border-theme-subtle flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                            {String.fromCharCode(65 + i)}
-                          </span>
-                          <span className="text-xs sm:text-sm font-medium line-clamp-2">{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {inputError && (
-                    <span className="text-red-500 text-xs font-medium text-center">Đáp án chưa đúng, chọn lại nhé!</span>
-                  )}
-                </div>
-              )
-            ) : (
-              /* Big Reveal Answer Button */
-              <button
-                type="button"
-                onClick={() => setShowAnswer(true)}
-                className="w-full py-4 sm:py-4.5 bg-gradient-to-r from-theme-accent via-amber-500 to-theme-accent hover:brightness-110 text-theme-inverted font-bold text-sm sm:text-base uppercase tracking-wider rounded-2xl shadow-xl shadow-theme-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20"
-              >
-                <span>Lật thẻ xem đáp án</span>
-                <span className="text-xs font-mono bg-black/20 text-theme-inverted px-2.5 py-1 rounded-xl font-bold">
-                  Phím Space
-                </span>
-              </button>
-            )
-          ) : isFreeStudy ? (
-            /* Free Study 2-button choice */
-            <div className="grid grid-cols-2 gap-3 w-full">
-              <button 
-                onClick={handleFreeStudyForgot}
-                className="py-4 px-4 rounded-2xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-                  <RotateCcw className="w-4 h-4 group-hover:-rotate-45 transition-transform" />
-                  <span>Cần ôn lại</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/20">1</kbd>
-                </div>
-                <span className="text-[11px] opacity-75">Sẽ lặp lại sớm trong phiên này</span>
-              </button>
-
-              <button 
-                onClick={handleFreeStudyRemember}
-                className="py-4 px-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-                  <CheckCircle2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span>Đã nhớ từ này</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20">2</kbd>
-                </div>
-                <span className="text-[11px] opacity-75">Ghi nhận tiến độ học nhồi</span>
-              </button>
-            </div>
-          ) : (
-            /* Standard SRS 4-Button Response Grid */
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full">
-              
-              {/* Grade: Forgot (1) */}
-              <button 
-                onClick={() => handleGrade('forgot')}
-                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 text-red-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                  <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
-                  <span>Lặp lại</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/20">1</kbd>
-                </div>
-                <span className="text-[10px] font-mono text-red-400/80">&lt; 10 phút</span>
-              </button>
-
-              {/* Grade: Hard (2) */}
-              <button 
-                onClick={() => handleGrade('hard')}
-                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15 text-amber-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                  <Flame className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                  <span>Khó</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">2</kbd>
-                </div>
-                <span className="text-[10px] font-mono text-amber-400/80">1 - 2 ngày</span>
-              </button>
-
-              {/* Grade: Good (3) */}
-              <button 
-                onClick={() => handleGrade('good')}
-                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                  <CheckCircle2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                  <span>Tốt</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">3</kbd>
-                </div>
-                <span className="text-[10px] font-mono text-emerald-500/80">3 - 4 ngày</span>
-              </button>
-
-              {/* Grade: Easy (4) */}
-              <button 
-                onClick={() => handleGrade('easy')}
-                className="py-3 sm:py-3.5 px-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
-                  <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                  <span>Rất dễ</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20">4</kbd>
-                </div>
-                <span className="text-[10px] font-mono text-sky-400/80">6 - 7 ngày</span>
-              </button>
-
-            </div>
-          )}
-        </div>
-
       </main>
+
+      {/* Pinned Bottom Response & Grading Actions (Always 100% visible on Mobile / iPhone 14 Pro & Desktop) */}
+      {!isEditing && (
+        <footer 
+          id="review-action-dock" 
+          className="shrink-0 w-full bg-theme-panel/95 backdrop-blur-md border-t border-theme-subtle shadow-2xl px-3 sm:px-6 pt-2.5 z-30 flex justify-center"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 16px))' }}
+        >
+          <div className="w-full max-w-3xl flex flex-col items-center gap-1.5">
+            {!showAnswer ? (
+              isFreeStudy && exerciseType !== 'flip' ? (
+                exerciseType === 'typing_reading' ? (
+                  <div className="w-full flex flex-col items-center gap-2">
+                    <div className="flex w-full gap-2 relative h-12">
+                      <input 
+                        type="text"
+                        value={readingInput}
+                        onChange={(e) => { setReadingInput(e.target.value); setInputError(false); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCheckReading(); }}
+                        placeholder="Nhập Hiragana..."
+                        className={`flex-1 bg-theme-panel border ${inputError ? 'border-red-500' : 'border-theme-accent/40 focus:border-theme-accent'} rounded-2xl text-theme-primary px-5 py-2 focus:outline-none text-center text-lg font-serif shadow-sm`}
+                        autoFocus
+                      />
+                      <button 
+                        type="button"
+                        onClick={handleCheckReading}
+                        className="bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 rounded-2xl uppercase tracking-wider font-bold text-xs transition-colors cursor-pointer shadow-md"
+                      >
+                        Kiểm tra
+                      </button>
+                    </div>
+                    {inputError && (
+                      <span className="text-red-500 text-xs font-medium">Đáp án chưa chính xác, hãy thử lại!</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-col gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                      {mcqOptions.map((opt, i) => {
+                        const isWrong = inputError && wrongMcqOption === opt;
+                        return (
+                          <button 
+                            key={i}
+                            type="button"
+                            onClick={() => handleMcqSelect(opt)}
+                            className={`p-3 sm:p-3.5 rounded-2xl border transition-all text-left flex items-center gap-3 cursor-pointer ${
+                              isWrong 
+                                ? 'border-red-500 bg-red-500/15 text-red-400' 
+                                : 'border-theme-subtle bg-theme-panel hover:border-theme-accent/60 hover:bg-theme-hover text-theme-primary'
+                            }`}
+                          >
+                            <span className="w-6 h-6 rounded-full bg-theme-base-alt border border-theme-subtle flex items-center justify-center text-xs font-mono font-bold shrink-0">
+                              {String.fromCharCode(65 + i)}
+                            </span>
+                            <span className="text-xs sm:text-sm font-medium line-clamp-2">{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {inputError && (
+                      <span className="text-red-500 text-xs font-medium text-center">Đáp án chưa đúng, chọn lại nhé!</span>
+                    )}
+                  </div>
+                )
+              ) : (
+                /* Big Reveal Answer Button */
+                <button
+                  type="button"
+                  onClick={() => setShowAnswer(true)}
+                  className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-theme-accent via-amber-500 to-theme-accent hover:brightness-110 text-theme-inverted font-bold text-sm sm:text-base uppercase tracking-wider rounded-2xl shadow-lg shadow-theme-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20"
+                >
+                  <span>Lật thẻ xem đáp án</span>
+                  <span className="text-xs font-mono bg-black/20 text-theme-inverted px-2.5 py-0.5 rounded-xl font-bold">
+                    Phím Space
+                  </span>
+                </button>
+              )
+            ) : showDetailedGrades && !isFreeStudy ? (
+              /* Expanded 4-button detailed grading */
+              <div className="w-full flex flex-col items-center gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+                  <button 
+                    type="button"
+                    onClick={() => handleGrade('forgot')}
+                    className="py-3 px-2.5 rounded-2xl border border-red-500/30 bg-red-500/5 hover:bg-red-500/15 text-red-500 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group shadow-xs active:scale-95"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                      <RotateCcw className="w-3.5 h-3.5 group-hover:-rotate-45 transition-transform" />
+                      <span>Lặp lại</span>
+                      <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/20">1</kbd>
+                    </div>
+                    <span className="text-[10px] font-mono text-red-400/80">&lt; 10 phút</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => handleGrade('hard')}
+                    className="py-3 px-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15 text-amber-500 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group shadow-xs active:scale-95"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                      <Flame className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>Khó</span>
+                      <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">2</kbd>
+                    </div>
+                    <span className="text-[10px] font-mono text-amber-400/80">1 - 2 ngày</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => handleGrade('good')}
+                    className="py-3 px-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group shadow-xs active:scale-95"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>Tốt</span>
+                      <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">3</kbd>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-500/80">3 - 4 ngày</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => handleGrade('easy')}
+                    className="py-3 px-2.5 rounded-2xl border border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/15 text-sky-500 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer group shadow-xs active:scale-95"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm">
+                      <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      <span>Rất dễ</span>
+                      <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20">4</kbd>
+                    </div>
+                    <span className="text-[10px] font-mono text-sky-400/80">6 - 7 ngày</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailedGrades(false)}
+                  className="text-[11px] text-theme-primary/50 hover:text-theme-accent transition-colors underline cursor-pointer"
+                >
+                  ← Dùng 2 nút gọn: Không nhớ / Nhớ
+                </button>
+              </div>
+            ) : (
+              /* 2 BIG BUTTONS: "Không nhớ" (Red) & "Nhớ" (Green) - Optimized for Mobile & iPhone 14 Pro */
+              <div className="w-full flex flex-col items-center gap-1.5">
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full">
+                  <button 
+                    type="button"
+                    id="btn-review-forgot"
+                    onClick={() => isFreeStudy ? handleFreeStudyForgot() : handleGrade('forgot')}
+                    className="py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl border-2 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 text-red-600 dark:text-red-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-sm active:scale-[0.98] select-none"
+                    title="Chưa nhớ từ này, sẽ lặp lại sớm để học kỹ (Phím 1)"
+                  >
+                    <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                      <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-rotate-45 transition-transform shrink-0" />
+                      <span>Không nhớ</span>
+                      <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/20 font-bold">1</kbd>
+                    </div>
+                    <span className="text-[10px] sm:text-[11px] opacity-75 font-medium leading-none">
+                      {isFreeStudy ? 'Sẽ lặp lại sớm trong phiên' : 'Lặp lại (< 10 phút)'}
+                    </span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    id="btn-review-remember"
+                    onClick={() => isFreeStudy ? handleFreeStudyRemember() : handleGrade('good')}
+                    className="py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl border-2 border-emerald-500/50 bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/35 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-sm active:scale-[0.98] select-none"
+                    title="Đã nhớ từ này, chuyển sang từ tiếp theo (Phím 2 hoặc Space)"
+                  >
+                    <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform shrink-0" />
+                      <span>Nhớ</span>
+                      <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 font-bold">2</kbd>
+                    </div>
+                    <span className="text-[10px] sm:text-[11px] opacity-75 font-medium leading-none">
+                      {isFreeStudy ? 'Đã thuộc từ này (+ điểm)' : 'Ghi nhận thuộc (3 - 4 ngày)'}
+                    </span>
+                  </button>
+                </div>
+
+                {!isFreeStudy && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailedGrades(true)}
+                    className="text-[11px] text-theme-primary/50 hover:text-theme-accent transition-colors underline cursor-pointer pt-0.5"
+                  >
+                    Tùy chọn: 4 mức chi tiết (Khó / Tốt / Rất dễ)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </footer>
+      )}
 
       {/* Delete Confirmation Modal */}
       {confirmingDeleteId && (
@@ -1495,20 +1544,16 @@ export default function ReviewSession({
                 <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold">Space / Enter</kbd>
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
-                <span className="text-theme-primary/80">Đánh giá: Chưa nhớ / Lặp lại</span>
+                <span className="text-theme-primary/80">Không nhớ (Lặp lại sớm)</span>
                 <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-red-500">1</kbd>
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
-                <span className="text-theme-primary/80">Đánh giá: Khó / Mơ hồ</span>
-                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-amber-500">2</kbd>
+                <span className="text-theme-primary/80">Nhớ (Ghi nhận thuộc)</span>
+                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-emerald-500">2 / Space</kbd>
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
-                <span className="text-theme-primary/80">Đánh giá: Tốt / Đã nhớ</span>
-                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-emerald-500">3</kbd>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
-                <span className="text-theme-primary/80">Đánh giá: Rất dễ</span>
-                <kbd className="font-mono px-2 py-1 rounded bg-theme-panel border border-theme-subtle font-bold text-sky-500">4</kbd>
+                <span className="text-theme-primary/80">Chế độ 4 mức chi tiết</span>
+                <span className="font-mono text-[11px] text-theme-muted">1 (Lặp lại) - 2 (Khó) - 3 (Tốt) - 4 (Dễ)</span>
               </div>
               <div className="flex items-center justify-between p-2 rounded-xl bg-theme-base-alt">
                 <span className="text-theme-primary/80">Nghe lại phát âm âm thanh</span>
