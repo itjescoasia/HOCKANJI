@@ -32,7 +32,8 @@ import {
   Repeat,
   Upload,
   Loader2,
-  Copy
+  Copy,
+  MoreVertical
 } from 'lucide-react';
 import { renderExampleHighlight, RelatedHighlight, HighlightVietnamese, HighlightProvider } from '../utils/highlight';
 import ReviewEditForm from './ReviewEditForm';
@@ -142,7 +143,22 @@ export default function ReviewSession({
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [showDetailedGrades, setShowDetailedGrades] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const cardContentRef = useRef<HTMLDivElement>(null);
+
+  // Close more menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    }
+    if (showMoreMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMoreMenu]);
 
   // Sync TTS events
   useEffect(() => {
@@ -642,63 +658,99 @@ export default function ReviewSession({
           </div>
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Actions (Clean & Minimalist for Mobile) */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           
-          {/* Autoplay Audio Toggle */}
-          <button
-            onClick={() => setAutoPlayAudio(!autoPlayAudio)}
-            className={`p-2 rounded-xl border text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-              autoPlayAudio 
-                ? 'bg-theme-accent/10 border-theme-accent/30 text-theme-accent' 
-                : 'border-theme-subtle text-theme-primary/50 hover:bg-theme-hover'
-            }`}
-            title={autoPlayAudio ? "Tự động phát âm thanh khi lật thẻ: Đang Bật" : "Tự động phát âm thanh: Đang Tắt"}
-          >
-            {autoPlayAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            <span className="hidden xl:inline text-[11px] font-medium">Tự phát âm</span>
-          </button>
-
           {/* Replay Current Word Audio */}
           {currentCard && (
             <button
+              type="button"
               onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-              className="p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent transition-all cursor-pointer"
-              title="Phát âm từ vựng (Phím R)"
+              className={`p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover transition-all cursor-pointer ${
+                isPlayingAudio ? 'bg-theme-accent/15 border-theme-accent/40 text-theme-accent' : 'text-theme-primary/70 hover:text-theme-accent'
+              }`}
+              title="Phát âm từ vựng"
             >
               <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-pulse text-theme-accent' : ''}`} />
             </button>
           )}
 
-
-          {/* Quick Edit */}
+          {/* Quick Edit (Desktop only, mobile has it in More menu) */}
           {!isEditing && (
             <button
+              type="button"
               onClick={startEdit}
-              className="p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/70 hover:text-theme-primary transition-all cursor-pointer"
-              title="Chỉnh sửa từ vựng (Phím E)"
+              className="hidden sm:flex p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/70 hover:text-theme-primary transition-all cursor-pointer"
+              title="Chỉnh sửa từ vựng"
             >
               <Edit3 className="w-4 h-4" />
             </button>
           )}
 
-          {/* Delete Card */}
-          <button
-            onClick={handleDelete}
-            className="p-2 rounded-xl border border-theme-subtle hover:border-red-500/30 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all cursor-pointer"
-            title="Xóa từ vựng"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {/* More Options Dropdown (Tùy chọn) */}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowMoreMenu(prev => !prev)}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                showMoreMenu 
+                  ? 'bg-theme-accent/15 border-theme-accent text-theme-accent' 
+                  : 'border-theme-subtle text-theme-primary/70 hover:bg-theme-hover hover:text-theme-primary'
+              }`}
+              title="Tùy chọn khác"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
 
-          {/* Keyboard shortcut guide */}
-          <button
-            onClick={() => setShowShortcutHelp(true)}
-            className="p-2 rounded-xl border border-theme-subtle hover:bg-theme-hover text-theme-primary/60 hover:text-theme-primary transition-all cursor-pointer"
-            title="Bảng phím tắt (?)"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
+            {showMoreMenu && (
+              <div className="absolute right-0 top-full mt-2 w-52 bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 text-xs">
+                {!isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      startEdit();
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-theme-hover text-theme-primary transition-colors cursor-pointer text-left w-full"
+                  >
+                    <Edit3 className="w-4 h-4 text-theme-accent" />
+                    <span className="font-medium">Chỉnh sửa từ vựng</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAutoPlayAudio(!autoPlayAudio);
+                    setShowMoreMenu(false);
+                  }}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-theme-hover text-theme-primary transition-colors cursor-pointer text-left w-full"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {autoPlayAudio ? <Volume2 className="w-4 h-4 text-theme-accent" /> : <VolumeX className="w-4 h-4 text-theme-primary/50" />}
+                    <span className="font-medium">Tự phát âm thanh</span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${autoPlayAudio ? 'bg-theme-accent/20 text-theme-accent' : 'bg-theme-base-alt text-theme-primary/50'}`}>
+                    {autoPlayAudio ? 'BẬT' : 'TẮT'}
+                  </span>
+                </button>
+
+                <div className="h-px bg-theme-subtle/60 my-0.5" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleDelete();
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer text-left w-full"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="font-medium">Xóa từ vựng này</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -775,7 +827,7 @@ export default function ReviewSession({
                         )}
                       </button>
 
-                      <div className="flex items-center gap-2 text-[11px] font-mono text-theme-primary/60">
+                      <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-theme-primary/60">
                         {isFreeStudy && (
                           <div className="flex items-center gap-1 mr-2">
                             {[0, 1, 2].map(i => (
@@ -794,88 +846,41 @@ export default function ReviewSession({
                   </div>
 
                   {/* Scrollable Card Body: Uses items-center without justify-center so long content never gets clipped at the top */}
-                  <div ref={cardContentRef} className="flex-1 overflow-y-auto px-5 py-5 sm:px-10 sm:py-8 flex flex-col items-center custom-scrollbar">
+                  <div ref={cardContentRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-10 sm:py-8 flex flex-col items-center custom-scrollbar">
                     
                     {!showAnswer ? (
-                      /* Front View: Always 100% visible */
-                      <div className="w-full flex-1 flex flex-col items-center justify-center text-center my-auto gap-6 py-4">
+                      /* Front View: Minimalist, clean & focused on memory recall */
+                      <div className="w-full flex-1 flex flex-col items-center justify-center text-center my-auto gap-5 py-2 sm:py-4">
                         
-                        {/* Hero Kanji / Word: Front side is ONLY for looking and recalling the word, NO explanations */}
-                        <div className="flex flex-col items-center gap-4">
+                        {/* Hero Kanji / Word */}
+                        <div className="flex flex-col items-center gap-3">
                           <h1 
-                            className="text-6xl sm:text-7xl md:text-8xl font-serif text-theme-primary font-bold tracking-tight break-words max-w-full leading-tight select-text"
+                            className="text-5xl sm:text-7xl md:text-8xl font-serif text-theme-primary font-bold tracking-tight break-words max-w-full leading-tight select-text"
                             style={{ fontFamily: 'serif' }}
                           >
                             {primaryDisplayWord}
                           </h1>
 
-                          {/* Audio Play & Direct Upload Section */}
-                          <div className="flex flex-col items-center gap-2 mt-2">
-                            {currentCard.audioUrl ? (
-                              <div className="flex flex-col items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
-                                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md bg-theme-accent text-theme-inverted hover:scale-105 shadow-theme-accent/20"
-                                  title="Nghe phát âm chuẩn MP3"
-                                >
-                                  <Volume2 className="w-7 h-7" />
-                                </button>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-extrabold text-theme-accent uppercase tracking-widest">
-                                    MP3 Chuẩn
-                                  </span>
-                                  <label
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-[10px] text-theme-primary/50 hover:text-theme-accent underline cursor-pointer transition-colors"
-                                    title="Tải đè hoặc thay đổi file MP3 khác cho từ này"
-                                  >
-                                    {isUploadingAudio ? "Đang tải..." : "Đổi file MP3"}
-                                    <input
-                                      type="file"
-                                      accept="audio/*"
-                                      className="hidden"
-                                      disabled={isUploadingAudio}
-                                      onChange={handleUploadCardAudio}
-                                    />
-                                  </label>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center gap-1.5">
-                                <label
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs font-semibold text-xs group"
-                                  title="Từ vựng này chưa có file MP3. Bấm để tải lên file MP3 âm thanh trực tiếp"
-                                >
-                                  {isUploadingAudio ? (
-                                    <Loader2 className="w-4 h-4 animate-spin text-theme-accent" />
-                                  ) : (
-                                    <Upload className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                  )}
-                                  <span>{isUploadingAudio ? "Đang tải lên MP3..." : "Tải lên file MP3 âm thanh"}</span>
-                                  <input
-                                    type="file"
-                                    accept="audio/*"
-                                    className="hidden"
-                                    disabled={isUploadingAudio}
-                                    onChange={handleUploadCardAudio}
-                                  />
-                                </label>
-                                <span className="text-[10px] text-theme-primary/40 italic">
-                                  (Chưa có MP3 • Tuyệt đối không phát giọng mặc định Google)
-                                </span>
-                              </div>
-                            )}
-
-                          </div>
+                          {/* Audio Play Button (Clean & Zen - no cluttered banners) */}
+                          {currentCard.audioUrl && (
+                            <div className="flex flex-col items-center mt-2">
+                              <button
+                                type="button"
+                                onClick={(e) => handleSpeak(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl)}
+                                className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md bg-theme-accent text-theme-inverted hover:scale-105 shadow-theme-accent/20"
+                                title="Nghe phát âm chuẩn MP3"
+                              >
+                                <Volume2 className="w-6 h-6" />
+                              </button>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Flip instruction badge */}
+                        {/* Flip instruction badge (Minimalist) */}
                         {!(isFreeStudy && exerciseType !== 'flip') && (
-                          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-base-alt border border-theme-subtle text-theme-primary/70 text-xs">
+                          <div className="mt-2 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-theme-base-alt border border-theme-subtle text-theme-primary/70 text-xs">
                             <Repeat className="w-3.5 h-3.5 text-theme-accent shrink-0" />
-                            <span>Chạm vào thẻ hoặc nhấn <kbd className="font-mono bg-theme-panel px-1.5 py-0.5 rounded border border-theme-subtle text-theme-primary font-bold">Space</kbd> để xem đáp án</span>
+                            <span>Chạm vào thẻ để xem đáp án <span className="hidden sm:inline opacity-60">(hoặc Space)</span></span>
                           </div>
                         )}
 
@@ -1363,7 +1368,7 @@ export default function ReviewSession({
                   className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-theme-accent via-amber-500 to-theme-accent hover:brightness-110 text-theme-inverted font-bold text-sm sm:text-base uppercase tracking-wider rounded-2xl shadow-lg shadow-theme-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20"
                 >
                   <span>Lật thẻ xem đáp án</span>
-                  <span className="text-xs font-mono bg-black/20 text-theme-inverted px-2.5 py-0.5 rounded-xl font-bold">
+                  <span className="hidden sm:inline-block text-xs font-mono bg-black/20 text-theme-inverted px-2.5 py-0.5 rounded-xl font-bold">
                     Phím Space
                   </span>
                 </button>
