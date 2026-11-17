@@ -1104,6 +1104,22 @@ QUY TẮC BẮT BUỘC:
     }
   });
 
+  // Ensure unhandled /api/* routes return 404 JSON, NEVER falling back to index.html
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` });
+  });
+
+  // Global error handler for API routes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path.startsWith('/api/')) {
+      console.error('[API Error]', req.method, req.path, err);
+      return res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error'
+      });
+    }
+    next(err);
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

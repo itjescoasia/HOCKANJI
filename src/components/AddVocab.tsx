@@ -4,6 +4,7 @@ import { KanjiExample, KanjiCard } from '../types';
 import { Plus, X, AlertTriangle } from 'lucide-react';
 import { toRomaji } from 'wanakana';
 import { getApiEndpoint } from '../utils/playTTS';
+import { safeFetchJson } from '../utils/safeFetch';
 import { ensureCompleteForms } from '../utils/verbConjugation';
 
 interface AddVocabProps {
@@ -55,8 +56,9 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: kanji.trim() })
           });
-          data = await res.json();
-          if (res.ok) {
+          const parsed = await safeFetchJson(res);
+          data = parsed.data || { error: parsed.error };
+          if (parsed.ok) {
             break;
           }
         } catch (fetchErr) {

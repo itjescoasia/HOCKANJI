@@ -1,5 +1,6 @@
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../utils/playTTS';
+import { safeFetchJson } from '../utils/safeFetch';
 import {
   cleanMarkdownForDisplay,
   cleanTextForSearch,
@@ -649,8 +650,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: editForm.kanji.trim() })
           });
-          data = await res.json();
-          if (res.ok) {
+          const parsed = await safeFetchJson(res);
+          data = parsed.data || { error: parsed.error };
+          if (parsed.ok) {
             break;
           }
         } catch (fetchErr) {
@@ -714,9 +716,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     }
     try {
       setIsFetchingOjad(true);
-      const res = await fetch(`/api/ojad?word=${encodeURIComponent(editForm.kanji)}`);
-      if (!res.ok) throw new Error('Không thể lấy dữ liệu OJAD');
-      const data = await res.json();
+      const res = await fetch(getApiEndpoint(`/api/ojad?word=${encodeURIComponent(editForm.kanji)}`));
+      const parsed = await safeFetchJson(res);
+      if (!parsed.ok || !parsed.data) throw new Error(parsed.error || 'Không thể lấy dữ liệu OJAD');
+      const data = parsed.data;
       if (data.results && data.results.length > 0) {
          // Lấy kết quả đầu tiên
          const result = data.results[0];

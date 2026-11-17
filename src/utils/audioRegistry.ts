@@ -3,6 +3,7 @@ import { db, auth } from '../lib/firebase';
 import { doc, getDoc, getDocFromCache, setDoc } from 'firebase/firestore';
 import { KanjiCard, IntensiveExample } from '../types';
 import { ttsCache, getApiEndpoint } from './playTTS';
+import { safeFetchJson } from './safeFetch';
 
 // In-memory cache to prevent multiple round-trips within the same session
 const memoryAudioCache = new Map<string, string>();
@@ -269,7 +270,7 @@ export async function uploadResilientAudio(
 
   // 1. Try uploading to local server /api/upload-audio
   try {
-    const res = await fetch('/api/upload-audio', {
+    const res = await fetch(getApiEndpoint('/api/upload-audio'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -277,11 +278,9 @@ export async function uploadResilientAudio(
         filename: `${wordId}_${cleanId}`
       })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.audioUrl) {
-        serverAudioUrl = data.audioUrl;
-      }
+    const parsed = await safeFetchJson(res);
+    if (parsed.ok && parsed.data?.audioUrl) {
+      serverAudioUrl = parsed.data.audioUrl;
     }
   } catch (serverErr) {
     console.warn('[AudioRegistry] Server upload warning:', serverErr);

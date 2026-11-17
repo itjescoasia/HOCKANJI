@@ -2,6 +2,7 @@ import React from 'react';
 import { KanjiCard } from '../types';
 import { Plus, X, Check } from 'lucide-react';
 import { getApiEndpoint } from '../utils/playTTS';
+import { safeFetchJson } from '../utils/safeFetch';
 import { ensureCompleteForms } from '../utils/verbConjugation';
 
 interface ReviewEditFormProps {
@@ -33,8 +34,9 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: editForm.kanji.trim() })
           });
-          data = await res.json();
-          if (res.ok) {
+          const parsed = await safeFetchJson(res);
+          data = parsed.data || { error: parsed.error };
+          if (parsed.ok) {
             break;
           }
         } catch (fetchErr) {

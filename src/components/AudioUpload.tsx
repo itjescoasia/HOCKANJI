@@ -1,4 +1,5 @@
-import { playAudioUrl } from '../utils/playTTS';
+import { playAudioUrl, getApiEndpoint } from '../utils/playTTS';
+import { safeFetchJson } from '../utils/safeFetch';
 import React, { useRef, useState } from 'react';
 import { Upload, X, Music, Link as LinkIcon, Check } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -60,17 +61,15 @@ export default function AudioUpload({ audioUrl, onAudioChange, className = '', o
 
           // Upload to server disk (/api/upload-audio)
           try {
-            const res = await fetch('/api/upload-audio', {
+            const res = await fetch(getApiEndpoint('/api/upload-audio'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ base64Data: base64Str, filename: file.name })
             });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.audioUrl) {
-                onAudioChange(data.audioUrl);
-                return;
-              }
+            const parsed = await safeFetchJson(res);
+            if (parsed.ok && parsed.data?.audioUrl) {
+              onAudioChange(parsed.data.audioUrl);
+              return;
             }
           } catch (serverErr) {
             console.warn("Server upload-audio failed, trying Firestore:", serverErr);

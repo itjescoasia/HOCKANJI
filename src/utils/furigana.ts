@@ -1,4 +1,5 @@
 import { getApiEndpoint } from './playTTS';
+import { safeFetchJson } from './safeFetch';
 import { KanjiCard } from '../types';
 
 export interface FuriganaToken {
@@ -178,12 +179,12 @@ export async function fetchFuriganaWithGemini(
       body: JSON.stringify({ sentence: cleanSentence }),
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP error ${res.status}`);
+    const parsed = await safeFetchJson(res);
+    if (!parsed.ok || !parsed.data) {
+      throw new Error(parsed.error || `HTTP error ${res.status}`);
     }
 
-    const data = await res.json();
+    const data = parsed.data;
     const furigana = data.furigana || cleanSentence;
     saveFuriganaToCache(cleanSentence, furigana);
     return {

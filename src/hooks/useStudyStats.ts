@@ -53,7 +53,12 @@ export function useStudyStats() {
         );
       } else {
         const localStats = localStorage.getItem("kanji_srs_stats");
-        setStats(localStats ? JSON.parse(localStats) : {});
+        try {
+          setStats(localStats ? JSON.parse(localStats) : {});
+        } catch (e) {
+          console.warn("Could not parse kanji_srs_stats from localStorage:", e);
+          setStats({});
+        }
         setIsStatsLoaded(true);
       }
     });

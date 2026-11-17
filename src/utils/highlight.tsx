@@ -1,4 +1,5 @@
 import { playTTS , playAudioUrl, getApiEndpoint } from '../utils/playTTS';
+import { safeFetchJson } from './safeFetch';
 import { ensureCompleteForms } from './verbConjugation';
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
@@ -510,8 +511,9 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word: targetWord })
           });
-          data = await res.json();
-          if (res.ok) break;
+          const parsed = await safeFetchJson(res);
+          data = parsed.data || { error: parsed.error };
+          if (parsed.ok) break;
         } catch (fetchErr) {
           if (attempt === 2) throw fetchErr;
         }

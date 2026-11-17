@@ -4,6 +4,7 @@ import { storage, auth, db } from '../lib/firebase';
 import { doc, deleteDoc, setDoc, getDoc, getDocFromCache } from 'firebase/firestore';
 
 import { recordAudioListen } from './activityTracker';
+import { safeFetchJson } from './safeFetch';
 
 export const ttsCache = localforage.createInstance({
   name: 'tts-cache',
@@ -115,13 +116,11 @@ export const callInworldTtsApi = async (cleanText: string): Promise<string | nul
       body: JSON.stringify({ text: cleanText })
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.audioContent) {
-        return data.audioContent;
-      }
+    const parsed = await safeFetchJson(res);
+    if (parsed.ok && parsed.data?.audioContent) {
+      return parsed.data.audioContent;
     } else {
-      console.warn('[TTS] Backend /api/tts returned non-ok status:', res.status);
+      console.warn('[TTS] Backend /api/tts returned non-ok or non-JSON status:', res.status);
     }
   } catch (backendErr) {
     console.warn('[TTS] Backend /api/tts call failed:', backendErr);
@@ -150,12 +149,10 @@ export const callInworldTtsApi = async (cleanText: string): Promise<string | nul
         })
       });
 
-      if (directRes.ok) {
-        const data = await directRes.json();
-        if (data.audioContent) {
-          clientInworldQuotaExhaustedUntil = 0; // recovered
-          return data.audioContent;
-        }
+      const parsedDirect = await safeFetchJson(directRes);
+      if (parsedDirect.ok && parsedDirect.data?.audioContent) {
+        clientInworldQuotaExhaustedUntil = 0; // recovered
+        return parsedDirect.data.audioContent;
       } else {
         if (directRes.status === 402 || directRes.status === 429) {
           clientInworldQuotaExhaustedUntil = Date.now() + 10 * 60 * 1000;
