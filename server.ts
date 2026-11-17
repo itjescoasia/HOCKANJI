@@ -1107,13 +1107,24 @@ QUY TẮC BẮT BUỘC:
   // ============================================================================
   // N4 Vocabulary Specialized Scraper & Scientific SRS Backend Persistence
   // ============================================================================
-  const DATA_DIR = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  let DATA_DIR = path.join(process.cwd(), 'data');
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.accessSync(DATA_DIR, fs.constants.W_OK);
+  } catch {
+    DATA_DIR = path.join('/tmp', 'kanjiflow_data');
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
   }
+  const BUNDLED_N4_DECK_FILE = path.join(process.cwd(), 'src', 'data', 'n4VocabDeck.json');
   const N4_DECK_FILE = path.join(DATA_DIR, 'n4_vocab_deck.json');
   const N4_PROGRESS_FILE = path.join(DATA_DIR, 'n4_vocab_progress.json');
   const N4_SOURCE_URL = 'https://hanoilink.vn/tu-vung-tieng-nhat-n4/';
+  let inMemoryN4Deck: N4DeckCachePayload | null = null;
+  let inMemoryN4Progress: Record<string, Record<string, N4VocabProgressServer>> | null = null;
 
   interface N4VocabWordServer {
     id: string;
@@ -1311,42 +1322,64 @@ QUY TẮC BẮT BUỘC:
       words,
     };
 
+    inMemoryN4Deck = payload;
     if (words.length > 0) {
-      fs.writeFileSync(N4_DECK_FILE, JSON.stringify(payload, null, 2), 'utf8');
+      try {
+        fs.writeFileSync(N4_DECK_FILE, JSON.stringify(payload, null, 2), 'utf8');
+      } catch (writeErr) {
+        console.warn('[N4] Could not persist N4 deck to disk, keeping in memory:', writeErr);
+      }
     }
     return payload;
   }
 
   async function getOrLoadN4Deck(): Promise<N4DeckCachePayload> {
-    if (fs.existsSync(N4_DECK_FILE)) {
-      try {
-        const raw = fs.readFileSync(N4_DECK_FILE, 'utf8');
-        const parsed = JSON.parse(raw) as N4DeckCachePayload;
-        if (Array.isArray(parsed.words) && parsed.words.length > 0) {
-          return parsed;
+    if (inMemoryN4Deck && inMemoryN4Deck.words.length > 0) {
+      return inMemoryN4Deck;
+    }
+    for (const candidateFile of [N4_DECK_FILE, BUNDLED_N4_DECK_FILE]) {
+      if (fs.existsSync(candidateFile)) {
+        try {
+          const raw = fs.readFileSync(candidateFile, 'utf8');
+          const parsed = JSON.parse(raw) as N4DeckCachePayload;
+          if (Array.isArray(parsed.words) && parsed.words.length > 0) {
+            inMemoryN4Deck = parsed;
+            return parsed;
+          }
+        } catch (e) {
+          console.warn('[N4] Failed to parse N4 deck candidate:', candidateFile, e);
         }
-      } catch (e) {
-        console.warn('[N4] Failed to parse cached N4 deck, re-scraping:', e);
       }
     }
     return await scrapeHanoilinkN4();
   }
 
   function readAllN4Progress(): Record<string, Record<string, N4VocabProgressServer>> {
-    if (!fs.existsSync(N4_PROGRESS_FILE)) return {};
+    if (inMemoryN4Progress) return inMemoryN4Progress;
+    if (!fs.existsSync(N4_PROGRESS_FILE)) {
+      inMemoryN4Progress = {};
+      return inMemoryN4Progress;
+    }
     try {
       const raw = fs.readFileSync(N4_PROGRESS_FILE, 'utf8');
       const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      inMemoryN4Progress = parsed && typeof parsed === 'object' ? parsed : {};
+      return inMemoryN4Progress!;
     } catch {
-      return {};
+      inMemoryN4Progress = {};
+      return inMemoryN4Progress;
     }
   }
 
   function writeAllN4Progress(store: Record<string, Record<string, N4VocabProgressServer>>) {
-    const tmpPath = `${N4_PROGRESS_FILE}.tmp`;
-    fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf8');
-    fs.renameSync(tmpPath, N4_PROGRESS_FILE);
+    inMemoryN4Progress = store;
+    try {
+      const tmpPath = `${N4_PROGRESS_FILE}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf8');
+      fs.renameSync(tmpPath, N4_PROGRESS_FILE);
+    } catch (writeErr) {
+      console.warn('[N4] Could not persist N4 progress to disk, kept in memory:', writeErr);
+    }
   }
 
   function calculateN4ScientificSrs(

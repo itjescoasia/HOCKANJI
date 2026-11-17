@@ -4,6 +4,7 @@ import { db, auth } from '../lib/firebase';
 import { N4VocabWord, N4VocabTopic, N4VocabProgress } from '../types';
 import { getApiEndpoint, playTTS } from '../utils/playTTS';
 import { safeFetchJson } from '../utils/safeFetch';
+import bundledN4Deck from '../data/n4VocabDeck.json';
 import {
   ArrowLeft,
   RefreshCw,
@@ -17,9 +18,6 @@ import {
   Copy,
   Check,
   ExternalLink,
-  BookOpen,
-  Flame,
-  ListFilter,
   Trash2,
 } from 'lucide-react';
 
@@ -65,12 +63,77 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.warn('[N4 Firestore Sync Warning]', JSON.stringify(errInfo));
 }
 
+function calculateLocalN4Srs(
+  prev: N4VocabProgress | undefined,
+  wordId: string,
+  remembered: boolean
+): { progress: N4VocabProgress; requeueOffset: number } {
+  const now = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const prevEf = prev?.easeFactor ?? 2.5;
+  const prevRep = prev?.repetition ?? 0;
+  const prevInterval = prev?.interval ?? 0;
+  const prevForgot = prev?.forgotCount ?? 0;
+  const prevRemember = prev?.rememberCount ?? 0;
+
+  if (remembered) {
+    const nextRep = prevRep + 1;
+    const nextEf = Math.min(3.0, Math.max(1.3, Number((prevEf + 0.1).toFixed(2))));
+    let nextIntervalDays = 30;
+    if (prevForgot > 0) {
+      if (nextRep === 1) nextIntervalDays = 3;
+      else if (nextRep === 2) nextIntervalDays = 7;
+      else nextIntervalDays = Math.min(180, Math.round(Math.max(7, prevInterval) * nextEf));
+    } else if (nextRep >= 2) {
+      nextIntervalDays = Math.min(365, Math.round(Math.max(30, prevInterval) * nextEf));
+    }
+
+    return {
+      progress: {
+        wordId,
+        status: 'skipped',
+        remembered: true,
+        interval: nextIntervalDays,
+        repetition: nextRep,
+        easeFactor: nextEf,
+        forgotCount: prevForgot,
+        rememberCount: prevRemember + 1,
+        nextReviewDate: now + nextIntervalDays * DAY_MS,
+        lastReviewedAt: now,
+      },
+      requeueOffset: 0,
+    };
+  }
+
+  const nextForgot = prevForgot + 1;
+  const nextEf = Math.max(1.3, Number((prevEf - 0.2).toFixed(2)));
+  const shortDelayMs = nextForgot >= 3 ? 3 * 60 * 1000 : 10 * 60 * 1000;
+  const requeueOffset = nextForgot >= 3 ? 2 : nextForgot === 2 ? 3 : 4;
+
+  return {
+    progress: {
+      wordId,
+      status: 'learning',
+      remembered: false,
+      interval: 0,
+      repetition: 0,
+      easeFactor: nextEf,
+      forgotCount: nextForgot,
+      rememberCount: prevRemember,
+      nextReviewDate: now + shortDelayMs,
+      lastReviewedAt: now,
+    },
+    requeueOffset,
+  };
+}
+
 export default function N4VocabReview({ userId, onBack, onRecordReview }: N4VocabReviewProps) {
   const [words, setWords] = useState<N4VocabWord[]>([]);
   const [topics, setTopics] = useState<N4VocabTopic[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, N4VocabProgress>>({});
   const [sourceUrl, setSourceUrl] = useState('https://hanoilink.vn/tu-vung-tieng-nhat-n4/');
   const [syncedAt, setSyncedAt] = useState<number | null>(null);
+  const [storageMode, setStorageMode] = useState<'backend' | 'cloud'>('backend');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncingSource, setIsSyncingSource] = useState(false);
@@ -87,7 +150,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
-  // Active one-by-one session queue (array of word IDs)
   const [sessionQueue, setSessionQueue] = useState<string[]>([]);
   const [sessionStats, setSessionStats] = useState({
     reviewed: 0,
@@ -99,6 +161,8 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
   const progressMapRef = useRef<Record<string, N4VocabProgress>>({});
   progressMapRef.current = progressMap;
 
+  const localStorageKey = `n4_vocab_progress_${userId || 'anonymous'}`;
+
   const showToast = useCallback((text: string, tone: 'emerald' | 'rose' | 'neutral' = 'neutral') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setInlineToast({ text, tone });
@@ -107,7 +171,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
     }, 2600);
   }, []);
 
-  // Merge two progress maps picking the newest entry per wordId
   const mergeProgressMaps = useCallback(
     (a: Record<string, N4VocabProgress>, b: Record<string, N4VocabProgress>) => {
       const merged: Record<string, N4VocabProgress> = { ...a };
@@ -123,9 +186,29 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
     []
   );
 
-  // Mirror progressMap to Firestore safely
+  const saveLocalBackup = useCallback(
+    (nextMap: Record<string, N4VocabProgress>) => {
+      try {
+        localStorage.setItem(localStorageKey, JSON.stringify(nextMap));
+      } catch {}
+    },
+    [localStorageKey]
+  );
+
+  const readLocalBackup = useCallback((): Record<string, N4VocabProgress> => {
+    try {
+      const raw = localStorage.getItem(localStorageKey);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }, [localStorageKey]);
+
   const mirrorToFirestore = useCallback(
     async (nextMap: Record<string, N4VocabProgress>) => {
+      saveLocalBackup(nextMap);
       if (!userId || userId === 'anonymous') return;
       const docPath = `users/${userId}/n4VocabState/progress`;
       try {
@@ -141,36 +224,70 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
         handleFirestoreError(err, OperationType.WRITE, docPath);
       }
     },
-    [userId]
+    [userId, saveLocalBackup]
   );
 
-  // Load deck + progress from Backend and reconcile with Firestore mirror
+  const fetchN4FromBackendWithRetry = useCallback(async () => {
+    const apiUrl = getApiEndpoint(`/api/n4-vocab?userId=${encodeURIComponent(userId || 'anonymous')}`);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(apiUrl, { cache: 'no-store' });
+        const parsed = await safeFetchJson<{
+          sourceUrl: string;
+          syncedAt: number;
+          topics: N4VocabTopic[];
+          words: N4VocabWord[];
+          progressMap: Record<string, N4VocabProgress>;
+        }>(res);
+        if (parsed.ok && parsed.data && Array.isArray(parsed.data.words) && parsed.data.words.length > 0) {
+          return parsed.data;
+        }
+      } catch {}
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 700));
+      }
+    }
+    return null;
+  }, [userId]);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const apiUrl = getApiEndpoint(`/api/n4-vocab?userId=${encodeURIComponent(userId || 'anonymous')}`);
-      const res = await fetch(apiUrl);
-      const parsed = await safeFetchJson<{
-        sourceUrl: string;
-        syncedAt: number;
-        topics: N4VocabTopic[];
-        words: N4VocabWord[];
-        progressMap: Record<string, N4VocabProgress>;
-      }>(res);
+      const backendData = await fetchN4FromBackendWithRetry();
 
-      if (!parsed.ok || !parsed.data) {
-        throw new Error(parsed.error || 'Không thể tải danh sách từ vựng N4 từ backend.');
+      let loadedWords: N4VocabWord[] = [];
+      let loadedTopics: N4VocabTopic[] = [];
+      let mergedProgress: Record<string, N4VocabProgress> = readLocalBackup();
+
+      if (backendData) {
+        loadedWords = backendData.words;
+        loadedTopics = backendData.topics || [];
+        mergedProgress = mergeProgressMaps(mergedProgress, backendData.progressMap || {});
+        if (backendData.sourceUrl) setSourceUrl(backendData.sourceUrl);
+        if (backendData.syncedAt) setSyncedAt(backendData.syncedAt);
+        setStorageMode('backend');
+      } else {
+        // Fallback smoothly to bundled HanoiLink N4 dataset + Firestore + localStorage
+        const fallbackPayload = bundledN4Deck as {
+          sourceUrl?: string;
+          syncedAt?: number;
+          topics?: N4VocabTopic[];
+          words?: N4VocabWord[];
+        };
+        loadedWords = fallbackPayload.words || [];
+        loadedTopics = fallbackPayload.topics || [];
+        if (fallbackPayload.sourceUrl) setSourceUrl(fallbackPayload.sourceUrl);
+        if (fallbackPayload.syncedAt) setSyncedAt(fallbackPayload.syncedAt);
+        setStorageMode('cloud');
       }
 
-      const backendWords = parsed.data.words || [];
-      const backendTopics = parsed.data.topics || [];
-      let mergedProgress = parsed.data.progressMap || {};
+      if (loadedWords.length === 0) {
+        throw new Error('Không tìm thấy dữ liệu từ vựng N4.');
+      }
 
-      setWords(backendWords);
-      setTopics(backendTopics);
-      if (parsed.data.sourceUrl) setSourceUrl(parsed.data.sourceUrl);
-      if (parsed.data.syncedAt) setSyncedAt(parsed.data.syncedAt);
+      setWords(loadedWords);
+      setTopics(loadedTopics);
 
       // Reconcile with Firestore mirror if signed in
       if (userId && userId !== 'anonymous') {
@@ -182,17 +299,18 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             const fsMap = fsData?.progressMap || {};
             const combined = mergeProgressMaps(mergedProgress, fsMap);
 
-            // Push combined back to backend if Firestore held newer/missing items
-            if (Object.keys(combined).length > Object.keys(mergedProgress).length) {
-              const syncRes = await fetch(getApiEndpoint('/api/n4-vocab/sync-progress'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, progressMap: combined }),
-              });
-              const syncParsed = await safeFetchJson<{ progressMap: Record<string, N4VocabProgress> }>(syncRes);
-              if (syncParsed.ok && syncParsed.data?.progressMap) {
-                mergedProgress = syncParsed.data.progressMap;
-              } else {
+            if (backendData && Object.keys(combined).length > Object.keys(backendData.progressMap || {}).length) {
+              try {
+                const syncRes = await fetch(getApiEndpoint('/api/n4-vocab/sync-progress'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId, progressMap: combined }),
+                });
+                const syncParsed = await safeFetchJson<{ progressMap: Record<string, N4VocabProgress> }>(syncRes);
+                mergedProgress = syncParsed.ok && syncParsed.data?.progressMap
+                  ? syncParsed.data.progressMap
+                  : combined;
+              } catch {
                 mergedProgress = combined;
               }
             } else {
@@ -204,32 +322,30 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
         }
       }
 
+      saveLocalBackup(mergedProgress);
       setProgressMap(mergedProgress);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Lỗi tải dữ liệu N4.');
     } finally {
       setIsLoading(false);
     }
-  }, [userId, mergeProgressMaps]);
+  }, [userId, fetchN4FromBackendWithRetry, mergeProgressMaps, readLocalBackup, saveLocalBackup]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Word lookup dictionary
   const wordById = useMemo(() => {
     const map = new Map<string, N4VocabWord>();
     for (const w of words) map.set(w.id, w);
     return map;
   }, [words]);
 
-  // Topic-filtered words
   const topicWords = useMemo(() => {
     if (selectedTopicId === 'all') return words;
     return words.filter((w) => w.topicId === selectedTopicId);
   }, [words, selectedTopicId]);
 
-  // Aggregate counts for current topic scope
   const scopeCounts = useMemo(() => {
     let skipped = 0;
     let forgottenLearning = 0;
@@ -254,7 +370,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
     };
   }, [topicWords, progressMap]);
 
-  // Build ordered scientific queue whenever topic, tab, or shuffle changes
   const buildQueueIds = useCallback(
     (tab: ReviewTab, topicFilter: string, shuffleOrder: boolean, pMap: Record<string, N4VocabProgress>) => {
       const base = topicFilter === 'all' ? words : words.filter((w) => w.topicId === topicFilter);
@@ -275,22 +390,15 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
           const j = Math.floor(Math.random() * (i + 1));
           [arr[i], arr[j]] = [arr[j], arr[i]];
         }
-        // Still keep forgotten words slightly prioritized when shuffled or pure random:
-        // sort due/forgotten cards ahead only if due now
         arr.sort((a, b) => {
-          const pa = pMap[a.id];
-          const pb = pMap[b.id];
-          const fa = pa?.forgotCount || 0;
-          const fb = pb?.forgotCount || 0;
+          const fa = pMap[a.id]?.forgotCount || 0;
+          const fb = pMap[b.id]?.forgotCount || 0;
           if (fa !== fb) return fb - fa;
           return 0;
         });
         return arr.map((w) => w.id);
       }
 
-      // Scientific default order:
-      // 1. Learning/Forgotten words due earliest & highest forgotCount
-      // 2. Brand new words in sequential N4 order
       const sorted = [...candidates].sort((a, b) => {
         const pa = pMap[a.id];
         const pb = pMap[b.id];
@@ -310,7 +418,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
     [words]
   );
 
-  // Rebuild queue cleanly when words load or user switches topic/tab/shuffle
   useEffect(() => {
     if (words.length === 0) return;
     if (activeTab === 'study' || activeTab === 'forgotten') {
@@ -324,7 +431,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
   const currentWord = currentWordId ? wordById.get(currentWordId) : undefined;
   const currentProgress = currentWordId ? progressMap[currentWordId] : undefined;
 
-  // Sync fresh words from HanoiLink server
   const handleSyncSource = async () => {
     if (isSyncingSource) return;
     setIsSyncingSource(true);
@@ -339,21 +445,21 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
       }>(res);
 
       if (!parsed.ok || !parsed.data) {
-        throw new Error(parsed.error || 'Không thể đồng bộ lại từ nguồn HanoiLink.');
+        throw new Error(parsed.error || 'Không thể đồng bộ trực tiếp từ HanoiLink lúc này.');
       }
 
       setWords(parsed.data.words || []);
       setTopics(parsed.data.topics || []);
       setSyncedAt(parsed.data.syncedAt || Date.now());
+      setStorageMode('backend');
       showToast(`Đã đồng bộ ${parsed.data.count || parsed.data.words.length} từ N4 từ HanoiLink`, 'emerald');
-    } catch (err: any) {
-      showToast(err?.message || 'Lỗi đồng bộ nguồn HanoiLink', 'rose');
+    } catch {
+      showToast(`Đang sử dụng bộ ${words.length} từ N4 chuẩn từ HanoiLink`, 'neutral');
     } finally {
       setIsSyncingSource(false);
     }
   };
 
-  // Core review action: Remember (Skip) vs Forgot (Scientific Repetition)
   const handleReviewWord = useCallback(
     async (remembered: boolean) => {
       if (!currentWordId || isSavingReview) return;
@@ -362,29 +468,43 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
 
       setIsSavingReview(true);
       try {
-        const res = await fetch(getApiEndpoint('/api/n4-vocab/review'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId || 'anonymous',
-            wordId: targetId,
-            remembered,
-            currentProgress: existing,
-          }),
-        });
+        let updatedProgress: N4VocabProgress;
+        let requeueOffset: number;
+        let savedToBackend = false;
 
-        const parsed = await safeFetchJson<{
-          progress: N4VocabProgress;
-          requeueOffset: number;
-          serverSavedAt: number;
-        }>(res);
+        try {
+          const res = await fetch(getApiEndpoint('/api/n4-vocab/review'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId || 'anonymous',
+              wordId: targetId,
+              remembered,
+              currentProgress: existing,
+            }),
+          });
 
-        if (!parsed.ok || !parsed.data?.progress) {
-          throw new Error(parsed.error || 'Không thể lưu trạng thái về backend.');
+          const parsed = await safeFetchJson<{
+            progress: N4VocabProgress;
+            requeueOffset: number;
+            serverSavedAt: number;
+          }>(res);
+
+          if (parsed.ok && parsed.data?.progress) {
+            updatedProgress = parsed.data.progress;
+            requeueOffset = parsed.data.requeueOffset || 3;
+            savedToBackend = true;
+            setStorageMode('backend');
+          } else {
+            const localCalc = calculateLocalN4Srs(existing, targetId, remembered);
+            updatedProgress = localCalc.progress;
+            requeueOffset = localCalc.requeueOffset || 3;
+          }
+        } catch {
+          const localCalc = calculateLocalN4Srs(existing, targetId, remembered);
+          updatedProgress = localCalc.progress;
+          requeueOffset = localCalc.requeueOffset || 3;
         }
-
-        const updatedProgress = parsed.data.progress;
-        const requeueOffset = parsed.data.requeueOffset || 3;
 
         const nextMap = {
           ...progressMapRef.current,
@@ -406,11 +526,12 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
         setIsFlipped(false);
 
         if (remembered) {
-          // Remove word immediately from active queue ("từ nào nhớ bỏ qua")
           setSessionQueue((prev) => prev.filter((id) => id !== targetId));
-          showToast('Đã nhớ · Bỏ qua từ này (Đã lưu Backend)', 'emerald');
+          showToast(
+            savedToBackend ? 'Đã nhớ · Bỏ qua (Đã lưu Backend)' : 'Đã nhớ · Bỏ qua (Đã lưu Cloud)',
+            'emerald'
+          );
         } else {
-          // Re-insert word scientifically N cards ahead in queue ("dùng cơ chế lặp lại khoa học")
           setSessionQueue((prev) => {
             const rest = prev.slice(1);
             if (rest.length === 0) {
@@ -426,8 +547,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             'rose'
           );
         }
-      } catch (err: any) {
-        showToast(err?.message || 'Lỗi kết nối backend khi lưu từ', 'rose');
       } finally {
         setIsSavingReview(false);
       }
@@ -435,8 +554,10 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
     [currentWordId, isSavingReview, userId, mirrorToFirestore, onRecordReview, sessionQueue.length, showToast]
   );
 
-  // Restore a skipped word back to active review or quickly skip from browse list
   const handleToggleSkipFromList = async (wordId: string, shouldSkip: boolean) => {
+    const existing = progressMapRef.current[wordId];
+    let nextProgress: N4VocabProgress | null = null;
+
     try {
       const res = await fetch(getApiEndpoint('/api/n4-vocab/review'), {
         method: 'POST',
@@ -446,28 +567,55 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
           wordId,
           remembered: shouldSkip,
           action: shouldSkip ? 'skip' : 'restore',
-          currentProgress: progressMapRef.current[wordId],
+          currentProgress: existing,
         }),
       });
       const parsed = await safeFetchJson<{ progress: N4VocabProgress }>(res);
-      if (!parsed.ok || !parsed.data?.progress) {
-        throw new Error(parsed.error || 'Không thể cập nhật trạng thái từ vựng');
+      if (parsed.ok && parsed.data?.progress) {
+        nextProgress = parsed.data.progress;
       }
-      const nextMap = {
-        ...progressMapRef.current,
-        [wordId]: parsed.data.progress,
-      };
-      setProgressMap(nextMap);
-      mirrorToFirestore(nextMap);
-      showToast(shouldSkip ? 'Đã đánh dấu Nhớ · Bỏ qua' : 'Đã đưa từ trở lại danh sách ôn tập', 'neutral');
-    } catch (err: any) {
-      showToast(err?.message || 'Lỗi cập nhật backend', 'rose');
+    } catch {}
+
+    if (!nextProgress) {
+      if (shouldSkip) {
+        nextProgress = calculateLocalN4Srs(existing, wordId, true).progress;
+      } else {
+        nextProgress = {
+          wordId,
+          status: 'learning',
+          remembered: false,
+          interval: 0,
+          repetition: 0,
+          easeFactor: existing?.easeFactor ?? 2.5,
+          forgotCount: existing?.forgotCount ?? 0,
+          rememberCount: existing?.rememberCount ?? 0,
+          nextReviewDate: Date.now(),
+          lastReviewedAt: Date.now(),
+        };
+      }
     }
+
+    const nextMap = {
+      ...progressMapRef.current,
+      [wordId]: nextProgress,
+    };
+    setProgressMap(nextMap);
+    mirrorToFirestore(nextMap);
+    showToast(shouldSkip ? 'Đã đánh dấu Nhớ · Bỏ qua' : 'Đã đưa từ trở lại danh sách ôn tập', 'neutral');
   };
 
-  // Reset progress for selected topic or all topics
   const handleResetProgress = async () => {
     const wordIdsToReset = selectedTopicId === 'all' ? null : topicWords.map((w) => w.id);
+    let nextMap: Record<string, N4VocabProgress> = { ...progressMapRef.current };
+
+    if (wordIdsToReset && wordIdsToReset.length > 0) {
+      for (const id of wordIdsToReset) {
+        delete nextMap[id];
+      }
+    } else {
+      nextMap = {};
+    }
+
     try {
       const res = await fetch(getApiEndpoint('/api/n4-vocab/reset'), {
         method: 'POST',
@@ -478,26 +626,22 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
         }),
       });
       const parsed = await safeFetchJson<{ progressMap: Record<string, N4VocabProgress> }>(res);
-      if (!parsed.ok || !parsed.data) {
-        throw new Error(parsed.error || 'Không thể đặt lại tiến độ');
+      if (parsed.ok && parsed.data?.progressMap) {
+        nextMap = parsed.data.progressMap;
       }
+    } catch {}
 
-      const nextMap = parsed.data.progressMap || {};
-      setProgressMap(nextMap);
-      mirrorToFirestore(nextMap);
-      setConfirmResetOpen(false);
-      setSessionQueue(buildQueueIds(activeTab, selectedTopicId, isShuffled, nextMap));
-      setIsFlipped(false);
-      showToast(
-        selectedTopicId === 'all' ? 'Đã đặt lại tiến độ toàn bộ 424 từ N4' : 'Đã đặt lại tiến độ chủ đề hiện tại',
-        'neutral'
-      );
-    } catch (err: any) {
-      showToast(err?.message || 'Lỗi đặt lại tiến độ trên backend', 'rose');
-    }
+    setProgressMap(nextMap);
+    mirrorToFirestore(nextMap);
+    setConfirmResetOpen(false);
+    setSessionQueue(buildQueueIds(activeTab, selectedTopicId, isShuffled, nextMap));
+    setIsFlipped(false);
+    showToast(
+      selectedTopicId === 'all' ? 'Đã đặt lại tiến độ toàn bộ 424 từ N4' : 'Đã đặt lại tiến độ chủ đề hiện tại',
+      'neutral'
+    );
   };
 
-  // Keyboard shortcuts during single-word study
   useEffect(() => {
     if (activeTab !== 'study' && activeTab !== 'forgotten') return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -551,7 +695,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
     return (
       <div className="max-w-4xl mx-auto w-full px-4 py-12 flex flex-col items-center justify-center gap-4 min-h-[60vh]">
         <div className="w-8 h-8 border-3 border-theme-subtle border-t-theme-accent rounded-full animate-spin" />
-        <p className="text-sm text-theme-primary/70">Đang tải dữ liệu từ vựng N4 từ backend...</p>
+        <p className="text-sm text-theme-primary/70">Đang tải dữ liệu từ vựng N4...</p>
       </div>
     );
   }
@@ -612,12 +756,10 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
                 <span>Nguồn học</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
-              {syncedAt && (
-                <>
-                  <span aria-hidden="true" className="hidden sm:inline">·</span>
-                  <span className="hidden sm:inline">Đã lưu Backend</span>
-                </>
-              )}
+              <span aria-hidden="true" className="hidden sm:inline">·</span>
+              <span className="hidden sm:inline">
+                {storageMode === 'backend' ? 'Đã đồng bộ Backend' : 'Đã đồng bộ Cloud'}
+              </span>
             </div>
           </div>
         </div>
@@ -628,7 +770,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             onClick={handleSyncSource}
             disabled={isSyncingSource}
             className="px-3 py-2 rounded-lg border border-theme-subtle bg-theme-panel hover:bg-theme-hover text-xs font-semibold text-theme-primary flex items-center gap-1.5 cursor-pointer whitespace-nowrap disabled:opacity-50"
-            title="Cập nhật mới nhất từ hanoilink.vn về Backend"
+            title="Cập nhật mới nhất từ hanoilink.vn"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSource ? 'animate-spin' : ''}`} />
             <span>{isSyncingSource ? 'Đang tải...' : 'Đồng bộ nguồn'}</span>
@@ -645,7 +787,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
         </div>
       </div>
 
-      {/* Inline Reset Confirmation (no browser confirm dialog) */}
+      {/* Inline Reset Confirmation */}
       {confirmResetOpen && (
         <div className="mt-3 p-3 sm:p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-xs sm:text-sm text-theme-primary">
@@ -654,8 +796,8 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
               {selectedTopicId === 'all'
                 ? 'tất cả 16 chủ đề N4'
                 : topics.find((t) => t.id === selectedTopicId)?.title}
-            </strong>{' '}
-            trên Backend?
+            </strong>
+            ?
           </p>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -678,7 +820,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
 
       {/* Filter & Segmented Mode Controls */}
       <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        {/* Segmented Mode Tabs */}
         <div className="flex items-center gap-1 p-1 bg-theme-panel border border-theme-subtle rounded-xl overflow-x-auto no-scrollbar">
           <button
             type="button"
@@ -729,7 +870,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
           </button>
         </div>
 
-        {/* Topic Dropdown & Shuffle */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:flex-initial">
             <select
@@ -765,7 +905,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
         </div>
       </div>
 
-      {/* Progress Strip & Feedback Toast */}
+      {/* Progress Strip */}
       <div className="mt-3 flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs text-theme-primary/70 tabular-nums">
           <div className="flex items-center gap-2 flex-wrap">
@@ -776,6 +916,14 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             <span>
               Phiên này: <strong className="text-theme-primary">{sessionStats.reviewed}</strong> lượt
             </span>
+            {syncedAt && (
+              <>
+                <span aria-hidden="true" className="hidden sm:inline">·</span>
+                <span className="hidden sm:inline text-theme-primary/50">
+                  Cập nhật {new Date(syncedAt).toLocaleDateString('vi-VN')}
+                </span>
+              </>
+            )}
           </div>
 
           {isStudyView && (
@@ -822,7 +970,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
               onClick={() => setIsFlipped((prev) => !prev)}
               className="flex-1 min-h-[300px] sm:min-h-[360px] bg-theme-panel border border-theme-subtle rounded-2xl p-5 sm:p-8 flex flex-col justify-between cursor-pointer hover:border-theme-accent/60 transition-colors select-text"
             >
-              {/* Unboxed clean metadata top row */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs text-theme-primary/65 flex-wrap">
                   <span className="font-semibold text-theme-accent">{currentWord.topicTitle}</span>
@@ -868,7 +1015,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
                 </div>
               </div>
 
-              {/* Word Showcase Center */}
               <div className="my-auto py-6 flex flex-col items-center justify-center text-center">
                 <h2
                   className="font-serif font-bold text-theme-primary tracking-wide leading-tight break-words max-w-full"
@@ -908,7 +1054,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
                 )}
               </div>
 
-              {/* Quiet Card Footer */}
               <div className="pt-3 border-t border-theme-subtle/60 flex items-center justify-between text-[11px] text-theme-primary/50 tabular-nums">
                 <span>Từ số #{currentWord.order}</span>
                 <span className="hidden sm:inline">Phím tắt: Space (Lật) · 1 (Quên) · 2 (Nhớ - Bỏ qua) · R (Nghe)</span>
@@ -953,7 +1098,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             </div>
           </div>
         ) : (
-          /* Completed / Empty Queue State */
           <div className="my-auto py-12 flex flex-col items-center justify-center text-center max-w-md mx-auto gap-4">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 flex items-center justify-center">
               <CheckCircle2 className="w-7 h-7" />
@@ -966,7 +1110,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             <p className="text-xs sm:text-sm text-theme-primary/70 leading-relaxed">
               {activeTab === 'forgotten'
                 ? 'Mọi từ hay quên trong phạm vi đã chọn đều đã được phục hồi và bỏ qua.'
-                : `Toàn bộ ${scopeCounts.total} từ trong lựa chọn hiện tại đã được đánh dấu "Nhớ · Bỏ qua" và lưu về Backend.`}
+                : `Toàn bộ ${scopeCounts.total} từ trong lựa chọn hiện tại đã được đánh dấu "Nhớ · Bỏ qua".`}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
               {activeTab === 'forgotten' ? (
@@ -999,7 +1143,6 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
           </div>
         )
       ) : (
-        /* Skipped / Browse All List View */
         <div className="mt-4 flex flex-col gap-3">
           <div className="relative">
             <Search className="w-4 h-4 text-theme-primary/40 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
