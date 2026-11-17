@@ -40,12 +40,26 @@
         "description": { "type": "string" }
       },
       "required": ["id", "title"]
+    },
+    "N4VocabState": {
+      "title": "N4VocabState",
+      "description": "User N4 vocabulary review progress and scientific repetition metadata",
+      "type": "object",
+      "properties": {
+        "progressMap": { "type": "object", "description": "Map of wordId to SRS review state" },
+        "updatedAt": { "type": "number", "description": "Last update timestamp" }
+      },
+      "required": ["progressMap", "updatedAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Individual user profile with unique ID and role"
+    },
+    "/users/{userId}/n4VocabState/{docId}": {
+      "schema": "N4VocabState",
+      "description": "User N4 specialized review progress mirror"
     },
     "/global_kanjiDeck/{docId}": {
       "schema": "KanjiCard",

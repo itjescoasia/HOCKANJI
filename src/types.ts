@@ -150,7 +150,40 @@ export interface Conversation {
   audioUrl?: string | null;
 }
 
-export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation' | 'quiz';
+export type ViewState = 'dashboard' | 'review' | 'list' | 'add' | 'difficult_review' | 'intensive_vocab' | 'short_study' | 'sentence_review' | 'conversation' | 'quiz' | 'n4_vocab';
+
+export interface N4VocabWord {
+  id: string;
+  topicId: string;
+  topicTitle: string;
+  wordType: string;
+  kanji: string;
+  reading: string;
+  romaji: string;
+  meaning: string;
+  order: number;
+  rawDisplay?: string;
+}
+
+export interface N4VocabTopic {
+  id: string;
+  title: string;
+  wordType: string;
+  count: number;
+}
+
+export interface N4VocabProgress {
+  wordId: string;
+  status: 'new' | 'learning' | 'skipped';
+  remembered: boolean;
+  interval: number;
+  repetition: number;
+  easeFactor: number;
+  forgotCount: number;
+  rememberCount: number;
+  nextReviewDate: number;
+  lastReviewedAt: number;
+}
 
 export interface QuizVocabItem {
   kanji: string;

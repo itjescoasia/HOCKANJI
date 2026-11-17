@@ -59,6 +59,7 @@ interface DashboardProps {
   onRecordWordOfTheDay?: (id: string) => void;
   onNavigateToWord?: (word: string, isIntensive: boolean, id: string) => void;
   onNavigateToQuiz?: () => void;
+  onNavigateToN4Vocab?: () => void;
 }
 
 import { cleanTextForSearch } from "../utils/stringUtils";
@@ -79,6 +80,7 @@ export default function Dashboard({
   onRecordWordOfTheDay,
   onNavigateToWord,
   onNavigateToQuiz,
+  onNavigateToN4Vocab,
 }: DashboardProps) {
 
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
@@ -419,7 +421,40 @@ export default function Dashboard({
       </div>
 
       {/* Feature Banners Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Specialized N4 Vocabulary Banner (HanoiLink Source + Backend SRS) */}
+        {onNavigateToN4Vocab && (
+          <div 
+            onClick={onNavigateToN4Vocab}
+            className="bg-gradient-to-r from-amber-950/35 via-theme-panel to-amber-950/20 border border-amber-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-amber-500 transition-all rounded-sm group shadow-sm"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold text-amber-500/90">
+                  Nguồn HanoiLink · 424 từ N4 · Lưu Backend
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-amber-500 transition-colors mt-1">
+                  Ôn Chuyên Từ Vựng N4
+                </h3>
+                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                  Ôn từng từ một theo 16 chủ đề N4 • Nhớ thì bỏ qua ngay • Quên tự động lặp lại khoa học.
+                </p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onNavigateToN4Vocab(); }}
+              className="px-4 py-2 bg-amber-600 group-hover:bg-amber-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+            >
+              Ôn từ vựng N4 ngay
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Forgotten Words Specialized Banner */}
         {onStartDifficultReview && (
           <div 

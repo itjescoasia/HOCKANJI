@@ -1104,6 +1104,470 @@ QUY TẮC BẮT BUỘC:
     }
   });
 
+  // ============================================================================
+  // N4 Vocabulary Specialized Scraper & Scientific SRS Backend Persistence
+  // ============================================================================
+  const DATA_DIR = path.join(process.cwd(), 'data');
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  const N4_DECK_FILE = path.join(DATA_DIR, 'n4_vocab_deck.json');
+  const N4_PROGRESS_FILE = path.join(DATA_DIR, 'n4_vocab_progress.json');
+  const N4_SOURCE_URL = 'https://hanoilink.vn/tu-vung-tieng-nhat-n4/';
+
+  interface N4VocabWordServer {
+    id: string;
+    topicId: string;
+    topicTitle: string;
+    wordType: string;
+    kanji: string;
+    reading: string;
+    romaji: string;
+    meaning: string;
+    order: number;
+    rawDisplay?: string;
+  }
+
+  interface N4VocabTopicServer {
+    id: string;
+    title: string;
+    wordType: string;
+    count: number;
+  }
+
+  interface N4VocabProgressServer {
+    wordId: string;
+    status: 'new' | 'learning' | 'skipped';
+    remembered: boolean;
+    interval: number;
+    repetition: number;
+    easeFactor: number;
+    forgotCount: number;
+    rememberCount: number;
+    nextReviewDate: number;
+    lastReviewedAt: number;
+  }
+
+  interface N4DeckCachePayload {
+    sourceUrl: string;
+    syncedAt: number;
+    topics: N4VocabTopicServer[];
+    words: N4VocabWordServer[];
+  }
+
+  const N4_TOPIC_META: Array<{ id: string; title: string; wordType: string }> = [
+    { id: 'n4_family', title: 'Gia đình & Mối quan hệ', wordType: 'Danh từ' },
+    { id: 'n4_body', title: 'Bộ phận cơ thể', wordType: 'Danh từ' },
+    { id: 'n4_work', title: 'Công việc & Nghề nghiệp', wordType: 'Danh từ' },
+    { id: 'n4_food', title: 'Đồ ăn & Thức uống', wordType: 'Danh từ' },
+    { id: 'n4_transport', title: 'Phương tiện giao thông', wordType: 'Danh từ' },
+    { id: 'n4_clothing', title: 'Quần áo & Phụ kiện', wordType: 'Danh từ' },
+    { id: 'n4_direction', title: 'Phương hướng', wordType: 'Danh từ' },
+    { id: 'n4_color', title: 'Màu sắc', wordType: 'Danh từ' },
+    { id: 'n4_nature', title: 'Thiên nhiên', wordType: 'Danh từ' },
+    { id: 'n4_hobby', title: 'Thể thao & Sở thích', wordType: 'Danh từ' },
+    { id: 'n4_animal', title: 'Động vật', wordType: 'Danh từ' },
+    { id: 'n4_event', title: 'Sự kiện', wordType: 'Danh từ' },
+    { id: 'n4_verbs', title: 'Động từ N4 thông dụng', wordType: 'Động từ' },
+    { id: 'n4_adj_i', title: 'Tính từ đuôi い', wordType: 'Tính từ い' },
+    { id: 'n4_adj_na', title: 'Tính từ đuôi な', wordType: 'Tính từ な' },
+    { id: 'n4_adverbs', title: 'Trạng từ thông dụng', wordType: 'Trạng từ' },
+  ];
+
+  function parseInlineFuriganaTerm(rawTerm: string): { kanji: string; reading: string; rawDisplay?: string } {
+    const clean = rawTerm.replace(/\s+/g, '').trim();
+    if (!clean.includes('(') && !clean.includes('（')) {
+      return { kanji: clean, reading: clean };
+    }
+    const normalized = clean.replace(/（/g, '(').replace(/）/g, ')');
+    const kanjiOnly = normalized.replace(/\([^)]*\)/g, '');
+    // Replace Kanji blocks immediately followed by (reading) with reading
+    const readingOnly = normalized.replace(/[\u4e00-\u9faf々]+?\(([^)]+)\)/g, '$1').replace(/\(([^)]+)\)/g, '$1');
+    return {
+      kanji: kanjiOnly || normalized,
+      reading: readingOnly || kanjiOnly || normalized,
+      rawDisplay: normalized,
+    };
+  }
+
+  async function scrapeHanoilinkN4(): Promise<N4DeckCachePayload> {
+    const response = await axios.get(N4_SOURCE_URL, {
+      timeout: 20000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; KanjiFlowBot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml'
+      }
+    });
+
+    const $ = cheerio.load(response.data);
+    const tables = $('table');
+    const words: N4VocabWordServer[] = [];
+    const topics: N4VocabTopicServer[] = [];
+    const seenIds = new Set<string>();
+
+    tables.each((tableIdx, tableEl) => {
+      const rows = $(tableEl).find('tr');
+      if (rows.length < 3) return;
+
+      const row0Text = $(rows[0]).text().replace(/\s+/g, ' ').trim();
+      const headerCells = $(rows[1])
+        .find('th, td')
+        .map((_, c) => $(c).text().replace(/\s+/g, ' ').trim())
+        .get();
+
+      const fallbackMeta = N4_TOPIC_META[tableIdx] || {
+        id: `n4_topic_${tableIdx}`,
+        title: row0Text || `Chủ đề ${tableIdx + 1}`,
+        wordType: 'Từ vựng N4'
+      };
+
+      const isTwoCol = headerCells.length === 2;
+      let topicCount = 0;
+
+      rows.slice(2).each((rowOffset, tr) => {
+        const cells = $(tr)
+          .find('th, td')
+          .map((_, c) => $(c).text().replace(/\s+/g, ' ').trim())
+          .get();
+
+        if (cells.length < 2) return;
+
+        let reading = '';
+        let kanji = '';
+        let meaning = '';
+        let rawDisplay: string | undefined;
+
+        if (isTwoCol) {
+          const parsed = parseInlineFuriganaTerm(cells[0] || '');
+          kanji = parsed.kanji;
+          reading = parsed.reading;
+          rawDisplay = parsed.rawDisplay;
+          meaning = (cells[1] || '').trim();
+        } else if (cells.length >= 4) {
+          reading = (cells[1] || '').trim();
+          const rawKanji = (cells[2] || '').trim();
+          meaning = (cells[3] || '').trim();
+
+          // Normalize empty/dash placeholders in Kanji column (e.g. Katakana words "–", "-")
+          if (!rawKanji || rawKanji === '–' || rawKanji === '-' || rawKanji === '—') {
+            kanji = reading;
+          } else {
+            kanji = rawKanji;
+          }
+        } else {
+          return;
+        }
+
+        if (!meaning || (!kanji && !reading)) return;
+        // Skip duplicated header rows if any
+        if (reading.toLowerCase() === 'hiragana' || meaning.toLowerCase().includes('nghĩa tiếng việt')) return;
+
+        const baseHash = crypto
+          .createHash('md5')
+          .update(`${fallbackMeta.id}|${reading}|${kanji}|${meaning}`)
+          .digest('hex')
+          .slice(0, 10);
+
+        let id = `n4_${baseHash}`;
+        if (seenIds.has(id)) {
+          id = `n4_${baseHash}_${rowOffset}`;
+        }
+        seenIds.add(id);
+
+        const romajiSource = reading || kanji;
+        const romaji = wanakana.isKana(romajiSource)
+          ? wanakana.toRomaji(romajiSource)
+          : wanakana.toRomaji(reading || kanji);
+
+        topicCount++;
+        words.push({
+          id,
+          topicId: fallbackMeta.id,
+          topicTitle: fallbackMeta.title,
+          wordType: fallbackMeta.wordType,
+          kanji: kanji || reading,
+          reading: reading || kanji,
+          romaji,
+          meaning,
+          order: words.length + 1,
+          ...(rawDisplay ? { rawDisplay } : {}),
+        });
+      });
+
+      if (topicCount > 0) {
+        topics.push({
+          id: fallbackMeta.id,
+          title: fallbackMeta.title,
+          wordType: fallbackMeta.wordType,
+          count: topicCount,
+        });
+      }
+    });
+
+    const payload: N4DeckCachePayload = {
+      sourceUrl: N4_SOURCE_URL,
+      syncedAt: Date.now(),
+      topics,
+      words,
+    };
+
+    if (words.length > 0) {
+      fs.writeFileSync(N4_DECK_FILE, JSON.stringify(payload, null, 2), 'utf8');
+    }
+    return payload;
+  }
+
+  async function getOrLoadN4Deck(): Promise<N4DeckCachePayload> {
+    if (fs.existsSync(N4_DECK_FILE)) {
+      try {
+        const raw = fs.readFileSync(N4_DECK_FILE, 'utf8');
+        const parsed = JSON.parse(raw) as N4DeckCachePayload;
+        if (Array.isArray(parsed.words) && parsed.words.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.warn('[N4] Failed to parse cached N4 deck, re-scraping:', e);
+      }
+    }
+    return await scrapeHanoilinkN4();
+  }
+
+  function readAllN4Progress(): Record<string, Record<string, N4VocabProgressServer>> {
+    if (!fs.existsSync(N4_PROGRESS_FILE)) return {};
+    try {
+      const raw = fs.readFileSync(N4_PROGRESS_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeAllN4Progress(store: Record<string, Record<string, N4VocabProgressServer>>) {
+    const tmpPath = `${N4_PROGRESS_FILE}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf8');
+    fs.renameSync(tmpPath, N4_PROGRESS_FILE);
+  }
+
+  function calculateN4ScientificSrs(
+    prev: N4VocabProgressServer | undefined,
+    wordId: string,
+    remembered: boolean
+  ): { progress: N4VocabProgressServer; requeueOffset: number } {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const prevEf = prev?.easeFactor ?? 2.5;
+    const prevRep = prev?.repetition ?? 0;
+    const prevInterval = prev?.interval ?? 0;
+    const prevForgot = prev?.forgotCount ?? 0;
+    const prevRemember = prev?.rememberCount ?? 0;
+
+    if (remembered) {
+      // "Nhớ — Bỏ qua": mark as skipped & schedule next scientific review far ahead
+      const nextRep = prevRep + 1;
+      const nextEf = Math.min(3.0, Math.max(1.3, Number((prevEf + 0.1).toFixed(2))));
+      let nextIntervalDays = 30;
+      if (prevForgot > 0) {
+        // Recovering from past forget: Ebbinghaus spaced expansion (3d -> 7d -> interval*EF)
+        if (nextRep === 1) nextIntervalDays = 3;
+        else if (nextRep === 2) nextIntervalDays = 7;
+        else nextIntervalDays = Math.min(180, Math.round(Math.max(7, prevInterval) * nextEf));
+      } else if (nextRep >= 2) {
+        nextIntervalDays = Math.min(365, Math.round(Math.max(30, prevInterval) * nextEf));
+      }
+
+      return {
+        progress: {
+          wordId,
+          status: 'skipped',
+          remembered: true,
+          interval: nextIntervalDays,
+          repetition: nextRep,
+          easeFactor: nextEf,
+          forgotCount: prevForgot,
+          rememberCount: prevRemember + 1,
+          nextReviewDate: now + nextIntervalDays * DAY_MS,
+          lastReviewedAt: now,
+        },
+        requeueOffset: 0,
+      };
+    }
+
+    // "Quên — Lặp lại khoa học": reset repetition, reduce Ease Factor, trigger short Ebbinghaus loop
+    const nextForgot = prevForgot + 1;
+    const nextEf = Math.max(1.3, Number((prevEf - 0.2).toFixed(2)));
+    // Short scientific delay so it stays prioritized at the front of active learning queue
+    const shortDelayMs = nextForgot >= 3 ? 3 * 60 * 1000 : 10 * 60 * 1000;
+    // Intra-session spacing: re-appear in 2 to 4 cards for active recall reinforcement
+    const requeueOffset = nextForgot >= 3 ? 2 : nextForgot === 2 ? 3 : 4;
+
+    return {
+      progress: {
+        wordId,
+        status: 'learning',
+        remembered: false,
+        interval: 0,
+        repetition: 0,
+        easeFactor: nextEf,
+        forgotCount: nextForgot,
+        rememberCount: prevRemember,
+        nextReviewDate: now + shortDelayMs,
+        lastReviewedAt: now,
+      },
+      requeueOffset,
+    };
+  }
+
+  // GET /api/n4-vocab?userId=...
+  app.get('/api/n4-vocab', async (req, res) => {
+    try {
+      const userId = String(req.query.userId || 'anonymous').trim() || 'anonymous';
+      const deckPayload = await getOrLoadN4Deck();
+      const allProgress = readAllN4Progress();
+      const progressMap = allProgress[userId] || {};
+
+      res.json({
+        sourceUrl: deckPayload.sourceUrl,
+        syncedAt: deckPayload.syncedAt,
+        topics: deckPayload.topics,
+        words: deckPayload.words,
+        progressMap,
+      });
+    } catch (err: any) {
+      console.error('[N4] Error loading N4 vocab:', err?.message || err);
+      res.status(500).json({ error: 'Không thể tải dữ liệu từ vựng N4 từ backend: ' + (err?.message || 'Lỗi máy chủ') });
+    }
+  });
+
+  // POST /api/n4-vocab/sync - Re-scrape directly from HanoiLink
+  app.post('/api/n4-vocab/sync', async (req, res) => {
+    try {
+      const deckPayload = await scrapeHanoilinkN4();
+      res.json({
+        sourceUrl: deckPayload.sourceUrl,
+        syncedAt: deckPayload.syncedAt,
+        topics: deckPayload.topics,
+        words: deckPayload.words,
+        count: deckPayload.words.length,
+      });
+    } catch (err: any) {
+      console.error('[N4] Error syncing from hanoilink.vn:', err?.message || err);
+      res.status(500).json({ error: 'Không thể đồng bộ nguồn hanoilink.vn: ' + (err?.message || 'Lỗi kết nối') });
+    }
+  });
+
+  // POST /api/n4-vocab/review - Compute scientific SRS & persist review state on backend
+  app.post('/api/n4-vocab/review', (req, res) => {
+    try {
+      const userId = String(req.body?.userId || 'anonymous').trim() || 'anonymous';
+      const wordId = String(req.body?.wordId || '').trim();
+      const remembered = Boolean(req.body?.remembered);
+      const clientCurrent = req.body?.currentProgress as N4VocabProgressServer | undefined;
+
+      if (!wordId) {
+        return res.status(400).json({ error: 'wordId là bắt buộc' });
+      }
+
+      const allProgress = readAllN4Progress();
+      const userProgress = allProgress[userId] || {};
+      const existing = userProgress[wordId] || clientCurrent;
+
+      // Support explicit un-skip / restore back into learning queue
+      if (req.body?.action === 'restore') {
+        const restored: N4VocabProgressServer = {
+          wordId,
+          status: 'learning',
+          remembered: false,
+          interval: 0,
+          repetition: 0,
+          easeFactor: existing?.easeFactor ?? 2.5,
+          forgotCount: existing?.forgotCount ?? 0,
+          rememberCount: existing?.rememberCount ?? 0,
+          nextReviewDate: Date.now(),
+          lastReviewedAt: Date.now(),
+        };
+        userProgress[wordId] = restored;
+        allProgress[userId] = userProgress;
+        writeAllN4Progress(allProgress);
+        return res.json({ progress: restored, requeueOffset: 0, serverSavedAt: Date.now() });
+      }
+
+      const { progress, requeueOffset } = calculateN4ScientificSrs(existing, wordId, remembered);
+      userProgress[wordId] = progress;
+      allProgress[userId] = userProgress;
+      writeAllN4Progress(allProgress);
+
+      res.json({
+        progress,
+        requeueOffset,
+        serverSavedAt: Date.now(),
+      });
+    } catch (err: any) {
+      console.error('[N4] Error saving review progress:', err);
+      res.status(500).json({ error: 'Không thể lưu tiến độ ôn tập về backend: ' + (err?.message || 'Lỗi máy chủ') });
+    }
+  });
+
+  // POST /api/n4-vocab/sync-progress - Merge client/Firestore progress snapshot with backend storage
+  app.post('/api/n4-vocab/sync-progress', (req, res) => {
+    try {
+      const userId = String(req.body?.userId || 'anonymous').trim() || 'anonymous';
+      const clientMap = (req.body?.progressMap && typeof req.body.progressMap === 'object')
+        ? (req.body.progressMap as Record<string, N4VocabProgressServer>)
+        : {};
+
+      const allProgress = readAllN4Progress();
+      const serverMap = allProgress[userId] || {};
+      const merged: Record<string, N4VocabProgressServer> = { ...serverMap };
+
+      let updated = false;
+      for (const [wId, clientEntry] of Object.entries(clientMap)) {
+        if (!clientEntry || typeof clientEntry !== 'object') continue;
+        const serverEntry = merged[wId];
+        if (!serverEntry || (clientEntry.lastReviewedAt || 0) > (serverEntry.lastReviewedAt || 0)) {
+          merged[wId] = clientEntry;
+          updated = true;
+        }
+      }
+
+      if (updated || !allProgress[userId]) {
+        allProgress[userId] = merged;
+        writeAllN4Progress(allProgress);
+      }
+
+      res.json({ progressMap: merged, serverSavedAt: Date.now() });
+    } catch (err: any) {
+      console.error('[N4] Error syncing progress:', err);
+      res.status(500).json({ error: 'Lỗi đồng bộ tiến độ N4 với backend' });
+    }
+  });
+
+  // POST /api/n4-vocab/reset - Reset progress for a specific list of words or entire user progress
+  app.post('/api/n4-vocab/reset', (req, res) => {
+    try {
+      const userId = String(req.body?.userId || 'anonymous').trim() || 'anonymous';
+      const wordIds = Array.isArray(req.body?.wordIds) ? (req.body.wordIds as string[]) : null;
+
+      const allProgress = readAllN4Progress();
+      const userMap = allProgress[userId] || {};
+
+      if (wordIds && wordIds.length > 0) {
+        for (const id of wordIds) {
+          delete userMap[id];
+        }
+        allProgress[userId] = userMap;
+      } else {
+        allProgress[userId] = {};
+      }
+
+      writeAllN4Progress(allProgress);
+      res.json({ progressMap: allProgress[userId], serverSavedAt: Date.now() });
+    } catch (err: any) {
+      console.error('[N4] Error resetting N4 progress:', err);
+      res.status(500).json({ error: 'Không thể đặt lại tiến độ N4 trên backend' });
+    }
+  });
+
   // Ensure unhandled /api/* routes return 404 JSON, NEVER falling back to index.html
   app.all('/api/*', (req, res) => {
     res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` });

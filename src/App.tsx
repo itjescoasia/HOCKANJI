@@ -17,7 +17,8 @@ import Login from './components/Login';
 import AccountSettingsModal from './components/AccountSettingsModal';
 import N4QuizView from './components/N4QuizView';
 import ForgottenVocabSession from './components/ForgottenVocabSession';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical } from 'lucide-react';
+import N4VocabReview from './components/N4VocabReview';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical, Layers } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -525,6 +526,7 @@ export default function App() {
   const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
   const navItems = [
     { id: 'dashboard', label: 'Trang chủ', icon: Home },
+    { id: 'n4_vocab', label: 'Từ vựng N4', icon: Layers },
     { id: 'sentence_srs', label: 'Dịch câu SRS', icon: Brain },
     { id: 'quiz', label: 'Trắc nghiệm N4', icon: CheckSquare },
     { id: 'list', label: 'Danh sách', icon: BookMarked },
@@ -756,6 +758,7 @@ export default function App() {
             onNavigateAdd={isAdmin ? () => handleNavigate('add') : undefined} 
             onRecordWordOfTheDay={recordWordOfTheDay}
             onNavigateToQuiz={() => handleNavigate('quiz')}
+            onNavigateToN4Vocab={() => handleNavigate('n4_vocab')}
             onNavigateToWord={(word, isIntensive, id) => {
               if (isIntensive) {
                 setIntensiveSearchQuery(word);
@@ -851,6 +854,14 @@ export default function App() {
               setListSearchQuery(word);
               handleNavigate('list');
             }}
+          />
+        )}
+
+        {view === 'n4_vocab' && (
+          <N4VocabReview
+            userId={user?.uid || 'anonymous'}
+            onBack={() => handleNavigate('dashboard')}
+            onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
           />
         )}
       </main>
