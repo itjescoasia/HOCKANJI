@@ -864,7 +864,7 @@ export function LinkSentenceModal({
                   onUnlink(sourceExample.id);
                   onClose();
                 }}
-                className="text-xs text-red-400 hover:text-red-300 underline font-semibold cursor-pointer"
+                className="text-xs text-red-700 dark:text-red-300 hover:underline font-semibold cursor-pointer"
               >
                 Hủy liên kết cặp này
               </button>
@@ -937,7 +937,7 @@ export function LinkSentenceModal({
                         </span>
                       )}
                       {isAdjacentToSource && (
-                        <span className="text-[10px] font-semibold text-cyan-400 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                        <span className="text-[10px] font-semibold text-cyan-800 dark:text-cyan-300 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/35">
                           ✨ Liền kề
                         </span>
                       )}
@@ -1371,13 +1371,13 @@ export default function IntensiveStudy({
                   onClick={() => setStatusFilter('all')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     statusFilter === 'all'
-                      ? 'bg-theme-accent text-white shadow-xs'
+                      ? 'bg-theme-accent text-theme-inverted shadow-xs'
                       : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
                   }`}
                 >
                   <span>Tất cả</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    statusFilter === 'all' ? 'bg-white/25 text-white' : 'bg-theme-hover text-theme-primary/60'
+                    statusFilter === 'all' ? 'bg-black/15 text-theme-inverted' : 'bg-theme-hover text-theme-primary/70'
                   }`}>
                     {deck.length}
                   </span>
@@ -1387,14 +1387,14 @@ export default function IntensiveStudy({
                   onClick={() => setStatusFilter('learning')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     statusFilter === 'learning'
-                      ? 'bg-amber-500 text-white shadow-xs'
-                      : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+                      ? 'bg-amber-700 text-white shadow-xs'
+                      : 'text-amber-700 dark:text-amber-300 hover:bg-amber-500/10'
                   }`}
                 >
                   <Circle className="w-3.5 h-3.5 shrink-0" />
                   <span>Chưa thuộc</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    statusFilter === 'learning' ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                    statusFilter === 'learning' ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
                   }`}>
                     {learningWordsCount}
                   </span>
@@ -1405,13 +1405,13 @@ export default function IntensiveStudy({
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     statusFilter === 'mastered'
                       ? 'bg-green-700 text-white shadow-xs'
-                      : 'text-green-700 dark:text-green-400 hover:bg-green-500/10'
+                      : 'text-green-700 dark:text-green-300 hover:bg-green-500/10'
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                   <span>Đã thuộc</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                    statusFilter === 'mastered' ? 'bg-white/25 text-white' : 'bg-green-500/15 text-green-700 dark:text-green-400'
+                    statusFilter === 'mastered' ? 'bg-white/25 text-white' : 'bg-green-500/15 text-green-800 dark:text-green-300'
                   }`}>
                     {masteredWordsCount}
                   </span>
@@ -1672,7 +1672,7 @@ export default function IntensiveStudy({
                                         e.stopPropagation();
                                         setDetailModalWord(word);
                                       }}
-                                      className="px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded-md transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                      className="px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-theme-inverted hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded-md transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                                       title="Xem toàn bộ chi tiết từ vựng"
                                     >
                                       <BookOpen className="w-3.5 h-3.5" />
@@ -2631,7 +2631,7 @@ function StudyView({
                   id={`btn-detail-modal-${word.id}`}
                   type="button"
                   onClick={() => setShowDetailModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/15 border border-theme-accent/30 text-theme-accent hover:bg-theme-accent hover:text-white rounded-md text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-theme-accent/15 border border-theme-accent/30 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted rounded-md text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                   title="Xem toàn bộ chi tiết từ vựng này"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -2694,7 +2694,7 @@ function StudyView({
                 </button>
                 <button
                   onClick={() => setShowDetailModal(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 rounded-md border border-theme-accent/30 transition-all cursor-pointer shadow-xs"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-theme-inverted hover:bg-theme-accent bg-theme-accent/10 rounded-md border border-theme-accent/30 transition-all cursor-pointer shadow-xs"
                   title="Xem toàn bộ chi tiết từ vựng"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
@@ -2702,11 +2702,11 @@ function StudyView({
                 </button>
               </div>
               { (word.explanation || word.category || matchedCard?.sinoVietnamese || matchedCard?.kanjiExplanation) && (
-                <div className="relative group/expl bg-theme-panel/90 dark:bg-theme-panel/75 backdrop-blur-xs p-4 sm:p-5 rounded-xl border border-theme-subtle/80 border-l-4 border-l-[#c5a059] mt-3 shadow-xs transition-all hover:border-theme-subtle">
+                <div className="relative group/expl bg-theme-panel/90 dark:bg-theme-panel/75 backdrop-blur-xs p-4 sm:p-5 rounded-xl border border-theme-subtle/80 border-l-4 border-l-theme-accent mt-3 shadow-xs transition-all hover:border-theme-subtle">
                   {/* Header bar: Title, Category Badge, Hán Việt Badge, and Action buttons */}
                   <div className="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b border-theme-subtle/60 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#c5a059]">
+                      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-theme-accent">
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
                         <span>Giải thích & Ghi chú từ vựng</span>
                       </div>
@@ -3145,7 +3145,7 @@ function StudyView({
                                     type="button"
                                     onClick={handleGenerateAIEditFurigana}
                                     disabled={isGeneratingFurigana || !editExampleData.sentence.trim()}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-white hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded transition-all disabled:opacity-50 cursor-pointer"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-theme-accent hover:text-theme-inverted hover:bg-theme-accent bg-theme-accent/10 border border-theme-accent/25 rounded transition-all disabled:opacity-50 cursor-pointer"
                                     title="Dùng Gemini AI để tạo Furigana tự động theo ngữ cảnh"
                                   >
                                     <Sparkles className={`w-3.5 h-3.5 ${isGeneratingFurigana ? 'animate-spin' : ''}`} />

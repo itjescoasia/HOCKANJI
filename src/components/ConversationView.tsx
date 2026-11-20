@@ -946,7 +946,7 @@ function ConversationDetail({
                 {!audioUrl ? (
                   <button 
                     onClick={() => audioInputRef.current?.click()} 
-                    className="flex items-center gap-2 px-4 py-2 bg-theme-accent text-white rounded-lg font-medium text-sm hover:bg-theme-accent/90 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-theme-accent text-theme-inverted rounded-lg font-semibold text-sm hover:bg-theme-accent-hover transition-colors disabled:opacity-50"
                     disabled={isUploadingAudio}
                   >
                     <Volume2 className="w-4 h-4" />

@@ -199,7 +199,7 @@ export default function Dashboard({
     deck.forEach((word) => processType(word.wordType));
     intensiveDeck.forEach((word) => processType(word.category));
 
-    const colors = ["#c5a059", "#4a4a4a", "#8b5a2b", "#2a2a2a", "#1a1a1a"];
+    const colors = ["#d97706", "#0284c7", "#10b981", "#e11d48", "#8b5cf6"];
 
     return Object.entries(stats)
       .map(([name, value], index) => ({
@@ -426,20 +426,20 @@ export default function Dashboard({
         {onNavigateToN4Vocab && (
           <div 
             onClick={onNavigateToN4Vocab}
-            className="bg-gradient-to-r from-amber-950/35 via-theme-panel to-amber-950/20 border border-amber-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-amber-500 transition-all rounded-sm group shadow-sm"
+            className="bg-gradient-to-r from-amber-50/90 dark:from-amber-950/35 via-theme-panel to-amber-50/50 dark:to-amber-950/20 border border-amber-500/45 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-amber-600 dark:hover:border-amber-400 transition-all rounded-xl group shadow-sm"
           >
             <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-700 dark:text-amber-300 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
                 <BookOpen className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-[11px] font-semibold text-amber-500/90">
+                <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300">
                   Nguồn HanoiLink · 424 từ N4 · Lưu Backend
                 </div>
-                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-amber-500 transition-colors mt-1">
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors mt-1">
                   Ôn Chuyên Từ Vựng N4
                 </h3>
-                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                <p className="text-xs text-theme-primary/80 mt-1 line-clamp-2">
                   Ôn từng từ một theo 16 chủ đề N4 • Nhớ thì bỏ qua ngay • Quên tự động lặp lại khoa học.
                 </p>
               </div>
@@ -447,7 +447,7 @@ export default function Dashboard({
             <button 
               type="button"
               onClick={(e) => { e.stopPropagation(); onNavigateToN4Vocab(); }}
-              className="px-4 py-2 bg-amber-600 group-hover:bg-amber-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+              className="px-4 py-2 bg-amber-700 group-hover:bg-amber-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
             >
               Ôn từ vựng N4 ngay
               <ChevronRight className="w-3.5 h-3.5" />
@@ -459,32 +459,32 @@ export default function Dashboard({
         {onStartDifficultReview && (
           <div 
             onClick={onStartDifficultReview}
-            className="bg-gradient-to-r from-rose-950/40 via-theme-panel to-rose-950/30 border border-rose-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-rose-500 transition-all rounded-sm group shadow-sm"
+            className="bg-gradient-to-r from-rose-50/90 dark:from-rose-950/40 via-theme-panel to-rose-50/50 dark:to-rose-950/25 border border-rose-500/45 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-rose-600 dark:hover:border-rose-400 transition-all rounded-xl group shadow-sm"
           >
             <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
-                <Flame className="w-5 h-5 fill-rose-500/30" />
+              <div className="w-10 h-10 rounded-lg bg-rose-500/15 border border-rose-500/40 flex items-center justify-center text-rose-700 dark:text-rose-300 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+                <Flame className="w-5 h-5 fill-rose-500/25" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded">
+                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-rose-500/15 text-rose-800 dark:text-rose-300 border border-rose-500/35 rounded">
                     Khoa học Active Recall
                   </span>
-                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-theme-base text-rose-400 border border-rose-500/30 rounded">
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-theme-base text-rose-800 dark:text-rose-300 border border-rose-500/35 rounded">
                     {taggedForgottenWords.length > 0 ? `${taggedForgottenWords.length} từ gán Quên` : `${difficultWordsCount} từ khó`}
                   </span>
                 </div>
-                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-rose-400 transition-colors mt-1">
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors mt-1">
                   Ôn Các Từ Vựng Hay Quên
                 </h3>
-                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                <p className="text-xs text-theme-primary/80 mt-1 line-clamp-2">
                   Chu kỳ ngắt quãng ngắn Ebbinghaus • Trắc nghiệm 4 đáp án &amp; nghe MP3 • Tự động phục hồi trí nhớ khi nhớ đúng.
                 </p>
               </div>
             </div>
             <button 
               onClick={(e) => { e.stopPropagation(); onStartDifficultReview(); }}
-              className="px-4 py-2 bg-rose-600 group-hover:bg-rose-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+              className="px-4 py-2 bg-rose-700 group-hover:bg-rose-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
             >
               Ôn từ hay quên ngay
               <ChevronRight className="w-3.5 h-3.5" />
@@ -496,32 +496,32 @@ export default function Dashboard({
         {onStartSentenceReview && (
           <div 
             onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
-            className="bg-gradient-to-r from-indigo-950/40 via-theme-panel to-indigo-950/30 border border-indigo-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-indigo-500 transition-all rounded-sm group shadow-sm"
+            className="bg-gradient-to-r from-indigo-50/90 dark:from-indigo-950/40 via-theme-panel to-indigo-50/50 dark:to-indigo-950/25 border border-indigo-500/45 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-indigo-600 dark:hover:border-indigo-400 transition-all rounded-xl group shadow-sm"
           >
             <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+              <div className="w-10 h-10 rounded-lg bg-indigo-500/15 border border-indigo-500/40 flex items-center justify-center text-indigo-700 dark:text-indigo-300 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
                 <Brain className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded">
+                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border border-indigo-500/35 rounded">
                     Khoa học SRS Ebbinghaus
                   </span>
-                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-theme-base text-theme-primary/60 border border-theme-subtle rounded">
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-theme-base text-theme-primary/70 border border-theme-subtle rounded">
                     MP3 Chuẩn
                   </span>
                 </div>
-                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-indigo-400 transition-colors mt-1">
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors mt-1">
                   Luyện Dịch Câu: Việt → Nhật
                 </h3>
-                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                <p className="text-xs text-theme-primary/80 mt-1 line-clamp-2">
                   Lấy ngẫu nhiên câu ví dụ có MP3 • Tự động lặp lại câu quên theo chu kỳ Ebbinghaus • Giảm lặp câu đã nhớ.
                 </p>
               </div>
             </div>
             <button 
               onClick={(e) => { e.stopPropagation(); onStartSentenceReview("VI_TO_JA", null, false, true); }}
-              className="px-4 py-2 bg-indigo-600 group-hover:bg-indigo-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+              className="px-4 py-2 bg-indigo-700 group-hover:bg-indigo-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
             >
               Luyện dịch ngay
               <ChevronRight className="w-3.5 h-3.5" />
@@ -533,29 +533,29 @@ export default function Dashboard({
         {onNavigateToQuiz && (
           <div 
             onClick={onNavigateToQuiz}
-            className="bg-gradient-to-r from-emerald-950/40 via-theme-panel to-emerald-950/30 border border-emerald-500/40 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-emerald-500 transition-all rounded-sm group shadow-sm"
+            className="bg-gradient-to-r from-emerald-50/90 dark:from-emerald-950/40 via-theme-panel to-emerald-50/50 dark:to-emerald-950/25 border border-emerald-500/45 p-4 sm:p-5 flex flex-col justify-between gap-4 cursor-pointer hover:border-emerald-600 dark:hover:border-emerald-400 transition-all rounded-xl group shadow-sm"
           >
             <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 group-hover:scale-110 transition-transform shrink-0 mt-0.5">
                 <CheckSquare className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">
+                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/35 rounded">
                     Đề thi N4
                   </span>
                 </div>
-                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-emerald-400 transition-colors mt-1">
+                <h3 className="text-sm sm:text-base font-bold text-theme-primary group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors mt-1">
                   Trắc Nghiệm Tiếng Nhật N4
                 </h3>
-                <p className="text-xs text-theme-primary/70 mt-1 line-clamp-2">
+                <p className="text-xs text-theme-primary/80 mt-1 line-clamp-2">
                   Luyện tập thể khả năng (Bài 27), trợ từ (が, しか), tự/tha động từ, ý chí, bị động kèm audio chuẩn.
                 </p>
               </div>
             </div>
             <button 
               onClick={(e) => { e.stopPropagation(); onNavigateToQuiz(); }}
-              className="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider rounded transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
+              className="px-4 py-2 bg-emerald-700 group-hover:bg-emerald-600 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors whitespace-nowrap self-end flex items-center gap-1.5 cursor-pointer shadow"
             >
               Làm bài test
               <ChevronRight className="w-3.5 h-3.5" />
@@ -636,65 +636,65 @@ export default function Dashboard({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col relative overflow-hidden">
-          <BookOpen className="w-6 h-6 text-theme-accent mb-4 opacity-70" />
+          <BookOpen className="w-6 h-6 text-theme-accent mb-4" />
           <div className="flex items-end gap-2 mb-2">
             <span className="text-4xl font-serif text-theme-primary">
               {deck.length}
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-theme-accent">
             Tổng Số Thẻ Từ
           </span>
         </div>
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
-          <Clock className="w-6 h-6 text-red-500 mb-4 opacity-70" />
+          <Clock className="w-6 h-6 text-red-700 dark:text-red-400 mb-4" />
           <div className="flex items-end gap-2 mb-2">
             <span className="text-4xl font-serif text-theme-primary">
               {dueCards.length}
             </span>
-            <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">
+            <span className="text-[11px] text-theme-muted uppercase tracking-widest mb-1">
               / 150
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-red-400 opacity-70">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-red-700 dark:text-red-400">
             Cần Ôn Tập
           </span>
         </div>
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
-          <Zap className="w-6 h-6  mb-4 opacity-70" />
+          <Zap className="w-6 h-6 text-theme-accent mb-4" />
           <div className="flex items-end gap-2 mb-2">
             <span className="text-4xl font-serif text-theme-primary">
               {todayStats.newLearned || 0}
             </span>
-            <span className="text-[11px] text-theme-primary opacity-40 uppercase tracking-widest mb-1">
+            <span className="text-[11px] text-theme-muted uppercase tracking-widest mb-1">
               / 15
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest  opacity-70">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-theme-muted">
             Thẻ Mới Đã Học
           </span>
         </div>
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
-          <Brain className="w-6 h-6 text-theme-accent mb-4 opacity-70" />
+          <Brain className="w-6 h-6 text-theme-accent mb-4" />
           <span
             className="text-4xl font-serif text-theme-primary mb-2"
             style={{ fontFamily: "serif" }}
           >
             {matureCards}
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-theme-accent">
             Từ Đã Khắc Sâu (&gt;21 ngày)
           </span>
         </div>
         <div className="bg-theme-panel p-6 border border-theme-subtle flex flex-col">
-          <Target className="w-6 h-6 text-theme-accent mb-4 opacity-70" />
+          <Target className="w-6 h-6 text-theme-accent mb-4" />
           <span
             className="text-4xl font-serif text-theme-primary mb-2"
             style={{ fontFamily: "serif" }}
           >
             {todayProgressRate}%
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-theme-accent opacity-70">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-theme-accent">
             Tiến độ hôm nay
           </span>
         </div>
@@ -988,8 +988,8 @@ export default function Dashboard({
         <div className="relative z-10 flex flex-col items-center mb-6">
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 shadow-md ${
             isDue 
-              ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-500' 
-              : 'bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 text-emerald-500'
+              ? 'bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300' 
+              : 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
           }`}>
             {isDue ? <Flame className="w-7 h-7 stroke-[2.2]" /> : <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />}
           </div>
@@ -1029,9 +1029,8 @@ export default function Dashboard({
           {isDue ? (
             <button
               onClick={onStartReview}
-              className="relative group w-full sm:w-auto min-w-[280px] sm:min-w-[340px] px-8 sm:px-12 py-4 bg-gradient-to-r from-theme-accent via-amber-500 to-theme-accent hover:brightness-110 text-theme-inverted font-bold text-sm sm:text-base tracking-wide rounded-2xl shadow-xl shadow-theme-accent/20 hover:shadow-2xl hover:shadow-theme-accent/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-between sm:justify-center gap-4 cursor-pointer overflow-hidden border border-white/20"
+              className="relative group w-full sm:w-auto min-w-[280px] sm:min-w-[340px] px-8 sm:px-12 py-4 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-sm sm:text-base tracking-wide rounded-2xl shadow-xl shadow-theme-accent/20 hover:shadow-2xl hover:shadow-theme-accent/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-between sm:justify-center gap-4 cursor-pointer overflow-hidden border border-theme-strong/30"
             >
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-black/15 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Play className="w-5 h-5 fill-current ml-0.5" />
@@ -1040,20 +1039,20 @@ export default function Dashboard({
                   <div className="uppercase tracking-wider font-extrabold text-xs sm:text-sm leading-tight">
                     Bắt đầu phiên ôn tập
                   </div>
-                  <div className="text-[11px] font-normal opacity-85 leading-tight mt-0.5">
+                  <div className="text-[11px] font-normal opacity-90 leading-tight mt-0.5">
                     Thuật toán ghi nhớ ngắt quãng SRS
                   </div>
                 </div>
               </div>
-              <span className="text-xs font-mono bg-black/20 text-theme-inverted px-3 py-1.5 rounded-xl font-bold border border-white/10 flex items-center gap-1.5 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-mono bg-black/20 text-theme-inverted px-3 py-1.5 rounded-xl font-bold border border-black/15 flex items-center gap-1.5 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
                 {dueCards.length} từ
               </span>
             </button>
           ) : (
             <button
               onClick={onNavigateAdd}
-              className="w-full sm:w-auto px-8 sm:px-12 py-3.5 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs sm:text-sm uppercase tracking-wider rounded-2xl shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer border border-white/20"
+              className="w-full sm:w-auto px-8 sm:px-12 py-3.5 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-xs sm:text-sm uppercase tracking-wider rounded-2xl shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer border border-theme-strong/30"
             >
               <Sparkles className="w-4 h-4 shrink-0" />
               <span>Thêm từ vựng mới vào kho</span>
@@ -1111,23 +1110,23 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={onStartDifficultReview}
-                  className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-950/15 hover:bg-rose-950/30 hover:border-rose-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                  className="p-3.5 rounded-xl border border-rose-500/35 bg-rose-50/85 dark:bg-rose-950/20 hover:bg-rose-100/80 dark:hover:bg-rose-950/35 hover:border-rose-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
                 >
-                  <div className="p-2 rounded-lg bg-rose-500/15 text-rose-500 group-hover:scale-110 transition-transform shrink-0">
-                    <Flame className="w-4 h-4 fill-rose-500/30" />
+                  <div className="p-2 rounded-lg bg-rose-500/15 text-rose-700 dark:text-rose-300 group-hover:scale-110 transition-transform shrink-0">
+                    <Flame className="w-4 h-4 fill-rose-500/25" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 group-hover:underline">
+                      <span className="text-xs font-bold text-rose-800 dark:text-rose-300 group-hover:underline">
                         Ôn các từ hay quên
                       </span>
                       {taggedForgottenWords.length > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/30">
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-500/35">
                           {taggedForgottenWords.length} từ
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                    <div className="text-[11px] text-theme-primary/70 truncate mt-0.5">
                       Khoa học Active Recall &amp; phục hồi trí nhớ
                     </div>
                   </div>
@@ -1140,14 +1139,14 @@ export default function Dashboard({
                   onClick={() => onStartSentenceReview("JA_TO_VI", null, false, true)}
                   className="p-3.5 rounded-xl border border-theme-subtle bg-theme-panel/70 hover:bg-theme-hover hover:border-theme-accent/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
                 >
-                  <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform shrink-0">
+                  <div className="p-2 rounded-lg bg-purple-500/15 text-purple-700 dark:text-purple-300 group-hover:scale-110 transition-transform shrink-0">
                     <Headphones className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-theme-primary group-hover:text-theme-accent transition-colors">
                       Ôn ngẫu nhiên MP3 (Nhật → Việt)
                     </div>
-                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                    <div className="text-[11px] text-theme-primary/70 truncate mt-0.5">
                       Nghe hiểu phản xạ câu tiếng Nhật
                     </div>
                   </div>
@@ -1158,21 +1157,21 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={() => onStartSentenceReview("VI_TO_JA", null, false, true)}
-                  className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-950/15 hover:bg-indigo-950/30 hover:border-indigo-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                  className="p-3.5 rounded-xl border border-indigo-500/35 bg-indigo-50/85 dark:bg-indigo-950/20 hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35 hover:border-indigo-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
                 >
-                  <div className="p-2 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
+                  <div className="p-2 rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 group-hover:scale-110 transition-transform shrink-0">
                     <Brain className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 group-hover:underline">
+                      <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 group-hover:underline">
                         Dịch câu Khoa học SRS (Việt → Nhật)
                       </span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-sm bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 uppercase tracking-widest">
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-sm bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border border-indigo-500/35 uppercase tracking-widest">
                         Ebbinghaus
                       </span>
                     </div>
-                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                    <div className="text-[11px] text-theme-primary/70 truncate mt-0.5">
                       Lấy ngẫu nhiên ví dụ có MP3 • Lặp lại câu quên theo khoa học
                     </div>
                   </div>
@@ -1183,16 +1182,16 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={onNavigateToQuiz}
-                  className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-950/40 hover:border-emerald-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
+                  className="p-3.5 rounded-xl border border-emerald-500/35 bg-emerald-50/85 dark:bg-emerald-950/20 hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35 hover:border-emerald-500/60 transition-all flex items-start gap-3 cursor-pointer group text-left shadow-xs"
                 >
-                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform shrink-0">
+                  <div className="p-2 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 group-hover:scale-110 transition-transform shrink-0">
                     <CheckSquare className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                    <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 group-hover:underline">
                       Trắc nghiệm N4 (Đề thi)
                     </div>
-                    <div className="text-[11px] text-theme-primary/60 truncate mt-0.5">
+                    <div className="text-[11px] text-theme-primary/70 truncate mt-0.5">
                       Bài test ngữ pháp &amp; từ vựng N4
                     </div>
                   </div>

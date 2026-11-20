@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-theme-base: var(--bg-base);
@@ -28,337 +28,351 @@
 
 :root {
   --text-success: #4ade80;
-  --text-danger: #f87171;
+  --text-danger: #fca5a5;
   
-  --badge-blue-bg: rgba(30, 58, 138, 0.3);
-  --badge-blue-text: #93c5fd;
-  --badge-blue-border: rgba(30, 64, 175, 0.5);
+  --badge-blue-bg: rgba(30, 58, 138, 0.42);
+  --badge-blue-text: #bfdbfe;
+  --badge-blue-border: rgba(96, 165, 250, 0.45);
   
-  --badge-purple-bg: rgba(88, 28, 135, 0.3);
-  --badge-purple-text: #d8b4fe;
-  --badge-purple-border: rgba(107, 33, 168, 0.5);
+  --badge-purple-bg: rgba(88, 28, 135, 0.42);
+  --badge-purple-text: #e9d5ff;
+  --badge-purple-border: rgba(192, 132, 252, 0.45);
   
-  --badge-pink-bg: rgba(131, 24, 67, 0.3);
-  --badge-pink-text: #f9a8d4;
-  --badge-pink-border: rgba(157, 23, 77, 0.5);
+  --badge-pink-bg: rgba(131, 24, 67, 0.42);
+  --badge-pink-text: #fbcfe8;
+  --badge-pink-border: rgba(244, 114, 182, 0.45);
   
-  --badge-emerald-bg: rgba(6, 78, 59, 0.3);
-  --badge-emerald-text: #6ee7b7;
-  --badge-emerald-border: rgba(6, 95, 70, 0.5);
+  --badge-emerald-bg: rgba(6, 78, 59, 0.42);
+  --badge-emerald-text: #a7f3d0;
+  --badge-emerald-border: rgba(52, 211, 153, 0.45);
   
-  --badge-amber-bg: rgba(120, 53, 15, 0.3);
-  --badge-amber-text: #fcd34d;
-  --badge-amber-border: rgba(146, 64, 14, 0.5);
+  --badge-amber-bg: rgba(120, 53, 15, 0.45);
+  --badge-amber-text: #fde68a;
+  --badge-amber-border: rgba(251, 191, 36, 0.45);
   
-  --badge-orange-bg: rgba(124, 45, 18, 0.3);
-  --badge-orange-text: #fdba74;
-  --badge-orange-border: rgba(154, 52, 18, 0.5);
+  --badge-orange-bg: rgba(124, 45, 18, 0.45);
+  --badge-orange-text: #fed7aa;
+  --badge-orange-border: rgba(251, 146, 60, 0.45);
   
-  --badge-cyan-bg: rgba(12, 74, 110, 0.3);
-  --badge-cyan-text: #7dd3fc;
-  --badge-cyan-border: rgba(7, 89, 133, 0.5);
+  --badge-cyan-bg: rgba(12, 74, 110, 0.42);
+  --badge-cyan-text: #bae6fd;
+  --badge-cyan-border: rgba(56, 189, 248, 0.45);
   
-  --badge-indigo-bg: rgba(49, 46, 129, 0.3);
-  --badge-indigo-text: #a5b4fc;
-  --badge-indigo-border: rgba(55, 48, 163, 0.5);
+  --badge-indigo-bg: rgba(49, 46, 129, 0.42);
+  --badge-indigo-text: #c7d2fe;
+  --badge-indigo-border: rgba(129, 140, 248, 0.45);
 
-  /* Ergonomic Dark Mode: Material Design Standard */
-  --bg-base: #121212;
-  --bg-base-alt: #18181b;
-  --bg-panel: #1e1e1e;
-  --bg-hover: #27272a;
-  --bg-active: #3f3f46;
-  --bg-active-alt: #52525b;
+  /* Ergonomic Obsidian Dark: WCAG AAA calibrated neutral elevation */
+  --bg-base: #0d0d0f;
+  --bg-base-alt: #131317;
+  --bg-panel: #1a1a1f;
+  --bg-hover: #24242b;
+  --bg-active: #32323c;
+  --bg-active-alt: #42424f;
   
-  --border-subtle: #27272a;
-  --border-strong: #3f3f46;
+  --border-subtle: #2b2b34;
+  --border-strong: #454554;
   
-  /* Text colors balanced for astigmatism (not pure white) */
-  --text-primary: #e4e4e7;
-  --text-muted: #a1a1aa;
-  --text-accent-dark: #8b5a2b;
-  --text-inverted: #09090b;
-  --text-japanese: #dbeafe; 
+  /* Anti-halation crisp off-white & high-contrast secondary text */
+  --text-primary: #f4f4f6;
+  --text-muted: #b4b4be;
+  --text-accent-dark: #9b742c;
+  --text-inverted: #0d0d0f;
+  --text-japanese: #dbeafe;
   
-  --accent: #c5a059;
-  --accent-hover: #b08d4a;
-  --accent-light: #d6b16a;
+  --accent: #e0b660;
+  --accent-hover: #ecc87a;
+  --accent-light: #f3d99c;
 }
 
 .theme-matcha {
-  --badge-blue-bg: #e0f2fe;
-  --badge-blue-text: #0369a1;
-  --badge-blue-border: #bae6fd;
+  --text-success: #116434;
+  --text-danger: #b91c1c;
+
+  --badge-blue-bg: #dbeafe;
+  --badge-blue-text: #1e40af;
+  --badge-blue-border: #93c5fd;
   
   --badge-purple-bg: #f3e8ff;
-  --badge-purple-text: #7e22ce;
-  --badge-purple-border: #e9d5ff;
+  --badge-purple-text: #6b21a8;
+  --badge-purple-border: #d8b4fe;
   
   --badge-pink-bg: #fce7f3;
-  --badge-pink-text: #be185d;
-  --badge-pink-border: #fbcfe8;
+  --badge-pink-text: #9d174d;
+  --badge-pink-border: #f9a8d4;
   
-  --badge-emerald-bg: #dcfce7;
-  --badge-emerald-text: #15803d;
-  --badge-emerald-border: #bbf7d0;
+  --badge-emerald-bg: #d1fae5;
+  --badge-emerald-text: #065f46;
+  --badge-emerald-border: #6ee7b7;
   
   --badge-amber-bg: #fef3c7;
-  --badge-amber-text: #b45309;
-  --badge-amber-border: #fde68a;
+  --badge-amber-text: #92400e;
+  --badge-amber-border: #fcd34d;
   
   --badge-orange-bg: #ffedd5;
-  --badge-orange-text: #c2410c;
-  --badge-orange-border: #fed7aa;
+  --badge-orange-text: #9a3412;
+  --badge-orange-border: #fdba74;
   
-  --badge-cyan-bg: #e0f2fe;
-  --badge-cyan-text: #0284c7;
-  --badge-cyan-border: #bae6fd;
+  --badge-cyan-bg: #cffafe;
+  --badge-cyan-text: #155e75;
+  --badge-cyan-border: #67e8f9;
   
   --badge-indigo-bg: #e0e7ff;
-  --badge-indigo-text: #4338ca;
-  --badge-indigo-border: #c7d2fe;
+  --badge-indigo-text: #3730a3;
+  --badge-indigo-border: #a5b4fc;
 
-  /* Ergonomic Matcha Sage: Optimal green wavelength to relax retina muscles */
-  --bg-base: #f3f6f3;
-  --bg-base-alt: #e9efe9;
+  /* Ergonomic Matcha Sage: Calibrated WCAG AAA green contrast */
+  --bg-base: #f2f6f2;
+  --bg-base-alt: #e7efe7;
   --bg-panel: #ffffff;
-  --bg-hover: #dfe7df;
-  --bg-active: #d1ded1;
-  --bg-active-alt: #c2d3c2;
+  --bg-hover: #dde8dd;
+  --bg-active: #cddccd;
+  --bg-active-alt: #bcd0bc;
   
-  --border-subtle: #d7e2d7;
-  --border-strong: #bfd0bf;
+  --border-subtle: #c8d8c8;
+  --border-strong: #9eb89e;
   
-  --text-primary: #1a2e22;
-  --text-muted: #546b5d;
-  --text-accent-dark: #225c3c;
+  --text-primary: #0f2418;
+  --text-muted: #395544;
+  --text-accent-dark: #144d2d;
   --text-inverted: #ffffff;
-  --text-japanese: #15452b;
+  --text-japanese: #0e3b22;
   
-  --accent: #2e7a51;
-  --accent-hover: #246341;
-  --accent-light: #449769;
+  --accent: #1b693f;
+  --accent-hover: #13502f;
+  --accent-light: #288251;
 }
 
 .theme-washi {
+  --text-success: #116434;
+  --text-danger: #b91c1c;
+
   --badge-blue-bg: #e2e8f0;
-  --badge-blue-text: #334155;
-  --badge-blue-border: #cbd5e1;
+  --badge-blue-text: #1e293b;
+  --badge-blue-border: #94a3b8;
   
   --badge-purple-bg: #ede9fe;
-  --badge-purple-text: #6d28d9;
-  --badge-purple-border: #ddd6fe;
+  --badge-purple-text: #5b21b6;
+  --badge-purple-border: #c4b5fd;
   
   --badge-pink-bg: #ffe4e6;
-  --badge-pink-text: #be123c;
-  --badge-pink-border: #fecdd3;
+  --badge-pink-text: #9f1239;
+  --badge-pink-border: #fda4af;
   
-  --badge-emerald-bg: #e6f4ea;
-  --badge-emerald-text: #137333;
-  --badge-emerald-border: #ceead6;
+  --badge-emerald-bg: #dcfce7;
+  --badge-emerald-text: #166534;
+  --badge-emerald-border: #86efac;
   
   --badge-amber-bg: #fef3c7;
-  --badge-amber-text: #b45309;
-  --badge-amber-border: #fde68a;
+  --badge-amber-text: #92400e;
+  --badge-amber-border: #fcd34d;
   
   --badge-orange-bg: #ffedd5;
-  --badge-orange-text: #c2410c;
-  --badge-orange-border: #fed7aa;
+  --badge-orange-text: #9a3412;
+  --badge-orange-border: #fdba74;
   
-  --badge-cyan-bg: #e0f2fe;
-  --badge-cyan-text: #0284c7;
-  --badge-cyan-border: #bae6fd;
+  --badge-cyan-bg: #cffafe;
+  --badge-cyan-text: #155e75;
+  --badge-cyan-border: #67e8f9;
   
   --badge-indigo-bg: #e0e7ff;
-  --badge-indigo-text: #4338ca;
-  --badge-indigo-border: #c7d2fe;
+  --badge-indigo-text: #3730a3;
+  --badge-indigo-border: #a5b4fc;
 
-  /* Traditional Japanese Washi Paper: Warm soothing cream */
-  --bg-base: #f7f4ed;
-  --bg-base-alt: #efeae0;
+  /* Traditional Japanese Washi Paper: High-contrast terracotta ink on warm rice paper */
+  --bg-base: #f6f2e9;
+  --bg-base-alt: #ece6da;
   --bg-panel: #fdfbf7;
-  --bg-hover: #e5ded2;
-  --bg-active: #d7cdbe;
-  --bg-active-alt: #c7bca9;
+  --bg-hover: #e4dccd;
+  --bg-active: #d5cab8;
+  --bg-active-alt: #c3b6a1;
   
-  --border-subtle: #e2d9ca;
-  --border-strong: #c8bdab;
+  --border-subtle: #d8cebc;
+  --border-strong: #b4a690;
   
-  --text-primary: #2d2823;
-  --text-muted: #736b62;
-  --text-accent-dark: #8c3b24;
-  --text-inverted: #ffffff;
-  --text-japanese: #8c3b24;
+  --text-primary: #1f1914;
+  --text-muted: #52483e;
+  --text-accent-dark: #732b11;
+  --text-inverted: #fdfbf7;
+  --text-japanese: #5e2412;
   
-  --accent: #b25833;
-  --accent-hover: #964727;
-  --accent-light: #c86e49;
+  --accent: #9c401c;
+  --accent-hover: #7d3113;
+  --accent-light: #b8532a;
 }
 
 .theme-charcoal {
-  --badge-blue-bg: rgba(30, 58, 138, 0.35);
-  --badge-blue-text: #93c5fd;
-  --badge-blue-border: rgba(30, 64, 175, 0.5);
-  
-  --badge-purple-bg: rgba(88, 28, 135, 0.35);
-  --badge-purple-text: #d8b4fe;
-  --badge-purple-border: rgba(107, 33, 168, 0.5);
-  
-  --badge-pink-bg: rgba(131, 24, 67, 0.35);
-  --badge-pink-text: #f9a8d4;
-  --badge-pink-border: rgba(157, 23, 77, 0.5);
-  
-  --badge-emerald-bg: rgba(6, 78, 59, 0.35);
-  --badge-emerald-text: #6ee7b7;
-  --badge-emerald-border: rgba(6, 95, 70, 0.5);
-  
-  --badge-amber-bg: rgba(120, 53, 15, 0.35);
-  --badge-amber-text: #fcd34d;
-  --badge-amber-border: rgba(146, 64, 14, 0.5);
-  
-  --badge-orange-bg: rgba(124, 45, 18, 0.35);
-  --badge-orange-text: #fdba74;
-  --badge-orange-border: rgba(154, 52, 18, 0.5);
-  
-  --badge-cyan-bg: rgba(12, 74, 110, 0.35);
-  --badge-cyan-text: #7dd3fc;
-  --badge-cyan-border: rgba(7, 89, 133, 0.5);
-  
-  --badge-indigo-bg: rgba(49, 46, 129, 0.35);
-  --badge-indigo-text: #a5b4fc;
-  --badge-indigo-border: rgba(55, 48, 163, 0.5);
+  --text-success: #4ade80;
+  --text-danger: #fca5a5;
 
-  /* Soft Warm Charcoal Dark: No harsh black, eliminates astigmatism halos */
-  --bg-base: #1c1e20;
-  --bg-base-alt: #232629;
-  --bg-panel: #292d31;
-  --bg-hover: #33383d;
-  --bg-active: #40464d;
-  --bg-active-alt: #505760;
+  --badge-blue-bg: rgba(30, 58, 138, 0.45);
+  --badge-blue-text: #bfdbfe;
+  --badge-blue-border: rgba(96, 165, 250, 0.45);
   
-  --border-subtle: #363b41;
-  --border-strong: #4d545d;
+  --badge-purple-bg: rgba(88, 28, 135, 0.45);
+  --badge-purple-text: #e9d5ff;
+  --badge-purple-border: rgba(192, 132, 252, 0.45);
   
-  --text-primary: #e3e4e6;
-  --text-muted: #9ba1a8;
-  --text-accent-dark: #b8864a;
-  --text-inverted: #1c1e20;
-  --text-japanese: #93c5fd;
+  --badge-pink-bg: rgba(131, 24, 67, 0.45);
+  --badge-pink-text: #fbcfe8;
+  --badge-pink-border: rgba(244, 114, 182, 0.45);
   
-  --accent: #dca35a;
-  --accent-hover: #c48e48;
-  --accent-light: #e8b674;
+  --badge-emerald-bg: rgba(6, 78, 59, 0.45);
+  --badge-emerald-text: #a7f3d0;
+  --badge-emerald-border: rgba(52, 211, 153, 0.45);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.48);
+  --badge-amber-text: #fde68a;
+  --badge-amber-border: rgba(251, 191, 36, 0.48);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.48);
+  --badge-orange-text: #fed7aa;
+  --badge-orange-border: rgba(251, 146, 60, 0.48);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.45);
+  --badge-cyan-text: #bae6fd;
+  --badge-cyan-border: rgba(56, 189, 248, 0.45);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.45);
+  --badge-indigo-text: #c7d2fe;
+  --badge-indigo-border: rgba(129, 140, 248, 0.45);
+
+  /* Soft Warm Charcoal Dark: Anti-halation dark gray with bright amber contrast */
+  --bg-base: #16181a;
+  --bg-base-alt: #1d2023;
+  --bg-panel: #24282c;
+  --bg-hover: #2f343a;
+  --bg-active: #3d434b;
+  --bg-active-alt: #4d545e;
+  
+  --border-subtle: #353a40;
+  --border-strong: #4e5660;
+  
+  --text-primary: #f1f3f5;
+  --text-muted: #b6bec6;
+  --text-accent-dark: #b58038;
+  --text-inverted: #141618;
+  --text-japanese: #bfdbfe;
+  
+  --accent: #eab364;
+  --accent-hover: #f4c47d;
+  --accent-light: #f8d49c;
 }
 
 .theme-ocean {
-  --badge-blue-bg: rgba(30, 58, 138, 0.4);
-  --badge-blue-text: #93c5fd;
-  --badge-blue-border: rgba(30, 64, 175, 0.6);
-  
-  --badge-purple-bg: rgba(88, 28, 135, 0.4);
-  --badge-purple-text: #d8b4fe;
-  --badge-purple-border: rgba(107, 33, 168, 0.6);
-  
-  --badge-pink-bg: rgba(131, 24, 67, 0.4);
-  --badge-pink-text: #f9a8d4;
-  --badge-pink-border: rgba(157, 23, 77, 0.6);
-  
-  --badge-emerald-bg: rgba(6, 78, 59, 0.4);
-  --badge-emerald-text: #6ee7b7;
-  --badge-emerald-border: rgba(6, 95, 70, 0.6);
-  
-  --badge-amber-bg: rgba(120, 53, 15, 0.4);
-  --badge-amber-text: #fcd34d;
-  --badge-amber-border: rgba(146, 64, 14, 0.6);
-  
-  --badge-orange-bg: rgba(124, 45, 18, 0.4);
-  --badge-orange-text: #fdba74;
-  --badge-orange-border: rgba(154, 52, 18, 0.6);
-  
-  --badge-cyan-bg: rgba(12, 74, 110, 0.4);
-  --badge-cyan-text: #7dd3fc;
-  --badge-cyan-border: rgba(7, 89, 133, 0.6);
-  
-  --badge-indigo-bg: rgba(49, 46, 129, 0.4);
-  --badge-indigo-text: #a5b4fc;
-  --badge-indigo-border: rgba(55, 48, 163, 0.6);
+  --text-success: #4ade80;
+  --text-danger: #fca5a5;
 
-  /* Midnight Ocean: Calming deep indigo blue for night study */
-  --bg-base: #0c1222;
-  --bg-base-alt: #111a30;
-  --bg-panel: #16223e;
-  --bg-hover: #1f2f54;
-  --bg-active: #2b3f70;
-  --bg-active-alt: #3a5391;
+  --badge-blue-bg: rgba(30, 58, 138, 0.5);
+  --badge-blue-text: #bfdbfe;
+  --badge-blue-border: rgba(96, 165, 250, 0.5);
   
-  --border-subtle: #213257;
-  --border-strong: #324a7e;
+  --badge-purple-bg: rgba(88, 28, 135, 0.5);
+  --badge-purple-text: #e9d5ff;
+  --badge-purple-border: rgba(192, 132, 252, 0.5);
   
-  --text-primary: #e2e8f7;
-  --text-muted: #8d9bb8;
-  --text-accent-dark: #38bdf8;
-  --text-inverted: #0c1222;
-  --text-japanese: #7dd3fc;
+  --badge-pink-bg: rgba(131, 24, 67, 0.5);
+  --badge-pink-text: #fbcfe8;
+  --badge-pink-border: rgba(244, 114, 182, 0.5);
+  
+  --badge-emerald-bg: rgba(6, 78, 59, 0.5);
+  --badge-emerald-text: #a7f3d0;
+  --badge-emerald-border: rgba(52, 211, 153, 0.5);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.52);
+  --badge-amber-text: #fde68a;
+  --badge-amber-border: rgba(251, 191, 36, 0.52);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.52);
+  --badge-orange-text: #fed7aa;
+  --badge-orange-border: rgba(251, 146, 60, 0.52);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.52);
+  --badge-cyan-text: #bae6fd;
+  --badge-cyan-border: rgba(56, 189, 248, 0.52);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.5);
+  --badge-indigo-text: #c7d2fe;
+  --badge-indigo-border: rgba(129, 140, 248, 0.5);
+
+  /* Midnight Ocean: Deep indigo night with crisp ice-cyan readability */
+  --bg-base: #091020;
+  --bg-base-alt: #0e172c;
+  --bg-panel: #14203b;
+  --bg-hover: #1d2e52;
+  --bg-active: #293f6d;
+  --bg-active-alt: #38528a;
+  
+  --border-subtle: #24375f;
+  --border-strong: #3b558a;
+  
+  --text-primary: #f0f4fc;
+  --text-muted: #b0c2e2;
+  --text-accent-dark: #0284c7;
+  --text-inverted: #070d1a;
+  --text-japanese: #93e2ff;
   
   --accent: #38bdf8;
-  --accent-hover: #0ea5e9;
-  --accent-light: #7dd3fc;
+  --accent-hover: #7dd3fc;
+  --accent-light: #bae6fd;
 }
 
 .theme-light {
+  --text-success: #116434;
+  --text-danger: #b91c1c;
+
   --badge-blue-bg: #dbeafe;
-  --badge-blue-text: #1d4ed8;
-  --badge-blue-border: #bfdbfe;
+  --badge-blue-text: #1e40af;
+  --badge-blue-border: #93c5fd;
   
   --badge-purple-bg: #f3e8ff;
-  --badge-purple-text: #7e22ce;
-  --badge-purple-border: #e9d5ff;
+  --badge-purple-text: #6b21a8;
+  --badge-purple-border: #d8b4fe;
   
   --badge-pink-bg: #fce7f3;
-  --badge-pink-text: #be185d;
-  --badge-pink-border: #fbcfe8;
+  --badge-pink-text: #9d174d;
+  --badge-pink-border: #f9a8d4;
   
   --badge-emerald-bg: #d1fae5;
-  --badge-emerald-text: #047857;
-  --badge-emerald-border: #a7f3d0;
+  --badge-emerald-text: #065f46;
+  --badge-emerald-border: #6ee7b7;
   
   --badge-amber-bg: #fef3c7;
-  --badge-amber-text: #b45309;
-  --badge-amber-border: #fde68a;
+  --badge-amber-text: #92400e;
+  --badge-amber-border: #fcd34d;
   
   --badge-orange-bg: #ffedd5;
-  --badge-orange-text: #c2410c;
-  --badge-orange-border: #fed7aa;
+  --badge-orange-text: #9a3412;
+  --badge-orange-border: #fdba74;
   
   --badge-cyan-bg: #cffafe;
-  --badge-cyan-text: #0369a1;
-  --badge-cyan-border: #a5f3fc;
+  --badge-cyan-text: #155e75;
+  --badge-cyan-border: #67e8f9;
   
   --badge-indigo-bg: #e0e7ff;
-  --badge-indigo-text: #4338ca;
-  --badge-indigo-border: #c7d2fe;
+  --badge-indigo-text: #3730a3;
+  --badge-indigo-border: #a5b4fc;
 
-  /* Ergonomic Light Mode: Anti-glare paper white */
-  --bg-base: #f9f9f8;
-  --bg-base-alt: #f3f3f1;
+  /* Ergonomic Clean Light: Anti-glare alabaster with high-contrast ochre ink */
+  --bg-base: #f8f8f7;
+  --bg-base-alt: #efefec;
   --bg-panel: #ffffff;
-  --bg-hover: #eaeae8;
-  --bg-active: #dcdcda;
-  --bg-active-alt: #cececc;
+  --bg-hover: #e6e6e3;
+  --bg-active: #d6d6d2;
+  --bg-active-alt: #c4c4bf;
   
-  --border-subtle: #e4e4e2;
-  --border-strong: #d1d1ce;
+  --border-subtle: #d9d9d5;
+  --border-strong: #b5b5af;
   
-  /* Text colors balanced to reduce contrast fatigue */
-  --text-primary: #27272a;
-  --text-muted: #71717a;
-  --text-accent-dark: #b07d35;
+  --text-primary: #18181b;
+  --text-muted: #52525b;
+  --text-accent-dark: #6c440b;
   --text-inverted: #ffffff;
   --text-japanese: #1e3a8a;
   
-  --accent: #b07d35;
-  --accent-hover: #966829;
-  --accent-light: #c49551;
+  --accent: #8c5a10;
+  --accent-hover: #6f460a;
+  --accent-light: #ab721d;
 }
 
 .theme-sepia {
@@ -394,35 +408,130 @@
   --badge-indigo-text: #312e81;
   --badge-indigo-border: #a5b4fc;
 
-  /* Gentle Warm Coffee: Soft warm tones with mathematically calculated WCAG AAA contrast */
-  --bg-base: #f5ede1;
-  --bg-base-alt: #ece1d1;
-  --bg-panel: #faf5ee;
-  --bg-hover: #f0e4d2;
-  --bg-active: #e3d2be;
-  --bg-active-alt: #d5c0a8;
+  /* Gentle Warm Coffee: Mathematically calculated WCAG AAA warm parchment contrast */
+  --bg-base: #f4ebdc;
+  --bg-base-alt: #ebdec9;
+  --bg-panel: #fcf7f0;
+  --bg-hover: #efe2cf;
+  --bg-active: #e1cfba;
+  --bg-active-alt: #d1bba2;
   
-  --border-subtle: #d9c8b2;
-  --border-strong: #b59f84;
+  --border-subtle: #d4c1aa;
+  --border-strong: #aa9275;
   
-  /* Text colors: deep rich espresso & chocolate brown for maximum legibility */
-  --text-primary: #1c1208; /* Ultra-crisp contrast ratio > 15:1 on #faf5ee */
-  --text-muted: #483523; /* Contrast ratio > 8.2:1 on #faf5ee */
-  --text-accent-dark: #6e350d;
-  --text-inverted: #faf5ee;
-  --text-japanese: #1c1208;
+  --text-primary: #191007;
+  --text-muted: #453220;
+  --text-accent-dark: #5e2605;
+  --text-inverted: #fcf7f0;
+  --text-japanese: #191007;
   
-  /* Recalibrated green: Imperial Forest Pine green with WCAG AAA contrast ratio > 9:1 */
   --text-success: #0e4b2a; 
-  --text-danger: #881313; /* Deep crimson wine: contrast ratio > 7.8:1 on #faf5ee */
+  --text-danger: #881313;
   
-  --accent: #7c340a; /* Rich roasted coffee caramel, contrast ratio > 7.3:1 */
-  --accent-hover: #5e2605; /* Deep espresso caramel, contrast ratio > 9.5:1 */
-  --accent-light: #9c4510;
+  --accent: #783108;
+  --accent-hover: #5b2404;
+  --accent-light: #994310;
 }
 
-/* High-Contrast overrides specifically for Gentle Warm Coffee theme */
-/* Green & Emerald text: Recalculated to deep pine/forest jade green (#0e4b2a) guaranteeing WCAG AAA contrast > 8.8:1 on coffee background */
+.theme-dim {
+  --text-success: #4ade80;
+  --text-danger: #fca5a5;
+
+  --badge-blue-bg: rgba(30, 58, 138, 0.45);
+  --badge-blue-text: #bfdbfe;
+  --badge-blue-border: rgba(96, 165, 250, 0.45);
+  
+  --badge-purple-bg: rgba(88, 28, 135, 0.45);
+  --badge-purple-text: #e9d5ff;
+  --badge-purple-border: rgba(192, 132, 252, 0.45);
+  
+  --badge-pink-bg: rgba(131, 24, 67, 0.45);
+  --badge-pink-text: #fbcfe8;
+  --badge-pink-border: rgba(244, 114, 182, 0.45);
+  
+  --badge-emerald-bg: rgba(6, 78, 59, 0.45);
+  --badge-emerald-text: #a7f3d0;
+  --badge-emerald-border: rgba(52, 211, 153, 0.45);
+  
+  --badge-amber-bg: rgba(120, 53, 15, 0.45);
+  --badge-amber-text: #fde68a;
+  --badge-amber-border: rgba(251, 191, 36, 0.45);
+  
+  --badge-orange-bg: rgba(124, 45, 18, 0.45);
+  --badge-orange-text: #fed7aa;
+  --badge-orange-border: rgba(251, 146, 60, 0.45);
+  
+  --badge-cyan-bg: rgba(12, 74, 110, 0.45);
+  --badge-cyan-text: #bae6fd;
+  --badge-cyan-border: rgba(56, 189, 248, 0.45);
+  
+  --badge-indigo-bg: rgba(49, 46, 129, 0.45);
+  --badge-indigo-text: #c7d2fe;
+  --badge-indigo-border: rgba(129, 140, 248, 0.45);
+
+  --bg-base: #0f172a;
+  --bg-base-alt: #1e293b;
+  --bg-panel: #1e293b;
+  --bg-hover: #334155;
+  --bg-active: #475569;
+  --bg-active-alt: #64748b;
+  
+  --border-subtle: #334155;
+  --border-strong: #475569;
+  
+  --text-primary: #f1f5f9;
+  --text-muted: #b3c2d4;
+  --text-accent-dark: #4b8cc4;
+  --text-inverted: #0f172a;
+  --text-japanese: #93e2ff;
+  
+  --accent: #7dd3fc;
+  --accent-hover: #bae6fd;
+  --accent-light: #e0f2fe;
+}
+
+/* ========================================================
+   Global Contrast Safeguards Across ALL Themes
+   ======================================================== */
+
+/* Uplift washed-out low-opacity primary text across both light & dark themes to guaranteed WCAG AA/AAA */
+.text-theme-primary\/30:not(:hover):not([class*="hover:text-"]),
+.text-theme-primary\/40:not(:hover):not([class*="hover:text-"]),
+.text-theme-primary\/50:not(:hover):not([class*="hover:text-"]) {
+  color: var(--text-muted);
+}
+
+.text-theme-primary\/55:not(:hover):not([class*="hover:text-"]),
+.text-theme-primary\/60:not(:hover):not([class*="hover:text-"]),
+.text-theme-primary\/65:not(:hover):not([class*="hover:text-"]),
+.text-theme-primary\/70:not(:hover):not([class*="hover:text-"]) {
+  color: color-mix(in srgb, var(--text-primary) 82%, var(--bg-panel));
+}
+
+/* Crisp readable placeholders across all inputs */
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.9;
+}
+
+/* Furigana crisp legibility across all themes */
+rt {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Ensure accent-hovered buttons maintain inverted high-contrast text on every theme */
+[class*="hover:bg-theme-accent"]:hover:not([class*="hover:bg-theme-accent/"]):not(.hover\:bg-theme-hover) {
+  color: var(--text-inverted) !important;
+}
+
+[class*="hover:bg-theme-accent"]:hover:not([class*="hover:bg-theme-accent/"]) * {
+  color: var(--text-inverted) !important;
+  stroke: var(--text-inverted) !important;
+}
+
+/* Extra Coffee-theme semantic ink calibration (WCAG AAA) */
 .theme-sepia .text-green-300:not(:hover),
 .theme-sepia .text-green-400:not(:hover),
 .theme-sepia .text-green-500:not(:hover),
@@ -446,7 +555,6 @@
   font-weight: 600;
 }
 
-/* Green icon strokes & fills in coffee theme */
 .theme-sepia svg[class*="text-green-"]:not(:hover),
 .theme-sepia svg[class*="text-emerald-"]:not(:hover),
 .theme-sepia .text-green-500:not(:hover) svg,
@@ -455,7 +563,6 @@
   stroke: #0e4b2a;
 }
 
-/* Green badge containers in coffee theme */
 .theme-sepia [class*="bg-green-500/"]:not(:hover),
 .theme-sepia [class*="bg-emerald-500/"]:not(:hover),
 .theme-sepia [class*="bg-green-600/"]:not(:hover),
@@ -469,7 +576,6 @@
   border-color: rgba(14, 75, 42, 0.35);
 }
 
-/* Red / Danger text overrides */
 .theme-sepia .text-red-400:not(:hover),
 .theme-sepia .text-red-500:not(:hover),
 .theme-sepia [class*="text-red-"]:not(:hover):not([class*="hover:text-"]) {
@@ -477,24 +583,11 @@
   font-weight: 600;
 }
 
-/* High-contrast secondary text: never wash out into pale beige on coffee background */
-.theme-sepia .text-theme-primary\/30:not(:hover):not([class*="hover:text-"]),
-.theme-sepia .text-theme-primary\/40:not(:hover):not([class*="hover:text-"]),
-.theme-sepia .text-theme-primary\/50:not(:hover):not([class*="hover:text-"]) {
-  color: #483523;
-}
-
-.theme-sepia .text-theme-primary\/60:not(:hover):not([class*="hover:text-"]),
-.theme-sepia .text-theme-primary\/70:not(:hover):not([class*="hover:text-"]) {
-  color: #352618;
-}
-
 .theme-sepia rt {
-  color: #7c340a;
+  color: #783108;
   font-weight: 700;
 }
 
-/* Hover fixes: ensure high contrast when user hovers elements with mouse */
 .theme-sepia [class*="hover:bg-red"]:hover,
 .theme-sepia [class*="hover:bg-amber"]:hover,
 .theme-sepia [class*="hover:bg-emerald"]:hover,
@@ -502,7 +595,6 @@
 .theme-sepia [class*="hover:bg-indigo"]:hover,
 .theme-sepia [class*="hover:bg-blue"]:hover,
 .theme-sepia [class*="hover:bg-purple"]:hover,
-.theme-sepia [class*="hover:bg-theme-accent"]:hover,
 .theme-sepia [class*="hover:bg-rose"]:hover {
   color: #ffffff !important;
 }
@@ -514,13 +606,11 @@
 .theme-sepia [class*="hover:bg-indigo"]:hover *,
 .theme-sepia [class*="hover:bg-blue"]:hover *,
 .theme-sepia [class*="hover:bg-purple"]:hover *,
-.theme-sepia [class*="hover:bg-theme-accent"]:hover *,
 .theme-sepia [class*="hover:bg-rose"]:hover * {
   color: #ffffff !important;
   stroke: #ffffff !important;
 }
 
-/* Action icons on hover inside cards and tables */
 .theme-sepia [class*="hover:text-theme-accent"]:hover {
   color: var(--accent) !important;
 }
@@ -532,76 +622,18 @@
 
 .theme-sepia [class*="hover:text-red"]:hover,
 .theme-sepia [class*="hover:text-red"]:hover svg {
-  color: #dc2626 !important;
-  stroke: #dc2626 !important;
+  color: #b91c1c !important;
+  stroke: #b91c1c !important;
 }
 
-/* Hover background on table rows and panels in coffee theme */
 .theme-sepia .hover\:bg-theme-hover:hover {
   background-color: var(--bg-hover) !important;
   color: var(--text-primary);
 }
 
-/* Example card inner surfaces in coffee theme: ensure crisp warm cream background */
 .theme-sepia [id^="example-"] > div {
   background-color: var(--bg-panel);
   border-color: var(--border-subtle);
-}
-
-.theme-dim {
-  --badge-blue-bg: rgba(30, 58, 138, 0.3);
-  --badge-blue-text: #93c5fd;
-  --badge-blue-border: rgba(30, 64, 175, 0.5);
-  
-  --badge-purple-bg: rgba(88, 28, 135, 0.3);
-  --badge-purple-text: #d8b4fe;
-  --badge-purple-border: rgba(107, 33, 168, 0.5);
-  
-  --badge-pink-bg: rgba(131, 24, 67, 0.3);
-  --badge-pink-text: #f9a8d4;
-  --badge-pink-border: rgba(157, 23, 77, 0.5);
-  
-  --badge-emerald-bg: rgba(6, 78, 59, 0.3);
-  --badge-emerald-text: #6ee7b7;
-  --badge-emerald-border: rgba(6, 95, 70, 0.5);
-  
-  --badge-amber-bg: rgba(120, 53, 15, 0.3);
-  --badge-amber-text: #fcd34d;
-  --badge-amber-border: rgba(146, 64, 14, 0.5);
-  
-  --badge-orange-bg: rgba(124, 45, 18, 0.3);
-  --badge-orange-text: #fdba74;
-  --badge-orange-border: rgba(154, 52, 18, 0.5);
-  
-  --badge-cyan-bg: rgba(12, 74, 110, 0.3);
-  --badge-cyan-text: #7dd3fc;
-  --badge-cyan-border: rgba(7, 89, 133, 0.5);
-  
-  --badge-indigo-bg: rgba(49, 46, 129, 0.3);
-  --badge-indigo-text: #a5b4fc;
-  --badge-indigo-border: rgba(55, 48, 163, 0.5);
-
-  /* Ergonomic Dim Mode: Slate blue reduction */
-  --bg-base: #0f172a;
-  --bg-base-alt: #1e293b;
-  --bg-panel: #1e293b;
-  --bg-hover: #334155;
-  --bg-active: #475569;
-  --bg-active-alt: #64748b;
-  
-  --border-subtle: #334155;
-  --border-strong: #475569;
-  
-  /* Text colors: cool slate */
-  --text-primary: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-accent-dark: #4b8cc4;
-  --text-inverted: #0f172a;
-  --text-japanese: #88c0d0;
-  
-  --accent: #81a1c1;
-  --accent-hover: #5e81ac;
-  --accent-light: #88c0d0;
 }
 
 body {
@@ -691,7 +723,6 @@ body {
    iPhone & iOS Safari Optimizations
    ======================================================== */
 
-/* Prevent iOS Safari auto-zooming on input focus (occurs when font-size < 16px) */
 @media screen and (max-width: 768px) {
   input[type="text"],
   input[type="search"],
@@ -704,7 +735,6 @@ body {
   }
 }
 
-/* Eliminate 300ms tap delay and double-tap zoom quirk on iOS */
 button,
 a,
 input[type="button"],
@@ -714,14 +744,12 @@ input[type="submit"],
   -webkit-tap-highlight-color: transparent;
 }
 
-/* iOS Momentum Scrolling */
 .custom-scrollbar,
 .overflow-y-auto,
 .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Safe Area Inset Helpers */
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -742,7 +770,6 @@ input[type="submit"],
   bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Dynamic Viewport Height for iOS Safari address bar changes */
 .min-h-screen-ios {
   min-height: 100vh;
   min-height: 100dvh;
@@ -758,7 +785,6 @@ input[type="submit"],
   max-height: 90dvh;
 }
 
-/* Steady, calm liquid flow for connected sentences (No blinking / No flashing) */
 @keyframes steadyLiquidFlow {
   0% {
     stroke-dashoffset: 48;
@@ -791,6 +817,3 @@ input[type="submit"],
   background-size: 100% 40px;
   animation: steadyFluidStream 3.5s linear infinite;
 }
-
-
-

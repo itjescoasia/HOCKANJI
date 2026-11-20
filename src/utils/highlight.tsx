@@ -111,7 +111,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
       return (
         <Fragment>
           {before}
-          <span className="rounded transition-all duration-200 bg-theme-accent text-white shadow-sm relative">
+          <span className="rounded transition-all duration-200 bg-theme-accent text-theme-inverted font-semibold shadow-sm relative">
             {match}
           </span>
           {after}
@@ -131,7 +131,7 @@ export const RelatedHighlight: React.FC<{ text: string, type: 'hiragana' | 'roma
         if (part.toLowerCase() === matchStr.toLowerCase()) {
           const isCurrentMatch = matchCount === index;
           matchCount++;
-          return <span key={i} className={`rounded transition-colors duration-200 ${isCurrentMatch ? 'bg-theme-accent text-white shadow-sm relative z-10' : 'bg-theme-accent/20 text-theme-accent'}`}>{part}</span>;
+          return <span key={i} className={`rounded transition-colors duration-200 ${isCurrentMatch ? 'bg-theme-accent text-theme-inverted font-semibold shadow-sm relative z-10' : 'bg-theme-accent/20 text-theme-accent'}`}>{part}</span>;
         }
         return <Fragment key={i}>{part}</Fragment>;
       })}
@@ -1834,7 +1834,7 @@ export const HighlightVietnamese: React.FC<{ text: string }> = ({ text }) => {
         if (part.toLowerCase() === matchStr.toLowerCase()) {
           const isCurrentMatch = matchCount === targetIndex;
           matchCount++;
-          return <span key={i} className={`rounded transition-colors duration-200 ${isCurrentMatch ? 'bg-theme-accent text-white shadow-sm relative z-10' : 'bg-theme-accent/20 text-theme-accent'}`}>{part}</span>;
+          return <span key={i} className={`rounded transition-colors duration-200 ${isCurrentMatch ? 'bg-theme-accent text-theme-inverted font-semibold shadow-sm relative z-10' : 'bg-theme-accent/20 text-theme-accent'}`}>{part}</span>;
         }
         return <Fragment key={i}>{part}</Fragment>;
       })}

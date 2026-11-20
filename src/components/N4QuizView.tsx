@@ -234,11 +234,11 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
   // Rank badge based on lifetime questions answered
   const userRank = useMemo(() => {
     const count = lifetimeStats.totalAnswered;
-    if (count >= 1000) return { title: '👑 Đại Cao Thủ N4', color: 'text-amber-400 bg-amber-500/20 border-amber-500/40' };
-    if (count >= 500) return { title: '💎 Bậc Thầy N4', color: 'text-purple-400 bg-purple-500/20 border-purple-500/40' };
-    if (count >= 200) return { title: '🥇 Chiến Binh N4', color: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/40' };
-    if (count >= 50) return { title: '🥈 Chăm Chỉ N4', color: 'text-blue-400 bg-blue-500/20 border-blue-500/40' };
-    return { title: '🥉 Tân Binh N4', color: 'text-theme-primary/70 bg-theme-base-alt border-theme-subtle' };
+    if (count >= 1000) return { title: '👑 Đại Cao Thủ N4', color: 'text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/40' };
+    if (count >= 500) return { title: '💎 Bậc Thầy N4', color: 'text-purple-800 dark:text-purple-300 bg-purple-500/15 border-purple-500/40' };
+    if (count >= 200) return { title: '🥇 Chiến Binh N4', color: 'text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/40' };
+    if (count >= 50) return { title: '🥈 Chăm Chỉ N4', color: 'text-blue-800 dark:text-blue-300 bg-blue-500/15 border-blue-500/40' };
+    return { title: '🥉 Tân Binh N4', color: 'text-theme-primary/80 bg-theme-base-alt border-theme-subtle' };
   }, [lifetimeStats.totalAnswered]);
 
   const formatTimer = (seconds: number) => {
@@ -263,11 +263,11 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded">
+              <span className="px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/35 rounded">
                 JLPT N4
               </span>
               <h1 className="text-xl sm:text-2xl font-bold text-theme-accent flex items-center gap-2">
-                <CheckSquare className="w-6 h-6 text-emerald-500" />
+                <CheckSquare className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />
                 Kho Trắc Nghiệm Tiếng Nhật N4 Vô Tận
               </h1>
             </div>
@@ -284,7 +284,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
               onClick={() => setViewMode('scroll')}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-all flex items-center gap-1.5 ${
                 viewMode === 'scroll'
-                  ? 'bg-theme-accent text-white shadow'
+                  ? 'bg-theme-accent text-theme-inverted shadow font-semibold'
                   : 'text-theme-primary/70 hover:text-theme-accent'
               }`}
               title="Xem danh sách tất cả câu"
@@ -296,7 +296,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
               onClick={() => setViewMode('step')}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-all flex items-center gap-1.5 ${
                 viewMode === 'step'
-                  ? 'bg-theme-accent text-white shadow'
+                  ? 'bg-theme-accent text-theme-inverted shadow font-semibold'
                   : 'text-theme-primary/70 hover:text-theme-accent'
               }`}
               title="Xem từng câu một (Flashcard test)"
@@ -311,7 +311,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
       {/* Lifetime Stats Counter Bar */}
       <div className="bg-theme-panel border border-theme-subtle rounded-xl p-3 px-4 mb-4 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-amber-400" />
+          <Trophy className="w-4 h-4 text-amber-700 dark:text-amber-300" />
           <span className="text-theme-primary/70">Cấp bậc:</span>
           <span className={`px-2 py-0.5 font-bold rounded border text-[11px] ${userRank.color}`}>
             {userRank.title}
@@ -325,13 +325,13 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
           </div>
           <div>
             <span className="text-theme-primary/60">Đúng: </span>
-            <strong className="text-emerald-400 text-sm">
+            <strong className="text-emerald-700 dark:text-emerald-300 text-sm">
               {lifetimeStats.totalAnswered > 0 ? Math.round((lifetimeStats.totalCorrect / lifetimeStats.totalAnswered) * 100) : 0}%
             </strong>
           </div>
           <div className="flex items-center gap-1" title="Chuỗi trả lời đúng liên tiếp hiện tại">
-            <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400" />
-            <strong className="text-orange-400 text-sm">{lifetimeStats.currentStreak}</strong>
+            <Flame className="w-3.5 h-3.5 text-orange-700 dark:text-orange-300 fill-orange-500/30" />
+            <strong className="text-orange-700 dark:text-orange-300 text-sm">{lifetimeStats.currentStreak}</strong>
             <span className="text-theme-primary/60 text-[10px]">(Kỷ lục: {lifetimeStats.maxStreak})</span>
           </div>
         </div>
@@ -344,7 +344,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             <label className="block text-xs font-semibold uppercase tracking-wider text-theme-primary/60 mb-1.5 flex items-center justify-between">
               <span>Chọn Đề Thi / Chuyên Đề N4</span>
               {selectedTopicId === 'mock-test-n4' && (
-                <span className="text-xs text-amber-400 font-mono flex items-center gap-1">
+                <span className="text-xs text-amber-700 dark:text-amber-300 font-mono flex items-center gap-1">
                   <Timer className="w-3.5 h-3.5" />
                   Thời gian: {formatTimer(timerSeconds)}
                 </span>
@@ -418,7 +418,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             </button>
             <button
               onClick={handleResetCurrentQuiz}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-theme-base-alt border border-theme-subtle hover:border-red-500/50 text-theme-primary/80 hover:text-red-400 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-theme-base-alt border border-theme-subtle hover:border-red-500/50 text-theme-primary/80 hover:text-red-700 dark:hover:text-red-400 rounded-lg transition-colors"
               title="Xóa kết quả và làm lại đề này"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -437,7 +437,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             <span>Tổng: <strong>{questions.length} câu</strong></span>
             <span>Đã làm: <strong className="text-theme-accent">{stats.answeredCount}/{stats.total}</strong></span>
             {stats.answeredCount > 0 && (
-              <span>Đúng: <strong className="text-emerald-500">{stats.correctCount} ({stats.percent}%)</strong></span>
+              <span>Đúng: <strong className="text-emerald-700 dark:text-emerald-300">{stats.correctCount} ({stats.percent}%)</strong></span>
             )}
           </div>
         </div>
@@ -465,7 +465,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             onClick={() => setFilterMode('all')}
             className={`px-2.5 py-1 text-xs rounded-full transition-colors whitespace-nowrap ${
               filterMode === 'all'
-                ? 'bg-theme-accent text-white font-medium'
+                ? 'bg-theme-accent text-theme-inverted font-semibold'
                 : 'bg-theme-base-alt text-theme-primary/70 hover:text-theme-accent'
             }`}
           >
@@ -475,7 +475,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             onClick={() => setFilterMode('unanswered')}
             className={`px-2.5 py-1 text-xs rounded-full transition-colors whitespace-nowrap ${
               filterMode === 'unanswered'
-                ? 'bg-theme-accent text-white font-medium'
+                ? 'bg-theme-accent text-theme-inverted font-semibold'
                 : 'bg-theme-base-alt text-theme-primary/70 hover:text-theme-accent'
             }`}
           >
@@ -485,8 +485,8 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             onClick={() => setFilterMode('correct')}
             className={`px-2.5 py-1 text-xs rounded-full transition-colors whitespace-nowrap ${
               filterMode === 'correct'
-                ? 'bg-emerald-600 text-white font-medium'
-                : 'bg-theme-base-alt text-emerald-400/80 hover:text-emerald-400'
+                ? 'bg-emerald-700 text-white font-semibold'
+                : 'bg-theme-base-alt text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15'
             }`}
           >
             Đúng ({stats.correctCount})
@@ -495,8 +495,8 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             onClick={() => setFilterMode('incorrect')}
             className={`px-2.5 py-1 text-xs rounded-full transition-colors whitespace-nowrap ${
               filterMode === 'incorrect'
-                ? 'bg-red-600 text-white font-medium'
-                : 'bg-theme-base-alt text-red-400/80 hover:text-red-400'
+                ? 'bg-red-700 text-white font-semibold'
+                : 'bg-theme-base-alt text-red-700 dark:text-red-300 hover:bg-red-500/15'
             }`}
           >
             Sai ({stats.incorrectCount})
@@ -506,13 +506,13 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
 
       {/* Completion Banner if all answered */}
       {stats.total > 0 && stats.answeredCount === stats.total && (
-        <div className="bg-gradient-to-r from-emerald-950/40 via-theme-panel to-emerald-950/40 border border-emerald-500/40 rounded-xl p-4 sm:p-5 mb-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-emerald-50/90 dark:from-emerald-950/40 via-theme-panel to-emerald-50/90 dark:to-emerald-950/40 border border-emerald-500/40 rounded-xl p-4 sm:p-5 mb-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 text-emerald-400">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-300">
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-base sm:text-lg text-emerald-400">
+              <h3 className="font-bold text-base sm:text-lg text-emerald-800 dark:text-emerald-300">
                 Hoàn thành xuất sắc đợt trắc nghiệm N4!
               </h3>
               <p className="text-xs sm:text-sm text-theme-primary/80">
@@ -624,7 +624,7 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
             <button
               onClick={() => setCurrentStepIdx((prev) => Math.min(displayedQuestions.length - 1, prev + 1))}
               disabled={currentStepIdx >= displayedQuestions.length - 1}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-theme-accent hover:bg-theme-accent-hover text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted disabled:opacity-30 disabled:pointer-events-none transition-colors"
             >
               Câu tiếp
               <ChevronRight className="w-4 h-4" />
@@ -677,11 +677,11 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
             )}
             {isAnswered && (
               selectedOptIdx === question.correctIndex ? (
-                <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold">
+                <span className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Chính xác
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-xs text-red-400 font-semibold">
+                <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-300 font-semibold">
                   <XCircle className="w-3.5 h-3.5" /> Chưa chính xác
                 </span>
               )
@@ -700,7 +700,7 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
           onClick={onPlayAudio}
           className={`p-2 rounded-lg transition-colors shrink-0 ${
             isPlayingAudio 
-              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse' 
+              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 animate-pulse' 
               : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover border border-theme-subtle'
           }`}
           title="Nghe phát âm tiếng Nhật câu này"
@@ -717,13 +717,13 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
           if (isAnswered) {
             if (optIdx === question.correctIndex) {
               // Correct button always turns emerald green
-              btnStyle = 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/50';
+              btnStyle = 'bg-emerald-500/15 border-emerald-600 dark:border-emerald-500 text-emerald-800 dark:text-emerald-300 font-bold shadow-sm ring-1 ring-emerald-500/40';
             } else if (optIdx === selectedOptIdx) {
               // User selected wrong button turns red
-              btnStyle = 'bg-red-500/20 border-red-500 text-red-400 line-through';
+              btnStyle = 'bg-red-500/15 border-red-600 dark:border-red-500 text-red-800 dark:text-red-300 line-through';
             } else {
               // Other unselected options fade out
-              btnStyle = 'bg-theme-base-alt/50 border-theme-subtle/50 text-theme-primary/40 opacity-60';
+              btnStyle = 'bg-theme-base-alt/50 border-theme-subtle/50 text-theme-muted opacity-65';
             }
           }
 
@@ -738,10 +738,10 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
             >
               <span>{opt}</span>
               {isAnswered && optIdx === question.correctIndex && (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 ml-2" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-700 dark:text-emerald-300 shrink-0 ml-2" />
               )}
               {isAnswered && optIdx === selectedOptIdx && optIdx !== question.correctIndex && (
-                <XCircle className="w-4 h-4 text-red-400 shrink-0 ml-2" />
+                <XCircle className="w-4 h-4 text-red-700 dark:text-red-300 shrink-0 ml-2" />
               )}
             </button>
           );
@@ -752,9 +752,9 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
       {isAnswered && (
         <div className="mt-4 pt-4 border-t-2 border-dashed border-theme-subtle animate-fadeIn space-y-4">
           {/* Full Sentence Callout */}
-          <div className="bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-lg p-3 sm:p-4 flex items-start justify-between gap-3">
+          <div className="bg-emerald-500/10 border-l-4 border-emerald-600 dark:border-emerald-500 rounded-r-lg p-3 sm:p-4 flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-1">
+              <div className="text-xs uppercase tracking-wider text-emerald-800 dark:text-emerald-300 font-bold mb-1">
                 Câu hoàn chỉnh:
               </div>
               <div 
@@ -764,7 +764,7 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
             </div>
             <button
               onClick={onPlayAudio}
-              className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 rounded-lg transition-colors shrink-0"
+              className="p-2 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 rounded-lg transition-colors shrink-0"
               title="Nghe câu hoàn chỉnh"
             >
               <Volume2 className="w-4 h-4" />
@@ -805,7 +805,7 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
                           {onNavigateToWord && (
                             <button
                               onClick={() => onNavigateToWord(v.kanji || v.hira)}
-                              className="ml-2 text-[11px] text-theme-accent hover:underline opacity-70 hover:opacity-100"
+                              className="ml-2 text-[11px] text-theme-accent hover:underline"
                               title="Xem chi tiết trong kho từ vựng"
                             >
                               Tra
@@ -828,8 +828,8 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
           )}
 
           {/* Grammar Explanation Note */}
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 sm:p-4 text-xs sm:text-sm text-theme-primary/90">
-            <div className="font-bold text-amber-400 flex items-center gap-1.5 mb-1">
+          <div className="bg-amber-500/10 border border-amber-500/35 rounded-lg p-3 sm:p-4 text-xs sm:text-sm text-theme-primary/90">
+            <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mb-1">
               <Sparkles className="w-3.5 h-3.5" />
               Giải thích ngữ pháp:
             </div>

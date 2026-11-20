@@ -838,7 +838,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             onClick={() => setActiveTab('forgotten')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
               activeTab === 'forgotten'
-                ? 'bg-rose-600 text-white shadow-xs'
+                ? 'bg-rose-700 text-white shadow-xs'
                 : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
             }`}
           >
@@ -850,7 +850,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             onClick={() => setActiveTab('skipped')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
               activeTab === 'skipped'
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
             }`}
           >
@@ -1078,7 +1078,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
                     type="button"
                     disabled={isSavingReview}
                     onClick={() => handleReviewWord(false)}
-                    className="min-h-[52px] px-4 py-3 rounded-xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-[52px] px-4 py-3 rounded-xl border border-rose-500/45 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <RotateCcw className="w-4 h-4 shrink-0" />
                     <span className="truncate">Quên · Lặp lại</span>
@@ -1088,7 +1088,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
                     type="button"
                     disabled={isSavingReview}
                     onClick={() => handleReviewWord(true)}
-                    className="min-h-[52px] px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                    className="min-h-[52px] px-4 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span className="truncate">Nhớ · Bỏ qua</span>

@@ -44,67 +44,67 @@ export const THEME_OPTIONS: ThemeOption[] = [
     name: 'Trà xanh dịu mắt (Matcha Sage)',
     badge: 'Khuyên dùng cho mắt',
     description: 'Bước sóng xanh thảo mộc giúp giảm mỏi võng mạc tối đa khi học Kanji lâu',
-    bgHex: '#f3f6f3',
+    bgHex: '#f2f6f2',
     panelHex: '#ffffff',
-    textHex: '#1a2e22',
-    accentHex: '#2e7a51',
+    textHex: '#0f2418',
+    accentHex: '#1b693f',
   },
   {
     id: 'washi',
     name: 'Giấy Washi kem ấm (Warm Paper)',
     badge: 'Chống chói',
     description: 'Màu giấy gạo tự nhiên Nhật Bản ấm êm, chống mỏi và chói lóa như trang sách thật',
-    bgHex: '#f7f4ed',
+    bgHex: '#f6f2e9',
     panelHex: '#fdfbf7',
-    textHex: '#2d2823',
-    accentHex: '#b25833',
+    textHex: '#1f1914',
+    accentHex: '#9c401c',
   },
   {
     id: 'charcoal',
     name: 'Than chì êm đêm (Soft Charcoal)',
     badge: 'Bảo vệ ban đêm',
     description: 'Xám than ấm dịu, không đen kịt, triệt tiêu quầng lóa mắt khi học trong phòng tối',
-    bgHex: '#1c1e20',
-    panelHex: '#292d31',
-    textHex: '#e3e4e6',
-    accentHex: '#dca35a',
+    bgHex: '#16181a',
+    panelHex: '#24282c',
+    textHex: '#f1f3f5',
+    accentHex: '#eab364',
   },
   {
     id: 'ocean',
     name: 'Đêm đại dương (Midnight Ocean)',
     badge: 'Thư giãn',
     description: 'Xanh chàm tĩnh lặng, lọc bỏ ánh sáng xanh gây mỏi mắt, thư giãn hệ thần kinh',
-    bgHex: '#0c1222',
-    panelHex: '#16223e',
-    textHex: '#e2e8f7',
+    bgHex: '#091020',
+    panelHex: '#14203b',
+    textHex: '#f0f4fc',
     accentHex: '#38bdf8',
   },
   {
     id: 'sepia',
     name: 'Cà phê ấm dịu (Gentle Coffee)',
     description: 'Nhiệt độ màu nâu cà phê ấm dịu với độ tương phản cao WCAG AAA bảo vệ mắt',
-    bgHex: '#f5ede1',
-    panelHex: '#faf5ee',
-    textHex: '#1c1208',
-    accentHex: '#7c340a',
+    bgHex: '#f4ebdc',
+    panelHex: '#fcf7f0',
+    textHex: '#191007',
+    accentHex: '#783108',
   },
   {
     id: 'light',
     name: 'Sáng thanh lịch (Clean Light)',
     description: 'Sáng nhẹ dịu mắt với độ tương phản cao khi ở ngoài trời',
-    bgHex: '#f9f9f8',
+    bgHex: '#f8f8f7',
     panelHex: '#ffffff',
-    textHex: '#27272a',
-    accentHex: '#b07d35',
+    textHex: '#18181b',
+    accentHex: '#8c5a10',
   },
   {
     id: 'dark',
     name: 'Tối cổ điển (Obsidian Dark)',
     description: 'Chế độ tối truyền thống phong cách tối giản',
-    bgHex: '#121212',
-    panelHex: '#1e1e1e',
-    textHex: '#e4e4e7',
-    accentHex: '#c5a059',
+    bgHex: '#0d0d0f',
+    panelHex: '#1a1a1f',
+    textHex: '#f4f4f6',
+    accentHex: '#e0b660',
   }
 ];
 
@@ -144,6 +144,15 @@ export default function App() {
     if (theme !== 'dark') {
       document.documentElement.classList.add(`theme-${theme}`);
     }
+    const isDarkTheme = theme === 'dark' || theme === 'charcoal' || theme === 'ocean';
+    document.documentElement.classList.toggle('dark', isDarkTheme);
+
+    const activeOption = THEME_OPTIONS.find((t) => t.id === theme);
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor && activeOption) {
+      metaThemeColor.setAttribute('content', activeOption.bgHex);
+    }
+
     localStorage.setItem('app_theme', theme);
   }, [theme]);
 
