@@ -57,35 +57,47 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
        className="w-full max-w-2xl relative"
     >
       <div 
-        className={`w-full aspect-[4/3] sm:aspect-video mb-6 ${!isMeaningShown ? 'cursor-pointer' : ''}`} 
+        className={`w-full min-h-[290px] sm:min-h-[340px] sm:aspect-video mb-6 ${!isMeaningShown ? 'cursor-pointer' : ''}`} 
         style={{ perspective: "1000px" }}
         onClick={handleFlip}
       >
          <motion.div
-            className="w-full h-full relative"
+            className="w-full h-full min-h-[290px] sm:min-h-[340px] relative"
             style={{ transformStyle: "preserve-3d" }}
             animate={{ rotateY: flipDegree }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
          >
             {/* Front */}
             <div 
-              className={`absolute inset-0 bg-theme-hover border border-theme-subtle p-8 md:p-12 rounded-lg flex flex-col items-center justify-center shadow-xl group ${isMeaningShown ? 'pointer-events-none' : ''}`}
+              className={`absolute inset-0 bg-theme-hover border border-theme-subtle p-6 sm:p-8 md:p-12 rounded-lg flex flex-col items-center justify-center shadow-xl group ${isMeaningShown ? 'pointer-events-none' : ''}`}
               style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
             >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playAudio(e, currentWord.kanji || currentWord.reading, currentWord.audioUrl);
+                }}
+                className="absolute top-4 left-4 p-2 rounded-lg text-theme-primary/70 hover:text-theme-accent bg-theme-base hover:bg-theme-panel border border-theme-subtle transition-colors cursor-pointer z-20"
+                title="Nghe phát âm"
+              >
+                <Volume2 className="w-4 h-4" />
+              </button>
+
               <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20">
                 <button
                   type="button"
                   onClick={handleCopyWord}
                   className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-xs ${
                     copied
-                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
                       : 'bg-theme-base hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent border-theme-subtle'
                   }`}
                   title="Sao chép từ vựng"
                 >
                   {copied ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
                       <span className="text-[11px] font-bold">Đã chép</span>
                     </>
                   ) : (
@@ -98,31 +110,21 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
               </div>
 
               {currentWord.wordType && (
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 text-xs text-theme-accent tracking-widest uppercase mb-4 font-bold opacity-80">{currentWord.wordType}</div>
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 text-[11px] text-theme-accent tracking-widest uppercase font-bold max-w-[45%] truncate">{currentWord.wordType}</div>
               )}
-              <div className="flex items-center justify-center gap-4 mb-6 relative">
-                <div className="text-6xl md:text-8xl font-serif text-theme-primary">
+              <div className="flex items-center justify-center gap-3 mb-4 max-w-full px-2">
+                <div className="text-5xl sm:text-6xl md:text-8xl font-serif text-theme-primary text-center break-words max-w-full">
                   {currentWord.kanji}
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    playAudio(e, currentWord.kanji || currentWord.reading, currentWord.audioUrl);
-                  }}
-                  className="absolute -right-12 p-3 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                  title="Nghe phát âm"
-                >
-                  <Volume2 className="w-8 h-8" />
-                </button>
               </div>
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-widest opacity-40">
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-widest text-theme-muted whitespace-nowrap">
                 Chạm để lật thẻ
               </div>
             </div>
 
             {/* Back */}
             <div 
-              className={`absolute inset-0 bg-theme-hover border border-theme-subtle p-6 md:p-10 rounded-lg flex flex-col items-center shadow-xl group overflow-y-auto custom-scrollbar ${!isMeaningShown ? 'pointer-events-none' : ''}`}
+              className={`absolute inset-0 bg-theme-hover border border-theme-subtle p-5 sm:p-6 md:p-10 rounded-lg flex flex-col items-center shadow-xl group overflow-y-auto custom-scrollbar ${!isMeaningShown ? 'pointer-events-none' : ''}`}
               style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
             >
                <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20">
@@ -131,14 +133,14 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
                    onClick={handleCopyWord}
                    className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-xs ${
                      copied
-                       ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                       ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
                        : 'bg-theme-base hover:bg-theme-hover text-theme-primary/70 hover:text-theme-accent border-theme-subtle'
                    }`}
                    title="Sao chép từ vựng"
                  >
                    {copied ? (
                      <>
-                       <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[3]" />
+                       <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
                        <span className="text-[11px] font-bold">Đã chép</span>
                      </>
                    ) : (
@@ -149,43 +151,44 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
                    )}
                  </button>
                </div>
-               <div className="flex flex-col items-center gap-1 w-full mt-2">
-                 <div className="flex items-center gap-2">
-                   <div className="text-3xl md:text-5xl text-theme-accent font-medium font-serif">{currentWord.reading}</div>
+               <div className="flex flex-col items-center gap-1 w-full mt-6 sm:mt-2">
+                 <div className="flex items-center justify-center gap-2 flex-wrap">
+                   <div className="text-2xl sm:text-3xl md:text-5xl text-theme-accent font-medium font-serif break-words text-center">{currentWord.reading}</div>
                    <button
+                     type="button"
                      onClick={(e) => {
                        e.stopPropagation();
                        playAudio(e, currentWord.reading || currentWord.kanji, currentWord.audioUrl);
                      }}
-                     className="p-2 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                     className="p-2 text-theme-primary/70 hover:text-theme-accent bg-theme-base hover:bg-theme-panel border border-theme-subtle rounded-full transition-colors cursor-pointer shrink-0"
                      title="Nghe phát âm"
                    >
-                     <Volume2 className="w-6 h-6" />
+                     <Volume2 className="w-5 h-5" />
                    </button>
                  </div>
                  {currentWord.romaji && (
-                   <div className="text-sm text-theme-primary opacity-50 italic">{currentWord.romaji}</div>
+                   <div className="text-sm text-theme-muted italic">{currentWord.romaji}</div>
                  )}
                </div>
-               <div className="text-xl text-theme-primary font-medium mt-3 text-center">{currentWord.meaning}</div>
+               <div className="text-lg sm:text-xl text-theme-primary font-semibold mt-3 text-center break-words">{currentWord.meaning}</div>
                
                { (currentWord.kanjiExplanation || currentWord.wordType) && (
-                 <div className="mt-3 px-6 py-3 bg-theme-base/50 border border-theme-subtle rounded text-sm text-theme-primary font-sans opacity-90 leading-relaxed max-w-lg mx-auto whitespace-pre-wrap text-center w-full shrink-0">
-                   {(currentWord.wordType ? `Loại từ: ${currentWord.wordType}\nn\n` : "") + (currentWord.kanjiExplanation || "")}
+                 <div className="mt-3 px-4 sm:px-6 py-3 bg-theme-base/60 border border-theme-subtle rounded text-sm text-theme-primary font-sans leading-relaxed max-w-lg mx-auto whitespace-pre-wrap text-center w-full shrink-0">
+                   {(currentWord.wordType ? `Loại từ: ${currentWord.wordType}\n\n` : "") + (currentWord.kanjiExplanation || "")}
                  </div>
                )}
                {currentWord.sinoVietnamese && (
-                 <div className="text-sm text-theme-primary/60 mt-3 uppercase tracking-widest text-center shrink-0">{currentWord.sinoVietnamese}</div>
+                 <div className="text-sm text-theme-primary/75 mt-3 uppercase tracking-widest text-center shrink-0">{currentWord.sinoVietnamese}</div>
                )}
                {currentWord.example && (
-                  <div className="text-theme-primary text-base bg-theme-panel p-4 rounded border border-theme-subtle text-left mt-4 shadow-inner w-full max-w-lg shrink-0 mb-4">
-                    <p className="font-serif leading-relaxed">{currentWord.example}</p>
+                  <div className="text-theme-primary text-sm sm:text-base bg-theme-panel p-4 rounded border border-theme-subtle text-left mt-4 shadow-inner w-full max-w-lg shrink-0 mb-4">
+                    <p className="font-serif leading-relaxed break-words">{currentWord.example}</p>
                     {currentWord.exampleTranslation && (
-                      <p className="text-xs opacity-60 mt-1 italic">{currentWord.exampleTranslation}</p>
+                      <p className="text-xs text-theme-muted mt-1 italic break-words">{currentWord.exampleTranslation}</p>
                     )}
                   </div>
                )}
-               <div className="mt-auto pt-4 text-[10px] uppercase tracking-widest opacity-40 w-full text-center shrink-0">
+               <div className="mt-auto pt-4 text-[10px] uppercase tracking-widest text-theme-muted w-full text-center shrink-0">
                  Chạm để lật thẻ
                </div>
             </div>
@@ -196,7 +199,7 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
         <div className="flex justify-center mb-6">
            <button
              onClick={handleFlip}
-             className="bg-theme-active border border-theme-strong hover:bg-theme-active-alt hover:border-theme-accent text-theme-primary px-8 py-4 rounded font-bold uppercase tracking-widest transition-all shadow-lg"
+             className="w-full sm:w-auto bg-theme-active border border-theme-strong hover:bg-theme-active-alt hover:border-theme-accent text-theme-primary px-8 py-4 rounded-xl font-bold uppercase tracking-widest transition-all shadow-lg cursor-pointer"
            >
              Hiện ý nghĩa
            </button>
@@ -204,16 +207,16 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
       )}
 
       {isMeaningShown && (
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
+        <div className="grid grid-cols-2 sm:flex sm:flex-row justify-center gap-3 sm:gap-4">
           <button 
              onClick={onForgot}
-             className="flex-1 bg-theme-panel border border-red-500/30 text-red-500 hover:bg-red-500/10 px-6 py-4 rounded font-bold uppercase tracking-widest transition-all"
+             className="flex-1 bg-theme-panel border border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/10 px-4 sm:px-6 py-4 rounded-xl font-bold uppercase tracking-wider text-xs sm:text-sm transition-all cursor-pointer"
           >
              Quên (-1)
           </button>
           <button 
              onClick={onRemember}
-             className="flex-1 bg-theme-accent border border-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-6 py-4 rounded font-bold uppercase tracking-widest transition-all shadow-lg shadow-[#c5a059]/10"
+             className="flex-1 bg-theme-accent border border-theme-accent hover:bg-theme-accent-hover text-theme-inverted px-4 sm:px-6 py-4 rounded-xl font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-lg cursor-pointer"
           >
              Nhớ (+1)
           </button>

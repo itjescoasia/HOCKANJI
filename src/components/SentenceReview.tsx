@@ -1676,92 +1676,96 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 </motion.div>
 </AnimatePresence>
 {!isEditing && (
-  <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3 w-full max-w-2xl sticky bottom-2 z-30 bg-theme-base-alt/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-theme-subtle shadow-xl">
+  <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-3 w-full max-w-2xl sticky bottom-2 z-30 bg-theme-base-alt/95 backdrop-blur-md p-2 sm:p-2.5 pb-safe rounded-2xl border border-theme-subtle shadow-xl">
     {showAnswer ? (
       /* 4-tier scientific SRS rating buttons */
-      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-[620px]">
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full sm:max-w-[620px]">
           <button
             id="btn-sentence-forgot"
             type="button"
             onClick={() => handleGrade('forgot')}
-            className="border-2 border-red-500/60 text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            className="border-2 border-red-500/60 text-red-700 dark:text-red-300 bg-red-500/10 hover:bg-red-700 hover:text-white font-bold py-2.5 sm:py-3 px-2 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
             title="Phím tắt: 1 hoặc Mũi tên trái"
           >
             <div className="flex items-center gap-1">
-              <X className="w-4 h-4 stroke-[3]" />
+              <X className="w-4 h-4 stroke-[3] shrink-0" />
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Quên (1)</span>
             </div>
-            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại trong phiên</span>
+            <span className="text-[10px] opacity-85 mt-0.5 font-normal">Lặp lại trong phiên</span>
           </button>
 
           <button
             id="btn-sentence-hard"
             type="button"
             onClick={() => handleGrade('hard')}
-            className="border-2 border-amber-500/60 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            className="border-2 border-amber-500/60 text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-700 hover:text-white font-bold py-2.5 sm:py-3 px-2 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
             title="Phím tắt: 2"
           >
             <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4 stroke-[2.5]" />
+              <Clock className="w-4 h-4 stroke-[2.5] shrink-0" />
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Khó (2)</span>
             </div>
-            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Lặp lại sau 1 ngày</span>
+            <span className="text-[10px] opacity-85 mt-0.5 font-normal">Lặp lại sau 1 ngày</span>
           </button>
 
           <button
             id="btn-sentence-good"
             type="button"
             onClick={() => handleGrade('good')}
-            className="border-2 border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            className="border-2 border-emerald-500 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-700 hover:text-white font-bold py-2.5 sm:py-3 px-2 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
             title="Phím tắt: 3 hoặc Mũi tên phải"
           >
             <div className="flex items-center gap-1">
-              <Check className="w-4 h-4 stroke-[3]" />
+              <Check className="w-4 h-4 stroke-[3] shrink-0" />
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Nhớ tốt (3)</span>
             </div>
-            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 3-6 ngày</span>
+            <span className="text-[10px] opacity-85 mt-0.5 font-normal">Giãn cách 3-6 ngày</span>
           </button>
 
           <button
             id="btn-sentence-easy"
             type="button"
             onClick={() => handleGrade('easy')}
-            className="border-2 border-indigo-500/60 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white font-bold py-2.5 sm:py-3 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
+            className="border-2 border-indigo-500/60 bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 hover:bg-indigo-700 hover:text-white font-bold py-2.5 sm:py-3 px-2 transition-all flex flex-col items-center justify-center rounded-xl shadow-xs cursor-pointer group"
             title="Phím tắt: 4"
           >
             <div className="flex items-center gap-1">
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 shrink-0" />
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Dễ dàng (4)</span>
             </div>
-            <span className="text-[10px] opacity-75 mt-0.5 font-normal">Giãn cách 10-20 ngày</span>
+            <span className="text-[10px] opacity-85 mt-0.5 font-normal">Giãn cách 10-20 ngày</span>
           </button>
         </div>
     ) : (
       <button
         id="btn-flip-card"
         onClick={handleReveal}
-        className="flex-1 max-w-[260px] border border-theme-accent text-theme-inverted bg-theme-accent hover:bg-theme-accent-hover font-bold py-4 transition-colors uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 rounded-lg shadow-sm cursor-pointer"
+        className="w-full sm:flex-1 sm:max-w-[260px] border border-theme-accent text-theme-inverted bg-theme-accent hover:bg-theme-accent-hover font-bold py-3.5 sm:py-4 transition-colors uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2 rounded-xl shadow-sm cursor-pointer"
       >
         <Eye className="w-4 h-4" />
         <span>Lật thẻ xem đáp án</span>
       </button>
     )}
 
-    <button
-      onClick={handlePrev}
-      disabled={isRandom ? randomCurrentIndex === 0 : currentIndex === 0}
-      className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel disabled:opacity-30 disabled:cursor-not-allowed rounded cursor-pointer"
-      title="Câu trước"
-    >
-      <ArrowLeft className="w-5 h-5" />
-    </button>
-    <button
-      onClick={handleNext}
-      className="p-4 border border-theme-subtle text-theme-primary/60 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel rounded cursor-pointer"
-      title="Câu tiếp theo"
-    >
-      <ArrowRight className="w-5 h-5" />
-    </button>
+    <div className="grid grid-cols-2 sm:flex items-center gap-2 shrink-0">
+      <button
+        onClick={handlePrev}
+        disabled={isRandom ? randomCurrentIndex === 0 : currentIndex === 0}
+        className="py-2.5 px-4 sm:p-4 border border-theme-subtle text-theme-primary/70 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel disabled:opacity-30 disabled:cursor-not-allowed rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
+        title="Câu trước"
+      >
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span className="sm:hidden text-xs font-semibold">Câu trước</span>
+      </button>
+      <button
+        onClick={handleNext}
+        className="py-2.5 px-4 sm:p-4 border border-theme-subtle text-theme-primary/70 hover:text-theme-primary hover:border-theme-accent transition-colors bg-theme-panel rounded-xl cursor-pointer flex items-center justify-center gap-1.5"
+        title="Câu tiếp theo"
+      >
+        <span className="sm:hidden text-xs font-semibold">Câu tiếp</span>
+        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+      </button>
+    </div>
   </div>
 )}
       </div>

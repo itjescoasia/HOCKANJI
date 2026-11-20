@@ -18,7 +18,7 @@ import AccountSettingsModal from './components/AccountSettingsModal';
 import N4QuizView from './components/N4QuizView';
 import ForgottenVocabSession from './components/ForgottenVocabSession';
 import N4VocabReview from './components/N4VocabReview';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical, Layers } from 'lucide-react';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical, Layers, Menu } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -345,7 +345,7 @@ export default function App() {
     };
   }, [isFreeStudyMode, isDifficultReviewMode, view, recordFreeStudyTime]);
 
-  if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen bg-theme-base-alt flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-theme-subtle border-t-[#c5a059] rounded-full animate-spin"></div></div>;
+  if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen-ios bg-theme-base-alt flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-theme-subtle border-t-theme-accent rounded-full animate-spin"></div></div>;
 
   if (!user) {
     return <Login />;
@@ -545,25 +545,30 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex flex-col">
+    <div className="min-h-screen-ios bg-theme-base-alt text-theme-primary font-sans flex flex-col overflow-x-clip">
       {/* Header / Nav */}
-      <header id="app-header" className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-30">
-        <div id="app-header-container" className="max-w-5xl mx-auto px-2 sm:px-4 h-16 flex items-center justify-between">
-          <div id="app-header-logo" className="flex items-center gap-2 sm:gap-4 cursor-pointer" onClick={() => handleNavigate('dashboard')}>
+      <header id="app-header" className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-30 pt-safe pl-safe pr-safe">
+        <div id="app-header-container" className="max-w-5xl mx-auto px-2.5 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <div id="app-header-logo" className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => handleNavigate('dashboard')}>
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent shrink-0">
               <span className="text-white font-serif text-xl sm:text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
             </div>
-            <h1 className="text-lg sm:text-xl font-serif tracking-widest text-theme-accent hidden md:block" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-base sm:text-xl font-serif tracking-widest text-theme-accent leading-none truncate" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
+              <span className="md:hidden text-[10px] font-semibold text-theme-muted truncate mt-0.5">
+                {navItems.find((n) => n.id === view)?.label || 'Trang chủ'}
+              </span>
+            </div>
           </div>
           
-          <nav id="app-navbar" className="flex items-center gap-1 sm:gap-3 overflow-x-auto no-scrollbar">
+          <nav id="app-navbar" className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             {/* Menu Chế độ màu nền & bảo vệ mắt */}
-            <div className="relative" ref={themeMenuRef}>
+            <div className="relative shrink-0" ref={themeMenuRef}>
               <button
                 id="btn-theme-toggle"
                 type="button"
                 onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
-                className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-2 border ${
+                className={`px-2 sm:px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 border ${
                   isThemeMenuOpen
                     ? 'bg-theme-hover text-theme-accent border-theme-accent shadow-xs'
                     : 'bg-theme-panel text-theme-primary/70 hover:text-theme-accent border-theme-subtle hover:border-theme-accent/60'
@@ -571,12 +576,12 @@ export default function App() {
                 title="Chọn chế độ màu nền thân thiện với mắt"
                 aria-expanded={isThemeMenuOpen}
               >
-                <Palette className="w-4 h-4 text-theme-accent" />
+                <Palette className="w-4 h-4 text-theme-accent shrink-0" />
                 <span 
-                  className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/20 shrink-0 shadow-xs" 
-                  style={{ backgroundColor: THEME_OPTIONS.find(t => t.id === theme)?.accentHex || '#2e7a51' }} 
+                  className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border border-black/20 dark:border-white/20 shrink-0 shadow-xs" 
+                  style={{ backgroundColor: THEME_OPTIONS.find(t => t.id === theme)?.accentHex || '#1b693f' }} 
                 />
-                <span className="hidden md:inline text-[11px] font-bold tracking-wider uppercase">
+                <span className="hidden lg:inline text-[11px] font-bold tracking-wider uppercase whitespace-nowrap">
                   {THEME_OPTIONS.find(t => t.id === theme)?.name.split(' (')[0] || 'Màu nền'}
                 </span>
               </button>
@@ -709,49 +714,133 @@ export default function App() {
               id="btn-account-settings"
               type="button"
               onClick={() => setIsAccountModalOpen(true)}
-              className="p-2 text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded transition-all relative flex items-center justify-center group cursor-pointer"
+              className="p-2 text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded-lg transition-all relative flex items-center justify-center group cursor-pointer shrink-0"
               title={`Cài đặt tài khoản & Phân quyền (${isAdmin ? 'Admin' : 'User'})`}
             >
               <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
               {isAdmin ? (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-theme-panel" title="Quản trị viên (Admin)" />
               ) : (
-                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-theme-primary/30 rounded-full" />
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-theme-muted rounded-full" />
               )}
             </button>
 
-            {navItems.map(item => (
+            {/* Desktop / Tablet Nav Items */}
+            <div className="hidden md:flex items-center gap-1 lg:gap-1.5 overflow-x-auto no-scrollbar">
+              {navItems.map(item => (
+                <button
+                  key={item.id}
+                  id={`nav-item-${item.id}`}
+                  type="button"
+                  onClick={() => handleNavigate(item.id)}
+                  className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer shrink-0 ${
+                    view === item.id 
+                      ? 'bg-theme-hover text-theme-accent border border-theme-subtle font-semibold' 
+                      : 'text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span className="tracking-wider uppercase text-[10px] lg:text-[11px] whitespace-nowrap">{item.label}</span>
+                </button>
+              ))}
+
               <button
-                key={item.id}
-                id={`nav-item-${item.id}`}
+                id="btn-logout"
                 type="button"
-                onClick={() => handleNavigate(item.id)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded cursor-pointer ${
-                  view === item.id 
-                    ? 'bg-theme-hover text-theme-accent border border-theme-subtle' 
-                    : 'text-theme-primary/60 hover:text-theme-accent hover:bg-theme-hover'
+                onClick={() => signOut(auth)}
+                className="flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium transition-all rounded-lg text-theme-primary/70 hover:text-red-700 dark:hover:text-red-400 hover:bg-theme-hover cursor-pointer shrink-0"
+                title={`Đăng xuất (${user?.email})`}
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mobile Home Shortcut + Hamburger Menu */}
+            <div className="flex md:hidden items-center gap-1 shrink-0" ref={mobileMenuRef}>
+              {view !== 'dashboard' && (
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('dashboard')}
+                  className="p-2 rounded-lg text-theme-primary/75 hover:text-theme-accent hover:bg-theme-hover border border-theme-subtle cursor-pointer"
+                  title="Trang chủ"
+                >
+                  <Home className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                id="btn-mobile-menu-toggle"
+                type="button"
+                onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+                aria-expanded={isMobileMenuOpen}
+                aria-label="Mở menu điều hướng"
+                className={`p-2 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  isMobileMenuOpen
+                    ? 'bg-theme-accent text-theme-inverted border-theme-accent'
+                    : 'bg-theme-panel text-theme-primary border-theme-subtle hover:bg-theme-hover'
                 }`}
               >
-                <item.icon className="w-4 h-4" />
-                <span className="hidden sm:inline tracking-widest uppercase text-[10px] sm:text-[11px]">{item.label}</span>
+                {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                <span className="text-[11px] font-bold uppercase tracking-wider">Menu</span>
               </button>
-            ))}
 
-            <button
-              id="btn-logout"
-              type="button"
-              onClick={() => signOut(auth)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all rounded text-theme-primary/60 hover:text-red-500 hover:bg-theme-hover cursor-pointer"
-              title={`Đăng xuất (${user?.email})`}
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+              {isMobileMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  />
+                  <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.5rem)] right-3 left-3 max-w-sm ml-auto bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl z-50 p-3 space-y-1 max-h-[80dvh] overflow-y-auto custom-scrollbar">
+                    <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-theme-muted border-b border-theme-subtle mb-1 flex items-center justify-between">
+                      <span>Điều hướng</span>
+                      <span className="truncate max-w-[160px] font-normal lowercase">{user?.email}</span>
+                    </div>
+                    {navItems.map((item) => {
+                      const active = view === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            handleNavigate(item.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-theme-accent text-theme-inverted shadow-xs'
+                              : 'text-theme-primary hover:bg-theme-hover'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <item.icon className="w-4 h-4 shrink-0" />
+                            <span>{item.label}</span>
+                          </div>
+                          {active && <Check className="w-4 h-4 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                    <div className="pt-1.5 mt-1.5 border-t border-theme-subtle">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          signOut(auth);
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-700 dark:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4 shrink-0" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </nav>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pl-safe pr-safe pb-safe">
         {view === 'dashboard' && (
           <Dashboard 
             deck={deck} 
@@ -831,7 +920,7 @@ export default function App() {
         )}
         
         {view === 'short_study' && (
-          <div id="short-study-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full">
+          <div id="short-study-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
             <ShortStudySession
               queue={shortStudyQueue}
               onExit={() => setView('dashboard')}
@@ -901,7 +990,7 @@ export default function App() {
 
       {/* Topic Vocab Review Overlay */}
       {isTopicVocabReviewOpen && topicVocabReviewCards && (
-        <div id="topic-vocab-review-overlay" className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full">
+        <div id="topic-vocab-review-overlay" className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
           <ReviewSession 
             deck={deck} 
             dueCards={topicVocabReviewCards}
@@ -918,7 +1007,7 @@ export default function App() {
       )}
 
         {isSentenceReviewOpen && (
-          <div id="sentence-review-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full">
+          <div id="sentence-review-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
             <SentenceReview
               deck={sentenceReviewTargetDeck || intensiveDeck}
               mainDeck={deck}

@@ -47,7 +47,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-base-alt text-theme-primary font-sans flex items-center justify-center p-4">
+    <div className="min-h-screen-ios pt-safe pb-safe bg-theme-base-alt text-theme-primary font-sans flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-theme-panel border border-theme-subtle p-8 shadow-2xl">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[#8b0000] border border-theme-accent flex items-center justify-center mx-auto mb-4">

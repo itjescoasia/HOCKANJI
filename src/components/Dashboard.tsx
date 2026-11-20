@@ -1029,7 +1029,7 @@ export default function Dashboard({
           {isDue ? (
             <button
               onClick={onStartReview}
-              className="relative group w-full sm:w-auto min-w-[280px] sm:min-w-[340px] px-8 sm:px-12 py-4 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-sm sm:text-base tracking-wide rounded-2xl shadow-xl shadow-theme-accent/20 hover:shadow-2xl hover:shadow-theme-accent/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-between sm:justify-center gap-4 cursor-pointer overflow-hidden border border-theme-strong/30"
+              className="relative group w-full sm:w-auto min-w-0 sm:min-w-[340px] px-5 sm:px-12 py-4 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted font-bold text-sm sm:text-base tracking-wide rounded-2xl shadow-xl shadow-theme-accent/20 hover:shadow-2xl hover:shadow-theme-accent/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-between sm:justify-center gap-3 sm:gap-4 cursor-pointer overflow-hidden border border-theme-strong/30"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-black/15 flex items-center justify-center group-hover:scale-110 transition-transform">

@@ -4074,7 +4074,7 @@ function IntensiveExampleAudio({
                 console.warn(`[Audio] Audio failed to load for example ${example.id}:`, audioUrl, e);
                 setAudioLoadError(true);
               }}
-              className={`h-9 w-full sm:w-auto min-w-[280px] sm:min-w-[340px] max-w-[440px] rounded shadow-2xs ${
+              className={`h-9 w-full sm:w-auto min-w-0 sm:min-w-[320px] max-w-full sm:max-w-[440px] rounded shadow-2xs ${
                 audioLoadError ? 'opacity-40 grayscale' : ''
               }`} 
             />
