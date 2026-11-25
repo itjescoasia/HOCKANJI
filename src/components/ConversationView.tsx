@@ -1,4 +1,5 @@
 import { playTTS, generateAndUploadTTS , playAudioUrl} from '../utils/playTTS';
+import { notify } from '../utils/feedback';
 import localforage from 'localforage';
 import { auth, storage, db } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -807,12 +808,15 @@ function ConversationDetail({
     saveAs(blob, `${conversation.title}_${dateStr}.docx`);
   };
 
+  const [copiedDialogueId, setCopiedDialogueId] = useState<string | null>(null);
+
   const handleCopyAllJapanese = () => {
     const textToCopy = conversation.dialogues
       .map((d, index) => `${index + 1}. ${d.japanese}`)
       .join("\n");
     navigator.clipboard.writeText(textToCopy).then(() => {
       setIsCopied(true);
+      notify.success("Đã sao chép toàn bộ câu tiếng Nhật!");
       setTimeout(() => setIsCopied(false), 2000);
     });
   };
@@ -1276,18 +1280,20 @@ function ConversationDetail({
                                       <Volume2 className="w-4 h-4" />
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         navigator.clipboard.writeText(dialogue.japanese);
-                                        const btn = e.currentTarget;
-                                        const originalHTML = btn.innerHTML;
-                                        btn.innerHTML = '<svg class="w-4 h-4 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                                        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                                        setCopiedDialogueId(dialogue.id);
+                                        notify.success('Đã sao chép câu hội thoại!');
+                                        setTimeout(() => {
+                                          setCopiedDialogueId(prev => prev === dialogue.id ? null : prev);
+                                        }, 2000);
                                       }}
                                       className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 shrink-0 mt-0.5 cursor-pointer"
                                       title="Copy câu hội thoại"
                                     >
-                                      <Copy className="w-4 h-4" />
+                                      {copiedDialogueId === dialogue.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                                     </button>
                                   </div>
                                   {dialogue.hiragana && (
@@ -2067,10 +2073,10 @@ function SentenceAudio({ conversationId, dialogue, onUpdateDialogue }: { convers
         setAudioUrl(url);
         playAudioUrl(url);
       } else {
-        alert("Có lỗi khi tạo âm thanh.");
+        notify.error("Có lỗi khi tạo âm thanh.");
       }
     } catch(err) {
-      alert("Lỗi khi gọi AI tạo âm thanh");
+      notify.error("Lỗi khi gọi AI tạo âm thanh");
     } finally {
       setIsGenerating(false);
     }

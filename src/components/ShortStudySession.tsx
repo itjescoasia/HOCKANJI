@@ -1,5 +1,6 @@
 import { playTTS , playAudioUrl} from '../utils/playTTS';
-import React, { useState } from 'react';
+import { notify } from '../utils/feedback';
+import React, { useState, useEffect } from 'react';
 import { KanjiCard } from '../types';
 import { ArrowLeft, Volume2, RotateCcw, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -23,8 +24,8 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
   const [copied, setCopied] = useState(false);
   const isMeaningShown = Math.abs(flipDegree / 180) % 2 === 1;
 
-  const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
-    e.stopPropagation();
+  const playAudio = (e: React.MouseEvent | null, text: string, audioUrl?: string | null) => {
+    if (e) e.stopPropagation();
     if (audioUrl) {
       playAudioUrl(audioUrl, text);
       return;
@@ -32,12 +33,13 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
     if (text) playTTS(text);
   };
 
-  const handleCopyWord = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCopyWord = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const targetText = currentWord.kanji || currentWord.reading || '';
     if (targetText) {
       navigator.clipboard.writeText(targetText).then(() => {
         setCopied(true);
+        notify.success(`Đã sao chép: ${targetText}`);
         setTimeout(() => setCopied(false), 2000);
       });
     }
@@ -48,6 +50,34 @@ function ShortStudyCard({ currentWord, onForgot, onRemember }: ShortStudyCardPro
       setFlipDegree(prev => prev + 180);
     }
   };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) return;
+
+      if (!isMeaningShown && (e.key === ' ' || e.key === 'Enter')) {
+        e.preventDefault();
+        handleFlip();
+      } else if (isMeaningShown && (e.key === '1' || e.key === 'ArrowLeft')) {
+        e.preventDefault();
+        onForgot();
+      } else if (isMeaningShown && (e.key === '2' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        onRemember();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        playAudio(null, currentWord.kanji || currentWord.reading, currentWord.audioUrl);
+      } else if (e.key === 'c' || e.key === 'C') {
+        if (!e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          handleCopyWord();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMeaningShown, currentWord, onForgot, onRemember]);
 
   return (
     <motion.div
@@ -230,6 +260,16 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
   const [queue, setQueue] = useState<KanjiCard[]>(initialQueue);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onExit();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onExit]);
+
   React.useEffect(() => {
     const handleTTSGenerated = (e: any) => {
       const { text, audioUrl } = e.detail;
@@ -316,8 +356,10 @@ export default function ShortStudySession({ queue: initialQueue, onExit, onUpdat
     <div className="max-w-3xl mx-auto py-4 sm:py-8 px-2 sm:px-4 w-full flex flex-col items-center justify-center min-h-[60vh]">
       <div className="w-full flex justify-between items-center mb-8">
         <button 
+          type="button"
           onClick={onExit}
-          className="flex items-center gap-2 text-theme-primary/60 hover:text-theme-accent transition-colors"
+          className="flex items-center gap-2 min-h-[40px] px-2 text-theme-primary/60 hover:text-theme-accent transition-colors cursor-pointer"
+          title="Thoát (Esc)"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm font-medium tracking-wider uppercase">Thoát</span>

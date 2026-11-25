@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
+import { notify } from '../utils/feedback';
 import { calculateNextReview } from '../lib/sm2';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, writeBatch } from 'firebase/firestore';
@@ -128,9 +129,9 @@ export function useVocabDeck() {
       } catch (err: any) {
         console.error("Error adding card:", err);
         if (err.message && err.message.includes("exceeds the limit")) {
-           alert("Lỗi lưu trữ: File âm thanh quá lớn vượt quá giới hạn dữ liệu (1MB) của Firestore. Vui lòng cắt nhỏ hoặc nén file mp3 lại.");
+           notify.error("Lỗi lưu trữ: File âm thanh quá lớn vượt quá giới hạn dữ liệu (1MB) của Firestore. Vui lòng cắt nhỏ hoặc nén file mp3 lại.");
         } else {
-           alert("Lỗi lưu trữ: Không thể thêm từ vựng này. Hãy kiểm tra lại dung lượng.");
+           notify.error("Lỗi lưu trữ: Không thể thêm từ vựng này. Hãy kiểm tra lại dung lượng.");
         }
       }
     } else {
@@ -322,9 +323,9 @@ export function useVocabDeck() {
       } catch (err: any) {
         console.error("Error updating card:", err);
         if (err.message && err.message.includes("exceeds the limit")) {
-           alert("Lỗi lưu trữ: File âm thanh quá lớn vượt quá giới hạn dữ liệu (1MB) của Firestore. Vui lòng cắt nhỏ hoặc nén file mp3 lại.");
+           notify.error("Lỗi lưu trữ: File âm thanh quá lớn vượt quá giới hạn dữ liệu (1MB) của Firestore. Vui lòng cắt nhỏ hoặc nén file mp3 lại.");
         } else {
-           alert("Lỗi lưu trữ: Không thể lưu từ vựng này. Hãy kiểm tra lại kết nối mạng hoặc dung lượng.");
+           notify.error("Lỗi lưu trữ: Không thể lưu từ vựng này. Hãy kiểm tra lại kết nối mạng hoặc dung lượng.");
         }
       }
     } else {

@@ -1,5 +1,6 @@
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, playAudioUrl } from '../utils/playTTS';
+import { notify } from '../utils/feedback';
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -62,6 +63,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   const [audioOnlyFilter, setAudioOnlyFilter] = usePersistentState('app_sentencereview_audio_only', true);
   const [showScienceModal, setShowScienceModal] = useState(false);
   const [requeuedNotice, setRequeuedNotice] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<'sentence-front' | 'sentence-back' | 'word' | null>(null);
 
   const currentIndex = isRandom
     ? (examples.length > 0 ? Math.min(randomCurrentIndex, examples.length - 1) : 0)
@@ -238,7 +240,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     
     // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của Google nếu chưa có file mp3 hoàn chỉnh
     if (e) {
-      alert('Câu ví dụ này chưa có file âm thanh MP3 hoàn chỉnh. Bạn hãy bấm vào nút "Sửa câu" để tải lên file MP3.');
+      notify.warning('Câu ví dụ này chưa có file âm thanh MP3 hoàn chỉnh. Bạn hãy bấm vào nút "Sửa câu" để tải lên file MP3.');
     }
   };
   
@@ -280,7 +282,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
         }));
       }
     } catch (err: any) {
-      alert('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi mạng'));
+      notify.error('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi mạng'));
     } finally {
       setIsGeneratingFurigana(false);
     }
@@ -778,7 +780,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       }
     } catch (err: any) {
       console.error("Audio upload error:", err);
-      alert("Lỗi khi tải file âm thanh lên: " + (err.message || "Vui lòng thử lại"));
+      notify.error("Lỗi khi tải file âm thanh lên: " + (err.message || "Vui lòng thử lại"));
     } finally {
       setIsUploadingAudio(false);
       if (e.target) e.target.value = '';
@@ -825,7 +827,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       }
       playAudioUrl(finalAudioUrl);
     } catch (err: any) {
-      alert("Lỗi khi tải file âm thanh lên: " + (err.message || "Vui lòng thử lại"));
+      notify.error("Lỗi khi tải file âm thanh lên: " + (err.message || "Vui lòng thử lại"));
     } finally {
       if (e.target) e.target.value = '';
     }
@@ -930,7 +932,23 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   // Keyboard navigation & shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isEditing) return;
+      if (e.key === 'Escape') {
+        if (isEditing) {
+          e.preventDefault();
+          handleCancelEdit();
+          return;
+        }
+        if (showScienceModal) {
+          e.preventDefault();
+          setShowScienceModal(false);
+          return;
+        }
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (isEditing || showScienceModal) return;
 
       const activeEl = document.activeElement;
       const isInputActive = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
@@ -980,7 +998,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAnswer, isEditing, currentIndex, examples, isRandom]);
+  }, [showAnswer, isEditing, showScienceModal, currentIndex, examples, isRandom, onClose]);
 
   if (isSessionFinished) {
     const accuracy = sessionStats.total > 0 ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0;
@@ -1346,18 +1364,18 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   
                   <button
                     id="btn-copy-sentence"
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigator.clipboard.writeText(currentExample.sentence);
-                      const btn = e.currentTarget;
-                      const originalHTML = btn.innerHTML;
-                      btn.innerHTML = '<svg class="w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                      setCopiedKey('sentence-front');
+                      notify.success('Đã sao chép câu tiếng Nhật!');
+                      setTimeout(() => setCopiedKey(prev => prev === 'sentence-front' ? null : prev), 2000);
                     }}
-                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors"
+                    className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-accent/10 rounded-full transition-colors cursor-pointer"
                     title="Copy câu tiếng Nhật"
                   >
-                    <Copy className="w-5 h-5" />
+                    {copiedKey === 'sentence-front' ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
 
@@ -1582,19 +1600,28 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                       </label>
                     )}
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigator.clipboard.writeText(currentExample.sentence);
-                        const btn = e.currentTarget;
-                        const originalHTML = btn.innerHTML;
-                        btn.innerHTML = '<span class="text-xs text-green-500 font-semibold">Đã copy!</span>';
-                        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                        setCopiedKey('sentence-back');
+                        notify.success('Đã sao chép câu tiếng Nhật!');
+                        setTimeout(() => setCopiedKey(prev => prev === 'sentence-back' ? null : prev), 2000);
                       }}
                       className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors flex items-center gap-1 text-xs cursor-pointer"
                       title="Copy câu tiếng Nhật"
                     >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span className="text-[10px] uppercase tracking-wider">Copy</span>
+                      {copiedKey === 'sentence-back' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="text-[10px] uppercase tracking-wider text-emerald-500 font-semibold">Đã copy</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span className="text-[10px] uppercase tracking-wider">Copy</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -1661,16 +1688,24 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(currentExample.word);
-                  const btn = e.currentTarget;
-                  const originalText = btn.innerHTML;
-                  btn.innerHTML = '<span class="text-emerald-500 font-bold">Đã chép!</span>';
-                  setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+                  setCopiedKey('word');
+                  notify.success(`Đã sao chép từ: ${currentExample.word}`);
+                  setTimeout(() => setCopiedKey(prev => prev === 'word' ? null : prev), 1500);
                 }}
                 className="px-2 py-0.5 rounded text-[10px] font-semibold border border-theme-subtle hover:border-theme-accent hover:text-theme-accent bg-theme-base hover:bg-theme-hover transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                 title="Sao chép từ vựng gốc này"
               >
-                <Copy className="w-3 h-3" />
-                <span>Chép từ</span>
+                {copiedKey === 'word' ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-500" />
+                    <span className="text-emerald-500 font-bold">Đã chép!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Chép từ</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

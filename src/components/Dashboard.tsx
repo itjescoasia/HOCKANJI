@@ -4,6 +4,7 @@ import { KanjiCard, IntensiveWord, IntensiveExample, FuriganaMode } from "../typ
 import { UserStats } from "../hooks/useStudyStats";
 import { getLocalDateString, getVietnamDate } from "../lib/dateUtils";
 import { renderExampleHighlight, RelatedHighlight, HighlightProvider, HighlightVietnamese } from "../utils/highlight";
+import { notify } from "../utils/feedback";
 import { FuriganaSentence, FuriganaToggle } from "./FuriganaSentence";
 import { usePersistentState } from "../hooks/usePersistentState";
 import {
@@ -147,7 +148,7 @@ export default function Dashboard({
       return;
     }
     // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của google nếu chưa có file mp3 hoàn chỉnh
-    alert('Mục này chưa có file MP3 phát âm hoàn chỉnh. Bạn hãy tải lên file MP3 chuẩn.');
+    notify.warning('Mục này chưa có file MP3 phát âm hoàn chỉnh. Bạn hãy tải lên file MP3 chuẩn.');
   };
 
   const isDue = dueCards.length > 0;

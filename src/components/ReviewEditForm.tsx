@@ -4,6 +4,7 @@ import { Plus, X, Check } from 'lucide-react';
 import { getApiEndpoint } from '../utils/playTTS';
 import { safeFetchJson } from '../utils/safeFetch';
 import { ensureCompleteForms } from '../utils/verbConjugation';
+import { notify } from '../utils/feedback';
 
 interface ReviewEditFormProps {
   editForm: Partial<KanjiCard>;
@@ -17,7 +18,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
 
   const autoFillAI = async () => {
     if (!editForm.kanji?.trim()) {
-      alert('Vui lòng nhập từ tiếng Nhật vào ô Kanji (Từ vựng) trước khi dùng AI tự động điền.');
+      notify.warning('Vui lòng nhập từ tiếng Nhật vào ô Kanji (Từ vựng) trước khi dùng AI tự động điền.');
       return;
     }
     
@@ -87,7 +88,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
       });
     } catch (error: any) {
       console.error(error);
-      alert(error.message || 'Có lỗi xảy ra khi gọi AI.');
+      notify.error(error.message || 'Có lỗi xảy ra khi gọi AI.');
     } finally {
       setIsGeneratingAI(false);
     }

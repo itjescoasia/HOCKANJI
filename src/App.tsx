@@ -24,6 +24,8 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { useConversations } from './hooks/useConversations';
 import { UserProfile } from './types';
+import FeedbackHost from './components/FeedbackHost';
+import { notify } from './utils/feedback';
 
 export type AppTheme = 'matcha' | 'washi' | 'charcoal' | 'ocean' | 'sepia' | 'dark' | 'light';
 
@@ -250,6 +252,22 @@ export default function App() {
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
   
   const [isAddModalOpen, setIsAddModalOpen] = usePersistentState('app_isAddModalOpen', false);
+
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (isThemeMenuOpen) {
+        setIsThemeMenuOpen(false);
+      } else if (isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      } else if (isAddModalOpen) {
+        setIsAddModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscKey);
+    return () => window.removeEventListener('keydown', handleEscKey);
+  }, [isThemeMenuOpen, isMobileMenuOpen, isAddModalOpen]);
+
   const [view, setView] = usePersistentState<any>('app_currentView_v2', 'dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = usePersistentState('app_isFreeStudyMode', false);
   const [isDifficultReviewMode, setIsDifficultReviewMode] = usePersistentState('app_isDifficultReviewMode', false);
@@ -876,10 +894,19 @@ export default function App() {
         
         {/* Modals */}
         {isAddModalOpen && (
-          <div id="add-vocab-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="relative bg-theme-panel w-full max-w-2xl my-auto rounded-xl shadow-2xl border border-theme-subtle">
+          <div
+            id="add-vocab-modal-overlay"
+            onClick={() => setIsAddModalOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe bg-black/60 backdrop-blur-sm overflow-y-auto"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-theme-panel w-full max-w-2xl my-auto rounded-xl shadow-2xl border border-theme-subtle"
+            >
               <button
                 id="btn-close-add-modal"
+                type="button"
+                aria-label="Đóng"
                 onClick={() => setIsAddModalOpen(false)}
                 className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors cursor-pointer"
               >
@@ -895,7 +922,7 @@ export default function App() {
                   }}
                   onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms, audioUrl, hasAudio) => {
                     await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || [], audioUrl, hasAudio);
-                    alert('Vừa thêm từ vựng mới thành công');
+                    notify.success('Vừa thêm từ vựng mới thành công!');
                     setIsAddModalOpen(false);
                   }} 
                 />
@@ -1063,6 +1090,7 @@ export default function App() {
         isAdmin={isAdmin}
         onProfileUpdated={(updated) => setUserProfile(updated)}
       />
+      <FeedbackHost />
     </div>
   );
 }

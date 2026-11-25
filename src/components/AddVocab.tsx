@@ -6,6 +6,7 @@ import { toRomaji } from 'wanakana';
 import { getApiEndpoint } from '../utils/playTTS';
 import { safeFetchJson } from '../utils/safeFetch';
 import { ensureCompleteForms } from '../utils/verbConjugation';
+import { notify } from '../utils/feedback';
 
 interface AddVocabProps {
   deck?: KanjiCard[];
@@ -39,7 +40,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   
   const autoFillAI = async () => {
     if (!kanji.trim()) {
-      alert('Vui lòng nhập từ tiếng Nhật vào ô Kanji (Từ vựng) trước khi dùng AI tự động điền.');
+      notify.warning('Vui lòng nhập từ tiếng Nhật vào ô Kanji (Từ vựng) trước khi dùng AI tự động điền.');
       return;
     }
     
@@ -111,7 +112,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
       setForms(completeForms);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Có lỗi xảy ra khi dùng AI.');
+      notify.error(err.message || 'Có lỗi xảy ra khi dùng AI.');
     } finally {
       setIsGeneratingAI(false);
     }
@@ -185,12 +186,12 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!kanji.trim() || !meaning.trim()) {
-      alert("Vui lòng điền đầy đủ Kanji (Từ vựng) và Ý nghĩa!");
+      notify.warning("Vui lòng điền đầy đủ Kanji (Từ vựng) và Ý nghĩa!");
       return;
     }
     
     if (deck.some(card => card.kanji.trim().toLowerCase() === kanji.trim().toLowerCase())) {
-      alert("Từ này đã tồn tại trong Kho từ vựng! Không thể thêm từ trùng lặp.");
+      notify.warning("Từ này đã tồn tại trong Kho từ vựng! Không thể thêm từ trùng lặp.");
       return;
     }
     
@@ -506,37 +507,38 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
             </button>
           </div>
           
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             {examples.map((ex, index) => (
-              <div key={index} className="relative p-4 border border-theme-subtle bg-theme-base-alt rounded-sm">
+              <div key={index} className="relative p-4 pt-10 sm:pt-4 border border-theme-subtle bg-theme-base-alt rounded-lg">
                 <button
                   type="button"
                   onClick={() => removeExampleField(index)}
-                  className="absolute -top-3 -right-3 p-1.5 rounded-full bg-theme-panel border border-theme-subtle text-theme-primary/50 hover:text-red-500 transition-colors"
+                  className="absolute top-2 right-2 p-2 rounded-full bg-theme-panel border border-theme-subtle text-theme-primary/50 hover:text-red-500 transition-colors cursor-pointer"
+                  title="Xóa ví dụ"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 sm:pr-8">
                   <input 
                     type="text" 
                     value={ex.sentence}
                     onChange={e => updateExample(index, 'sentence', e.target.value)}
-                    className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center"
+                    className="w-full px-4 py-2.5 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center rounded-md"
                     placeholder="Câu ví dụ (Tiếng Nhật)"
                   />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input 
                       type="text" 
                       value={ex.reading}
                       onChange={e => updateExample(index, 'reading', e.target.value)}
-                      className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-serif italic text-center"
+                      className="w-full px-4 py-2.5 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-serif italic text-center rounded-md"
                       placeholder="Hiragana"
                     />
                     <input 
                       type="text" 
                       value={ex.romaji}
                       onChange={e => updateExample(index, 'romaji', e.target.value)}
-                      className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-serif italic text-center"
+                      className="w-full px-4 py-2.5 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-sm font-serif italic text-center rounded-md"
                       placeholder="Romaji"
                     />
                   </div>
@@ -544,7 +546,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
                     type="text" 
                     value={ex.translation}
                     onChange={e => updateExample(index, 'translation', e.target.value)}
-                    className="w-full px-4 py-2 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center"
+                    className="w-full px-4 py-2.5 bg-theme-panel border border-theme-subtle focus:outline-none focus:border-theme-accent transition-colors text-theme-primary font-light text-center rounded-md"
                     placeholder="Dịch nghĩa (Tiếng Việt)"
                   />
                 </div>
@@ -555,7 +557,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
         <button 
           type="submit"
           disabled={!kanji.trim() || !meaning.trim()}
-          className="mt-6 bg-theme-hover border border-theme-accent disabled:border-theme-subtle disabled:text-theme-inverted hover:disabled:bg-theme-hover hover:disabled:text-theme-inverted text-theme-accent hover:bg-theme-accent hover:text-theme-inverted py-4 uppercase tracking-[0.2em] text-[11px] transition-all font-medium"
+          className="mt-4 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted disabled:bg-theme-base-alt disabled:text-theme-primary/40 disabled:border-theme-subtle border border-theme-accent py-4 rounded-xl uppercase tracking-[0.2em] text-xs font-bold transition-all cursor-pointer disabled:cursor-not-allowed"
         >
           Thêm vào danh sách
         </button>

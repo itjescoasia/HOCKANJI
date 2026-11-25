@@ -1,6 +1,7 @@
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../utils/playTTS';
 import { safeFetchJson } from '../utils/safeFetch';
+import { notify, confirmAction } from '../utils/feedback';
 import {
   cleanMarkdownForDisplay,
   cleanTextForSearch,
@@ -226,10 +227,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         onComplete(url);
         playAudioUrl(url);
       } else {
-        alert("Có lỗi khi tạo âm thanh. Vui lòng kiểm tra API Key.");
+        notify.error("Có lỗi khi tạo âm thanh. Vui lòng kiểm tra API Key.");
       }
     } catch(err) {
-      alert("Lỗi khi gọi AI tạo âm thanh");
+      notify.error("Lỗi khi gọi AI tạo âm thanh");
     }
     setGeneratingId(null);
   };
@@ -260,7 +261,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
        }
        
        if (targets.length === 0) {
-          alert("Tất cả các thể và câu ví dụ đều đã có MP3!");
+          notify.info("Tất cả các thể và câu ví dụ đều đã có MP3!");
           setIsBulkGenerating(false);
           return;
        }
@@ -324,13 +325,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
              setEditForm(prev => ({ ...prev, ...updates }));
           }
           
-          alert(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
+          notify.success(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
        } else {
-          alert(`Không thể tạo MP3 cho ${targets.length} mục đã chọn. Vui lòng kiểm tra lại kết nối mạng hoặc API.`);
+          notify.error(`Không thể tạo MP3 cho ${targets.length} mục đã chọn. Vui lòng kiểm tra lại kết nối mạng hoặc API.`);
        }
     } catch (e: any) {
        console.error("Bulk generate error:", e);
-       alert(`Có lỗi xảy ra khi tạo MP3 hàng loạt: ${e?.message || e}`);
+       notify.error(`Có lỗi xảy ra khi tạo MP3 hàng loạt: ${e?.message || e}`);
     } finally {
        setIsBulkGenerating(false);
        setTimeout(() => setBulkProgress(null), 1200);
@@ -365,7 +366,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
        }
        
        if (targets.length === 0) {
-          alert("Tất cả các thể và câu ví dụ đều đã có MP3!");
+          notify.info("Tất cả các thể và câu ví dụ đều đã có MP3!");
           setIsBulkGenerating(false);
           return;
        }
@@ -436,13 +437,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
              setViewingCard(prev => prev ? { ...prev, ...updatesToSave } : prev);
           }
           
-          alert(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
+          notify.success(`Đã tự động tạo và lưu thành công ${generatedCount}/${targets.length} file MP3 vào Database!`);
        } else {
-          alert(`Không thể tạo MP3 cho ${targets.length} mục đã chọn. Vui lòng kiểm tra lại kết nối mạng hoặc API.`);
+          notify.error(`Không thể tạo MP3 cho ${targets.length} mục đã chọn. Vui lòng kiểm tra lại kết nối mạng hoặc API.`);
        }
     } catch (e: any) {
        console.error("Bulk generate error:", e);
-       alert(`Có lỗi xảy ra khi tạo MP3 hàng loạt: ${e?.message || e}`);
+       notify.error(`Có lỗi xảy ra khi tạo MP3 hàng loạt: ${e?.message || e}`);
     } finally {
        setIsBulkGenerating(false);
        setTimeout(() => setBulkProgress(null), 1200);
@@ -462,7 +463,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         await playAudioUrl(audioUrl, text);
       } else {
         // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của Google nếu chưa có file mp3 hoàn chỉnh
-        alert('Mục này chưa có file MP3 phát âm hoàn chỉnh. Bạn hãy tải lên file MP3 chuẩn.');
+        notify.warning('Mục này chưa có file MP3 phát âm hoàn chỉnh. Bạn hãy tải lên file MP3 chuẩn.');
       }
     } catch (err) {
       console.warn('Audio playback issue:', err);
@@ -528,7 +529,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       if (onUpdate) await onUpdate(viewingCard.id, updates);
       setViewingCard(updatedCard);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
       setUploadingMainAudio(false);
       e.target.value = '';
@@ -549,7 +550,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
       }
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
       setUploadingExIdx(null);
       e.target.value = '';
@@ -566,7 +567,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       if (onUpdate) await onUpdate(viewingCard.id, updates);
       setViewingCard(prev => prev ? ({ ...prev, ...updates }) : null);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
       setUploadingExIdx(null);
       e.target.value = '';
@@ -596,7 +597,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       if (onUpdate) await onUpdate(viewingCard.id, updatedCard);
       setViewingCard(updatedCard);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
       setUploadingFormIdx(null);
       e.target.value = '';
@@ -623,7 +624,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         setViewingCard(updatedCard);
       }
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi xóa file âm thanh');
+      notify.error(err.message || 'Lỗi khi xóa file âm thanh');
     }
   };
 
@@ -633,7 +634,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const autoFillAI = async () => {
     if (!editForm.kanji?.trim()) {
-      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi dùng AI tự động điền.');
+      notify.warning('Vui lòng nhập từ (Kanji/Hiragana) trước khi dùng AI tự động điền.');
       return;
     }
     
@@ -703,7 +704,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       });
     } catch (error: any) {
       console.error(error);
-      alert(error.message || 'Có lỗi xảy ra khi gọi AI.');
+      notify.error(error.message || 'Có lỗi xảy ra khi gọi AI.');
     } finally {
       setIsGeneratingAI(false);
     }
@@ -711,7 +712,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const fetchOjadData = async () => {
     if (!editForm.kanji) {
-      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
+      notify.warning('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
       return;
     }
     try {
@@ -762,11 +763,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
          const newWordType = editForm.wordType || 'Động từ'; // Fallback to verb if not set
          setEditForm({...editForm, forms: updatedForms, wordType: newWordType});
       } else {
-         alert('Không tìm thấy dữ liệu OJAD cho từ này.');
+         notify.warning('Không tìm thấy dữ liệu OJAD cho từ này.');
       }
     } catch (err) {
       console.error(err);
-      alert('Lỗi kết nối hoặc lấy dữ liệu OJAD.');
+      notify.error('Lỗi kết nối hoặc lấy dữ liệu OJAD.');
     } finally {
       setIsFetchingOjad(false);
     }
@@ -867,9 +868,27 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     }
   }, [viewCardReq, deck]);
 
+  React.useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (editingId) {
+        setEditingId(null);
+        setEditForm({});
+      } else if (viewingCard) {
+        setViewingCard(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [editingId, viewingCard]);
+
   const saveEdit = () => {
-    if (editingId && editForm.kanji && editForm.meaning && onUpdate) {
-      
+    if (!editingId) return;
+    if (!String(editForm.kanji || '').trim() || !String(editForm.meaning || '').trim()) {
+      notify.warning('Vui lòng nhập đầy đủ Từ vựng (Kanji) và Ý nghĩa!');
+      return;
+    }
+    if (onUpdate) {
       const validExamples = editForm.examples?.filter(ex => String(ex.sentence || "").trim() || String(ex.translation || "").trim()).map(ex => ({
         id: ex.id || crypto.randomUUID(),
         sentence: String(ex.sentence || "").trim(),
@@ -895,6 +914,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         forms: validForms,
         wordType: String(editForm.wordType || '').trim() || '', audioUrl: editForm.audioUrl || null, hasAudio: !!editForm.audioUrl });
       setEditingId(null);
+      notify.success('Đã lưu thay đổi từ vựng!');
     }
   };
 
@@ -1015,13 +1035,13 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
         if (importedCards.length > 0) {
           const result = await onImport(importedCards);
-          alert(`Đã thêm ${result.added} từ vựng mới và cập nhật thông tin cho ${result.updated} từ đã có.`);
+          notify.success(`Đã thêm ${result.added} từ vựng mới và cập nhật thông tin cho ${result.updated} từ đã có.`);
         } else {
-          alert('Không tìm thấy từ vựng hợp lệ trong file.');
+          notify.warning('Không tìm thấy từ vựng hợp lệ trong file.');
         }
       } catch (err) {
         console.error("Lỗi khi import file Excel:", err);
-        alert('Có lỗi xảy ra khi đọc file Excel.');
+        notify.error('Có lỗi xảy ra khi đọc file Excel.');
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) {
@@ -1294,7 +1314,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => onRemove && onRemove(card.id)}
+                            type="button"
+                            onClick={async () => {
+                              const ok = await confirmAction({
+                                title: 'Xóa thẻ từ vựng?',
+                                message: `Bạn có chắc chắn muốn xóa từ "${card.kanji || card.reading}" khỏi kho từ vựng không?`,
+                                confirmText: 'Xóa thẻ',
+                                danger: true,
+                              });
+                              if (ok && onRemove) {
+                                onRemove(card.id);
+                                notify.success('Đã xóa thẻ từ vựng.');
+                              }
+                            }}
                             className="p-2 text-theme-primary/40 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                             title="Xóa"
                           >
@@ -1960,9 +1992,19 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                           <Edit2 className="w-4 h-4" />
                         </button>}
                         {isAdmin && <button
-                        onClick={() => {
-                          if (window.confirm("Bạn có chắc chắn muốn xóa thẻ này?")) onRemove(card.id); }}
-                          className="p-2 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all rounded-xl inline-flex items-center justify-center"
+                        onClick={async () => {
+                          const ok = await confirmAction({
+                            title: 'Xóa thẻ từ vựng?',
+                            message: `Bạn có chắc chắn muốn xóa từ "${card.kanji || card.reading}" khỏi kho từ vựng không?`,
+                            confirmText: 'Xóa thẻ',
+                            danger: true,
+                          });
+                          if (ok) {
+                            onRemove(card.id);
+                            notify.success('Đã xóa thẻ từ vựng.');
+                          }
+                        }}
+                          className="p-2 hover:bg-red-500/10 text-theme-primary/40 hover:text-red-500 transition-all rounded-xl inline-flex items-center justify-center cursor-pointer"
                           title="Xóa thẻ"
                         >
                           <Trash2 className="w-4 h-4" />

@@ -1,6 +1,7 @@
 import { playTTS , playAudioUrl, getApiEndpoint } from '../utils/playTTS';
 import { safeFetchJson } from './safeFetch';
 import { ensureCompleteForms } from './verbConjugation';
+import { notify } from './feedback';
 import React, { Fragment, useState, useRef, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 export const HighlightContext = React.createContext<{
@@ -296,7 +297,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
       await persistCardUpdate(updated);
       showToast('Đã tải lên MP3 thành công cho từ vựng lớn & đồng bộ Thể từ điển (ngắn)!');
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
       setUploadingMainAudio(false);
       e.target.value = '';
@@ -334,7 +335,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
           : 'Đã tải lên MP3 thành công cho thể chia!'
       );
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file MP3 cho thể chia');
+      notify.error(err.message || 'Lỗi khi tải file MP3 cho thể chia');
     } finally {
       setUploadingFormKey(null);
       e.target.value = '';
@@ -372,7 +373,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
       await persistCardUpdate(updated);
       showToast('Đã tải lên MP3 thành công cho câu ví dụ!');
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file MP3 cho câu ví dụ');
+      notify.error(err.message || 'Lỗi khi tải file MP3 cho câu ví dụ');
     } finally {
       setUploadingExIdx(null);
       e.target.value = '';
@@ -383,7 +384,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
     e.stopPropagation();
     if (!audioUrl) {
       // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của google nếu chưa có file mp3 hoàn chỉnh
-      alert('Mục này chưa có file MP3 phát âm hoàn chỉnh. Hãy tải file MP3 lên bằng nút Tải MP3 bên cạnh.');
+      notify.warning('Mục này chưa có file MP3 phát âm hoàn chỉnh. Hãy tải file MP3 lên bằng nút Tải MP3 bên cạnh.');
       return;
     }
     setIsPlayingAudio(true);
@@ -440,7 +441,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
     const rawKanji = (editForm.kanji || '').trim();
     const rawReading = (editForm.reading || '').trim();
     if (!rawKanji && !rawReading) {
-      alert('Vui lòng nhập Kanji hoặc Cách đọc cho từ vựng!');
+      notify.warning('Vui lòng nhập Kanji hoặc Cách đọc cho từ vựng!');
       return;
     }
 
@@ -488,14 +489,14 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
       setIsEditing(false);
       showToast('Đã cập nhật nội dung từ vựng thành công!');
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi lưu từ vựng');
+      notify.error(err.message || 'Lỗi khi lưu từ vựng');
     }
   };
 
   const autoFillAI = async () => {
     const targetWord = (editForm.kanji || editForm.reading || '').trim();
     if (!targetWord) {
-      alert('Vui lòng nhập từ (Kanji/Hiragana) trước khi dùng AI tự động điền.');
+      notify.warning('Vui lòng nhập từ (Kanji/Hiragana) trước khi dùng AI tự động điền.');
       return;
     }
     
@@ -559,7 +560,7 @@ const VocabularyDetailWindow: React.FC<VocabularyDetailWindowProps> = ({
       showToast('Đã tải thông tin từ AI thành công!');
     } catch (error: any) {
       console.error(error);
-      alert(error.message || 'Có lỗi xảy ra khi gọi AI.');
+      notify.error(error.message || 'Có lỗi xảy ra khi gọi AI.');
     } finally {
       setIsGeneratingAI(false);
     }

@@ -2,6 +2,7 @@ import { usePersistentState } from '../hooks/usePersistentState';
 import { playTTS, playAudioUrl, deleteCloudAudio } from '../utils/playTTS';
 import { recordAudioListen } from '../utils/activityTracker';
 import { resolveExampleAudioUrl, loadAudioContent, uploadResilientAudio } from '../utils/audioRegistry';
+import { notify, confirmAction } from '../utils/feedback';
 
 import localforage from 'localforage';
 import { auth, db } from '../lib/firebase';
@@ -382,15 +383,21 @@ function SortableWordItem({
         <GripVertical className="w-5 h-5" />
       </div>
       <button
-        onClick={(e) => {
+        type="button"
+        onClick={async (e) => {
           e.stopPropagation();
-          if (
-            window.confirm("Bạn có chắc chắn muốn xóa chuyên đề này?")
-          ) {
+          const confirmed = await confirmAction({
+            title: 'Xóa chuyên đề?',
+            message: `Bạn có chắc chắn muốn xóa chuyên đề "${word.word}" không?`,
+            confirmText: 'Xóa chuyên đề',
+            danger: true,
+          });
+          if (confirmed) {
             onRemoveWord(word.id);
+            notify.success('Đã xóa chuyên đề.');
           }
         }}
-        className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel z-20"
+        className="absolute top-2 right-2 p-2 text-theme-primary/20 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded hover:bg-theme-panel z-20 cursor-pointer"
         title="Xoá chuyên đề"
       >
         <Trash2 className="w-4 h-4" />
@@ -2157,6 +2164,7 @@ function StudyView({
 
   const [hiddenMeaningIds, setHiddenMeaningIds] = useState<string[]>([]);
   const [expandedNoteIds, setExpandedNoteIds] = useState<string[]>([]);
+  const [copiedExId, setCopiedExId] = useState<string | null>(null);
   const isAllHidden =
     word.examples.length > 0 &&
     hiddenMeaningIds.length === word.examples.length;
@@ -2212,7 +2220,7 @@ function StudyView({
         }
       }
     } catch (err: any) {
-      alert('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi'));
+      notify.error('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi'));
     } finally {
       setIsGeneratingFurigana(false);
     }
@@ -2231,7 +2239,7 @@ function StudyView({
         }));
       }
     } catch (err: any) {
-      alert('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi'));
+      notify.error('Không thể tạo Furigana bằng Gemini AI: ' + (err.message || 'Lỗi'));
     } finally {
       setIsGeneratingFurigana(false);
     }
@@ -2431,10 +2439,10 @@ function StudyView({
       }, 100);
 
       const actionText = mode === 'move' ? 'Chuyển' : 'Sao chép';
-      alert(`Đã ${actionText.toLowerCase()} âm thanh sang Câu #${targetIndex + 1} thành công!`);
+      notify.success(`Đã ${actionText.toLowerCase()} âm thanh sang Câu #${targetIndex + 1} thành công!`);
     } catch (err: any) {
       console.error('Error transferring audio:', err);
-      alert('Có lỗi xảy ra khi chuyển âm thanh: ' + (err?.message || 'Vui lòng thử lại.'));
+      notify.error('Có lỗi xảy ra khi chuyển âm thanh: ' + (err?.message || 'Vui lòng thử lại.'));
     }
   };
 
@@ -3289,18 +3297,18 @@ function StudyView({
                                 )}
                                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                                   <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigator.clipboard.writeText(ex.sentence);
-                                      const btn = e.currentTarget;
-                                      const originalHTML = btn.innerHTML;
-                                      btn.innerHTML = '<svg class="w-4 h-4 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                                      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+                                      setCopiedExId(ex.id);
+                                      notify.success('Đã sao chép câu ví dụ!');
+                                      setTimeout(() => setCopiedExId(prev => prev === ex.id ? null : prev), 2000);
                                     }}
-                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel"
+                                    className="p-2 text-theme-primary/40 hover:text-theme-accent rounded hover:bg-theme-panel cursor-pointer"
                                     title="Copy câu ví dụ"
                                   >
-                                    <Copy className="w-4 h-4" />
+                                    {copiedExId === ex.id ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                                   </button>
                                   <button
                                     onClick={(e) => {
@@ -3933,6 +3941,18 @@ function IntensiveExampleAudio({
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string>('');
 
+  useEffect(() => {
+    if (!showTransferModal && !showReceiveModal) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowTransferModal(false);
+        setShowReceiveModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showTransferModal, showReceiveModal]);
+
   const otherExamplesWithAudio = React.useMemo(() => {
     return allExamples.filter(e => e.id !== example.id && (e.audioUrl || e.hasAudio));
   }, [allExamples, example.id]);
@@ -4098,7 +4118,13 @@ function IntensiveExampleAudio({
                   type="button"
                   onClick={async (e) => {
                     e.stopPropagation();
-                    if (window.confirm(`Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} (và gỡ khỏi câu này)?`)) {
+                    const confirmed = await confirmAction({
+                      title: 'Chuyển hẳn âm thanh?',
+                      message: `Bạn có chắc muốn chuyển hẳn âm thanh sang Câu #${duplicateInfo?.otherIndex} và gỡ khỏi câu này?`,
+                      confirmText: 'Chuyển sang câu kia',
+                      danger: true,
+                    });
+                    if (confirmed) {
                       await onTransferAudio(example.id, counterpart.id, 'move');
                     }
                   }}

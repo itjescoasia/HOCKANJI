@@ -24,6 +24,7 @@ import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { UserProfile, UserRole } from '../types';
+import { confirmAction, notify } from '../utils/feedback';
 
 interface AccountSettingsModalProps {
   isOpen: boolean;
@@ -191,9 +192,12 @@ export default function AccountSettingsModal({
     
     // Safety check: warning if self-demoting
     if (targetUser.uid === currentUser?.uid && newRole === 'user') {
-      const confirmSelf = window.confirm(
-        'CẢNH BÁO: Bạn đang chuyển tài khoản của chính mình thành "User (Người dùng)". Bạn sẽ mất quyền quản trị viên ngay lập tức. Bạn có chắc chắn không?'
-      );
+      const confirmSelf = await confirmAction({
+        title: 'Hạ quyền tài khoản hiện tại?',
+        message: 'CẢNH BÁO: Bạn đang chuyển tài khoản của chính mình thành "User (Người dùng)". Bạn sẽ mất quyền quản trị viên ngay lập tức.',
+        confirmText: 'Xác nhận hạ quyền',
+        danger: true,
+      });
       if (!confirmSelf) return;
     }
 
@@ -227,11 +231,20 @@ export default function AccountSettingsModal({
       setTimeout(() => setAdminFeedback(null), 3000);
     } catch (err: any) {
       console.error('Lỗi khi cập nhật quyền:', err);
-      alert('Lỗi cập nhật quyền: ' + (err.message || 'Không có quyền truy cập.'));
+      notify.error('Lỗi cập nhật quyền: ' + (err.message || 'Không có quyền truy cập.'));
     } finally {
       setUpdatingUserId(null);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
 
   const filteredUsers = usersList.filter(u => {
     const q = searchQuery.toLowerCase().trim();
@@ -246,7 +259,11 @@ export default function AccountSettingsModal({
   });
 
   return (
-    <div id="account-settings-modal-overlay" className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
+    <div
+      id="account-settings-modal-overlay"
+      onClick={onClose}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto"
+    >
       <div 
         id="account-settings-modal"
         className="bg-theme-panel border border-theme-subtle w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90dvh] animate-in fade-in zoom-in-95 duration-150"

@@ -25,6 +25,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { playTTS } from '../utils/playTTS';
+import { confirmAction } from '../utils/feedback';
 
 interface N4QuizViewProps {
   onBackToDashboard?: () => void;
@@ -205,8 +206,15 @@ export const N4QuizView: React.FC<N4QuizViewProps> = ({
     setFilterMode('all');
   };
 
-  const handleResetCurrentQuiz = () => {
-    if (window.confirm('Bạn có chắc muốn làm lại bài trắc nghiệm này từ đầu không?')) {
+  const handleResetCurrentQuiz = async () => {
+    const confirmed = await confirmAction({
+      title: 'Làm lại bài trắc nghiệm?',
+      message: 'Tất cả đáp án hiện tại của bài này sẽ được đặt lại từ đầu.',
+      confirmText: 'Làm lại',
+      cancelText: 'Tiếp tục làm',
+      danger: true,
+    });
+    if (confirmed) {
       setUserAnswers({});
       setCurrentStepIdx(0);
     }

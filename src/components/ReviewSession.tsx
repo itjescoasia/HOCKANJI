@@ -2,6 +2,7 @@ import React, { useState, useEffect, Fragment, useRef } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { playAudioUrl } from '../utils/playTTS';
+import { notify } from '../utils/feedback';
 import { isDictionaryForm, getEffectiveCardAudioUrl, getEffectiveFormAudioUrl, syncDictionaryAudioOnCardUpload } from '../utils/stringUtils';
 import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
@@ -587,7 +588,7 @@ export default function ReviewSession({
       await new Promise(r => setTimeout(r, 400));
       playAudioUrl(url, currentCard.kanji || currentCard.reading);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh');
     } finally {
       setIsUploadingAudio(false);
       setUploadProgress(0);
@@ -613,7 +614,7 @@ export default function ReviewSession({
       await new Promise(r => setTimeout(r, 400));
       playAudioUrl(url);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tải file âm thanh câu ví dụ');
+      notify.error(err.message || 'Lỗi khi tải file âm thanh câu ví dụ');
     } finally {
       setUploadingExampleId(null);
       setExampleUploadProgress(0);
@@ -633,7 +634,7 @@ export default function ReviewSession({
 
     // Tuyệt đối không phát bằng bộ phát âm thanh mặc định của google nếu chưa có file mp3 hoàn chỉnh
     if (!silentIfNoAudio && e) {
-      alert('Từ vựng này chưa có file MP3 hoàn chỉnh. Vui lòng bấm nút "Tải lên file MP3" để nạp file âm thanh chuẩn.');
+      notify.warning('Từ vựng này chưa có file MP3 hoàn chỉnh. Vui lòng bấm nút "Tải lên file MP3" để nạp file âm thanh chuẩn.');
     }
   };
 
