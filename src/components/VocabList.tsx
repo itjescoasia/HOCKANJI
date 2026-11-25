@@ -1,5 +1,5 @@
 import { usePersistentState } from '../hooks/usePersistentState';
-import { playTTS, generateAndUploadTTS , playAudioUrl, getApiEndpoint} from '../utils/playTTS';
+import { playAudioUrl, getApiEndpoint } from '../utils/playTTS';
 import { safeFetchJson } from '../utils/safeFetch';
 import { notify, confirmAction } from '../utils/feedback';
 import {
@@ -217,25 +217,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       setCurrentPage(1);
     }
   }, [initialSearchQuery]);
-
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
-
-  const handleGenerateSingle = async (text: string | undefined, onComplete: (url: string) => void, id: string) => {
-    if (!text) return;
-    setGeneratingId(id);
-    try {
-      const url = await generateAndUploadTTS(text);
-      if (url) {
-        onComplete(url);
-        playAudioUrl(url);
-      } else {
-        notify.error("Có lỗi khi tạo âm thanh. Vui lòng kiểm tra API Key.");
-      }
-    } catch(err) {
-      notify.error("Lỗi khi gọi AI tạo âm thanh");
-    }
-    setGeneratingId(null);
-  };
 
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>>({});
   const editFormRef = useRef(editForm);
@@ -1998,17 +1979,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                     <AudioUpload
                       audioUrl={editForm.audioUrl}
                       onAudioChange={(url) => setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: !!url }))}
-                      onGenerateAI={editForm.kanji && !editForm.audioUrl ? () => {
-                        const targetId = editingIdRef.current;
-                        handleGenerateSingle(editForm.kanji, (url) => {
-                          if (editingIdRef.current !== targetId) return;
-                          setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: true }));
-                          if (targetId && onUpdate) {
-                            onUpdate(targetId, { ...editFormRef.current, audioUrl: url, hasAudio: true });
-                          }
-                        }, 'main-kanji');
-                      } : undefined}
-                      isGenerating={generatingId === 'main-kanji'}
                     />
                   </div>
                 </div>
@@ -2157,27 +2127,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                   return { ...prev, forms: newForms };
                                 });
                               }}
-                              onGenerateAI={f.value && !f.audioUrl ? () => {
-                                const targetId = editingIdRef.current;
-                                handleGenerateSingle(f.value, (url) => {
-                                  if (editingIdRef.current !== targetId) return;
-                                  const updatedForms = [...(editFormRef.current.forms || [])];
-                                  if (updatedForms[index]) {
-                                    updatedForms[index] = { ...updatedForms[index], audioUrl: url, hasAudio: true };
-                                  }
-                                  setEditForm(prev => {
-                                    const nextForms = [...(prev.forms || [])];
-                                    if (nextForms[index]) {
-                                      nextForms[index] = { ...nextForms[index], audioUrl: url, hasAudio: true };
-                                    }
-                                    return { ...prev, forms: nextForms };
-                                  });
-                                  if (targetId && onUpdate) {
-                                    onUpdate(targetId, { ...editFormRef.current, forms: updatedForms });
-                                  }
-                                }, `form-${index}`);
-                              } : undefined}
-                              isGenerating={generatingId === `form-${index}`}
                             />
                           </div>
                         ))}
@@ -2226,17 +2175,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                       <AudioUpload
                         audioUrl={editForm.audioUrl}
                         onAudioChange={(url) => setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: !!url }))}
-                        onGenerateAI={editForm.example && !editForm.audioUrl ? () => {
-                          const targetId = editingIdRef.current;
-                          handleGenerateSingle(editForm.example, (url) => {
-                            if (editingIdRef.current !== targetId) return;
-                            setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: true }));
-                            if (targetId && onUpdate) {
-                              onUpdate(targetId, { ...editFormRef.current, audioUrl: url, hasAudio: true });
-                            }
-                          }, 'old-example');
-                        } : undefined}
-                        isGenerating={generatingId === 'old-example'}
                       />
                     </div>
                   ) : (
@@ -2326,27 +2264,6 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                                 return { ...prev, examples: newExamples };
                               });
                             }}
-                            onGenerateAI={ex.sentence && !ex.audioUrl ? () => {
-                              const targetId = editingIdRef.current;
-                              handleGenerateSingle(ex.sentence, (url) => {
-                                if (editingIdRef.current !== targetId) return;
-                                const updatedExamples = [...(editFormRef.current.examples || [])];
-                                if (updatedExamples[index]) {
-                                  updatedExamples[index] = { ...updatedExamples[index], audioUrl: url, hasAudio: true };
-                                }
-                                setEditForm(prev => {
-                                  const nextExamples = [...(prev.examples || [])];
-                                  if (nextExamples[index]) {
-                                    nextExamples[index] = { ...nextExamples[index], audioUrl: url, hasAudio: true };
-                                  }
-                                  return { ...prev, examples: nextExamples };
-                                });
-                                if (targetId && onUpdate) {
-                                  onUpdate(targetId, { ...editFormRef.current, examples: updatedExamples });
-                                }
-                              }, `ex-${index}`);
-                            } : undefined}
-                            isGenerating={generatingId === `ex-${index}`}
                           />
                         </div>
                       ))}
