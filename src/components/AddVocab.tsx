@@ -256,23 +256,23 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
         <p className="text-[10px] uppercase tracking-[0.2em] opacity-50">Bổ sung Kanji vào danh sách học của bạn</p>
       </div>
       
-      <form onSubmit={handleSubmit} className="bg-theme-panel p-8 border border-theme-subtle flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="bg-theme-panel p-4 sm:p-8 border border-theme-subtle flex flex-col gap-5 sm:gap-6 rounded-xl">
         <div>
           <label className="block text-[11px] uppercase tracking-[0.2em] text-theme-accent opacity-80 mb-2">Kanji (Từ vựng) <span className="text-[#8b0000]">*</span></label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input 
               type="text" 
               required
               value={kanji}
               onChange={e => setKanji(e.target.value)}
-              className={`flex-1 px-5 py-4 bg-theme-base border ${duplicateWarning ? 'border-red-500' : 'border-theme-subtle'} focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-2xl font-serif text-center`}
+              className={`flex-1 px-4 sm:px-5 py-3 sm:py-4 bg-theme-base border ${duplicateWarning ? 'border-red-500' : 'border-theme-subtle'} focus:outline-none focus:border-theme-accent transition-colors text-theme-primary text-2xl font-serif text-center`}
               placeholder="語"
             />
             <button
               type="button"
               onClick={autoFillAI}
               disabled={isGeneratingAI || !kanji.trim()}
-              className="px-4 py-4 bg-theme-accent text-theme-base font-bold text-xs tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="px-4 py-3 sm:py-4 bg-theme-accent text-theme-base font-bold text-xs tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer min-h-[44px]"
             >
               {isGeneratingAI ? 'ĐANG TẠO...' : 'AI TỰ ĐỘNG ĐIỀN'}
             </button>

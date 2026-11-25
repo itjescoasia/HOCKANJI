@@ -289,29 +289,29 @@ export default function AccountSettingsModal({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-theme-subtle px-5 pt-2 gap-2 bg-theme-panel">
+        <div className="flex overflow-x-auto no-scrollbar border-b border-theme-subtle px-3 sm:px-5 pt-2 gap-2 bg-theme-panel shrink-0">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold tracking-wider uppercase border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs font-semibold tracking-wider uppercase border-b-2 transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'profile'
                 ? 'border-theme-accent text-theme-accent bg-theme-accent/5'
                 : 'border-transparent text-theme-primary/60 hover:text-theme-primary'
             }`}
           >
-            <UserIcon className="w-4 h-4" />
+            <UserIcon className="w-4 h-4 shrink-0" />
             Thông Tin Cá Nhân
           </button>
 
           {isAdmin && (
             <button
               onClick={() => setActiveTab('admin_users')}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold tracking-wider uppercase border-b-2 transition-all ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs font-semibold tracking-wider uppercase border-b-2 transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === 'admin_users'
                   ? 'border-theme-accent text-theme-accent bg-theme-accent/5'
                   : 'border-transparent text-theme-primary/60 hover:text-theme-primary'
               }`}
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-4 h-4 shrink-0" />
               Quản Lý Tài Khoản & Phân Quyền
               <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-theme-accent/20 text-theme-accent font-bold">
                 {usersList.length}
@@ -321,7 +321,7 @@ export default function AccountSettingsModal({
         </div>
 
         {/* Body Content */}
-        <div className="p-5 overflow-y-auto flex-1">
+        <div className="p-3.5 sm:p-5 overflow-y-auto flex-1">
           {activeTab === 'profile' ? (
             <div className="space-y-6 max-w-xl mx-auto">
               {/* Account Identifier Card */}

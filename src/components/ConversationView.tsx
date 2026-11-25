@@ -953,8 +953,8 @@ function ConversationDetail({
                     {isUploadingAudio ? 'Uploading...' : 'Upload MP3'}
                   </button>
                 ) : (
-                  <div className="flex-1 flex items-center gap-4 flex-wrap">
-                    <audio controls src={audioUrl} className="h-10 flex-1 min-w-[200px]" />
+                  <div className="flex-1 flex items-center gap-3 sm:gap-4 flex-wrap min-w-0">
+                    <audio controls src={audioUrl} className="h-10 flex-1 min-w-0 w-full sm:w-auto sm:min-w-[240px]" />
                     <button 
                       onClick={handleRemoveAudio}
                       className="flex items-center gap-2 px-3 py-1.5 border border-red-500/20 text-red-500 rounded hover:bg-red-500/10 transition-colors text-xs font-medium uppercase tracking-wider"
@@ -1024,7 +1024,7 @@ function ConversationDetail({
                   )}
                   <button
                     onClick={() => setIsEditingMetadata(true)}
-                    className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-theme-primary/40 hover:text-theme-accent"
+                    className="absolute top-0 right-0 p-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-theme-primary/50 hover:text-theme-accent cursor-pointer"
                     title="Chỉnh sửa thông tin hội thoại"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -1189,13 +1189,13 @@ function ConversationDetail({
                         style={provided.draggableProps.style}
                         className={`relative rounded-lg border ${snapshot.isDragging ? "border-theme-accent shadow-2xl z-50" : "border-theme-subtle hover:z-40 focus-within:z-40"} bg-theme-panel group mb-4`}
                       >
-                        <div className={`p-4 relative z-10 w-full min-h-full ${editingId !== dialogue.id ? "pl-14" : ""}`}>
+                        <div className={`p-3 sm:p-4 relative z-10 w-full min-h-full ${editingId !== dialogue.id ? "pl-10 sm:pl-14" : ""}`}>
                           {editingId !== dialogue.id && !deleteEnabled && (
                             <div
                               {...provided.dragHandleProps}
-                              className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-theme-primary/20 hover:text-theme-accent transition-colors z-20 border-r border-theme-subtle"
+                              className="absolute left-0 top-0 bottom-0 w-9 sm:w-12 flex items-center justify-center cursor-grab active:cursor-grabbing text-theme-primary/30 hover:text-theme-accent transition-colors z-20 border-r border-theme-subtle"
                             >
-                              <GripVertical className="w-5 h-5" />
+                              <GripVertical className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                           )}
                           
@@ -1230,7 +1230,7 @@ function ConversationDetail({
                                 <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Tiếng Nhật *</label>
                                 <input required type="text" value={editJp} onChange={(e) => setEditJp(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div className="space-y-2">
                                   <label className="text-[10px] uppercase tracking-wider text-theme-primary/60 font-medium">Phiên âm Hiragana</label>
                                   <input type="text" value={editHira} onChange={(e) => setEditHira(e.target.value)} className="w-full bg-theme-base border border-theme-subtle px-4 py-2 text-theme-primary placeholder-theme-primary/40 focus:outline-none focus:border-theme-accent transition-colors" />
@@ -1259,18 +1259,18 @@ function ConversationDetail({
                             </form>
                           ) : (
                             <div className="flex gap-4 flex-col">
-                              <div className="flex gap-4">
-                                <div className="shrink-0 text-theme-primary/30 font-serif text-xl mt-1">
+                              <div className="flex gap-2.5 sm:gap-4">
+                                <div className="shrink-0 text-theme-primary/35 font-serif text-base sm:text-xl mt-1">
                                   {String(index + 1).padStart(2, "0")}
                                 </div>
-                                <HighlightProvider><div className="flex-1 space-y-1">
-                                  <div className="flex items-start gap-2">
-                                    <p className="text-lg text-theme-primary font-serif">
+                                <HighlightProvider><div className="flex-1 min-w-0 space-y-1">
+                                  <div className="flex items-start gap-1.5 sm:gap-2">
+                                    <p className="text-base sm:text-lg text-theme-primary font-serif flex-1 min-w-0 break-words">
                                       {renderExampleHighlight(dialogue.japanese, "", mainDeck, undefined, conversation.vocabScores)}
                                     </p>
                                     <button
                                       onClick={(e) => playAudio(e, dialogue.japanese, dialogue.audioUrl)}
-                                      className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                                      className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 shrink-0 mt-0.5 cursor-pointer"
                                       title="Nghe câu hội thoại"
                                     >
                                       <Volume2 className="w-4 h-4" />
@@ -1284,30 +1284,30 @@ function ConversationDetail({
                                         btn.innerHTML = '<svg class="w-4 h-4 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
                                         setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
                                       }}
-                                      className="p-1.5 text-theme-primary/40 hover:text-theme-accent transition-colors opacity-0 group-hover:opacity-100 shrink-0 mt-0.5"
+                                      className="p-1.5 text-theme-primary/50 hover:text-theme-accent transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 shrink-0 mt-0.5 cursor-pointer"
                                       title="Copy câu hội thoại"
                                     >
                                       <Copy className="w-4 h-4" />
                                     </button>
                                   </div>
                                   {dialogue.hiragana && (
-                                    <p className="text-sm text-theme-primary/80">
+                                    <p className="text-sm text-theme-primary/80 break-words">
                                       <RelatedHighlight text={dialogue.hiragana} type="hiragana" />
                                     </p>
                                   )}
                                   {dialogue.romaji && (
-                                    <p className="text-xs text-theme-primary/50 font-mono">
+                                    <p className="text-xs text-theme-primary/50 font-mono break-words">
                                       <RelatedHighlight text={dialogue.romaji} type="romaji" />
                                     </p>
                                   )}
                                   {dialogue.vietnamese && (
-                                    <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2">
+                                    <p className="text-sm text-theme-primary/70 mt-1 italic border-l-2 border-theme-primary/20 pl-2 break-words">
                                       <HighlightVietnamese text={dialogue.vietnamese || ""} />
                                     </p>
                                   )}
                                   <SentenceAudio conversationId={conversation.id} dialogue={dialogue} onUpdateDialogue={handleUpdateDialogueField} />
                                 </div></HighlightProvider>
-                                <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all self-start relative z-20">
+                                <div className="flex flex-col gap-1 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all self-start relative z-20 shrink-0">
                                   
                                   <button
                                     onClick={() => setMovingDialogueId(movingDialogueId === dialogue.id ? null : dialogue.id)}
@@ -1650,7 +1650,7 @@ function ConversationDetail({
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMovingDialogueId(null)}
           />
-          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-6 w-full max-w-md relative z-10 flex flex-col max-h-[80vh]">
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-4 sm:p-6 w-full max-w-md relative z-10 flex flex-col max-h-[85dvh] pb-safe">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-serif text-theme-primary">
                 Chuyển sang chủ đề khác
@@ -1676,7 +1676,7 @@ function ConversationDetail({
                   className="w-full text-left px-4 py-3 text-base text-theme-primary/80 hover:text-theme-accent hover:bg-theme-accent/10 rounded-lg border border-theme-subtle hover:border-theme-accent/30 transition-all flex items-center justify-between group"
                 >
                   <span className="truncate pr-4 font-medium">{targetConv.title}</span>
-                  <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ArrowRight className="w-4 h-4 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0" />
                 </button>
               ))}
               
@@ -1726,10 +1726,10 @@ function ConversationDetail({
       )}
 
       {!isAdding && viewMode === "list" && (
-        <div className="sticky bottom-8 z-[60] w-full mt-4 flex justify-center pointer-events-none">
+        <div className="sticky bottom-4 sm:bottom-8 pb-safe z-[60] w-full mt-4 flex justify-center pointer-events-none">
           <button
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 text-theme-inverted bg-theme-accent hover:bg-theme-accent-light uppercase tracking-widest text-xs font-bold transition-all py-3 px-8 justify-center rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] pointer-events-auto hover:scale-105"
+            className="flex items-center gap-2 text-theme-inverted bg-theme-accent hover:bg-theme-accent-light uppercase tracking-widest text-xs font-bold transition-all py-3 px-6 sm:px-8 justify-center rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] pointer-events-auto hover:scale-105 min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
             Thêm câu mới
@@ -1932,7 +1932,7 @@ function ConversationVocabReview({
       </div>
       
       <div 
-        className={`w-full aspect-[4/3] sm:aspect-[16/9] mb-10 ${!isFlipped ? 'cursor-pointer' : ''}`}
+        className={`w-full min-h-[260px] sm:aspect-[16/9] mb-6 sm:mb-10 ${!isFlipped ? 'cursor-pointer' : ''}`}
         style={{ perspective: "1000px" }}
         onClick={() => {
           if (!isFlipped) setIsFlipped(true);
@@ -1946,11 +1946,11 @@ function ConversationVocabReview({
         >
           {/* Front */}
           <div 
-            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex flex-col items-center justify-center p-8 shadow-2xl rounded-2xl group"
+            className="absolute inset-0 bg-theme-panel border border-theme-subtle flex flex-col items-center justify-center p-5 sm:p-8 shadow-2xl rounded-2xl group"
             style={{ backfaceVisibility: "hidden" }}
           >
-            <div className="flex items-center gap-4">
-              <h2 className="text-6xl md:text-8xl font-serif text-theme-primary text-center leading-tight">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 max-w-full flex-wrap">
+              <h2 className="text-4xl sm:text-6xl md:text-8xl font-serif text-theme-primary text-center leading-tight break-words max-w-full">
                 {currentCard.kanji || currentCard.reading}
               </h2>
               <button
@@ -1958,21 +1958,21 @@ function ConversationVocabReview({
                   e.stopPropagation();
                   playAudio(e, currentCard.kanji || currentCard.reading, currentCard.audioUrl);
                 }}
-                className="p-3 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                className="p-3 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shrink-0"
                 title="Nghe phát âm"
               >
-                <Volume2 className="w-8 h-8" />
+                <Volume2 className="w-6 h-6 sm:w-8 sm:h-8" />
               </button>
             </div>
           </div>
 
           {/* Back */}
           <div 
-            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-10 shadow-2xl rounded-2xl text-center group"
+            className="absolute inset-0 bg-theme-panel border-2 border-theme-accent flex flex-col items-center justify-center p-5 sm:p-10 shadow-2xl rounded-2xl text-center group overflow-y-auto"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
           >
-             <div className="flex items-center justify-center gap-3 mb-6">
-               <div className="text-4xl md:text-5xl text-theme-primary font-serif text-theme-accent">
+             <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap max-w-full">
+               <div className="text-2xl sm:text-4xl md:text-5xl font-serif text-theme-accent break-words max-w-full">
                   {currentCard.reading}
                </div>
                <button
@@ -1980,23 +1980,23 @@ function ConversationVocabReview({
                    e.stopPropagation();
                    playTTS(currentCard.reading || currentCard.kanji!);
                  }}
-                 className="p-2 text-theme-primary/30 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                 className="p-2 text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover rounded-full transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-pointer shrink-0"
                  title="Nghe phát âm"
                >
-                 <Volume2 className="w-6 h-6" />
+                 <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
                </button>
              </div>
              {currentCard.sinoVietnamese && (
-                <div className="text-lg md:text-xl text-theme-accent/80 font-serif mb-2 uppercase tracking-widest">
+                <div className="text-base sm:text-lg md:text-xl text-theme-accent/80 font-serif mb-2 uppercase tracking-widest break-words max-w-full">
                   {currentCard.sinoVietnamese}
                 </div>
              )}
              {currentCard.romaji && (
-                <div className="text-xl md:text-2xl text-theme-primary/50 font-mono mb-6 tracking-[0.2em] uppercase">
+                <div className="text-base sm:text-xl md:text-2xl text-theme-primary/50 font-mono mb-4 sm:mb-6 tracking-[0.15em] sm:tracking-[0.2em] uppercase break-words max-w-full">
                   {currentCard.romaji}
                 </div>
              )}
-             <div className="text-2xl md:text-3xl text-theme-primary/90 font-medium mt-2">
+             <div className="text-xl sm:text-2xl md:text-3xl text-theme-primary/90 font-medium mt-1 break-words max-w-full">
                 {currentCard.meaning}
              </div>
           </div>

@@ -596,7 +596,7 @@ export default function App() {
                   />
                   <div 
                     id="theme-selection-menu"
-                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-xl bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl z-50 p-4 sm:p-6 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-xl bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl z-50 p-4 sm:p-6 flex flex-col max-h-[85dvh] pb-safe overflow-hidden animate-in fade-in zoom-in-95 duration-150"
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between pb-3 mb-3 border-b border-theme-subtle shrink-0">
@@ -876,7 +876,7 @@ export default function App() {
         
         {/* Modals */}
         {isAddModalOpen && (
-          <div id="add-vocab-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div id="add-vocab-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe bg-black/60 backdrop-blur-sm overflow-y-auto">
             <div className="relative bg-theme-panel w-full max-w-2xl my-auto rounded-xl shadow-2xl border border-theme-subtle">
               <button
                 id="btn-close-add-modal"
@@ -885,7 +885,7 @@ export default function App() {
               >
                 <X className="w-6 h-6" />
               </button>
-              <div className="p-2 sm:p-4 max-h-[90vh] overflow-y-auto">
+              <div className="p-2 sm:p-4 max-h-[88dvh] overflow-y-auto custom-scrollbar">
                 <AddVocab 
                   deck={deck}
                   onNavigateToWord={(kanji) => {

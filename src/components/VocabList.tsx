@@ -1076,7 +1076,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-stretch sm:items-center w-full sm:w-auto">
           <select
             value={audioFilter}
             onChange={(e) => { setAudioFilter(e.target.value as any); setCurrentPage(1); }}
@@ -1973,31 +1973,30 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 })}
               </tbody>
             </table>
+          </div>
           {filteredDeck.length > itemsPerPage && (
-            <div className="p-4 flex items-center justify-between border-t border-theme-subtle/50 bg-theme-base-alt/30">
-              <div className="text-xs text-theme-muted">
+            <div className="p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-theme-subtle/50 bg-theme-base-alt/30">
+              <div className="text-xs text-theme-muted text-center sm:text-left">
                 Hiển thị {(safeCurrentPage - 1) * itemsPerPage + 1} - {Math.min(safeCurrentPage * itemsPerPage, filteredDeck.length)} trong {filteredDeck.length} từ
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto justify-center">
                 <button
                   disabled={safeCurrentPage <= 1}
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm cursor-pointer"
+                  className="flex-1 sm:flex-initial min-h-[40px] px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm cursor-pointer"
                 >
                   Trước
                 </button>
                 <button
                   disabled={safeCurrentPage >= totalPages}
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  className="px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm cursor-pointer"
+                  className="flex-1 sm:flex-initial min-h-[40px] px-4 py-2 bg-theme-panel border border-theme-subtle hover:bg-theme-hover hover:border-theme-accent/50 disabled:opacity-50 disabled:hover:bg-theme-panel text-theme-primary transition-all text-sm rounded-xl shadow-sm cursor-pointer"
                 >
                   Tiếp
                 </button>
               </div>
             </div>
           )}
-
-          </div>
         </div>
       )}
       {viewingCard && (
@@ -2263,8 +2262,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   <div className="flex flex-col gap-4">
                     {viewingCard.examples && viewingCard.examples.length > 0 ? (
                       viewingCard.examples.map((ex, idx) => (
-                        <div key={idx} className="bg-theme-hover p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm">
-                          <div className="pr-24 text-lg text-theme-primary mb-3 flex flex-col gap-1.5">
+                        <div key={idx} className="bg-theme-hover p-3.5 sm:p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm flex flex-col">
+                          <div className="sm:pr-44 text-base sm:text-lg text-theme-primary mb-3 flex flex-col gap-1.5 break-words">
                             <span className="font-serif leading-relaxed">
                               <HighlightProvider onEditCard={startEdit}>
                                 {renderExampleHighlight(ex.sentence, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
@@ -2277,12 +2276,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               </div>
                             )}
                           </div>
-                          <div className="text-base text-theme-accent/90 italic border-t border-theme-subtle/50 pt-3">
+                          <div className="text-sm sm:text-base text-theme-accent/90 italic border-t border-theme-subtle/50 pt-3 break-words">
                             <HighlightProvider onEditCard={startEdit}>
                               <HighlightVietnamese text={ex.translation || ""} />
                             </HighlightProvider>
                           </div>
-                          <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-theme-panel/90 p-1 rounded-full border border-theme-subtle shadow-xs">
+                          <div className="mt-3 sm:mt-0 self-end sm:self-auto sm:absolute sm:top-4 sm:right-4 flex items-center flex-wrap gap-1.5 bg-theme-panel/90 p-1 rounded-full border border-theme-subtle shadow-xs">
                             <button
                               onClick={(e) => playAudio(e, ex.sentence, ex.audioUrl)}
                               className={`p-2 rounded-full transition-colors cursor-pointer shadow-xs ${ex.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}
@@ -2349,20 +2348,20 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         </div>
                       ))
                     ) : (
-                      <div className="bg-theme-hover p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm">
-                        <div className="pr-24 text-lg text-theme-primary mb-3 font-serif leading-relaxed">
+                      <div className="bg-theme-hover p-3.5 sm:p-5 rounded-md border-l-4 border-theme-accent relative group/ex shadow-sm flex flex-col">
+                        <div className="sm:pr-32 text-base sm:text-lg text-theme-primary mb-3 font-serif leading-relaxed break-words">
                           <HighlightProvider>
                             {renderExampleHighlight(viewingCard.example!, viewingCard.kanji || viewingCard.reading, deck, viewingCard)}
                           </HighlightProvider>
                         </div>
                         {viewingCard.exampleTranslation && (
-                          <div className="text-base text-theme-accent/90 italic border-t border-theme-subtle/50 pt-3">
+                          <div className="text-sm sm:text-base text-theme-accent/90 italic border-t border-theme-subtle/50 pt-3 break-words">
                             <HighlightProvider>
                               <HighlightVietnamese text={viewingCard.exampleTranslation} />
                             </HighlightProvider>
                           </div>
                         )}
-                        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-theme-panel/90 p-1 rounded-full border border-theme-subtle shadow-xs">
+                        <div className="mt-3 sm:mt-0 self-end sm:self-auto sm:absolute sm:top-4 sm:right-4 flex items-center gap-1.5 bg-theme-panel/90 p-1 rounded-full border border-theme-subtle shadow-xs">
                           <button
                             onClick={(e) => playAudio(e, viewingCard.example!, viewingCard.audioUrl)}
                             className={`p-2 rounded-full transition-colors cursor-pointer shadow-xs ${viewingCard.audioUrl ? 'text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20' : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'}`}

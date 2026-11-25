@@ -1514,7 +1514,7 @@ export default function IntensiveStudy({
                                     {!searchQuery.trim() && statusFilter === 'all' && (
                                       <div 
                                         {...provided.dragHandleProps}
-                                        className="text-theme-primary/20 hover:text-theme-accent transition-colors p-1 -ml-2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+                                        className="text-theme-primary/35 hover:text-theme-accent transition-colors p-1 -ml-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-grab active:cursor-grabbing"
                                         onClick={(e) => e.stopPropagation()}
                                         title="Kéo thả để sắp xếp"
                                       >
@@ -2589,7 +2589,7 @@ function StudyView({
             {/* Edit Button */}
             <button
               onClick={() => setIsEditing(true)}
-              className="absolute top-0 right-0 p-2 bg-theme-hover/80 text-theme-primary/40 hover:text-theme-accent opacity-0 group-hover:opacity-100 transition-all rounded z-20"
+              className="absolute top-0 right-0 p-2 bg-theme-hover/80 text-theme-primary/50 hover:text-theme-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded z-20 cursor-pointer"
               title="Chỉnh sửa chuyên đề"
             >
               <Edit2 className="w-5 h-5" />
@@ -2650,7 +2650,7 @@ function StudyView({
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center text-center sm:text-left h-full pr-8">
+            <div className="flex-1 flex flex-col justify-center text-center sm:text-left h-full sm:pr-8">
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-2 flex-wrap">
                 <span className="text-2xl text-theme-accent font-medium">
                   {word.reading}
@@ -3767,16 +3767,16 @@ function StudyView({
       )}
 
       {copyingExample && (
-        <div id="copy-example-modal-overlay" className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-theme-panel border border-theme-subtle rounded-xl w-full max-w-md shadow-2xl p-6 relative">
-            <h3 className="text-xl font-serif text-theme-primary mb-4">
+        <div id="copy-example-modal-overlay" className="fixed inset-0 bg-theme-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-safe pb-safe">
+          <div className="bg-theme-panel border border-theme-subtle rounded-xl w-full max-w-md shadow-2xl p-4 sm:p-6 relative max-h-[88dvh] flex flex-col">
+            <h3 className="text-xl font-serif text-theme-primary mb-2 sm:mb-4">
               Sao chép câu ví dụ
             </h3>
-            <p className="text-theme-primary/60 text-sm mb-6">
+            <p className="text-theme-primary/60 text-sm mb-4 sm:mb-6">
               Chọn chuyên đề bạn muốn sao chép câu ví dụ này tới:
             </p>
             
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2 mb-6">
+            <div className="space-y-2 max-h-[50dvh] overflow-y-auto custom-scrollbar pr-1 sm:pr-2 mb-4 sm:mb-6 flex-1">
               {deck.filter(w => w.id !== word.id).length === 0 ? (
                 <div className="text-center text-theme-primary/40 text-sm py-4 italic">
                   Không có chuyên đề nào khác.
@@ -3791,17 +3791,17 @@ function StudyView({
                       setShowCopySuccess(true);
                       setTimeout(() => setShowCopySuccess(false), 2000);
                     }}
-                    className="w-full text-left p-4 rounded-lg bg-theme-hover hover:bg-theme-active border border-theme-subtle hover:border-theme-accent/50 transition-all group flex items-center justify-between"
+                    className="w-full text-left p-3.5 sm:p-4 rounded-lg bg-theme-hover hover:bg-theme-active border border-theme-subtle hover:border-theme-accent/50 transition-all group flex items-center justify-between gap-2 cursor-pointer"
                   >
-                    <div>
-                      <div className="text-theme-primary font-serif text-lg">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-theme-primary font-serif text-lg break-words">
                         {w.word}
                       </div>
-                      <div className="text-theme-primary/40 text-xs">
+                      <div className="text-theme-primary/40 text-xs truncate">
                         {w.category}
                       </div>
                     </div>
-                    <ArrowLeft className="w-4 h-4 text-theme-accent opacity-0 group-hover:opacity-100 transition-opacity transform rotate-180" />
+                    <ArrowLeft className="w-4 h-4 text-theme-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity transform rotate-180 shrink-0" />
                   </button>
                 ))
               )}

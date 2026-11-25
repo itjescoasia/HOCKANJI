@@ -752,13 +752,13 @@ const QuizCardItem: React.FC<QuizCardItemProps> = ({
       {isAnswered && (
         <div className="mt-4 pt-4 border-t-2 border-dashed border-theme-subtle animate-fadeIn space-y-4">
           {/* Full Sentence Callout */}
-          <div className="bg-emerald-500/10 border-l-4 border-emerald-600 dark:border-emerald-500 rounded-r-lg p-3 sm:p-4 flex items-start justify-between gap-3">
-            <div>
+          <div className="bg-emerald-500/10 border-l-4 border-emerald-600 dark:border-emerald-500 rounded-r-lg p-3 sm:p-4 flex items-start justify-between gap-2.5 sm:gap-3">
+            <div className="flex-1 min-w-0">
               <div className="text-xs uppercase tracking-wider text-emerald-800 dark:text-emerald-300 font-bold mb-1">
                 Câu hoàn chỉnh:
               </div>
               <div 
-                className="text-base sm:text-lg font-medium text-theme-primary leading-[2.2]"
+                className="text-base sm:text-lg font-medium text-theme-primary leading-[2.2] break-words"
                 dangerouslySetInnerHTML={{ __html: question.fullSentence }}
               />
             </div>

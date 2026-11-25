@@ -292,10 +292,10 @@ export default function ForgottenVocabSession({
   return (
     <div
       id="forgotten-vocab-session-overlay"
-      className="fixed inset-0 z-50 bg-theme-base flex flex-col overflow-hidden animate-in fade-in duration-200 select-text"
+      className="fixed inset-0 z-50 bg-theme-base flex flex-col overflow-hidden animate-in fade-in duration-200 select-text pt-safe pb-safe pl-safe pr-safe"
     >
       {/* Top Header Bar */}
-      <header className="px-4 sm:px-8 py-3.5 border-b border-theme-subtle bg-theme-panel/90 backdrop-blur shrink-0 flex items-center justify-between gap-4 shadow-xs">
+      <header className="px-3 sm:px-8 py-2.5 sm:py-3.5 border-b border-theme-subtle bg-theme-panel/90 backdrop-blur shrink-0 flex items-center justify-between gap-2 sm:gap-4 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
             <Flame className="w-5 h-5 fill-rose-500/30" />
@@ -344,13 +344,13 @@ export default function ForgottenVocabSession({
       </header>
 
       {/* Mode Switcher & Filter Ribbon */}
-      <div className="px-4 sm:px-8 py-2.5 bg-theme-panel/40 border-b border-theme-subtle flex items-center justify-between gap-3 flex-wrap text-xs">
+      <div className="px-3 sm:px-8 py-2.5 bg-theme-panel/40 border-b border-theme-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
         {/* Study Mode Selector */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-theme-base border border-theme-subtle shadow-xs">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-theme-base border border-theme-subtle shadow-xs overflow-x-auto no-scrollbar max-w-full w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setStudyMode('flashcard')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap shrink-0 transition-all cursor-pointer ${
               studyMode === 'flashcard'
                 ? 'bg-rose-500 text-white shadow-xs'
                 : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
@@ -363,7 +363,7 @@ export default function ForgottenVocabSession({
           <button
             type="button"
             onClick={() => setStudyMode('mcq')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap shrink-0 transition-all cursor-pointer ${
               studyMode === 'mcq'
                 ? 'bg-rose-500 text-white shadow-xs'
                 : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
@@ -376,7 +376,7 @@ export default function ForgottenVocabSession({
           <button
             type="button"
             onClick={() => setStudyMode('audio_first')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap shrink-0 transition-all cursor-pointer ${
               studyMode === 'audio_first'
                 ? 'bg-rose-500 text-white shadow-xs'
                 : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
@@ -388,12 +388,12 @@ export default function ForgottenVocabSession({
         </div>
 
         {/* Filter Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-theme-primary/60 hidden sm:inline">Nguồn từ:</span>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-[11px] text-theme-primary/60 hidden sm:inline shrink-0">Nguồn từ:</span>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as any)}
-            className="bg-theme-base border border-theme-subtle text-theme-primary text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:border-rose-500"
+            className="w-full sm:w-auto max-w-full bg-theme-base border border-theme-subtle text-theme-primary text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:border-rose-500"
           >
             <option value="all_difficult">Tất cả từ khó &amp; gán Quên ({deck.filter(c => c.isForgotten || (c.difficultScore && c.difficultScore < 0)).length} từ)</option>
             <option value="only_tagged">Chỉ các từ ĐÃ GÁN QUÊN ({deck.filter(c => c.isForgotten).length} từ)</option>
@@ -484,7 +484,7 @@ export default function ForgottenVocabSession({
         ) : currentCard ? (
           <div className="w-full max-w-3xl flex-1 flex flex-col items-center justify-center my-auto py-2">
             {/* Memory Streak Indicator Pill */}
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-500 border border-rose-500/30">
                 <Flame className="w-3.5 h-3.5 fill-rose-500/40" />
                 <span>{currentCard.isForgotten ? 'Đang gán: HAY QUÊN' : 'Từ điểm khó cao'}</span>
@@ -523,7 +523,7 @@ export default function ForgottenVocabSession({
                   setIsFlipped(true);
                 }
               }}
-              className={`w-full min-h-[360px] sm:min-h-[420px] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl flex flex-col justify-between overflow-hidden relative transition-all duration-300 ${
+              className={`w-full min-h-[300px] sm:min-h-[420px] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl flex flex-col justify-between overflow-hidden relative transition-all duration-300 ${
                 studyMode === 'flashcard' && !isFlipped ? 'cursor-pointer hover:border-rose-500/50' : ''
               }`}
             >
@@ -577,7 +577,7 @@ export default function ForgottenVocabSession({
               </div>
 
               {/* Card Body - Content changes based on studyMode & isFlipped */}
-              <div className="p-6 sm:p-8 flex-1 flex flex-col items-center justify-center text-center">
+              <div className="p-4 sm:p-8 flex-1 flex flex-col items-center justify-center text-center">
                 {studyMode === 'audio_first' && !isFlipped ? (
                   /* Audio-First mode: Play audio, conceal Kanji until flipped */
                   <div className="flex flex-col items-center gap-4 py-6">
@@ -602,8 +602,8 @@ export default function ForgottenVocabSession({
                   </div>
                 ) : (
                   /* Standard Kanji / Word display */
-                  <div className="flex flex-col items-center gap-2">
-                    <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-bold text-theme-primary tracking-tight">
+                  <div className="flex flex-col items-center gap-2 max-w-full">
+                    <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-bold text-theme-primary tracking-tight break-words max-w-full">
                       {currentCard.kanji || currentCard.reading}
                     </h2>
 
@@ -624,7 +624,7 @@ export default function ForgottenVocabSession({
                 {/* Answer Revealed Section (when isFlipped or MCQ answered) */}
                 {isFlipped ? (
                   <div className="mt-6 pt-6 border-t border-theme-subtle w-full flex flex-col items-center gap-4 animate-in fade-in duration-200">
-                    <div className="text-xl sm:text-2xl font-bold text-rose-500 uppercase tracking-wide">
+                    <div className="text-xl sm:text-2xl font-bold text-rose-500 uppercase tracking-wide break-words max-w-full">
                       {currentCard.meaning}
                     </div>
 
@@ -645,9 +645,9 @@ export default function ForgottenVocabSession({
                         {currentCard.examples.slice(0, 2).map((ex, exIdx) => (
                           <div
                             key={ex.id || exIdx}
-                            className="p-3 rounded-xl bg-theme-base border border-theme-subtle flex items-start justify-between gap-3"
+                            className="p-3 rounded-xl bg-theme-base border border-theme-subtle flex items-start justify-between gap-2 sm:gap-3"
                           >
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0 break-words">
                               <div className="text-sm sm:text-base font-serif text-theme-primary">
                                 {furiganaMode === 'off' ? (
                                   ex.sentence
@@ -781,60 +781,60 @@ export default function ForgottenVocabSession({
 
         {/* Bottom Response Controls (Active Recall Feedback) */}
         {!isCompleted && currentCard && (
-          <div className="w-full max-w-3xl pt-3 pb-2 shrink-0 z-10">
+          <div className="w-full max-w-3xl pt-3 pb-2 pb-safe shrink-0 z-10">
             {!isFlipped && studyMode !== 'mcq' ? (
               <button
                 type="button"
                 onClick={() => setIsFlipped(true)}
-                className="w-full py-4 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-500 hover:brightness-110 text-white font-bold text-sm sm:text-base uppercase tracking-wider rounded-2xl shadow-xl shadow-rose-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20"
+                className="w-full py-3.5 sm:py-4 px-4 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-500 hover:brightness-110 text-white font-bold text-sm sm:text-base uppercase tracking-wider rounded-2xl shadow-xl shadow-rose-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer border border-white/20"
               >
                 <span>Lật thẻ xem đáp án &amp; giải thích</span>
-                <span className="text-xs font-mono bg-black/20 text-white px-2.5 py-1 rounded-xl font-bold">
+                <span className="hidden sm:inline-block text-xs font-mono bg-black/20 text-white px-2.5 py-1 rounded-xl font-bold">
                   Phím Space
                 </span>
               </button>
             ) : isFlipped && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 w-full">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
                 {/* Button 1: Still forgotten */}
                 <button
                   type="button"
                   onClick={() => handleResponse(false)}
-                  className="py-3.5 px-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.01] active:scale-[0.99]"
+                  className="min-h-[52px] py-3 px-3 sm:px-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
-                    <RotateCcw className="w-4 h-4 group-hover:-rotate-45 transition-transform" />
+                  <div className="flex items-center gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm">
+                    <RotateCcw className="w-4 h-4 shrink-0 group-hover:-rotate-45 transition-transform" />
                     <span>Vẫn chưa nhớ</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-500/20">1</kbd>
+                    <kbd className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-500/20">1</kbd>
                   </div>
-                  <span className="text-[11px] opacity-75">Ghi nhận chưa nhớ &amp; chuyển tiếp</span>
+                  <span className="text-[10px] sm:text-[11px] opacity-75 leading-tight text-center">Chưa nhớ &amp; chuyển tiếp</span>
                 </button>
 
                 {/* Button 2: Remembered */}
                 <button
                   type="button"
                   onClick={() => handleResponse(true)}
-                  className="py-3.5 px-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.01] active:scale-[0.99]"
+                  className="min-h-[52px] py-3 px-3 sm:px-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.01] active:scale-[0.99]"
                 >
-                  <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
-                    <CheckCircle2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <div className="flex items-center gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
                     <span>Đã nhớ được</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">2</kbd>
+                    <kbd className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20">2</kbd>
                   </div>
-                  <span className="text-[11px] opacity-75">Tăng độ phục hồi trí nhớ</span>
+                  <span className="text-[10px] sm:text-[11px] opacity-75 leading-tight text-center">Tăng phục hồi trí nhớ</span>
                 </button>
 
                 {/* Button 3: Graduate now */}
                 <button
                   type="button"
                   onClick={handleGraduateWord}
-                  className="py-3.5 px-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.01] active:scale-[0.99]"
+                  className="col-span-2 sm:col-span-1 min-h-[48px] py-3 px-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all cursor-pointer group shadow-xs hover:scale-[1.01] active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
-                    <Award className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <Award className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
                     <span>Đã nhớ vững (Gỡ Quên)</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">3</kbd>
+                    <kbd className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20">3</kbd>
                   </div>
-                  <span className="text-[11px] opacity-75">Gỡ nhãn Hay Quên ngay</span>
+                  <span className="text-[10px] sm:text-[11px] opacity-75">Gỡ nhãn Hay Quên ngay</span>
                 </button>
               </div>
             )}

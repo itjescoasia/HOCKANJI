@@ -985,7 +985,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
   if (isSessionFinished) {
     const accuracy = sessionStats.total > 0 ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0;
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[70vh] p-6 max-w-lg mx-auto text-center">
+      <div className="flex flex-col items-center justify-center min-h-[70dvh] p-4 sm:p-6 max-w-lg mx-auto text-center">
         <div className="w-16 h-16 rounded-full bg-theme-accent/15 border border-theme-accent/30 flex items-center justify-center mb-6 text-theme-accent shadow-sm">
           <Trophy className="w-8 h-8" />
         </div>
@@ -1051,7 +1051,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
   if (examples.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-6 max-w-md mx-auto">
+      <div className="flex flex-col items-center justify-center min-h-[60dvh] text-center p-4 sm:p-6 max-w-md mx-auto">
         <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-500">
           <Volume2 className="w-7 h-7" />
         </div>
@@ -1082,84 +1082,86 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
     mode === "JA_TO_VI" ? currentExample.translation : currentExample.sentence;
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] max-w-4xl mx-auto w-full px-2 sm:px-4 overflow-y-auto pb-12">
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-theme-subtle bg-theme-panel/60 backdrop-blur-xs sticky top-0 z-20">
-        <div className="flex items-center gap-3 sm:gap-4">
+    <div className="flex flex-col min-h-full max-w-4xl mx-auto w-full px-2 sm:px-4 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 sm:p-4 border-b border-theme-subtle bg-theme-panel/85 backdrop-blur-md sticky top-0 z-20 rounded-t-xl sm:rounded-none">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-4 min-w-0">
           <button
             onClick={onClose}
-            className="p-2 text-theme-primary/60 hover:text-theme-primary transition-colors cursor-pointer rounded-lg hover:bg-theme-hover"
+            className="p-2 -ml-1 sm:ml-0 text-theme-primary/70 hover:text-theme-primary transition-colors cursor-pointer rounded-lg hover:bg-theme-hover shrink-0"
             title="Đóng ôn tập"
           >
             <X className="w-5 h-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-sm font-bold tracking-widest uppercase text-theme-accent">
-                {isRandom ? "Dịch câu Khoa học SRS: " : "Ôn tập câu: "}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h2 className="text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest uppercase text-theme-accent truncate max-w-full">
+                {isRandom ? "Dịch câu SRS: " : "Ôn tập câu: "}
                 {mode === "JA_TO_VI" ? "Nhật → Việt" : "Việt → Nhật"}
               </h2>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1 shrink-0">
                 <Brain className="w-2.5 h-2.5" />
                 SRS Ebbinghaus
               </span>
               {mode === "VI_TO_JA" && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1" title="Chỉ những câu ví dụ thực sự có file MP3 mới được đưa vào luyện dịch">
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0" title="Chỉ những câu ví dụ thực sự có file MP3 mới được đưa vào luyện dịch">
                   <Volume2 className="w-2.5 h-2.5" />
                   100% Có MP3
                 </span>
               )}
             </div>
-            <p className="text-xs text-theme-primary/50 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-theme-primary/60 mt-0.5 truncate">
               Câu {currentIndex + 1} / {examples.length}{" "}
-              <span className="opacity-70">
-                ({examples.length - currentIndex - 1} câu còn lại)
+              <span className="opacity-75">
+                ({examples.length - currentIndex - 1} còn lại)
               </span>
               {sessionStats.requeuedCount > 0 && (
                 <span className="text-indigo-600 dark:text-indigo-400 font-semibold ml-1.5">
-                  • {sessionStats.requeuedCount} câu đang lặp lại
+                  • {sessionStats.requeuedCount} lặp lại
                 </span>
               )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-between sm:justify-end w-full sm:w-auto pl-9 sm:pl-0">
           <FuriganaToggle mode={furiganaMode} onChange={setFuriganaMode} />
 
-          <button
-            type="button"
-            onClick={() => setShowScienceModal(true)}
-            className="px-2.5 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Xem nguyên tắc khoa học đường cong quên lãng Ebbinghaus & Spaced Repetition (SRS)"
-          >
-            <Brain className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">Khoa học SRS</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setAutoPlayAudio(!autoPlayAudio)}
-            className={`px-2.5 py-1.5 text-xs rounded-md border transition-colors flex items-center gap-1.5 cursor-pointer ${
-              autoPlayAudio
-                ? 'bg-theme-accent/15 text-theme-accent border-theme-accent/40 font-bold'
-                : 'bg-theme-panel text-theme-primary/50 border-theme-subtle hover:text-theme-primary'
-            }`}
-            title={autoPlayAudio ? "Tự động phát MP3 khi lật thẻ: Đang BẬT" : "Tự động phát MP3 khi lật thẻ: Đang TẮT"}
-          >
-            {autoPlayAudio ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="hidden md:inline text-[11px] uppercase tracking-wider">{autoPlayAudio ? "Auto MP3: Bật" : "Auto MP3: Tắt"}</span>
-          </button>
-
-          {isRandom && (
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
-              onClick={initExamples}
-              title="Xáo trộn lại toàn bộ câu ngẫu nhiên theo nguyên tắc khoa học"
-              className="px-2.5 py-1.5 text-xs text-theme-primary/70 hover:text-theme-accent border border-theme-subtle hover:border-theme-accent bg-theme-panel rounded flex items-center gap-1.5 transition-colors cursor-pointer"
+              type="button"
+              onClick={() => setShowScienceModal(true)}
+              className="px-2 sm:px-2.5 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Xem nguyên tắc khoa học đường cong quên lãng Ebbinghaus & Spaced Repetition (SRS)"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline text-[11px] uppercase tracking-wider">Xáo trộn</span>
+              <Brain className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">Khoa học SRS</span>
             </button>
-          )}
+
+            <button
+              type="button"
+              onClick={() => setAutoPlayAudio(!autoPlayAudio)}
+              className={`px-2 sm:px-2.5 py-1.5 text-xs rounded-md border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                autoPlayAudio
+                  ? 'bg-theme-accent/15 text-theme-accent border-theme-accent/40 font-bold'
+                  : 'bg-theme-panel text-theme-primary/60 border-theme-subtle hover:text-theme-primary'
+              }`}
+              title={autoPlayAudio ? "Tự động phát MP3 khi lật thẻ: Đang BẬT" : "Tự động phát MP3 khi lật thẻ: Đang TẮT"}
+            >
+              {autoPlayAudio ? <Volume2 className="w-3.5 h-3.5 shrink-0" /> : <VolumeX className="w-3.5 h-3.5 shrink-0" />}
+              <span className="hidden md:inline text-[11px] uppercase tracking-wider">{autoPlayAudio ? "Auto MP3: Bật" : "Auto MP3: Tắt"}</span>
+            </button>
+
+            {isRandom && (
+              <button
+                onClick={initExamples}
+                title="Xáo trộn lại toàn bộ câu ngẫu nhiên theo nguyên tắc khoa học"
+                className="px-2 sm:px-2.5 py-1.5 text-xs text-theme-primary/70 hover:text-theme-accent border border-theme-subtle hover:border-theme-accent bg-theme-panel rounded-md flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden md:inline text-[11px] uppercase tracking-wider">Xáo trộn</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <div className="w-full h-1 bg-theme-subtle">
@@ -1180,7 +1182,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
           >
             
   
-  <div className="w-full relative min-h-[380px] sm:min-h-[440px] mb-4 sm:mb-6" style={{ perspective: "1000px", WebkitPerspective: "1000px" as any }}>
+  <div className="w-full relative min-h-[450px] sm:min-h-[490px] mb-4 sm:mb-6" style={{ perspective: "1000px", WebkitPerspective: "1000px" as any }}>
     <motion.div
       className="w-full h-full absolute inset-0"
       style={{ transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d" as any }}
@@ -1190,79 +1192,81 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
       {/* Front */}
       <div 
         id="sentence-review-card-front"
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-5 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-4 sm:p-8 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", visibility: showAnswer ? 'hidden' : 'visible' }}
       >
-        {/* Badges khoa học SRS */}
-        <div className="absolute top-4 left-4 flex flex-wrap items-center gap-1.5 z-20">
-          <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-theme-base border border-theme-subtle text-theme-primary/70">
-            {mode === "JA_TO_VI" ? "CÂU HỎI NHẬT" : "DỊCH VIỆT → NHẬT"}
-          </span>
-
-          {currentExample.sessionRepeat && (
-            <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-red-500/15 text-red-500 border border-red-500/30 flex items-center gap-1 animate-pulse">
-              <RotateCcw className="w-2.5 h-2.5" />
-              Lặp lại câu quên
+        {/* Top bar: Badges khoa học SRS + nút Sửa câu (không bị đè chữ trên mobile) */}
+        <div className="w-full flex items-start justify-between gap-2 mb-3 shrink-0 z-20">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-theme-base border border-theme-subtle text-theme-primary/75">
+              {mode === "JA_TO_VI" ? "CÂU HỎI NHẬT" : "DỊCH VIỆT → NHẬT"}
             </span>
-          )}
 
-          {/* Ebbinghaus Stage Indicator */}
-          {(() => {
-            const interval = mode === "VI_TO_JA" ? (currentExample.viToJaInterval ?? 0) : (currentExample.jaToViInterval ?? 0);
-            const repetition = mode === "VI_TO_JA" ? (currentExample.viToJaRepetition ?? 0) : (currentExample.jaToViRepetition ?? 0);
-            if (interval === 0 && (currentExample.viToJaFailCount || currentExample.jaToViFailCount)) {
-              return (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                  Cần củng cố gấp
-                </span>
-              );
-            }
-            if (repetition === 0 && !currentExample.viToJaNextReviewDate && !currentExample.jaToViNextReviewDate) {
-              return (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  Câu mới
-                </span>
-              );
-            }
-            if (interval <= 3) {
-              return (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  Trí nhớ ngắn hạn ({interval}d)
-                </span>
-              );
-            }
-            if (interval <= 14) {
-              return (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  Trí nhớ trung hạn ({interval}d)
-                </span>
-              );
-            }
-            return (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                Trí nhớ dài hạn ({interval}d)
+            {currentExample.sessionRepeat && (
+              <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 flex items-center gap-1 animate-pulse">
+                <RotateCcw className="w-2.5 h-2.5" />
+                Lặp lại câu quên
               </span>
-            );
-          })()}
+            )}
+
+            {/* Ebbinghaus Stage Indicator */}
+            {(() => {
+              const interval = mode === "VI_TO_JA" ? (currentExample.viToJaInterval ?? 0) : (currentExample.jaToViInterval ?? 0);
+              const repetition = mode === "VI_TO_JA" ? (currentExample.viToJaRepetition ?? 0) : (currentExample.jaToViRepetition ?? 0);
+              if (interval === 0 && (currentExample.viToJaFailCount || currentExample.jaToViFailCount)) {
+                return (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                    Cần củng cố gấp
+                  </span>
+                );
+              }
+              if (repetition === 0 && !currentExample.viToJaNextReviewDate && !currentExample.jaToViNextReviewDate) {
+                return (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    Câu mới
+                  </span>
+                );
+              }
+              if (interval <= 3) {
+                return (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    Trí nhớ ngắn hạn ({interval}d)
+                  </span>
+                );
+              }
+              if (interval <= 14) {
+                return (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    Trí nhớ trung hạn ({interval}d)
+                  </span>
+                );
+              }
+              return (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                  Trí nhớ dài hạn ({interval}d)
+                </span>
+              );
+            })()}
+          </div>
+
+          <button
+            id="btn-edit-sentence-front"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
+            className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-theme-subtle text-theme-primary/75 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-xs cursor-pointer shadow-xs"
+            title="Chỉnh sửa câu ví dụ này (Chế độ bút sửa)"
+          >
+            <Pen className="w-3.5 h-3.5 text-theme-accent" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Sửa câu</span>
+          </button>
         </div>
-        
-        <button
-          id="btn-edit-sentence-front"
-          type="button"
-          onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
-          className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-theme-subtle text-theme-primary/70 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-xs z-30 cursor-pointer shadow-xs"
-          title="Chỉnh sửa câu ví dụ này (Chế độ bút sửa)"
-        >
-          <Pen className="w-3.5 h-3.5 text-theme-accent" />
-          <span className="text-[11px] font-bold uppercase tracking-wider">Sửa câu</span>
-        </button>
 
         <div className="flex-1 shrink-0 min-h-0" />
         <HighlightProvider>
-          <div className="w-full shrink-0 my-3">
+          <div className="w-full shrink-0 my-2">
             <div
               id="sentence-review-question-text"
-              className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "JA_TO_VI" ? "text-theme-japanese text-2xl sm:text-3xl" : "text-theme-primary text-xl sm:text-2xl"}`}
+              className={`font-serif leading-relaxed whitespace-pre-wrap break-words ${mode === "JA_TO_VI" ? "text-theme-japanese text-xl sm:text-3xl" : "text-theme-primary text-lg sm:text-2xl"}`}
             >
               {mode === "JA_TO_VI"
                 ? (
@@ -1415,7 +1419,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 rows={2}
                 className="w-full bg-theme-base/80 border border-theme-subtle focus:border-theme-accent rounded-lg p-3 text-sm text-theme-primary placeholder:text-theme-primary/30 outline-none transition-all resize-none shadow-xs"
               />
-              <p className="text-[10px] text-theme-primary/40 mt-1 text-right">
+              <p className="hidden sm:block text-[10px] text-theme-primary/40 mt-1 text-right">
                 Nhấn <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-theme-panel border border-theme-subtle rounded text-[9px] font-mono">Enter</kbd> hoặc nút Lật thẻ bên dưới
               </p>
             </div>
@@ -1427,9 +1431,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 e.stopPropagation();
                 setShowAnswer(true);
               }}
-              className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-theme-accent text-theme-inverted font-bold uppercase tracking-widest text-xs rounded-md shadow-xs hover:bg-theme-accent-hover transition-all cursor-pointer"
+              className="mt-4 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-2.5 bg-theme-accent text-theme-inverted font-bold uppercase tracking-wider sm:tracking-widest text-xs rounded-lg shadow-xs hover:bg-theme-accent-hover transition-all cursor-pointer"
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-4 h-4 shrink-0" />
               <span>{mode === "JA_TO_VI" ? "Lật thẻ xem dịch nghĩa (Tiếng Việt)" : "Lật thẻ xem đáp án câu (Tiếng Nhật)"}</span>
             </button>
           </div>
@@ -1439,27 +1443,29 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
       {/* Back */}
       <div 
-        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-5 sm:p-10 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
+        className={`absolute inset-0 bg-theme-panel border border-theme-subtle p-4 sm:p-8 flex flex-col items-center text-center group overflow-y-auto custom-scrollbar rounded-2xl shadow-lg ${!showAnswer ? 'pointer-events-none' : ''}`}
         style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", visibility: !showAnswer ? 'hidden' : 'visible' }}
       >
-        <span className="absolute top-4 left-4 text-[11px] font-mono font-bold tracking-widest text-theme-accent/50 uppercase">
-          {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
-        </span>
-        
-        <button
-          id="btn-edit-sentence-back"
-          type="button"
-          onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
-          className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-theme-subtle text-theme-primary/70 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-xs z-30 cursor-pointer shadow-xs"
-          title="Chỉnh sửa câu ví dụ này (Chế độ bút sửa)"
-        >
-          <Pen className="w-3.5 h-3.5 text-theme-accent" />
-          <span className="text-[11px] font-bold uppercase tracking-wider">Sửa câu</span>
-        </button>
+        <div className="w-full flex items-center justify-between gap-2 mb-3 shrink-0 z-20">
+          <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-wider sm:tracking-widest text-theme-accent/70 uppercase text-left">
+            {mode === "JA_TO_VI" ? "ĐÁP ÁN (TIẾNG VIỆT)" : "ĐÁP ÁN (TIẾNG NHẬT)"}
+          </span>
+          
+          <button
+            id="btn-edit-sentence-back"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleStartEdit(); }}
+            className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-theme-subtle text-theme-primary/75 hover:text-theme-accent hover:border-theme-accent bg-theme-panel hover:bg-theme-hover transition-all text-xs cursor-pointer shadow-xs"
+            title="Chỉnh sửa câu ví dụ này (Chế độ bút sửa)"
+          >
+            <Pen className="w-3.5 h-3.5 text-theme-accent" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Sửa câu</span>
+          </button>
+        </div>
         
         <div className="flex-1 shrink-0 min-h-0" />
         <HighlightProvider>
-          <div className="w-full shrink-0 flex flex-col items-center justify-center my-3">
+          <div className="w-full shrink-0 flex flex-col items-center justify-center my-2">
             {/* Câu hỏi gốc phía trên */}
             <div className="mb-4 text-theme-primary/60 text-xs sm:text-sm font-serif">
               <span className="text-[10px] uppercase tracking-wider block opacity-70 mb-0.5">
@@ -1497,11 +1503,11 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             )}
 
             {/* Đáp án chuẩn */}
-            <div className="w-full max-w-lg mx-auto bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 mb-3 text-left">
+            <div className="w-full max-w-lg mx-auto bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3.5 sm:p-4 mb-3 text-left">
               <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 dark:text-emerald-400 block mb-1.5">
                 Đáp án chuẩn:
               </span>
-              <div className={`font-serif leading-relaxed whitespace-pre-wrap ${mode === "VI_TO_JA" ? "text-theme-japanese text-xl sm:text-2xl" : "text-theme-primary text-lg sm:text-xl font-medium"}`}>
+              <div className={`font-serif leading-relaxed whitespace-pre-wrap break-words ${mode === "VI_TO_JA" ? "text-theme-japanese text-lg sm:text-2xl" : "text-theme-primary text-base sm:text-xl font-medium"}`}>
                 {mode === "VI_TO_JA"
                   ? (
                     furiganaMode === 'off'
@@ -1784,22 +1790,22 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-theme-panel border border-theme-subtle rounded-xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-auto"
+              className="bg-theme-panel border border-theme-subtle rounded-xl max-w-xl w-full p-4 sm:p-7 shadow-2xl relative my-auto max-h-[90dvh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between pb-4 mb-4 border-b border-theme-subtle">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-theme-accent/10 text-theme-accent">
+              <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-theme-subtle gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-2 rounded-lg bg-theme-accent/10 text-theme-accent shrink-0">
                     <Pen className="w-4 h-4" />
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-theme-primary">Chế độ sửa câu ví dụ</h3>
-                    <p className="text-xs text-theme-primary/50">Chỉnh sửa câu tiếng Nhật, Furigana và nghĩa tiếng Việt</p>
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-theme-primary truncate">Chế độ sửa câu ví dụ</h3>
+                    <p className="text-xs text-theme-primary/50 truncate">Chỉnh sửa câu tiếng Nhật, Furigana và nghĩa tiếng Việt</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleCancelEdit}
-                  className="p-1.5 text-theme-primary/50 hover:text-theme-primary transition-colors rounded-lg hover:bg-theme-hover cursor-pointer"
+                  className="p-1.5 text-theme-primary/50 hover:text-theme-primary transition-colors rounded-lg hover:bg-theme-hover cursor-pointer shrink-0"
                   title="Đóng"
                 >
                   <X className="w-5 h-5" />
@@ -1808,7 +1814,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
 
               <form onSubmit={handleSaveEdit} className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold">
                       Câu ví dụ (Nhật) *
                     </label>
@@ -1836,7 +1842,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold flex items-center justify-between">
+                  <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold flex items-center justify-between flex-wrap gap-1">
                     <span>Furigana (Định dạng: 漢字[かんじ])</span>
                     <span className="text-[10px] text-theme-accent lowercase font-normal">Tự động sinh hoặc gõ thủ công</span>
                   </label>
@@ -1850,7 +1856,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="text-xs uppercase tracking-wider text-theme-primary/70 font-bold">Cách đọc (Hiragana)</label>
                     <input 
@@ -2001,9 +2007,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-theme-panel border border-red-500/50 text-red-600 dark:text-red-400 shadow-2xl flex items-center gap-2.5 text-xs font-bold"
+            className="fixed bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 max-w-md z-50 px-4 py-2.5 rounded-xl bg-theme-panel border border-red-500/50 text-red-600 dark:text-red-400 shadow-2xl flex items-center justify-center gap-2.5 text-xs font-bold text-center"
           >
-            <RotateCcw className="w-4 h-4 text-red-500 animate-spin" />
+            <RotateCcw className="w-4 h-4 text-red-500 animate-spin shrink-0" />
             <span>Đã xếp lại câu này vào cuối phiên để củng cố trí nhớ!</span>
           </motion.div>
         )}
@@ -2021,7 +2027,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-theme-panel border border-theme-subtle rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative my-auto"
+              className="bg-theme-panel border border-theme-subtle rounded-2xl max-w-lg w-full p-4 sm:p-7 shadow-2xl relative my-auto max-h-[90dvh] overflow-y-auto"
             >
               <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-theme-subtle">
                 <div className="flex items-center gap-2.5">

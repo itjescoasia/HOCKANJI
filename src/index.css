@@ -817,3 +817,22 @@ input[type="submit"],
   background-size: 100% 40px;
   animation: steadyFluidStream 3.5s linear infinite;
 }
+
+/* Hide horizontal scrollbar for mobile segmented pills/tabs while preserving touch scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Respect OS reduced-motion preference on mobile & desktop */
+@media (prefers-reduced-motion: reduce) {
+  .animate-liquid-flow,
+  .steady-pipe-stream {
+    animation: none !important;
+  }
+}
+

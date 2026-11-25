@@ -669,10 +669,10 @@ export default function ReviewSession({
   const primaryDisplayWord = currentCard.kanji || currentCard.reading || currentCard.meaning || 'Từ vựng';
 
   return (
-    <div className="fixed inset-0 bg-theme-base z-50 font-sans text-theme-primary flex flex-col overflow-hidden select-none">
+    <div className="fixed inset-0 bg-theme-base z-50 font-sans text-theme-primary flex flex-col overflow-hidden select-none pt-safe pl-safe pr-safe">
       
       {/* Top App Bar Header */}
-      <header className="shrink-0 w-full bg-theme-panel/95 backdrop-blur-md border-b border-theme-subtle px-3 sm:px-6 py-2.5 z-20 flex items-center justify-between gap-3 shadow-xs">
+      <header className="shrink-0 w-full bg-theme-panel/95 backdrop-blur-md border-b border-theme-subtle px-3 sm:px-6 py-2.5 z-20 flex items-center justify-between gap-2 sm:gap-3 shadow-xs">
         
         {/* Left: Exit & Mode */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -835,7 +835,7 @@ export default function ReviewSession({
                       }
                     }
                   }}
-                  className={`w-full min-h-[380px] sm:min-h-[440px] max-h-[76vh] md:max-h-[82vh] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl shadow-black/5 dark:shadow-black/40 overflow-hidden flex flex-col relative transition-all duration-300 ${
+                  className={`w-full min-h-[300px] sm:min-h-[440px] max-h-[66dvh] sm:max-h-[76dvh] md:max-h-[82dvh] bg-theme-panel border border-theme-subtle rounded-3xl shadow-xl shadow-black/5 dark:shadow-black/40 overflow-hidden flex flex-col relative transition-all duration-300 ${
                     !(isFreeStudy && exerciseType !== 'flip') && !showAnswer
                       ? 'cursor-pointer hover:border-theme-accent/40' 
                       : ''
@@ -843,7 +843,7 @@ export default function ReviewSession({
                 >
                   
                   {/* Card Interior Header Tag */}
-                  <div className="w-full px-5 sm:px-6 pt-4 sm:pt-5 pb-3 flex items-center justify-between border-b border-theme-subtle/50 shrink-0 bg-theme-panel">
+                  <div className="w-full px-3.5 sm:px-6 pt-3.5 sm:pt-5 pb-2.5 sm:pb-3 flex items-center justify-between flex-wrap gap-2 border-b border-theme-subtle/50 shrink-0 bg-theme-panel">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent">
                         {showAnswer ? 'Mặt sau (Đáp án & Chi tiết)' : 'Mặt trước (Từ vựng)'}
@@ -952,7 +952,7 @@ export default function ReviewSession({
                           
                           <div className="flex items-center justify-center gap-3 flex-wrap">
                             <h2 
-                              className="text-4xl sm:text-6xl font-serif text-theme-primary font-bold tracking-tight"
+                              className="text-4xl sm:text-6xl font-serif text-theme-primary font-bold tracking-tight break-words max-w-full"
                               style={{ fontFamily: 'serif' }}
                             >
                               {currentCard.kanji || currentCard.reading}
@@ -1067,7 +1067,7 @@ export default function ReviewSession({
                           <span className="text-[10px] font-bold uppercase tracking-widest text-theme-accent/70">
                             Ý nghĩa chính
                           </span>
-                          <h3 className="text-2xl sm:text-3xl font-bold text-theme-primary tracking-tight leading-relaxed max-w-xl">
+                          <h3 className="text-xl sm:text-3xl font-bold text-theme-primary tracking-tight leading-relaxed max-w-xl break-words">
                             {currentCard.meaning}
                           </h3>
                         </div>
@@ -1147,19 +1147,19 @@ export default function ReviewSession({
                                               className="w-full bg-theme-panel border border-theme-subtle rounded-xl p-2.5 text-xs sm:text-sm text-theme-primary focus:outline-none focus:border-theme-accent"
                                               placeholder="Câu tiếng Nhật..."
                                             />
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-col sm:flex-row gap-2">
                                               <input
                                                 type="text"
                                                 value={editExampleForm.reading || ''}
                                                 onChange={e => setEditExampleForm({...editExampleForm, reading: e.target.value})}
-                                                className="w-1/2 bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                                                className="w-full sm:w-1/2 bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
                                                 placeholder="Cách đọc Hiragana..."
                                               />
                                               <input
                                                 type="text"
                                                 value={editExampleForm.romaji || ''}
                                                 onChange={e => setEditExampleForm({...editExampleForm, romaji: e.target.value})}
-                                                className="w-1/2 bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
+                                                className="w-full sm:w-1/2 bg-theme-panel border border-theme-subtle rounded-xl p-2 text-xs text-theme-primary focus:outline-none focus:border-theme-accent"
                                                 placeholder="Romaji..."
                                               />
                                             </div>
@@ -1601,9 +1601,9 @@ export default function ReviewSession({
 
       {/* Delete Confirmation Modal */}
       {confirmingDeleteId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-safe pb-safe">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmingDeleteId(null)} />
-          <div className="bg-theme-panel border border-theme-subtle rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md relative z-10 flex flex-col gap-4 text-center">
+          <div className="bg-theme-panel border border-theme-subtle rounded-3xl shadow-2xl p-5 sm:p-8 w-full max-w-md max-h-[88dvh] overflow-y-auto relative z-10 flex flex-col gap-4 text-center">
             <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
@@ -1638,9 +1638,9 @@ export default function ReviewSession({
 
       {/* Keyboard Shortcut Help Modal */}
       {showShortcutHelp && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-safe pb-safe">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowShortcutHelp(false)} />
-          <div className="bg-theme-panel border border-theme-subtle rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md relative z-10 flex flex-col gap-4">
+          <div className="bg-theme-panel border border-theme-subtle rounded-3xl shadow-2xl p-5 sm:p-8 w-full max-w-md max-h-[88dvh] overflow-y-auto relative z-10 flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-theme-subtle pb-3">
               <div className="flex items-center gap-2">
                 <Keyboard className="w-5 h-5 text-theme-accent" />

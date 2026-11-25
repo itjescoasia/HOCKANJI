@@ -94,10 +94,10 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
   };
 
   return (
-    <div className="w-full bg-theme-panel border border-theme-subtle p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[85vh]">
-      <div className="flex justify-between items-center mb-6 shrink-0 border-b border-theme-subtle/60 pb-4">
-        <h2 className="text-xl font-serif text-theme-primary font-bold tracking-tight">Chỉnh sửa từ vựng</h2>
-        <button onClick={onCancel} className="p-2 rounded-xl text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover transition-colors">
+    <div className="w-full bg-theme-panel border border-theme-subtle p-4 sm:p-8 rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[88dvh]">
+      <div className="flex justify-between items-center mb-4 sm:mb-6 shrink-0 border-b border-theme-subtle/60 pb-3 sm:pb-4">
+        <h2 className="text-lg sm:text-xl font-serif text-theme-primary font-bold tracking-tight">Chỉnh sửa từ vựng</h2>
+        <button onClick={onCancel} className="p-2 rounded-xl text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -106,7 +106,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] uppercase font-bold tracking-widest text-theme-primary/60">Kanji / Từ Vựng</label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
             <input 
               value={editForm.kanji || ''} 
               onChange={e => setEditForm({...editForm, kanji: e.target.value})}
@@ -116,7 +116,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
               type="button"
               onClick={autoFillAI}
               disabled={isGeneratingAI || !editForm.kanji?.trim()}
-              className="px-3.5 py-2.5 bg-theme-accent text-theme-inverted font-bold text-[10px] tracking-wider rounded-xl disabled:opacity-50 hover:brightness-110 transition-all whitespace-nowrap cursor-pointer shadow-xs"
+              className="px-3.5 py-2.5 bg-theme-accent text-theme-inverted font-bold text-[10px] tracking-wider rounded-xl disabled:opacity-50 hover:brightness-110 transition-all whitespace-nowrap cursor-pointer shadow-xs min-h-[42px]"
             >
               {isGeneratingAI ? 'ĐANG TẠO...' : 'AI TỰ ĐỘNG ĐIỀN'}
             </button>
@@ -225,7 +225,7 @@ export default function ReviewEditForm({ editForm, setEditForm, onSave, onCancel
                   placeholder="Câu ví dụ (Tiếng Nhật)"
                 />
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input 
                     value={ex.reading || ''} 
                     onChange={e => {

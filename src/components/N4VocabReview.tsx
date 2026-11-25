@@ -693,7 +693,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto w-full px-4 py-12 flex flex-col items-center justify-center gap-4 min-h-[60vh]">
+      <div className="max-w-4xl mx-auto w-full px-4 py-12 flex flex-col items-center justify-center gap-4 min-h-[60dvh]">
         <div className="w-8 h-8 border-3 border-theme-subtle border-t-theme-accent rounded-full animate-spin" />
         <p className="text-sm text-theme-primary/70">Đang tải dữ liệu từ vựng N4...</p>
       </div>
@@ -728,7 +728,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
   }
 
   return (
-    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-3 sm:px-6 pt-3 pb-28 sm:pb-8">
+    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-3 sm:px-6 pt-3 pb-36 sm:pb-8">
       {/* Compact Workspace Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-theme-subtle">
         <div className="flex items-center gap-3 min-w-0">
@@ -1061,7 +1061,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             </div>
 
             {/* Pinned / Mobile-Friendly 2-Button Action Dock */}
-            <div className="fixed bottom-0 left-0 right-0 sm:static z-20 bg-theme-panel/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-t-0 border-theme-subtle px-3 py-3 sm:p-0">
+            <div className="fixed bottom-0 left-0 right-0 sm:static z-20 bg-theme-panel/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-t-0 border-theme-subtle px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,12px))] sm:p-0">
               <div className="max-w-5xl mx-auto flex flex-col gap-2">
                 {!isFlipped && (
                   <button
