@@ -1138,9 +1138,9 @@ export default function ReviewSession({
                                   const isEditingExample = editingExampleId === ex.id;
                                   return (
                                     <HighlightProvider key={ex.id}>
-                                      <div className="w-full p-4 sm:p-5 rounded-2xl bg-theme-base-alt border border-theme-subtle/80 flex flex-col gap-2.5 relative group/ex text-left shadow-xs">
+                                      <div className="w-full p-3.5 sm:p-5 rounded-2xl bg-theme-base-alt border border-theme-subtle/80 flex flex-col gap-2.5 sm:grid sm:grid-cols-[1fr_auto] sm:gap-x-3 sm:gap-y-2.5 relative group/ex text-left shadow-xs">
                                         {isEditingExample ? (
-                                          <div className="w-full flex flex-col gap-2.5">
+                                          <div className="w-full sm:col-span-2 flex flex-col gap-2.5">
                                             <input
                                               type="text"
                                               value={editExampleForm.sentence}
@@ -1173,12 +1173,14 @@ export default function ReviewSession({
                                             />
                                             <div className="flex justify-end gap-2 mt-1">
                                               <button
+                                                type="button"
                                                 onClick={() => setEditingExampleId(null)}
-                                                className="px-3 py-1.5 text-xs text-theme-primary/60 hover:text-theme-primary"
+                                                className="px-3 py-1.5 text-xs text-theme-primary/60 hover:text-theme-primary cursor-pointer"
                                               >
                                                 Hủy
                                               </button>
                                               <button
+                                                type="button"
                                                 onClick={() => {
                                                   if (!onUpdateCard) return;
                                                   const updatedExamples = currentCard.examples!.map(e => 
@@ -1187,7 +1189,7 @@ export default function ReviewSession({
                                                   onUpdateCard(currentCard.id, { examples: updatedExamples });
                                                   setEditingExampleId(null);
                                                 }}
-                                                className="px-4 py-1.5 text-xs font-bold bg-theme-accent text-theme-inverted rounded-xl hover:brightness-110"
+                                                className="px-4 py-1.5 text-xs font-bold bg-theme-accent text-theme-inverted rounded-xl hover:brightness-110 cursor-pointer"
                                               >
                                                 Lưu thay đổi
                                               </button>
@@ -1195,22 +1197,35 @@ export default function ReviewSession({
                                           </div>
                                         ) : (
                                           <>
-                                            <div className="w-full flex items-start justify-between gap-3">
-                                              <p className="text-base sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium">
-                                                {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, deck, currentCard)}
+                                            <p className="w-full min-w-0 text-[17px] sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium sm:col-start-1 sm:row-start-1">
+                                              {renderExampleHighlight(ex.sentence, currentCard.kanji || currentCard.reading, deck, currentCard)}
+                                            </p>
+
+                                            {(ex.reading || ex.romaji) && (
+                                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-theme-primary/65 font-serif sm:col-span-2">
+                                                {ex.reading && <span className="italic"><RelatedHighlight text={ex.reading} type="hiragana" /></span>}
+                                                {ex.romaji && <span className="opacity-65 italic"><RelatedHighlight text={ex.romaji} type="romaji" /></span>}
+                                              </div>
+                                            )}
+
+                                            {ex.translation && (
+                                              <p className="text-xs sm:text-sm text-theme-accent opacity-90 leading-relaxed pt-2 border-t border-theme-subtle/50 sm:col-span-2">
+                                                <HighlightVietnamese text={ex.translation} />
                                               </p>
-                                              
-                                              <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                            )}
+
+                                            <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-1 flex-wrap pt-2.5 mt-0.5 border-t border-theme-subtle/50 sm:border-t-0 sm:pt-0 sm:mt-0 sm:-mt-1 shrink-0 sm:col-start-2 sm:row-start-1 sm:self-start">
+                                              <div className="flex items-center gap-1.5 sm:gap-1 flex-wrap">
                                                 {ex.audioUrl ? (
                                                   <div className="flex items-center gap-1">
                                                     <button
                                                       type="button"
                                                       onClick={(e) => handleSpeak(e, ex.sentence, ex.audioUrl)}
-                                                      className="p-2 rounded-xl transition-all cursor-pointer bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25 flex items-center gap-1 shadow-xs"
+                                                      className="px-2.5 py-2 sm:p-2 rounded-xl transition-all cursor-pointer bg-theme-accent/15 text-theme-accent hover:bg-theme-accent/25 flex items-center gap-1.5 sm:gap-1 shadow-xs"
                                                       title="Nghe file MP3 chuẩn câu ví dụ"
                                                     >
                                                       <Volume2 className="w-4 h-4" />
-                                                      <span className="text-[9px] font-bold uppercase tracking-wider">MP3</span>
+                                                      <span className="text-[10px] sm:text-[9px] font-bold uppercase tracking-wider">MP3</span>
                                                     </button>
                                                     {uploadingExampleId === ex.id ? (
                                                       <div className="flex items-center gap-1.5 p-1 px-2.5 rounded-xl bg-theme-panel border border-theme-accent/40 shadow-2xs animate-in fade-in duration-150">
@@ -1226,10 +1241,10 @@ export default function ReviewSession({
                                                     ) : (
                                                       <label
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="p-1.5 rounded-xl text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover cursor-pointer transition-colors"
+                                                        className="p-2 sm:p-1.5 rounded-xl text-theme-primary/50 hover:text-theme-accent hover:bg-theme-hover cursor-pointer transition-colors"
                                                         title="Đổi file MP3 cho câu ví dụ này"
                                                       >
-                                                        <Upload className="w-3.5 h-3.5" />
+                                                        <Upload className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                                                         <input
                                                           type="file"
                                                           accept="audio/*"
@@ -1255,7 +1270,7 @@ export default function ReviewSession({
                                                   ) : (
                                                     <label
                                                       onClick={(e) => e.stopPropagation()}
-                                                      className="px-2.5 py-1.5 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                                                      className="px-3 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl transition-all cursor-pointer bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 flex items-center gap-1.5 text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98]"
                                                       title="Câu ví dụ này chưa có file MP3. Bấm để tải lên file MP3 chuẩn"
                                                     >
                                                       <Upload className="w-3.5 h-3.5" />
@@ -1270,7 +1285,9 @@ export default function ReviewSession({
                                                     </label>
                                                   )
                                                 )}
+                                              </div>
 
+                                              <div className="flex items-center gap-1">
                                                 <button
                                                   type="button"
                                                   onClick={() => {
@@ -1282,10 +1299,10 @@ export default function ReviewSession({
                                                       romaji: ex.romaji || ""
                                                     });
                                                   }}
-                                                  className="p-2 rounded-xl text-theme-primary/30 hover:text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer"
+                                                  className="p-2 rounded-xl text-theme-primary/50 sm:text-theme-primary/35 hover:text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer"
                                                   title="Chỉnh sửa câu ví dụ"
                                                 >
-                                                  <Edit3 className="w-3.5 h-3.5" />
+                                                  <Edit3 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                                                 </button>
 
                                                 <button
@@ -1294,31 +1311,18 @@ export default function ReviewSession({
                                                   className={`p-2 rounded-xl transition-all cursor-pointer ${
                                                     copiedExampleId === ex.id
                                                       ? 'bg-emerald-500/15 text-emerald-500 font-bold'
-                                                      : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                                      : 'text-theme-primary/50 sm:text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
                                                   }`}
                                                   title={copiedExampleId === ex.id ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
                                                 >
                                                   {copiedExampleId === ex.id ? (
-                                                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                                    <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-500" />
                                                   ) : (
-                                                    <Copy className="w-3.5 h-3.5" />
+                                                    <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                                                   )}
                                                 </button>
                                               </div>
                                             </div>
-
-                                            {(ex.reading || ex.romaji) && (
-                                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-theme-primary/60 font-serif">
-                                                {ex.reading && <span className="italic"><RelatedHighlight text={ex.reading} type="hiragana" /></span>}
-                                                {ex.romaji && <span className="opacity-60 italic"><RelatedHighlight text={ex.romaji} type="romaji" /></span>}
-                                              </div>
-                                            )}
-
-                                            {ex.translation && (
-                                              <p className="text-xs sm:text-sm text-theme-accent opacity-90 leading-relaxed pt-2 border-t border-theme-subtle/50">
-                                                <HighlightVietnamese text={ex.translation} />
-                                              </p>
-                                            )}
                                           </>
                                         )}
                                       </div>
@@ -1328,26 +1332,34 @@ export default function ReviewSession({
                               ) : (
                                 /* Legacy single example fallback */
                                 <HighlightProvider>
-                                  <div className="w-full p-4 sm:p-5 rounded-2xl bg-theme-base-alt border border-theme-subtle/80 flex flex-col gap-2 relative text-left shadow-xs">
+                                  <div className="w-full p-3.5 sm:p-5 rounded-2xl bg-theme-base-alt border border-theme-subtle/80 flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_auto] sm:gap-x-3 sm:gap-y-2 relative text-left shadow-xs">
                                     {currentCard.example && (
-                                      <div className="w-full flex items-start justify-between gap-3">
-                                        <p className="text-base sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium">
-                                          {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck, currentCard)}
-                                        </p>
-                                        <div className="flex items-center gap-1 shrink-0 -mt-1">
+                                      <p className="w-full min-w-0 text-[17px] sm:text-lg text-theme-primary font-serif leading-relaxed break-words font-medium sm:col-start-1 sm:row-start-1">
+                                        {renderExampleHighlight(currentCard.example, currentCard.kanji || currentCard.reading, deck, currentCard)}
+                                      </p>
+                                    )}
+                                    {currentCard.exampleTranslation && (
+                                      <p className="text-xs sm:text-sm text-theme-accent opacity-90 leading-relaxed pt-2 border-t border-theme-subtle/50 sm:col-span-2">
+                                        <HighlightVietnamese text={currentCard.exampleTranslation} />
+                                      </p>
+                                    )}
+                                    {currentCard.example && (
+                                      <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-1 flex-wrap pt-2.5 mt-0.5 border-t border-theme-subtle/50 sm:border-t-0 sm:pt-0 sm:mt-0 sm:-mt-1 shrink-0 sm:col-start-2 sm:row-start-1 sm:self-start">
+                                        <div className="flex items-center gap-1">
                                           {currentCard.audioUrl ? (
                                             <button
                                               type="button"
                                               onClick={(e) => handleSpeak(e, currentCard.example!, currentCard.audioUrl)}
-                                              className="p-2 rounded-xl text-theme-accent bg-theme-accent/15 hover:bg-theme-accent/25 cursor-pointer shadow-xs"
+                                              className="px-2.5 py-2 sm:p-2 rounded-xl text-theme-accent bg-theme-accent/15 hover:bg-theme-accent/25 cursor-pointer shadow-xs flex items-center gap-1.5 sm:gap-1"
                                               title="Nghe file MP3 câu ví dụ"
                                             >
                                               <Volume2 className="w-4 h-4" />
+                                              <span className="text-[10px] font-bold uppercase tracking-wider sm:hidden">MP3</span>
                                             </button>
                                           ) : (
                                             <label
                                               onClick={(e) => e.stopPropagation()}
-                                              className="px-2.5 py-1 rounded-xl cursor-pointer bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1 shadow-xs"
+                                              className="px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-xl cursor-pointer bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 shadow-xs"
                                               title="Tải lên file MP3 cho câu ví dụ"
                                             >
                                               <Upload className="w-3.5 h-3.5" />
@@ -1360,30 +1372,25 @@ export default function ReviewSession({
                                               />
                                             </label>
                                           )}
-
-                                          <button
-                                            type="button"
-                                            onClick={(e) => handleCopySentence(e, currentCard.example!, 'legacy')}
-                                            className={`p-2 rounded-xl transition-all cursor-pointer ${
-                                              copiedExampleId === 'legacy'
-                                                ? 'bg-emerald-500/15 text-emerald-500 font-bold'
-                                                : 'text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
-                                            }`}
-                                            title={copiedExampleId === 'legacy' ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
-                                          >
-                                            {copiedExampleId === 'legacy' ? (
-                                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                                            ) : (
-                                              <Copy className="w-3.5 h-3.5" />
-                                            )}
-                                          </button>
                                         </div>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleCopySentence(e, currentCard.example!, 'legacy')}
+                                          className={`p-2 rounded-xl transition-all cursor-pointer ${
+                                            copiedExampleId === 'legacy'
+                                              ? 'bg-emerald-500/15 text-emerald-500 font-bold'
+                                              : 'text-theme-primary/50 sm:text-theme-primary/40 hover:text-theme-accent hover:bg-theme-hover'
+                                          }`}
+                                          title={copiedExampleId === 'legacy' ? "Đã copy câu ví dụ!" : "Copy câu ví dụ tiếng Nhật"}
+                                        >
+                                          {copiedExampleId === 'legacy' ? (
+                                            <Check className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-500" />
+                                          ) : (
+                                            <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                                          )}
+                                        </button>
                                       </div>
-                                    )}
-                                    {currentCard.exampleTranslation && (
-                                      <p className="text-xs sm:text-sm text-theme-accent opacity-90 leading-relaxed pt-2 border-t border-theme-subtle/50">
-                                        <HighlightVietnamese text={currentCard.exampleTranslation} />
-                                      </p>
                                     )}
                                   </div>
                                 </HighlightProvider>
