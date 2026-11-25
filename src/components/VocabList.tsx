@@ -194,8 +194,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const itemsPerPage = 10;
   const [isImporting, setIsImporting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTab, setEditTab] = useState<'basic' | 'forms' | 'examples'>('basic');
   const [viewingCard, setViewingCard] = useState<KanjiCard | null>(null);
   const [copiedSentenceKey, setCopiedSentenceKey] = useState<string | null>(null);
+  const editingIdRef = useRef<string | null>(null);
+  const handledEditReqRef = useRef<string | null>(null);
+  const handledViewReqRef = useRef<string | null>(null);
 
   const handleCopySentence = (e: React.MouseEvent, text: string, key: string) => {
     e.stopPropagation();
@@ -234,6 +238,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>>({});
+  const editFormRef = useRef(editForm);
+  editFormRef.current = editForm;
+  editingIdRef.current = editingId;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeAudioText, setActiveAudioText] = useState<string | null>(null);
 
@@ -416,10 +423,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const autoFillAI = async () => {
-    if (!editForm.kanji?.trim()) {
+    const wordToQuery = (editFormRef.current.kanji || '').trim();
+    if (!wordToQuery) {
       notify.warning('Vui lòng nhập từ (Kanji/Hiragana) trước khi dùng AI tự động điền.');
       return;
     }
+    const targetEditId = editingIdRef.current;
     
     try {
       setIsGeneratingAI(true);
@@ -432,7 +441,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           res = await fetch(getApiEndpoint('/api/generate-vocab'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ word: editForm.kanji.trim() })
+            body: JSON.stringify({ word: wordToQuery })
           });
           const parsed = await safeFetchJson(res);
           data = parsed.data || { error: parsed.error };
@@ -452,39 +461,44 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         throw new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
       }
 
-      // Process forms and guarantee complete forms (including 寝なかった, 眠らなかった, 朝だ, etc.)
-      let incomingForms = Array.isArray(data.forms) ? data.forms.map((f: any) => ({
-        ...f,
-        id: f.id || crypto.randomUUID()
-      })) : (editForm.forms || []);
+      if (editingIdRef.current !== targetEditId) return;
 
-      incomingForms = ensureCompleteForms({
-        word: editForm.kanji.trim() || data.kanji || '',
-        reading: data.reading || editForm.reading || '',
-        romaji: data.romaji || editForm.romaji || '',
-        meaning: data.meaning || editForm.meaning || '',
-        wordType: data.wordType || editForm.wordType || '',
-        forms: incomingForms
+      setEditForm(prev => {
+        const currentKanji = (prev.kanji || wordToQuery || '').trim();
+        let incomingForms = Array.isArray(data.forms) ? data.forms.map((f: any) => ({
+          ...f,
+          id: f.id || crypto.randomUUID()
+        })) : (prev.forms || []);
+
+        incomingForms = ensureCompleteForms({
+          word: currentKanji || data.kanji || '',
+          reading: data.reading || prev.reading || '',
+          romaji: data.romaji || prev.romaji || '',
+          meaning: data.meaning || prev.meaning || '',
+          wordType: data.wordType || prev.wordType || '',
+          forms: incomingForms
+        });
+
+        const incomingExamples = Array.isArray(data.examples) && data.examples.length > 0
+          ? data.examples.map((ex: any) => ({
+              id: ex.id || crypto.randomUUID(),
+              ...ex
+            }))
+          : prev.examples;
+
+        return {
+          ...prev,
+          reading: data.reading !== undefined ? data.reading : prev.reading,
+          romaji: data.romaji !== undefined ? data.romaji : prev.romaji,
+          meaning: data.meaning !== undefined ? data.meaning : prev.meaning,
+          sinoVietnamese: data.sinoVietnamese !== undefined ? data.sinoVietnamese : prev.sinoVietnamese,
+          kanjiExplanation: data.kanjiExplanation !== undefined ? data.kanjiExplanation : prev.kanjiExplanation,
+          wordType: data.wordType !== undefined ? data.wordType : prev.wordType,
+          forms: incomingForms,
+          examples: incomingExamples
+        };
       });
-
-      const incomingExamples = Array.isArray(data.examples) && data.examples.length > 0
-        ? data.examples.map((ex: any) => ({
-            id: ex.id || crypto.randomUUID(),
-            ...ex
-          }))
-        : editForm.examples;
-
-      setEditForm({
-        ...editForm,
-        reading: data.reading !== undefined ? data.reading : editForm.reading,
-        romaji: data.romaji !== undefined ? data.romaji : editForm.romaji,
-        meaning: data.meaning !== undefined ? data.meaning : editForm.meaning,
-        sinoVietnamese: data.sinoVietnamese !== undefined ? data.sinoVietnamese : editForm.sinoVietnamese,
-        kanjiExplanation: data.kanjiExplanation !== undefined ? data.kanjiExplanation : editForm.kanjiExplanation,
-        wordType: data.wordType !== undefined ? data.wordType : editForm.wordType,
-        forms: incomingForms,
-        examples: incomingExamples
-      });
+      notify.success('Đã tự động điền thông tin từ AI! Bạn có thể xem lại ở từng tab.');
     } catch (error: any) {
       console.error(error);
       notify.error(error.message || 'Có lỗi xảy ra khi gọi AI.');
@@ -494,24 +508,24 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const fetchOjadData = async () => {
-    if (!editForm.kanji) {
+    const wordToQuery = (editFormRef.current.kanji || '').trim();
+    if (!wordToQuery) {
       notify.warning('Vui lòng nhập từ (Kanji/Hiragana) trước khi lấy dữ liệu OJAD.');
       return;
     }
+    const targetEditId = editingIdRef.current;
     try {
       setIsFetchingOjad(true);
-      const res = await fetch(getApiEndpoint(`/api/ojad?word=${encodeURIComponent(editForm.kanji)}`));
+      const res = await fetch(getApiEndpoint(`/api/ojad?word=${encodeURIComponent(wordToQuery)}`));
       const parsed = await safeFetchJson(res);
       if (!parsed.ok || !parsed.data) throw new Error(parsed.error || 'Không thể lấy dữ liệu OJAD');
       const data = parsed.data;
+      if (editingIdRef.current !== targetEditId) return;
+
       if (data.results && data.results.length > 0) {
-         // Lấy kết quả đầu tiên
          const result = data.results[0];
-         // Preserve existing forms not returned by OJAD if needed, or simply replace
-         const updatedForms = [...(editForm.forms || [])];
          const ojadForms = result.forms;
          
-         const baseMeaning = editForm.meaning || '';
          const getFormMeaning = (formName: string, base: string) => {
             if (!base) return '';
             const lowerBase = base.toLowerCase();
@@ -526,25 +540,30 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             if (formName.includes('thể て')) return `${lowerBase} rồi...`;
             return '';
          };
-         
-         ojadForms.forEach((f: any) => {
-            const romajiValue = f.reading ? toRomaji(f.reading) : '';
-            const formMeaning = getFormMeaning(f.name, baseMeaning);
-            
-            const existingIdx = updatedForms.findIndex(uf => uf.name === f.name);
-            if (existingIdx !== -1) {
-                updatedForms[existingIdx].value = f.value;
-                updatedForms[existingIdx].reading = f.reading;
-                updatedForms[existingIdx].romaji = romajiValue;
-                updatedForms[existingIdx].meaning = formMeaning;
-            } else {
-                updatedForms.push({ id: crypto.randomUUID(), name: f.name, value: f.value, reading: f.reading, romaji: romajiValue, meaning: formMeaning });
-            }
+
+         setEditForm(prev => {
+           const updatedForms = [...(prev.forms || [])];
+           const baseMeaning = prev.meaning || '';
+           ojadForms.forEach((f: any) => {
+             const romajiValue = f.reading ? toRomaji(f.reading) : '';
+             const formMeaning = getFormMeaning(f.name, baseMeaning);
+             const existingIdx = updatedForms.findIndex(uf => uf.name === f.name);
+             if (existingIdx !== -1) {
+               updatedForms[existingIdx] = {
+                 ...updatedForms[existingIdx],
+                 value: f.value,
+                 reading: f.reading,
+                 romaji: romajiValue,
+                 meaning: formMeaning
+               };
+             } else {
+               updatedForms.push({ id: crypto.randomUUID(), name: f.name, value: f.value, reading: f.reading, romaji: romajiValue, meaning: formMeaning });
+             }
+           });
+           const newWordType = prev.wordType || 'Động từ';
+           return { ...prev, forms: updatedForms, wordType: newWordType };
          });
-         
-         // Update wordType if empty
-         const newWordType = editForm.wordType || 'Động từ'; // Fallback to verb if not set
-         setEditForm({...editForm, forms: updatedForms, wordType: newWordType});
+         notify.success('Đã cập nhật các thể chia từ OJAD!');
       } else {
          notify.warning('Không tìm thấy dữ liệu OJAD cho từ này.');
       }
@@ -557,7 +576,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const startEdit = (card: KanjiCard) => {
+    editingIdRef.current = card.id;
     setEditingId(card.id);
+    setEditTab('basic');
     setEditForm({
       kanji: card.kanji,
       reading: card.reading || '',
@@ -576,10 +597,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   React.useEffect(() => {
-    const targetId = editCardReq?.id || initialEditId;
-    if (targetId) {
+    const reqKey = editCardReq ? `req:${editCardReq.id}:${editCardReq.ts}` : initialEditId ? `init:${initialEditId}` : null;
+    if (reqKey && handledEditReqRef.current !== reqKey) {
+      const targetId = editCardReq?.id || initialEditId;
       const card = deck.find(c => c.id === targetId);
       if (card) {
+        handledEditReqRef.current = reqKey;
         startEdit(card);
         setSearch(card.kanji || card.reading);
         setCurrentPage(1);
@@ -613,8 +636,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
              if (updatedCard.forms) {
                 updatedCard.forms.forEach((cloudForm, idx) => {
                    if (cloudForm.audioUrl && newForms[idx] && !newForms[idx].audioUrl) {
-                      newForms[idx].audioUrl = cloudForm.audioUrl;
-                      newForms[idx].hasAudio = true;
+                      newForms[idx] = { ...newForms[idx], audioUrl: cloudForm.audioUrl, hasAudio: true };
                       changed = true;
                    }
                 });
@@ -622,8 +644,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
              if (updatedCard.examples) {
                 updatedCard.examples.forEach((cloudEx, idx) => {
                    if (cloudEx.audioUrl && newExamples[idx] && !newExamples[idx].audioUrl) {
-                      newExamples[idx].audioUrl = cloudEx.audioUrl;
-                      newExamples[idx].hasAudio = true;
+                      newExamples[idx] = { ...newExamples[idx], audioUrl: cloudEx.audioUrl, hasAudio: true };
                       changed = true;
                    }
                 });
@@ -641,9 +662,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   }, [deck]);
 
   React.useEffect(() => {
-    if (viewCardReq?.id) {
-      const card = deck.find(c => c.id === viewCardReq.id);
+    const reqKey = viewCardReq ? `${viewCardReq.id}:${viewCardReq.ts}` : null;
+    if (reqKey && handledViewReqRef.current !== reqKey) {
+      const card = deck.find(c => c.id === viewCardReq!.id);
       if (card) {
+        handledViewReqRef.current = reqKey;
         setViewingCard(sanitizeCardFormsAudio(card));
         setSearch(card.kanji || card.reading);
         setCurrentPage(1);
@@ -655,6 +678,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (editingId) {
+        editingIdRef.current = null;
         setEditingId(null);
         setEditForm({});
       } else if (viewingCard) {
@@ -696,12 +720,15 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         examples: validExamples,
         forms: validForms,
         wordType: String(editForm.wordType || '').trim() || '', audioUrl: editForm.audioUrl || null, hasAudio: !!editForm.audioUrl });
+      editingIdRef.current = null;
       setEditingId(null);
+      setEditForm({});
       notify.success('Đã lưu thay đổi từ vựng!');
     }
   };
 
   const cancelEdit = () => {
+    editingIdRef.current = null;
     setEditingId(null);
     setEditForm({});
   };
@@ -956,46 +983,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         <div className="bg-theme-panel border border-theme-subtle overflow-hidden shadow-md sm:rounded-[20px] rounded-xl">
           {/* Mobile Card List (Visible on iPhone & mobile < md) */}
           <div className="block md:hidden divide-y divide-theme-subtle">
-            {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card, idx) => {
-              const isEditing = editingId === card.id;
-              if (isEditing) {
-                return (
-                  <div key={`mob-edit-${card.id}-${idx}`} className="p-4 bg-theme-hover space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase text-theme-accent">Đang sửa thẻ</span>
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={saveEdit} className="p-2 bg-theme-accent text-theme-inverted rounded-lg cursor-pointer" title="Lưu">
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button onClick={cancelEdit} className="p-2 border border-theme-subtle text-theme-primary rounded-lg cursor-pointer" title="Hủy">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <input 
-                      value={editForm.kanji} 
-                      onChange={e => setEditForm({...editForm, kanji: e.target.value})}
-                      className="w-full bg-theme-base-alt border border-theme-subtle text-xl font-serif text-theme-primary px-3 py-2 rounded-lg"
-                      placeholder="Kanji"
-                    />
-                    <input 
-                      value={editForm.reading} 
-                      onChange={e => setEditForm({...editForm, reading: e.target.value})}
-                      className="w-full bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 rounded-lg"
-                      placeholder="Cách đọc (Hiragana)"
-                    />
-                    <input 
-                      value={editForm.meaning} 
-                      onChange={e => setEditForm({...editForm, meaning: e.target.value})}
-                      className="w-full bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 rounded-lg"
-                      placeholder="Ý nghĩa"
-                    />
-                  </div>
-                );
-              }
-
+            {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card) => {
+              const isEditingThis = editingId === card.id;
               return (
-                <div key={`mob-${card.id}-${idx}`} className="p-4 flex flex-col gap-2.5 hover:bg-theme-hover/40 transition-colors">
+                <div key={`mob-${card.id}`} className={`p-4 flex flex-col gap-2.5 transition-colors ${isEditingThis ? 'bg-theme-accent/5 ring-1 ring-inset ring-theme-accent/30' : 'hover:bg-theme-hover/40'}`}>
                   {/* Top Header Row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
@@ -1136,462 +1127,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 </tr>
               </thead>
               <tbody className="divide-y divide-theme-subtle">
-                {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card, idx) => {
+                {filteredDeck.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage).map((card) => {
                   const endOfToday = new Date();
                   endOfToday.setHours(23, 59, 59, 999);
                   const isDue = card.nextReviewDate <= endOfToday.getTime();
-                  const isEditing = editingId === card.id;
+                  const isEditingThis = editingId === card.id;
 
-                  if (isEditing) {
-                    return (
-                      <tr key={`desk-edit-${card.id}-${idx}`} className="bg-theme-hover shadow-inner">
-                        <td className="px-4 py-4 w-32 align-top">
-                          <div className="flex flex-col gap-2">
-                            <input 
-                              value={editForm.kanji} 
-                              onChange={e => setEditForm({...editForm, kanji: e.target.value})}
-                              className="w-full bg-theme-base-alt border border-theme-subtle text-xl font-serif text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                              placeholder="Kanji"
-                            />
-                            <AudioUpload 
-                              audioUrl={editForm.audioUrl} 
-                              onAudioChange={(url) => setEditForm(prev => ({...prev, audioUrl: url}))}
-                              onGenerateAI={editForm.kanji && !editForm.audioUrl ? () => {
-                                handleGenerateSingle(editForm.kanji, (url) => {
-                                  setEditForm(prev => {
-                                     if (editingId && onUpdate) onUpdate(editingId, { ...prev, audioUrl: url });
-                                     return { ...prev, audioUrl: url };
-                                  });
-                                }, 'main-kanji');
-                              } : undefined}
-                              isGenerating={generatingId === 'main-kanji'}
-                              className="w-full mt-2" 
-                            />
-                            <button
-                              type="button"
-                              onClick={autoFillAI}
-                              disabled={isGeneratingAI || !editForm.kanji?.trim()}
-                              className="w-full px-3 py-2 bg-theme-accent text-theme-base font-bold text-[10px] tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap text-center"
-                            >
-                              {isGeneratingAI ? 'ĐANG TẠO...' : 'AI TỰ ĐỘNG ĐIỀN'}
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 min-w-[250px] align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex gap-2">
-                              <input 
-                                value={editForm.reading} 
-                                onChange={e => setEditForm({...editForm, reading: e.target.value})}
-                                className="flex-1 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                                placeholder="Cách đọc"
-                              />
-                              <input 
-                                value={editForm.romaji || ''} 
-                                onChange={e => setEditForm({...editForm, romaji: e.target.value})}
-                                className="w-24 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                                placeholder="Romaji"
-                              />
-                              <select 
-                                value={editForm.wordType} 
-                                onChange={e => {
-  const newWordType = e.target.value;
-  let newForms = editForm.forms || [];
-  if (newWordType.includes('Động từ') && newForms.length === 0) {
-    newForms = [
-      { id: crypto.randomUUID(), name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể quá khứ phủ định (thể なかった)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể khả năng (phủ định)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể khả năng (quá khứ phủ định)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể điều kiện (thể ば/たら)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
-      { id: crypto.randomUUID(), name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
-    ];
-  } else if (newWordType === 'Danh từ' && newForms.length === 0) {
-    const rootK = editForm.kanji?.trim() || '';
-    const rootR = editForm.reading?.trim() || '';
-    const rootRom = editForm.romaji?.trim() || '';
-    const rootM = editForm.meaning?.trim() || '';
-    newForms = [
-      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `là ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `là ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không phải là ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không phải là ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã là ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã là ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không phải là ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không phải là ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `là ${rootM} và...` : '' }
-    ];
-  } else if (newWordType === 'Tính từ na' && newForms.length === 0) {
-    const rootK = editForm.kanji?.trim() || '';
-    const rootR = editForm.reading?.trim() || '';
-    const rootRom = editForm.romaji?.trim() || '';
-    const rootM = editForm.meaning?.trim() || '';
-    newForms = [
-      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `(thể ngắn) ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `(thể lịch sự) ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Bổ nghĩa danh từ (thể な)', value: rootK ? `${rootK}な` : '', reading: rootR ? `${rootR}な` : '', romaji: rootRom ? `${rootRom} na` : '', meaning: rootM ? `(bổ nghĩa) ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không ${rootM}` : '' },
-      { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không ${rootM} (lịch sự)` : '' },
-      { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `${rootM} và...` : '' }
-    ];
-  }
-  setEditForm({...editForm, wordType: newWordType, forms: newForms});
-}}
-                                className="w-32 bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent appearance-none"
-                              >
-                                <option value="">Loại từ</option>
-                                <option value="Động từ nhóm I (Tha động từ)">Động từ nhóm I (Tha động từ)</option>
-                                <option value="Động từ nhóm I (Tự động từ)">Động từ nhóm I (Tự động từ)</option>
-                                <option value="Động từ nhóm I">Động từ nhóm I</option>
-                                <option value="Động từ nhóm II (Tha động từ)">Động từ nhóm II (Tha động từ)</option>
-                                <option value="Động từ nhóm II (Tự động từ)">Động từ nhóm II (Tự động từ)</option>
-                                <option value="Động từ nhóm II">Động từ nhóm II</option>
-                                <option value="Động từ nhóm III (Tha động từ)">Động từ nhóm III (Tha động từ)</option>
-                                <option value="Động từ nhóm III (Tự động từ)">Động từ nhóm III (Tự động từ)</option>
-                                <option value="Động từ nhóm III">Động từ nhóm III</option>
-                                <option value="Danh từ">Danh từ</option>
-                                <option value="Tính từ i">Tính từ i</option>
-                                <option value="Tính từ na">Tính từ na</option>
-                                <option value="Trạng từ">Trạng từ</option>
-                                <option value="Ngữ pháp">Ngữ pháp</option>
-                                <option value="Khác">Khác</option>
-                              </select>
-                              <input 
-                                value={editForm.sinoVietnamese} 
-                                onChange={e => setEditForm({...editForm, sinoVietnamese: e.target.value})}
-                                className="w-24 bg-theme-base-alt border border-theme-subtle text-sm text-theme-accent uppercase px-3 py-2 focus:outline-none focus:border-theme-accent"
-                                placeholder="Hán Việt"
-                              />
-                            </div>
-                            <input 
-                              value={editForm.meaning} 
-                              onChange={e => setEditForm({...editForm, meaning: e.target.value})}
-                              className="w-full bg-theme-base-alt border border-theme-subtle text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                              placeholder="Ý nghĩa"
-                            />
-                            <textarea 
-                              value={editForm.kanjiExplanation || ''} 
-                              onChange={e => setEditForm({...editForm, kanjiExplanation: e.target.value})}
-                              className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                              placeholder="Giải thích Hán tự"
-                              rows={2}
-                            />
-                            
-                            {(() => {
-                              const isVerbs = editForm.wordType?.includes('Động từ');
-                              const isAdjectivesOrNoun = editForm.wordType === 'Danh từ' || editForm.wordType === 'Tính từ i' || editForm.wordType === 'Tính từ na';
-                              const isFormsEnabled = isVerbs || isAdjectivesOrNoun;
-                              const formsLabel = isVerbs ? 'Các thể' : 'Các thì';
-                              const formsNamePlaceholder = isVerbs ? 'Tên thể (ví dụ: Thể て)' : 'Tên thì (ví dụ: Quá khứ)';
-                              const formsValuePlaceholder = isVerbs ? 'Sau khi chia (ví dụ: 教えて)' : 'Sau khi chia (ví dụ: だった)';
-
-                              if (!isFormsEnabled) return null;
-
-                              return (
-                              <div className="pt-2 border-t border-theme-subtle mt-2">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">{formsLabel}</label>
-                                    {isVerbs && (
-                                      <button
-                                        type="button"
-                                        onClick={fetchOjadData}
-                                        disabled={isFetchingOjad}
-                                        className="text-[10px] bg-[#1a5f7a] text-white px-2 py-0.5 rounded-sm hover:bg-[#227b9e] transition-colors disabled:opacity-50"
-                                      >
-                                        {isFetchingOjad ? 'Đang lấy...' : 'Lấy từ OJAD'}
-                                      </button>
-                                    )}
-                                  </div>
-                                  <button 
-                                    type="button" 
-                                    onClick={() => {
-                                      const newForms = editForm.forms ? [...editForm.forms] : [];
-                                      newForms.push({ id: crypto.randomUUID(), name: '', value: '' });
-                                      setEditForm({...editForm, forms: newForms});
-                                    }}
-                                    className="p-1 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors flex items-center gap-1 text-[10px]"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                    <span>Thêm thể</span>
-                                  </button>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                  {editForm.forms?.map((f, index) => (
-                                    <div key={f.id || index} className="relative flex flex-col gap-2 p-2 border border-theme-subtle bg-theme-base/30 rounded-sm">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const newForms = [...(editForm.forms || [])];
-                                          newForms.splice(index, 1);
-                                          setEditForm({...editForm, forms: newForms});
-                                        }}
-                                        className="absolute top-1 right-1 p-1 text-theme-primary/40 hover:text-red-500 z-10"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                      <div className="flex gap-2">
-                                        <input 
-                                          value={f.name} 
-                                          onChange={e => {
-                                            const newForms = [...(editForm.forms || [])];
-                                            newForms[index] = { ...newForms[index], name: e.target.value };
-                                            setEditForm({...editForm, forms: newForms});
-                                          }}
-                                          className="w-1/3 bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent"
-                                          placeholder={formsNamePlaceholder}
-                                        />
-                                        <input 
-                                          value={f.value} 
-                                          onChange={e => {
-                                            const newForms = [...(editForm.forms || [])];
-                                            newForms[index] = { ...newForms[index], value: e.target.value };
-                                            setEditForm({...editForm, forms: newForms});
-                                          }}
-                                          className="w-2/3 bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent pr-6"
-                                          placeholder={formsValuePlaceholder}
-                                        />
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <input 
-                                          value={f.reading || ''} 
-                                          onChange={e => {
-                                            const newForms = [...(editForm.forms || [])];
-                                            newForms[index] = { ...newForms[index], reading: e.target.value };
-                                            setEditForm({...editForm, forms: newForms});
-                                          }}
-                                          className="w-1/3 bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent italic"
-                                          placeholder="Hiragana"
-                                        />
-                                        <input 
-                                          value={f.romaji || ''} 
-                                          onChange={e => {
-                                            const newForms = [...(editForm.forms || [])];
-                                            newForms[index] = { ...newForms[index], romaji: e.target.value };
-                                            setEditForm({...editForm, forms: newForms});
-                                          }}
-                                          className="w-1/3 bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent italic"
-                                          placeholder="Romaji"
-                                        />
-                                        <input 
-                                          value={f.meaning || ''} 
-                                          onChange={e => {
-                                            const newForms = [...(editForm.forms || [])];
-                                            newForms[index] = { ...newForms[index], meaning: e.target.value };
-                                            setEditForm({...editForm, forms: newForms});
-                                          }}
-                                          className="w-1/3 bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent italic"
-                                          placeholder="Nghĩa (Tiếng Việt)"
-                                        />
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <AudioUpload 
-                                          audioUrl={f.audioUrl} 
-                                          onAudioChange={(url) => {
-                                            const newForms = [...(editForm.forms || [])];
-                                            newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
-                                            setEditForm({...editForm, forms: newForms});
-                                          }}
-                                          onGenerateAI={f.value && !f.audioUrl ? () => {
-                                            handleGenerateSingle(f.value, (url) => {
-                                              setEditForm(prev => {
-                                                const newForms = [...(prev.forms || [])];
-                                                newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
-                                                if (editingId && onUpdate) onUpdate(editingId, { ...prev, forms: newForms });
-                                                return { ...prev, forms: newForms };
-                                              });
-                                            }, `form-${index}`);
-                                          } : undefined}
-                                          isGenerating={generatingId === `form-${index}`}
-                                        />
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              );
-                            })()}
-                            
-                            <div className="pt-2 border-t border-theme-subtle mt-2">
-                              <div className="flex items-center justify-between mb-2">
-                                <label className="text-[10px] uppercase tracking-[0.1em] text-theme-accent opacity-80">Các ví dụ (Mở rộng)</label>
-                                <button 
-                                  type="button" 
-                                  onClick={() => {
-                                    const newExamples = editForm.examples ? [...editForm.examples] : [];
-                                    newExamples.unshift({ id: crypto.randomUUID(), sentence: '', translation: '' });
-                                    setEditForm({...editForm, examples: newExamples});
-                                  }}
-                                  className="p-1 rounded-sm bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors flex items-center gap-1 text-[10px]"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  <span>Thêm</span>
-                                </button>
-                              </div>
-                              
-                              <div className="flex flex-col gap-2">
-                                {(!editForm.examples || editForm.examples.length === 0) ? (
-                                  <div className="flex flex-col gap-2 p-2 border border-theme-subtle bg-theme-base/50 rounded-sm">
-                                    <input 
-                                      value={editForm.example || ''} 
-                                      onChange={e => setEditForm({...editForm, example: e.target.value})}
-                                      className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                                      placeholder="Ví dụ (Tiếng Nhật) - Cũ"
-                                    />
-                                    <input 
-                                      value={editForm.exampleTranslation || ''} 
-                                      onChange={e => setEditForm({...editForm, exampleTranslation: e.target.value})}
-                                      className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
-                                      placeholder="Dịch nghĩa (Tiếng Việt) - Cũ"
-                                    />
-                                    <AudioUpload 
-                                      audioUrl={editForm.audioUrl} 
-                                      onAudioChange={(url) => setEditForm({...editForm, audioUrl: url})} 
-                                      onGenerateAI={editForm.example && !editForm.audioUrl ? () => {
-                                            handleGenerateSingle(editForm.example, (url) => {
-                                              setEditForm(prev => {
-                                                 if (editingId && onUpdate) onUpdate(editingId, { ...prev, audioUrl: url });
-                                                 return { ...prev, audioUrl: url };
-                                              });
-                                            }, `old-example`);
-                                      } : undefined}
-                                      isGenerating={generatingId === `old-example`}
-                                    />
-                                  </div>
-                                ) : (
-                                  editForm.examples.map((ex, index) => (
-                                    <div key={ex.id || index} className="relative p-2 border border-theme-subtle bg-theme-base/50 rounded-sm flex flex-col gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const newExamples = [...(editForm.examples || [])];
-                                          newExamples.splice(index, 1);
-                                          setEditForm({...editForm, examples: newExamples});
-                                        }}
-                                        className="absolute top-1 right-1 p-1 text-theme-primary/40 hover:text-red-500"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                      
-                                      <input 
-                                        value={ex.sentence} 
-                                        onChange={e => {
-                                          const newExamples = [...(editForm.examples || [])];
-                                          newExamples[index] = { ...newExamples[index], sentence: e.target.value };
-                                          setEditForm({...editForm, examples: newExamples});
-                                        }}
-                                        className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent pr-6"
-                                        placeholder="Câu ví dụ (Tiếng Nhật)"
-                                      />
-                                      
-                                      <AudioUpload 
-                                        audioUrl={ex.audioUrl} 
-                                        onAudioChange={(url) => {
-                                          const newExamples = [...(editForm.examples || [])];
-                                          newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
-                                          setEditForm({...editForm, examples: newExamples});
-                                        }} 
-                                        onGenerateAI={ex.sentence && !ex.audioUrl ? () => {
-                                            handleGenerateSingle(ex.sentence, (url) => {
-                                              setEditForm(prev => {
-                                                const newExamples = [...(prev.examples || [])];
-                                                newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
-                                                
-                                                // Tự động lưu ngay lập tức vào DB
-                                                if (editingId && onUpdate) {
-                                                   onUpdate(editingId, { ...prev, examples: newExamples });
-                                                }
-                                                
-                                                return { ...prev, examples: newExamples };
-                                              });
-                                            }, `ex-${index}`);
-                                          } : undefined}
-                                        isGenerating={generatingId === `ex-${index}`}
-                                      />
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <input 
-                                          value={ex.reading || ''} 
-                                          onChange={e => {
-                                            const newExamples = [...(editForm.examples || [])];
-                                            newExamples[index] = { ...newExamples[index], reading: e.target.value };
-                                            setEditForm({...editForm, examples: newExamples});
-                                          }}
-                                          className="w-full bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1 focus:outline-none focus:border-theme-accent italic"
-                                          placeholder="Hiragana"
-                                        />
-                                        <input 
-                                          value={ex.romaji || ''} 
-                                          onChange={e => {
-                                            const newExamples = [...(editForm.examples || [])];
-                                            newExamples[index] = { ...newExamples[index], romaji: e.target.value };
-                                            setEditForm({...editForm, examples: newExamples});
-                                          }}
-                                          className="w-full bg-theme-base-alt border border-theme-subtle text-[10px] text-theme-primary px-2 py-1 focus:outline-none focus:border-theme-accent italic"
-                                          placeholder="Romaji"
-                                        />
-                                      </div>
-                                      
-                                      <input 
-                                        value={ex.translation} 
-                                        onChange={e => {
-                                          const newExamples = [...(editForm.examples || [])];
-                                          newExamples[index] = { ...newExamples[index], translation: e.target.value };
-                                          setEditForm({...editForm, examples: newExamples});
-                                        }}
-                                        className="w-full bg-theme-base-alt border border-theme-subtle text-xs text-theme-primary px-2 py-1.5 focus:outline-none focus:border-theme-accent"
-                                        placeholder="Dịch nghĩa (Tiếng Việt)"
-                                      />
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="hidden">
-                          Đang chỉnh sửa
-                        </td>
-                        <td className="px-4 py-4 text-right align-middle">
-                          <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={saveEdit}
-                              disabled={!editForm.kanji || !editForm.meaning}
-                              className="p-2 bg-theme-accent text-theme-inverted hover:bg-theme-accent-light transition-colors inline-flex items-center justify-center rounded-sm disabled:opacity-50"
-                              title="Lưu"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={cancelEdit}
-                              className="p-2 border border-theme-subtle text-theme-primary hover:bg-theme-active transition-colors inline-flex items-center justify-center rounded-sm"
-                              title="Hủy"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-                  
                   return (
-                    <tr key={`desk-${card.id}-${idx}`} className="hover:bg-theme-hover transition-colors group">
+                    <tr key={`desk-${card.id}`} className={`transition-colors group ${isEditingThis ? 'bg-theme-accent/5 ring-1 ring-inset ring-theme-accent/30' : 'hover:bg-theme-hover'}`}>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
                           <div className="text-3xl font-serif text-theme-primary bg-theme-base-alt px-3 py-1.5 rounded-xl shadow-sm border border-theme-subtle/50 inline-block">{card.kanji}</div>
@@ -1634,7 +1177,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                         <div className="text-sm tracking-widest uppercase text-theme-primary font-light break-words whitespace-pre-wrap w-full sm:min-w-[300px] lg:min-w-[500px]">{card.meaning}</div>
                         { (card.kanjiExplanation || card.wordType) && (
                           <div className="mt-2 text-xs text-theme-primary font-sans opacity-80 leading-relaxed w-full sm:min-w-[300px] lg:min-w-[500px] markdown-body whitespace-pre-wrap">
-                            <Markdown>{(card.wordType ? `**Loại từ: ${card.wordType}**\nn\n` : "") + cleanMarkdownForDisplay(card.kanjiExplanation || "")}</Markdown>
+                            <Markdown>{(card.wordType ? `**Loại từ: ${card.wordType}**\n\n` : "") + cleanMarkdownForDisplay(card.kanjiExplanation || "")}</Markdown>
                           </div>
                         )}
                         
@@ -2183,6 +1726,654 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 </div>
               ) : null}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Edit Card Modal (Desktop & Mobile) */}
+      {editingId && (
+        <div
+          id="edit-card-modal-overlay"
+          onClick={cancelEdit}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-theme-panel border border-theme-subtle w-full sm:max-w-3xl h-[92dvh] sm:h-auto sm:max-h-[90dvh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          >
+            {/* Modal Sticky Header */}
+            <div className="px-4 sm:px-6 py-3.5 pt-safe border-b border-theme-subtle bg-theme-panel flex items-center justify-between gap-2 shrink-0">
+              <div className="min-w-0 flex items-center gap-2.5">
+                <h3 className="text-base sm:text-lg font-bold text-theme-primary truncate">Sửa thẻ từ vựng</h3>
+                {(editForm.kanji || editForm.reading) && (
+                  <span className="text-sm sm:text-base font-serif font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-lg truncate max-w-[140px] sm:max-w-[220px]">
+                    {editForm.kanji || editForm.reading}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={autoFillAI}
+                  disabled={isGeneratingAI || !editForm.kanji?.trim()}
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] min-w-[146px] px-3 py-1.5 bg-theme-accent text-theme-inverted font-bold text-xs rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer shadow-xs whitespace-nowrap"
+                  title="Tự động điền nghĩa, cách đọc, các thể và câu ví dụ bằng AI"
+                >
+                  {isGeneratingAI ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span>{isGeneratingAI ? 'Đang tạo AI...' : 'AI tự động điền'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="p-2 min-h-[38px] min-w-[38px] inline-flex items-center justify-center text-theme-primary/55 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer"
+                  title="Đóng"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Segmented Tab Bar */}
+            <div className="px-4 sm:px-6 py-2 bg-theme-base-alt/60 border-b border-theme-subtle flex items-center gap-1.5 shrink-0 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setEditTab('basic')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  editTab === 'basic'
+                    ? 'bg-theme-accent text-theme-inverted shadow-xs'
+                    : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
+                }`}
+              >
+                Thông tin & Âm thanh
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab('forms')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  editTab === 'forms'
+                    ? 'bg-theme-accent text-theme-inverted shadow-xs'
+                    : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
+                }`}
+              >
+                <span>Các thể / Chia thì</span>
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+                  editTab === 'forms' ? 'bg-black/20 text-theme-inverted' : 'bg-theme-base border border-theme-subtle text-theme-primary/70'
+                }`}>
+                  {editForm.forms?.length || 0}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab('examples')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  editTab === 'examples'
+                    ? 'bg-theme-accent text-theme-inverted shadow-xs'
+                    : 'text-theme-primary/70 hover:text-theme-primary hover:bg-theme-hover'
+                }`}
+              >
+                <span>Ví dụ</span>
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+                  editTab === 'examples' ? 'bg-black/20 text-theme-inverted' : 'bg-theme-base border border-theme-subtle text-theme-primary/70'
+                }`}>
+                  {editForm.examples && editForm.examples.length > 0 ? editForm.examples.length : (editForm.example ? 1 : 0)}
+                </span>
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body (overflow-anchor:none prevents scroll jumps when items change) */}
+            <div className="flex-1 overflow-y-auto [overflow-anchor:none] p-4 sm:p-6 space-y-4 custom-scrollbar">
+              {editTab === 'basic' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                        Từ vựng (Kanji / Từ gốc) *
+                      </label>
+                      <input
+                        value={editForm.kanji || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, kanji: e.target.value }))}
+                        className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-lg font-serif text-theme-primary px-3.5 py-2.5 min-h-[44px] focus:outline-none focus:border-theme-accent"
+                        placeholder="Ví dụ: 教える"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                        Cách đọc (Hiragana)
+                      </label>
+                      <input
+                        value={editForm.reading || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, reading: e.target.value }))}
+                        className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-sm text-theme-primary px-3.5 py-2.5 min-h-[44px] focus:outline-none focus:border-theme-accent"
+                        placeholder="Ví dụ: おしえる"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                        Romaji
+                      </label>
+                      <input
+                        value={editForm.romaji || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, romaji: e.target.value }))}
+                        className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-sm text-theme-primary px-3.5 py-2.5 min-h-[44px] focus:outline-none focus:border-theme-accent"
+                        placeholder="oshieru"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                        Hán Việt
+                      </label>
+                      <input
+                        value={editForm.sinoVietnamese || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, sinoVietnamese: e.target.value }))}
+                        className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-sm text-theme-accent uppercase px-3.5 py-2.5 min-h-[44px] focus:outline-none focus:border-theme-accent"
+                        placeholder="GIÁO"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                        Loại từ
+                      </label>
+                      <select
+                        value={editForm.wordType || ''}
+                        onChange={e => {
+                          const newWordType = e.target.value;
+                          setEditForm(prev => {
+                            let newForms = prev.forms || [];
+                            if (newWordType.includes('Động từ') && newForms.length === 0) {
+                              newForms = [
+                                { id: crypto.randomUUID(), name: 'Thể từ điển (thể る)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể lịch sự (thể ます)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể て', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể quá khứ (thể た)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể phủ định (thể ない)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể quá khứ phủ định (thể なかった)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể khả năng', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể khả năng (phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể khả năng (quá khứ phủ định)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể điều kiện (thể ば/たら)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể ý chí (thể よう)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể mệnh lệnh', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể cấm chỉ (thể な)', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể bị động', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể bị động sai khiến', value: '', reading: '', romaji: '', meaning: '' },
+                                { id: crypto.randomUUID(), name: 'Thể muốn (thể たい)', value: '', reading: '', romaji: '', meaning: '' }
+                              ];
+                            } else if (newWordType === 'Danh từ' && newForms.length === 0) {
+                              const rootK = prev.kanji?.trim() || '';
+                              const rootR = prev.reading?.trim() || '';
+                              const rootRom = prev.romaji?.trim() || '';
+                              const rootM = prev.meaning?.trim() || '';
+                              newForms = [
+                                { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `là ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `là ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không phải là ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không phải là ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã là ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã là ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không phải là ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không phải là ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `là ${rootM} và...` : '' }
+                              ];
+                            } else if (newWordType === 'Tính từ na' && newForms.length === 0) {
+                              const rootK = prev.kanji?.trim() || '';
+                              const rootR = prev.reading?.trim() || '';
+                              const rootRom = prev.romaji?.trim() || '';
+                              const rootM = prev.meaning?.trim() || '';
+                              newForms = [
+                                { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể ngắn - だ)', value: rootK ? `${rootK}だ` : '', reading: rootR ? `${rootR}だ` : '', romaji: rootRom ? `${rootRom} da` : '', meaning: rootM ? `(thể ngắn) ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Khẳng định hiện tại (thể lịch sự - です)', value: rootK ? `${rootK}です` : '', reading: rootR ? `${rootR}です` : '', romaji: rootRom ? `${rootRom} desu` : '', meaning: rootM ? `(thể lịch sự) ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Bổ nghĩa danh từ (thể な)', value: rootK ? `${rootK}な` : '', reading: rootR ? `${rootR}な` : '', romaji: rootRom ? `${rootRom} na` : '', meaning: rootM ? `(bổ nghĩa) ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể ngắn - ではない)', value: rootK ? `${rootK}ではない` : '', reading: rootR ? `${rootR}ではない` : '', romaji: rootRom ? `${rootRom} dewa nai` : '', meaning: rootM ? `không ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Phủ định hiện tại (thể lịch sự - ではありません)', value: rootK ? `${rootK}ではありません` : '', reading: rootR ? `${rootR}ではありません` : '', romaji: rootRom ? `${rootRom} dewa arimasen` : '', meaning: rootM ? `không ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể ngắn - だった)', value: rootK ? `${rootK}だった` : '', reading: rootR ? `${rootR}だった` : '', romaji: rootRom ? `${rootRom} datta` : '', meaning: rootM ? `đã ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ khẳng định (thể lịch sự - でした)', value: rootK ? `${rootK}でした` : '', reading: rootR ? `${rootR}でした` : '', romaji: rootRom ? `${rootRom} deshita` : '', meaning: rootM ? `đã ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể ngắn - ではなかった)', value: rootK ? `${rootK}ではなかった` : '', reading: rootR ? `${rootR}ではなかった` : '', romaji: rootRom ? `${rootRom} dewa nakatta` : '', meaning: rootM ? `đã không ${rootM}` : '' },
+                                { id: crypto.randomUUID(), name: 'Quá khứ phủ định (thể lịch sự - ではありませんでした)', value: rootK ? `${rootK}ではありませんでした` : '', reading: rootR ? `${rootR}ではありませんでした` : '', romaji: rootRom ? `${rootRom} dewa arimasen deshita` : '', meaning: rootM ? `đã không ${rootM} (lịch sự)` : '' },
+                                { id: crypto.randomUUID(), name: 'Thể て (thể nối - で)', value: rootK ? `${rootK}で` : '', reading: rootR ? `${rootR}で` : '', romaji: rootRom ? `${rootRom} de` : '', meaning: rootM ? `${rootM} và...` : '' }
+                              ];
+                            }
+                            return { ...prev, wordType: newWordType, forms: newForms };
+                          });
+                        }}
+                        className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-sm text-theme-primary px-3 py-2.5 min-h-[44px] focus:outline-none focus:border-theme-accent cursor-pointer"
+                      >
+                        <option value="">Chọn loại từ</option>
+                        <option value="Động từ nhóm I (Tha động từ)">Động từ nhóm I (Tha động từ)</option>
+                        <option value="Động từ nhóm I (Tự động từ)">Động từ nhóm I (Tự động từ)</option>
+                        <option value="Động từ nhóm I">Động từ nhóm I</option>
+                        <option value="Động từ nhóm II (Tha động từ)">Động từ nhóm II (Tha động từ)</option>
+                        <option value="Động từ nhóm II (Tự động từ)">Động từ nhóm II (Tự động từ)</option>
+                        <option value="Động từ nhóm II">Động từ nhóm II</option>
+                        <option value="Động từ nhóm III (Tha động từ)">Động từ nhóm III (Tha động từ)</option>
+                        <option value="Động từ nhóm III (Tự động từ)">Động từ nhóm III (Tự động từ)</option>
+                        <option value="Động từ nhóm III">Động từ nhóm III</option>
+                        <option value="Danh từ">Danh từ</option>
+                        <option value="Tính từ i">Tính từ i</option>
+                        <option value="Tính từ na">Tính từ na</option>
+                        <option value="Trạng từ">Trạng từ</option>
+                        <option value="Ngữ pháp">Ngữ pháp</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                      Ý nghĩa (Tiếng Việt) *
+                    </label>
+                    <input
+                      value={editForm.meaning || ''}
+                      onChange={e => setEditForm(prev => ({ ...prev, meaning: e.target.value }))}
+                      className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-sm text-theme-primary px-3.5 py-2.5 min-h-[44px] focus:outline-none focus:border-theme-accent"
+                      placeholder="Ví dụ: Dạy, chỉ bảo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-primary/65 mb-1.5">
+                      Giải thích Hán tự
+                    </label>
+                    <textarea
+                      value={editForm.kanjiExplanation || ''}
+                      onChange={e => setEditForm(prev => ({ ...prev, kanjiExplanation: e.target.value }))}
+                      className="w-full bg-theme-base-alt border border-theme-subtle rounded-xl text-xs sm:text-sm text-theme-primary px-3.5 py-2.5 focus:outline-none focus:border-theme-accent leading-relaxed"
+                      placeholder="Phân tích bộ thủ, âm Hán Việt, mẹo ghi nhớ..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="bg-theme-base-alt/60 border border-theme-subtle rounded-xl p-3.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-theme-accent mb-2">
+                      Âm thanh phát âm từ chính
+                    </label>
+                    <AudioUpload
+                      audioUrl={editForm.audioUrl}
+                      onAudioChange={(url) => setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: !!url }))}
+                      onGenerateAI={editForm.kanji && !editForm.audioUrl ? () => {
+                        const targetId = editingIdRef.current;
+                        handleGenerateSingle(editForm.kanji, (url) => {
+                          if (editingIdRef.current !== targetId) return;
+                          setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: true }));
+                          if (targetId && onUpdate) {
+                            onUpdate(targetId, { ...editFormRef.current, audioUrl: url, hasAudio: true });
+                          }
+                        }, 'main-kanji');
+                      } : undefined}
+                      isGenerating={generatingId === 'main-kanji'}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editTab === 'forms' && (() => {
+                const isVerbs = editForm.wordType?.includes('Động từ');
+                const formsLabel = isVerbs ? 'Các thể động từ' : 'Các thể / Chia thì';
+                const formsNamePlaceholder = isVerbs ? 'Tên thể (vd: Thể て)' : 'Tên thì (vd: Quá khứ)';
+                const formsValuePlaceholder = isVerbs ? 'Sau khi chia (vd: 教えて)' : 'Sau khi chia (vd: だった)';
+
+                return (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-theme-subtle">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold uppercase tracking-wider text-theme-accent">{formsLabel}</span>
+                        {isVerbs && (
+                          <button
+                            type="button"
+                            onClick={fetchOjadData}
+                            disabled={isFetchingOjad}
+                            className="inline-flex items-center justify-center gap-1.5 min-w-[122px] min-h-[34px] text-xs font-semibold bg-[#1a5f7a] text-white px-3 py-1 rounded-lg hover:bg-[#227b9e] transition-colors disabled:opacity-60 cursor-pointer whitespace-nowrap"
+                          >
+                            {isFetchingOjad && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+                            <span>{isFetchingOjad ? 'Đang lấy...' : 'Lấy từ OJAD'}</span>
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditForm(prev => ({
+                            ...prev,
+                            forms: [...(prev.forms || []), { id: crypto.randomUUID(), name: '', value: '', reading: '', romaji: '', meaning: '' }]
+                          }));
+                        }}
+                        className="inline-flex items-center gap-1.5 min-h-[34px] px-3 py-1 rounded-lg bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors text-xs font-bold cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Thêm thể</span>
+                      </button>
+                    </div>
+
+                    {(!editForm.forms || editForm.forms.length === 0) ? (
+                      <div className="py-10 text-center bg-theme-base-alt/50 border border-dashed border-theme-subtle rounded-xl px-4">
+                        <p className="text-sm text-theme-primary/70 mb-3">
+                          Chưa có thể chia nào. Bấm <strong>"AI tự động điền"</strong> ở góc trên hoặc bấm <strong>"+ Thêm thể"</strong> để tự nhập.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {editForm.forms.map((f, index) => (
+                          <div key={f.id || index} className="relative p-3.5 border border-theme-subtle bg-theme-base-alt/60 rounded-xl space-y-2.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditForm(prev => {
+                                  const newForms = [...(prev.forms || [])];
+                                  newForms.splice(index, 1);
+                                  return { ...prev, forms: newForms };
+                                });
+                              }}
+                              className="absolute top-2.5 right-2.5 p-1.5 text-theme-primary/45 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                              title="Xóa thể này"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pr-8">
+                              <input
+                                value={f.name || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(prev => {
+                                    const newForms = [...(prev.forms || [])];
+                                    newForms[index] = { ...newForms[index], name: val };
+                                    return { ...prev, forms: newForms };
+                                  });
+                                }}
+                                className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                placeholder={formsNamePlaceholder}
+                              />
+                              <input
+                                value={f.value || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(prev => {
+                                    const newForms = [...(prev.forms || [])];
+                                    newForms[index] = { ...newForms[index], value: val };
+                                    return { ...prev, forms: newForms };
+                                  });
+                                }}
+                                className="w-full bg-theme-base border border-theme-subtle rounded-lg text-sm font-serif text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                placeholder={formsValuePlaceholder}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                              <input
+                                value={f.reading || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(prev => {
+                                    const newForms = [...(prev.forms || [])];
+                                    newForms[index] = { ...newForms[index], reading: val };
+                                    return { ...prev, forms: newForms };
+                                  });
+                                }}
+                                className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent italic"
+                                placeholder="Hiragana"
+                              />
+                              <input
+                                value={f.romaji || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(prev => {
+                                    const newForms = [...(prev.forms || [])];
+                                    newForms[index] = { ...newForms[index], romaji: val };
+                                    return { ...prev, forms: newForms };
+                                  });
+                                }}
+                                className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent italic"
+                                placeholder="Romaji"
+                              />
+                              <input
+                                value={f.meaning || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditForm(prev => {
+                                    const newForms = [...(prev.forms || [])];
+                                    newForms[index] = { ...newForms[index], meaning: val };
+                                    return { ...prev, forms: newForms };
+                                  });
+                                }}
+                                className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                                placeholder="Nghĩa (Tiếng Việt)"
+                              />
+                            </div>
+
+                            <AudioUpload
+                              audioUrl={f.audioUrl}
+                              onAudioChange={(url) => {
+                                setEditForm(prev => {
+                                  const newForms = [...(prev.forms || [])];
+                                  newForms[index] = { ...newForms[index], audioUrl: url, hasAudio: !!url };
+                                  return { ...prev, forms: newForms };
+                                });
+                              }}
+                              onGenerateAI={f.value && !f.audioUrl ? () => {
+                                const targetId = editingIdRef.current;
+                                handleGenerateSingle(f.value, (url) => {
+                                  if (editingIdRef.current !== targetId) return;
+                                  const updatedForms = [...(editFormRef.current.forms || [])];
+                                  if (updatedForms[index]) {
+                                    updatedForms[index] = { ...updatedForms[index], audioUrl: url, hasAudio: true };
+                                  }
+                                  setEditForm(prev => {
+                                    const nextForms = [...(prev.forms || [])];
+                                    if (nextForms[index]) {
+                                      nextForms[index] = { ...nextForms[index], audioUrl: url, hasAudio: true };
+                                    }
+                                    return { ...prev, forms: nextForms };
+                                  });
+                                  if (targetId && onUpdate) {
+                                    onUpdate(targetId, { ...editFormRef.current, forms: updatedForms });
+                                  }
+                                }, `form-${index}`);
+                              } : undefined}
+                              isGenerating={generatingId === `form-${index}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {editTab === 'examples' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-theme-subtle">
+                    <span className="text-xs font-bold uppercase tracking-wider text-theme-accent">Các câu ví dụ</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditForm(prev => ({
+                          ...prev,
+                          examples: [{ id: crypto.randomUUID(), sentence: '', reading: '', romaji: '', translation: '' }, ...(prev.examples || [])]
+                        }));
+                      }}
+                      className="inline-flex items-center gap-1.5 min-h-[34px] px-3 py-1 rounded-lg bg-theme-accent/10 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted transition-colors text-xs font-bold cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm ví dụ</span>
+                    </button>
+                  </div>
+
+                  {(!editForm.examples || editForm.examples.length === 0) ? (
+                    <div className="space-y-2.5 p-3.5 border border-theme-subtle bg-theme-base-alt/60 rounded-xl">
+                      <p className="text-[11px] text-theme-primary/60">
+                        Chưa có danh sách ví dụ mở rộng (đang hiển thị ô ví dụ cũ nếu có, hoặc bấm <strong>"+ Thêm ví dụ"</strong>).
+                      </p>
+                      <input
+                        value={editForm.example || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, example: e.target.value }))}
+                        className="w-full bg-theme-base border border-theme-subtle rounded-lg text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                        placeholder="Ví dụ (Tiếng Nhật)"
+                      />
+                      <input
+                        value={editForm.exampleTranslation || ''}
+                        onChange={e => setEditForm(prev => ({ ...prev, exampleTranslation: e.target.value }))}
+                        className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                        placeholder="Dịch nghĩa (Tiếng Việt)"
+                      />
+                      <AudioUpload
+                        audioUrl={editForm.audioUrl}
+                        onAudioChange={(url) => setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: !!url }))}
+                        onGenerateAI={editForm.example && !editForm.audioUrl ? () => {
+                          const targetId = editingIdRef.current;
+                          handleGenerateSingle(editForm.example, (url) => {
+                            if (editingIdRef.current !== targetId) return;
+                            setEditForm(prev => ({ ...prev, audioUrl: url, hasAudio: true }));
+                            if (targetId && onUpdate) {
+                              onUpdate(targetId, { ...editFormRef.current, audioUrl: url, hasAudio: true });
+                            }
+                          }, 'old-example');
+                        } : undefined}
+                        isGenerating={generatingId === 'old-example'}
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {editForm.examples.map((ex, index) => (
+                        <div key={ex.id || index} className="relative p-3.5 border border-theme-subtle bg-theme-base-alt/60 rounded-xl space-y-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditForm(prev => {
+                                const newExamples = [...(prev.examples || [])];
+                                newExamples.splice(index, 1);
+                                return { ...prev, examples: newExamples };
+                              });
+                            }}
+                            className="absolute top-2.5 right-2.5 p-1.5 text-theme-primary/45 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa ví dụ này"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+
+                          <div className="pr-8">
+                            <input
+                              value={ex.sentence || ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditForm(prev => {
+                                  const newExamples = [...(prev.examples || [])];
+                                  newExamples[index] = { ...newExamples[index], sentence: val };
+                                  return { ...prev, examples: newExamples };
+                                });
+                              }}
+                              className="w-full bg-theme-base border border-theme-subtle rounded-lg text-sm font-serif text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                              placeholder="Câu ví dụ (Tiếng Nhật)"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <input
+                              value={ex.reading || ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditForm(prev => {
+                                  const newExamples = [...(prev.examples || [])];
+                                  newExamples[index] = { ...newExamples[index], reading: val };
+                                  return { ...prev, examples: newExamples };
+                                });
+                              }}
+                              className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent italic"
+                              placeholder="Hiragana"
+                            />
+                            <input
+                              value={ex.romaji || ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditForm(prev => {
+                                  const newExamples = [...(prev.examples || [])];
+                                  newExamples[index] = { ...newExamples[index], romaji: val };
+                                  return { ...prev, examples: newExamples };
+                                });
+                              }}
+                              className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent italic"
+                              placeholder="Romaji"
+                            />
+                          </div>
+
+                          <input
+                            value={ex.translation || ''}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditForm(prev => {
+                                const newExamples = [...(prev.examples || [])];
+                                newExamples[index] = { ...newExamples[index], translation: val };
+                                return { ...prev, examples: newExamples };
+                              });
+                            }}
+                            className="w-full bg-theme-base border border-theme-subtle rounded-lg text-xs sm:text-sm text-theme-primary px-3 py-2 focus:outline-none focus:border-theme-accent"
+                            placeholder="Dịch nghĩa (Tiếng Việt)"
+                          />
+
+                          <AudioUpload
+                            audioUrl={ex.audioUrl}
+                            onAudioChange={(url) => {
+                              setEditForm(prev => {
+                                const newExamples = [...(prev.examples || [])];
+                                newExamples[index] = { ...newExamples[index], audioUrl: url, hasAudio: !!url };
+                                return { ...prev, examples: newExamples };
+                              });
+                            }}
+                            onGenerateAI={ex.sentence && !ex.audioUrl ? () => {
+                              const targetId = editingIdRef.current;
+                              handleGenerateSingle(ex.sentence, (url) => {
+                                if (editingIdRef.current !== targetId) return;
+                                const updatedExamples = [...(editFormRef.current.examples || [])];
+                                if (updatedExamples[index]) {
+                                  updatedExamples[index] = { ...updatedExamples[index], audioUrl: url, hasAudio: true };
+                                }
+                                setEditForm(prev => {
+                                  const nextExamples = [...(prev.examples || [])];
+                                  if (nextExamples[index]) {
+                                    nextExamples[index] = { ...nextExamples[index], audioUrl: url, hasAudio: true };
+                                  }
+                                  return { ...prev, examples: nextExamples };
+                                });
+                                if (targetId && onUpdate) {
+                                  onUpdate(targetId, { ...editFormRef.current, examples: updatedExamples });
+                                }
+                              }, `ex-${index}`);
+                            } : undefined}
+                            isGenerating={generatingId === `ex-${index}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Sticky Footer */}
+            <div className="px-4 sm:px-6 py-3 pb-safe border-t border-theme-subtle bg-theme-panel flex items-center justify-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="min-h-[44px] px-5 py-2 border border-theme-subtle text-theme-primary hover:bg-theme-hover rounded-xl text-sm font-medium transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={!editForm.kanji?.trim() || !editForm.meaning?.trim()}
+                className="min-h-[44px] px-6 py-2 bg-theme-accent text-theme-inverted hover:opacity-90 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity cursor-pointer shadow-sm"
+              >
+                <Check className="w-4 h-4" />
+                <span>Lưu thay đổi</span>
+              </button>
             </div>
           </div>
         </div>
