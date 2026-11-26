@@ -102,7 +102,7 @@ export function WordTypeBadges({
 interface VocabListProps {
   deck: KanjiCard[];
   onRemove: (id: string) => void;
-  onUpdate?: (id: string, updates: Partial<KanjiCard>) => void;
+  onUpdate?: (id: string, updates: Partial<KanjiCard>) => void | Promise<void>;
   onImport: (cards: { kanji: string; reading: string; romaji?: string; meaning: string; sinoVietnamese?: string; kanjiExplanation?: string; example?: string; exampleTranslation?: string; wordType?: string }[]) => Promise<{added: number, updated: number}>;
   initialSearchQuery?: string;
   initialEditId?: string | null;
@@ -218,7 +218,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     }
   }, [initialSearchQuery]);
 
-  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio'>>>({});
+  const [editForm, setEditForm] = useState<Partial<Pick<KanjiCard, 'kanji' | 'reading' | 'romaji' | 'meaning' | 'sinoVietnamese' | 'kanjiExplanation' | 'example' | 'exampleTranslation' | 'examples' | 'wordType' | 'forms' | 'audioUrl' | 'hasAudio' | 'aiAutoFilledAt'>>>({});
   const editFormRef = useRef(editForm);
   editFormRef.current = editForm;
   editingIdRef.current = editingId;
@@ -402,6 +402,278 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const [isFetchingOjad, setIsFetchingOjad] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchScope, setBatchScope] = useState<'missing' | 'never_ai'>('missing');
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
+  const [isStoppingBatch, setIsStoppingBatch] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{
+    total: number;
+    current: number;
+    succeeded: number;
+    failed: number;
+    currentWord: string;
+    finished: boolean;
+    errorMessage?: string;
+  }>({ total: 0, current: 0, succeeded: 0, failed: 0, currentWord: '', finished: false });
+  const stopBatchRef = useRef(false);
+
+  const hasKanjiChar = (text: string) => /[\u4e00-\u9faf]/.test(text);
+
+  const isCardNeverAiFilled = React.useCallback((card: KanjiCard) => {
+    const word = (card.kanji || card.reading || '').trim();
+    return Boolean(word) && !card.aiAutoFilledAt;
+  }, []);
+
+  const isCardMissingAiData = React.useCallback((card: KanjiCard) => {
+    const word = (card.kanji || card.reading || '').trim();
+    if (!word || card.aiAutoFilledAt) return false;
+
+    const missingReading = !card.reading?.trim();
+    const missingMeaning = !card.meaning?.trim();
+    const missingWordType = !card.wordType?.trim();
+    const missingExplanation = !card.kanjiExplanation?.trim();
+    const missingSino = hasKanjiChar(word) && !card.sinoVietnamese?.trim();
+    const missingExamples = !card.examples || card.examples.length === 0;
+    const wt = card.wordType || '';
+    const needsForms = wt.includes('Động từ') || wt === 'Danh từ' || wt === 'Tính từ i' || wt === 'Tính từ na';
+    const missingForms = needsForms && (!card.forms || card.forms.length === 0);
+
+    return (
+      missingReading ||
+      missingMeaning ||
+      missingWordType ||
+      missingExplanation ||
+      missingSino ||
+      missingExamples ||
+      missingForms
+    );
+  }, []);
+
+  const missingDataCards = React.useMemo(
+    () => deck.filter(isCardMissingAiData),
+    [deck, isCardMissingAiData]
+  );
+
+  const neverAiFilledCards = React.useMemo(
+    () => deck.filter(isCardNeverAiFilled),
+    [deck, isCardNeverAiFilled]
+  );
+
+  const openBatchModal = () => {
+    setBatchScope(missingDataCards.length > 0 ? 'missing' : 'never_ai');
+    setBatchProgress({ total: 0, current: 0, succeeded: 0, failed: 0, currentWord: '', finished: false, errorMessage: undefined });
+    setIsStoppingBatch(false);
+    setShowBatchModal(true);
+  };
+
+  const fetchVocabFromAI = async (wordToQuery: string) => {
+    let res: Response | null = null;
+    let data: any = null;
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        res = await fetch(getApiEndpoint('/api/generate-vocab'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word: wordToQuery })
+        });
+        const parsed = await safeFetchJson(res);
+        data = parsed.data || { error: parsed.error };
+        if (parsed.ok) {
+          if (data?.isFallback) {
+            const fallbackErr: any = new Error('Hệ thống AI tạm thời không khả dụng.');
+            fallbackErr.status = 503;
+            throw fallbackErr;
+          }
+          return data;
+        }
+        // Do not retry non-transient client/quota/auth errors
+        if (res.status === 429 || res.status === 400 || res.status === 401 || res.status === 403 || res.status === 404) {
+          const fatalErr: any = new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
+          fatalErr.status = res.status;
+          fatalErr.code = data?.code;
+          throw fatalErr;
+        }
+      } catch (fetchErr: any) {
+        if (fetchErr?.status === 429 || fetchErr?.status === 400 || fetchErr?.status === 401 || fetchErr?.status === 403 || fetchErr?.status === 404) {
+          throw fetchErr;
+        }
+        if (attempt === 2) throw fetchErr;
+      }
+
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 900));
+      }
+    }
+
+    const err: any = new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
+    err.status = res?.status || 500;
+    err.code = data?.code;
+    throw err;
+  };
+
+  const runBatchAutoFillAI = async () => {
+    if (!onUpdate || isBatchRunning) return;
+    const queue = (batchScope === 'missing' ? missingDataCards : neverAiFilledCards).slice();
+    if (queue.length === 0) {
+      notify.info('Tất cả từ vựng phù hợp đều đã được điền dữ liệu AI.');
+      return;
+    }
+
+    stopBatchRef.current = false;
+    setIsStoppingBatch(false);
+    setIsBatchRunning(true);
+    setBatchProgress({
+      total: queue.length,
+      current: 0,
+      succeeded: 0,
+      failed: 0,
+      currentWord: queue[0].kanji || queue[0].reading || '',
+      finished: false,
+      errorMessage: undefined
+    });
+
+    let succeeded = 0;
+    let failed = 0;
+    let consecutiveErrors = 0;
+    let fatalErrorMsg: string | undefined;
+
+    for (let i = 0; i < queue.length; i++) {
+      if (stopBatchRef.current) break;
+      const card = queue[i];
+      const wordToQuery = (card.kanji || card.reading || '').trim();
+      setBatchProgress({
+        total: queue.length,
+        current: i + 1,
+        succeeded,
+        failed,
+        currentWord: wordToQuery,
+        finished: false,
+        errorMessage: undefined
+      });
+
+      if (!wordToQuery) {
+        failed++;
+        continue;
+      }
+
+      try {
+        const data = await fetchVocabFromAI(wordToQuery);
+        consecutiveErrors = 0;
+
+        const existingForms = card.forms || [];
+        let incomingForms = Array.isArray(data.forms)
+          ? data.forms.map((f: any) => {
+              const prevMatch = existingForms.find(
+                (ef) => (ef.name && f.name && ef.name === f.name) || (ef.value && f.value && ef.value === f.value)
+              );
+              return {
+                ...f,
+                id: prevMatch?.id || f.id || crypto.randomUUID(),
+                ...(prevMatch?.audioUrl ? { audioUrl: prevMatch.audioUrl, hasAudio: true } : {}),
+              };
+            })
+          : existingForms;
+
+        incomingForms = ensureCompleteForms({
+          word: wordToQuery || data.kanji || '',
+          reading: card.reading?.trim() || data.reading || '',
+          romaji: card.romaji?.trim() || data.romaji || '',
+          meaning: card.meaning?.trim() || data.meaning || '',
+          wordType: card.wordType?.trim() || data.wordType || '',
+          forms: incomingForms
+        });
+
+        const existingExamples = card.examples || [];
+        const incomingExamples =
+          Array.isArray(data.examples) && data.examples.length > 0
+            ? data.examples.map((ex: any) => {
+                const prevMatch = existingExamples.find(
+                  (ee) => ee.sentence && ex.sentence && ee.sentence.trim() === ex.sentence.trim()
+                );
+                return {
+                  ...(prevMatch || {}),
+                  ...ex,
+                  id: prevMatch?.id || ex.id || crypto.randomUUID(),
+                  ...(prevMatch?.audioUrl ? { audioUrl: prevMatch.audioUrl, hasAudio: true } : {}),
+                };
+              })
+            : existingExamples;
+
+        const updates: Partial<KanjiCard> = {
+          reading: card.reading?.trim() ? card.reading : (data.reading ?? card.reading ?? ''),
+          romaji: card.romaji?.trim() ? card.romaji : (data.romaji ?? card.romaji ?? ''),
+          meaning: card.meaning?.trim() ? card.meaning : (data.meaning ?? card.meaning ?? ''),
+          sinoVietnamese: card.sinoVietnamese?.trim()
+            ? card.sinoVietnamese
+            : (data.sinoVietnamese ?? card.sinoVietnamese ?? ''),
+          kanjiExplanation: card.kanjiExplanation?.trim()
+            ? card.kanjiExplanation
+            : (data.kanjiExplanation ?? card.kanjiExplanation ?? ''),
+          wordType: card.wordType?.trim() ? card.wordType : (data.wordType ?? card.wordType ?? ''),
+          forms: incomingForms,
+          examples: incomingExamples,
+          aiAutoFilledAt: Date.now()
+        };
+
+        await onUpdate(card.id, updates);
+        succeeded++;
+      } catch (err: any) {
+        failed++;
+        consecutiveErrors++;
+        const isQuotaOrAuth = err?.status === 429 || err?.status === 403 || err?.status === 401 || err?.code === 'QUOTA_EXHAUSTED' || err?.code === 'API_KEY_ERROR';
+        if (isQuotaOrAuth || consecutiveErrors >= 3) {
+          fatalErrorMsg = err?.message || 'Đã tạm dừng do AI quá tải hoặc hết hạn mức.';
+          setBatchProgress({
+            total: queue.length,
+            current: i + 1,
+            succeeded,
+            failed,
+            currentWord: wordToQuery,
+            finished: false,
+            errorMessage: fatalErrorMsg
+          });
+          break;
+        }
+      }
+
+      setBatchProgress({
+        total: queue.length,
+        current: i + 1,
+        succeeded,
+        failed,
+        currentWord: wordToQuery,
+        finished: false,
+        errorMessage: undefined
+      });
+
+      if (i < queue.length - 1 && !stopBatchRef.current) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    const stopped = stopBatchRef.current;
+    stopBatchRef.current = false;
+    setIsStoppingBatch(false);
+    setIsBatchRunning(false);
+    setBatchProgress(prev => ({
+      ...prev,
+      succeeded,
+      failed,
+      finished: true,
+      errorMessage: fatalErrorMsg
+    }));
+
+    if (fatalErrorMsg) {
+      notify.error(fatalErrorMsg);
+    } else if (stopped) {
+      notify.info(`Đã dừng. Đã điền thành công ${succeeded} từ.`);
+    } else if (failed === 0) {
+      notify.success(`Đã AI tự động điền hoàn tất ${succeeded} từ vựng!`);
+    } else {
+      notify.warning(`Hoàn tất: ${succeeded} từ thành công, ${failed} từ lỗi.`);
+    }
+  };
 
   const autoFillAI = async () => {
     const wordToQuery = (editFormRef.current.kanji || '').trim();
@@ -413,34 +685,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     
     try {
       setIsGeneratingAI(true);
-      let res: Response | null = null;
-      let data: any = null;
-
-      // Try up to 3 attempts with progressive backoff for transient server or network glitches
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          res = await fetch(getApiEndpoint('/api/generate-vocab'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ word: wordToQuery })
-          });
-          const parsed = await safeFetchJson(res);
-          data = parsed.data || { error: parsed.error };
-          if (parsed.ok) {
-            break;
-          }
-        } catch (fetchErr) {
-          if (attempt === 3) throw fetchErr;
-        }
-
-        if (attempt < 3) {
-          await new Promise(r => setTimeout(r, 1000 * attempt));
-        }
-      }
-      
-      if (!res || !res.ok) {
-        throw new Error((data && data.error) || 'Lỗi lấy dữ liệu từ AI');
-      }
+      const data = await fetchVocabFromAI(wordToQuery);
 
       if (editingIdRef.current !== targetEditId) return;
 
@@ -476,7 +721,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           kanjiExplanation: data.kanjiExplanation !== undefined ? data.kanjiExplanation : prev.kanjiExplanation,
           wordType: data.wordType !== undefined ? data.wordType : prev.wordType,
           forms: incomingForms,
-          examples: incomingExamples
+          examples: incomingExamples,
+          aiAutoFilledAt: Date.now()
         };
       });
       notify.success('Đã tự động điền thông tin từ AI! Bạn có thể xem lại ở từng tab.');
@@ -574,6 +820,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       wordType: card.wordType || '',
       audioUrl: card.audioUrl || null,
       hasAudio: card.hasAudio || !!card.audioUrl,
+      aiAutoFilledAt: card.aiAutoFilledAt,
     });
   };
 
@@ -658,7 +905,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   React.useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (editingId) {
+      if (showBatchModal) {
+        if (!isBatchRunning) {
+          setShowBatchModal(false);
+        }
+      } else if (editingId) {
         editingIdRef.current = null;
         setEditingId(null);
         setEditForm({});
@@ -668,7 +919,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [editingId, viewingCard]);
+  }, [showBatchModal, isBatchRunning, editingId, viewingCard]);
 
   const saveEdit = () => {
     if (!editingId) return;
@@ -700,7 +951,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         exampleTranslation: String(editForm.exampleTranslation || "").trim() || '',
         examples: validExamples,
         forms: validForms,
-        wordType: String(editForm.wordType || '').trim() || '', audioUrl: editForm.audioUrl || null, hasAudio: !!editForm.audioUrl });
+        wordType: String(editForm.wordType || '').trim() || '', audioUrl: editForm.audioUrl || null, hasAudio: !!editForm.audioUrl,
+        ...(editForm.aiAutoFilledAt ? { aiAutoFilledAt: editForm.aiAutoFilledAt } : {}) });
       editingIdRef.current = null;
       setEditingId(null);
       setEditForm({});
@@ -870,6 +1122,28 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             >
               <Download className="w-3 h-3" /> Xuất Excel
             </button>
+            {onUpdate && deck.length > 0 && (
+              <button
+                type="button"
+                onClick={openBatchModal}
+                disabled={isBatchRunning}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border shadow-sm cursor-pointer ${
+                  missingDataCards.length > 0 || neverAiFilledCards.length > 0
+                    ? 'bg-theme-accent/10 text-theme-accent border-theme-accent/30 hover:bg-theme-accent hover:text-theme-inverted'
+                    : 'bg-theme-base-alt text-theme-primary/65 border-theme-subtle hover:border-theme-accent/30 hover:text-theme-accent'
+                }`}
+                title="Chạy AI tự động điền hàng loạt cho các từ chưa có dữ liệu hoặc chưa từng chạy AI"
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  {missingDataCards.length > 0
+                    ? `AI điền hàng loạt (${missingDataCards.length})`
+                    : neverAiFilledCards.length > 0
+                      ? `AI điền hàng loạt (${neverAiFilledCards.length})`
+                      : 'AI điền hàng loạt (Đã đủ)'}
+                </span>
+              </button>
+            )}
             {isAdmin && <button
           onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
@@ -2274,23 +2548,247 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             </div>
 
             {/* Modal Sticky Footer */}
-            <div className="px-4 sm:px-6 py-3 pb-safe border-t border-theme-subtle bg-theme-panel flex items-center justify-end gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="min-h-[44px] px-5 py-2 border border-theme-subtle text-theme-primary hover:bg-theme-hover rounded-xl text-sm font-medium transition-colors cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={saveEdit}
-                disabled={!editForm.kanji?.trim() || !editForm.meaning?.trim()}
-                className="min-h-[44px] px-6 py-2 bg-theme-accent text-theme-inverted hover:opacity-90 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity cursor-pointer shadow-sm"
-              >
-                <Check className="w-4 h-4" />
-                <span>Lưu thay đổi</span>
-              </button>
+            <div className="px-4 sm:px-6 py-3 pb-safe border-t border-theme-subtle bg-theme-panel flex items-center justify-between gap-2.5 shrink-0">
+              <div>
+                {onUpdate && neverAiFilledCards.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      cancelEdit();
+                      openBatchModal();
+                    }}
+                    className="min-h-[40px] px-3 py-1.5 rounded-xl bg-theme-accent/10 border border-theme-accent/25 text-theme-accent hover:bg-theme-accent hover:text-theme-inverted text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    title="Chạy AI tự động điền hàng loạt cho các từ chưa có dữ liệu"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Điền hàng loạt ({missingDataCards.length > 0 ? missingDataCards.length : neverAiFilledCards.length})</span>
+                    <span className="sm:hidden">Hàng loạt ({missingDataCards.length > 0 ? missingDataCards.length : neverAiFilledCards.length})</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="min-h-[44px] px-5 py-2 border border-theme-subtle text-theme-primary hover:bg-theme-hover rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={!editForm.kanji?.trim() || !editForm.meaning?.trim()}
+                  className="min-h-[44px] px-6 py-2 bg-theme-accent text-theme-inverted hover:opacity-90 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity cursor-pointer shadow-sm"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Lưu thay đổi</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch AI Auto-Fill Modal */}
+      {showBatchModal && (
+        <div
+          id="batch-autofill-modal-overlay"
+          onClick={() => {
+            if (!isBatchRunning) setShowBatchModal(false);
+          }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center sm:p-4"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-theme-panel border border-theme-subtle w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="px-5 py-4 pt-safe border-b border-theme-subtle flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-theme-accent/15 border border-theme-accent/25 flex items-center justify-center text-theme-accent shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-theme-primary truncate">AI tự động điền hàng loạt</h3>
+                  <p className="text-xs text-theme-primary/60 truncate">
+                    Tổng cộng {deck.length} từ • Đã AI điền {deck.length - neverAiFilledCards.length} từ
+                  </p>
+                </div>
+              </div>
+              {!isBatchRunning && (
+                <button
+                  type="button"
+                  onClick={() => setShowBatchModal(false)}
+                  className="p-2 text-theme-primary/55 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer shrink-0"
+                  title="Đóng"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {!isBatchRunning && !batchProgress.finished ? (
+                <>
+                  <div className="space-y-2.5">
+                    <label
+                      onClick={() => setBatchScope('missing')}
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        batchScope === 'missing'
+                          ? 'bg-theme-accent/10 border-theme-accent/50 shadow-xs'
+                          : 'bg-theme-base-alt/60 border-theme-subtle hover:border-theme-accent/30'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="batchScope"
+                        checked={batchScope === 'missing'}
+                        onChange={() => setBatchScope('missing')}
+                        className="mt-1 accent-theme-accent cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold text-theme-primary">Chỉ từ còn thiếu dữ liệu</span>
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-theme-accent/15 text-theme-accent shrink-0">
+                            {missingDataCards.length} từ
+                          </span>
+                        </div>
+                        <p className="text-xs text-theme-primary/65 mt-1 leading-relaxed">
+                          Áp dụng cho các từ chưa chạy AI và đang thiếu nghĩa, cách đọc, loại từ, Hán Việt, giải thích Hán tự, các thể hoặc câu ví dụ.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      onClick={() => setBatchScope('never_ai')}
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        batchScope === 'never_ai'
+                          ? 'bg-theme-accent/10 border-theme-accent/50 shadow-xs'
+                          : 'bg-theme-base-alt/60 border-theme-subtle hover:border-theme-accent/30'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="batchScope"
+                        checked={batchScope === 'never_ai'}
+                        onChange={() => setBatchScope('never_ai')}
+                        className="mt-1 accent-theme-accent cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold text-theme-primary">Tất cả từ chưa từng dùng AI</span>
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-theme-base border border-theme-subtle text-theme-primary/80 shrink-0">
+                            {neverAiFilledCards.length} từ
+                          </span>
+                        </div>
+                        <p className="text-xs text-theme-primary/65 mt-1 leading-relaxed">
+                          Chạy bổ sung đầy đủ các thể chia và 10 câu ví dụ cho mọi từ chưa được đánh dấu đã chạy AI tự động điền.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-theme-base-alt/70 border border-theme-subtle text-xs text-theme-primary/70 leading-relaxed">
+                    Hệ thống luôn giữ nguyên file MP3, tiến trình SRS và các trường bạn đã nhập trước đó. Mỗi từ xong sẽ được lưu ngay lên Cloud nên bạn có thể bấm dừng bất kỳ lúc nào.
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4 py-1">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-theme-primary/80 flex items-center gap-2">
+                      {isBatchRunning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-theme-accent shrink-0" />
+                          <span>
+                            {isStoppingBatch ? 'Đang dừng sau từ hiện tại...' : `Đang xử lý: `}
+                            {!isStoppingBatch && <strong className="text-theme-accent font-serif text-sm">{batchProgress.currentWord}</strong>}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Đã hoàn tất quá trình xử lý</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="text-theme-accent font-bold tabular-nums">
+                      {batchProgress.current} / {batchProgress.total}
+                    </span>
+                  </div>
+
+                  <div className="w-full h-2.5 bg-theme-base-alt border border-theme-subtle rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-theme-accent transition-all duration-300"
+                      style={{
+                        width: `${batchProgress.total > 0 ? Math.min(100, Math.round((batchProgress.current / batchProgress.total) * 100)) : 0}%`
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                      <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{batchProgress.succeeded}</div>
+                      <div className="text-[11px] text-theme-primary/70 font-medium">Thành công</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25">
+                      <div className="text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums">{batchProgress.failed}</div>
+                      <div className="text-[11px] text-theme-primary/70 font-medium">Lỗi / Bỏ qua</div>
+                    </div>
+                  </div>
+                  {batchProgress.errorMessage && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-600 dark:text-rose-300 leading-relaxed">
+                      {batchProgress.errorMessage}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3.5 pb-safe border-t border-theme-subtle bg-theme-base-alt/40 flex items-center justify-end gap-2.5">
+              {isBatchRunning ? (
+                <button
+                  type="button"
+                  disabled={isStoppingBatch}
+                  onClick={() => {
+                    stopBatchRef.current = true;
+                    setIsStoppingBatch(true);
+                  }}
+                  className="min-h-[44px] px-5 py-2 bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-60 cursor-pointer"
+                >
+                  {isStoppingBatch ? 'Đang dừng...' : 'Dừng lại'}
+                </button>
+              ) : batchProgress.finished ? (
+                <button
+                  type="button"
+                  onClick={() => setShowBatchModal(false)}
+                  className="min-h-[44px] px-6 py-2 bg-theme-accent text-theme-inverted hover:opacity-90 rounded-xl text-sm font-bold transition-opacity cursor-pointer"
+                >
+                  Đóng
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowBatchModal(false)}
+                    className="min-h-[44px] px-5 py-2 border border-theme-subtle text-theme-primary hover:bg-theme-hover rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={runBatchAutoFillAI}
+                    disabled={(batchScope === 'missing' ? missingDataCards.length : neverAiFilledCards.length) === 0}
+                    className="min-h-[44px] px-5 py-2 bg-theme-accent text-theme-inverted hover:opacity-90 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity cursor-pointer shadow-sm"
+                  >
+                    <Sparkles className="w-4 h-4 shrink-0" />
+                    <span>
+                      Bắt đầu ({batchScope === 'missing' ? missingDataCards.length : neverAiFilledCards.length} từ)
+                    </span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

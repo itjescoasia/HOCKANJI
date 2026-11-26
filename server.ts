@@ -52,11 +52,10 @@ async function startServer() {
   const modelCooldownMap = new Map<string, number>();
 
   async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
-    // Current supported Google GenAI models (prioritizing gemini-3.8-flash as primary)
+    // Current supported free-tier Google GenAI models
     const candidateModels = [
-      'gemini-3.8-flash',
+      'gemini-4-hydrogen',
       'gemini-3.1-flash-lite',
-      'gemini-flash-latest',
     ];
     let lastErr: any = null;
     const now = Date.now();
@@ -64,7 +63,6 @@ async function startServer() {
     for (const model of candidateModels) {
       const cooldownUntil = modelCooldownMap.get(model) || 0;
       if (now < cooldownUntil) {
-        console.warn(`Skipping model ${model} (in cooldown until ${new Date(cooldownUntil).toLocaleTimeString()})`);
         continue;
       }
 
@@ -76,7 +74,6 @@ async function startServer() {
             config: { responseMimeType: 'application/json' }
           });
           if (response && response.text) {
-            // Success: clear cooldown for this model
             modelCooldownMap.delete(model);
             return response.text;
           }
@@ -84,37 +81,37 @@ async function startServer() {
           lastErr = err;
           const errMsg = err?.message || String(err);
           const is404 = err?.status === 404 || errMsg.includes('404') || errMsg.includes('no longer available') || errMsg.includes('NOT_FOUND');
-          const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded') || errMsg.includes('rate limit');
+          const isQuota = err?.status === 429 || errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded') || errMsg.includes('rate limit');
           const is503 = err?.status === 503 || errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE') || errMsg.includes('overloaded');
-          
-          console.warn(`Gemini model ${model} (attempt ${attempt + 1}) warning: ${errMsg.slice(0, 160)}`);
-          
+
           if (is404) {
-            // Deprecated / unavailable model: permanently disable this model
             modelCooldownMap.set(model, Infinity);
             break;
           }
 
           if (isQuota) {
-            // Temporary 60s cooldown, immediately fail over to next model
-            modelCooldownMap.set(model, Date.now() + 60 * 1000);
+            const isDailyQuota = errMsg.includes('PerDay') || errMsg.includes('FreeTier');
+            modelCooldownMap.set(model, Date.now() + (isDailyQuota ? 15 * 60 * 1000 : 60 * 1000));
             break;
           }
 
           if (is503) {
-            // Cluster overloaded: cooldown for 30s and immediately fail over to next model
             modelCooldownMap.set(model, Date.now() + 30 * 1000);
             break;
           }
 
-          // If network glitch (ECONNRESET, ETIMEDOUT, fetch failed), wait briefly before retry
           if (attempt === 0) {
             await new Promise(r => setTimeout(r, 600));
           }
         }
       }
     }
-    throw lastErr || new Error('All Gemini candidate models failed');
+    if (!lastErr) {
+      const cooldownErr: any = new Error('Hạn mức gọi Gemini AI tạm thời đang được giới hạn (429). Vui lòng thử lại sau ít phút.');
+      cooldownErr.status = 429;
+      throw cooldownErr;
+    }
+    throw lastErr;
   }
 
   app.post('/api/generate-vocab', async (req, res) => {
@@ -247,7 +244,6 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
         } catch (e: any) {
           e.provider = 'Gemini';
           lastError = e;
-          console.error('Gemini generate-vocab failed:', e.message);
         }
       }
 
@@ -284,112 +280,50 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
         }
       }
 
-      let parsedData: any = null;
-
       if (!success) {
-        console.warn('[AI] All AI providers failed or busy. Generating resilient fallback vocab data for word:', word, lastError?.message);
-        const cleanWord = String(word || '').trim();
-        const COMMON_WORD_MAP: Record<string, { reading: string; romaji: string; sino: string; meaning: string; type: string }> = {
-          '入れる': { reading: 'いれる', romaji: 'ireru', sino: 'Nhập', meaning: 'cho vào, bỏ vào', type: 'Động từ nhóm II (Tha động từ)' },
-          '入る': { reading: 'はいる', romaji: 'hairu', sino: 'Nhập', meaning: 'đi vào, vào', type: 'Động từ nhóm I (Tự động từ)' },
-          '寝る': { reading: 'ねる', romaji: 'neru', sino: 'Tẩm', meaning: 'ngủ, đi ngủ', type: 'Động từ nhóm II (Tự động từ)' },
-          '眠る': { reading: 'ねむる', romaji: 'nemuru', sino: 'Miên', meaning: 'ngủ, chợp mắt', type: 'Động từ nhóm I (Tự động từ)' },
-          '乾かす': { reading: 'かわかす', romaji: 'kawakasu', sino: 'Can', meaning: 'làm khô, phơi khô', type: 'Động từ nhóm I (Tha động từ)' },
-          '乾く': { reading: 'かわく', romaji: 'kawaku', sino: 'Can', meaning: 'khô', type: 'Động từ nhóm I (Tự động từ)' },
-          '食べる': { reading: 'たべる', romaji: 'taberu', sino: 'Thực', meaning: 'ăn', type: 'Động từ nhóm II (Tha động từ)' },
-          '飲む': { reading: 'のむ', romaji: 'nomu', sino: 'Ẩm', meaning: 'uống', type: 'Động từ nhóm I (Tha động từ)' },
-          '行く': { reading: 'いく', romaji: 'iku', sino: 'Hành', meaning: 'đi', type: 'Động từ nhóm I (Tự động từ)' },
-          '来る': { reading: 'くる', romaji: 'kuru', sino: 'Lai', meaning: 'đến', type: 'Động từ nhóm III (Tự động từ)' },
-          'する': { reading: 'する', romaji: 'suru', sino: '', meaning: 'làm', type: 'Động từ nhóm III (Tha động từ)' },
-          '見る': { reading: 'みる', romaji: 'miru', sino: 'Kiến', meaning: 'nhìn, xem', type: 'Động từ nhóm II (Tha động từ)' },
-          '聞く': { reading: 'きく', romaji: 'kiku', sino: 'Văn', meaning: 'nghe, hỏi', type: 'Động từ nhóm I (Tha động từ)' },
-          '話す': { reading: 'はなす', romaji: 'hanasu', sino: 'Thoại', meaning: 'nói chuyện', type: 'Động từ nhóm I (Tha động từ)' },
-          '読む': { reading: 'よむ', romaji: 'yomu', sino: 'Độc', meaning: 'đọc', type: 'Động từ nhóm I (Tha động từ)' },
-          '書く': { reading: 'かく', romaji: 'kaku', sino: 'Thư', meaning: 'viết', type: 'Động từ nhóm I (Tha động từ)' },
-          '買う': { reading: 'かう', romaji: 'kau', sino: 'Mãi', meaning: 'mua', type: 'Động từ nhóm I (Tha động từ)' },
-          '待つ': { reading: 'まつ', romaji: 'matsu', sino: 'Đãi', meaning: 'đợi', type: 'Động từ nhóm I (Tha động từ)' },
-          '起きる': { reading: 'おきる', romaji: 'okiru', sino: 'Khởi', meaning: 'thức dậy', type: 'Động từ nhóm II (Tự động từ)' },
-          '忘れる': { reading: 'わすれる', romaji: 'wasureru', sino: 'Vong', meaning: 'quên', type: 'Động từ nhóm II (Tha động từ)' },
-          '覚える': { reading: 'おぼえる', romaji: 'oboeru', sino: 'Giác', meaning: 'nhớ', type: 'Động từ nhóm II (Tha động từ)' },
-          '教える': { reading: 'おしえる', romaji: 'oshieru', sino: 'Giáo', meaning: 'dạy, chỉ bảo', type: 'Động từ nhóm II (Tha động từ)' },
-          '開ける': { reading: 'あける', romaji: 'akeru', sino: 'Khai', meaning: 'mở', type: 'Động từ nhóm II (Tha động từ)' },
-          '閉める': { reading: 'しめる', romaji: 'shimeru', sino: 'Bế', meaning: 'đóng', type: 'Động từ nhóm II (Tha động từ)' },
-          '開く': { reading: 'あく', romaji: 'aku', sino: 'Khai', meaning: 'mở ra', type: 'Động từ nhóm I (Tự động từ)' },
-          '閉まる': { reading: 'しまる', romaji: 'shimaru', sino: 'Bế', meaning: 'đóng lại', type: 'Động từ nhóm I (Tự động từ)' },
-        };
+        const rawMsg = lastError?.message || String(lastError || 'Không thể kết nối AI');
+        const isQuota = lastError?.status === 429 || rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('Quota exceeded') || rawMsg.includes('rate limit');
+        const isAuth = lastError?.status === 403 || lastError?.status === 401 || rawMsg.includes('PERMISSION_DENIED') || rawMsg.includes('API_KEY_INVALID');
+        const is503 = lastError?.status === 503 || rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('UNAVAILABLE');
 
-        const mapped = COMMON_WORD_MAP[cleanWord];
-        let detectedType = mapped?.type || 'Danh từ';
-        let reading = mapped?.reading || (wanakana.isKana(cleanWord) ? cleanWord : cleanWord);
-        let romaji = mapped?.romaji || wanakana.toRomaji(reading || cleanWord);
-        let sinoVietnamese = mapped?.sino || '';
-        let meaning = mapped?.meaning || `(Từ vựng: ${cleanWord})`;
-
-        if (!mapped) {
-          if (cleanWord.endsWith('る') || cleanWord.endsWith('う') || cleanWord.endsWith('く') || cleanWord.endsWith('ぐ') || cleanWord.endsWith('す') || cleanWord.endsWith('つ') || cleanWord.endsWith('ぬ') || cleanWord.endsWith('ぶ') || cleanWord.endsWith('む')) {
-            if (cleanWord.endsWith('かす') || cleanWord === '乾かす' || cleanWord === '沸かす' || cleanWord === '冷やす') {
-              detectedType = 'Động từ nhóm I (Tha động từ)';
-            } else if (cleanWord.endsWith('く') || cleanWord === '乾く' || cleanWord === '沸く') {
-              detectedType = 'Động từ nhóm I (Tự động từ)';
-            } else if (/[いきぎしじちぢにひびぴみりえけげせぜてでねへべぺめれ]る$/.test(cleanWord)) {
-              detectedType = 'Động từ nhóm II';
-            } else {
-              detectedType = 'Động từ nhóm I';
-            }
-          } else if (cleanWord.endsWith('い')) {
-            detectedType = 'Tính từ i';
-          }
+        if (isQuota) {
+          return res.status(429).json({
+            error: 'Đã hết hạn mức gọi AI (429). Vui lòng đợi hoặc kiểm tra API Key / gói trả phí trong Settings > Secrets.',
+            code: 'QUOTA_EXHAUSTED'
+          });
         }
-
-        const forms = ensureCompleteForms({
-          word: cleanWord,
-          reading,
-          romaji,
-          wordType: detectedType,
-          meaning,
-          forms: []
+        if (isAuth) {
+          return res.status(403).json({
+            error: 'API Key không hợp lệ hoặc không có quyền truy cập. Vui lòng kiểm tra Settings > Secrets.',
+            code: 'API_KEY_ERROR'
+          });
+        }
+        if (is503) {
+          return res.status(503).json({
+            error: 'Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút (503).',
+            code: 'UNAVAILABLE'
+          });
+        }
+        return res.status(500).json({
+          error: 'Không thể lấy dữ liệu từ AI lúc này. Vui lòng thử lại sau.',
+          code: 'AI_FAILED'
         });
+      }
 
-        parsedData = {
-          kanji: cleanWord,
-          reading,
-          romaji,
-          sinoVietnamese,
-          kanjiExplanation: '',
-          meaning,
-          wordType: detectedType,
-          forms,
-          examples: [
-            {
-              id: crypto.randomUUID(),
-              sentence: `${cleanWord}を練習しましょう。`,
-              furigana: `${cleanWord}を練習[れんしゅう]しましょう。`,
-              reading: `${reading}をれんしゅうしましょう。`,
-              romaji: `${romaji} o renshuu shimashou.`,
-              translation: `Chúng ta hãy cùng luyện tập từ ${cleanWord}.`
-            }
-          ],
-          isFallback: true
-        };
-      } else {
-        text = text.replace(/^\s*```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      let parsedData: any = null;
+      text = text.replace(/^\s*```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      try {
+        parsedData = JSON.parse(text);
+      } catch (e) {
         try {
-          parsedData = JSON.parse(text);
-        } catch (e) {
-          try {
-            parsedData = JSON.parse(jsonrepair(text));
-          } catch (e2) {
-            const start = text.indexOf('{');
-            const end = text.lastIndexOf('}');
-            if (start !== -1 && end !== -1) {
-              try {
-                parsedData = JSON.parse(jsonrepair(text.substring(start, end + 1)));
-              }  catch (e3) {
-                throw e2;
-              }
-            } else {
-              throw e2;
-            }
+          parsedData = JSON.parse(jsonrepair(text));
+        } catch (e2) {
+          const start = text.indexOf('{');
+          const end = text.lastIndexOf('}');
+          if (start !== -1 && end !== -1) {
+            parsedData = JSON.parse(jsonrepair(text.substring(start, end + 1)));
+          } else {
+            throw e2;
           }
         }
       }
@@ -464,54 +398,22 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
 
       res.json(parsedData);
     } catch (error: any) {
-      console.error('Error generating vocab:', error);
-
-      // If word was provided, synthesize a resilient vocab object so the user is never blocked by external AI outages
-      if (req.body && req.body.word) {
-        try {
-          const cleanWord = String(req.body.word).trim();
-          const reading = wanakana.isKana(cleanWord) ? cleanWord : wanakana.toHiragana(cleanWord);
-          const romaji = wanakana.toRomaji(cleanWord);
-          const forms = ensureCompleteForms({
-            word: cleanWord,
-            reading: reading || cleanWord,
-            romaji: romaji || cleanWord,
-            meaning: cleanWord,
-            wordType: 'Từ vựng',
-            forms: []
-          });
-
-          return res.json({
-            kanji: cleanWord,
-            reading: reading || cleanWord,
-            romaji: romaji || cleanWord,
-            sinoVietnamese: '',
-            kanjiExplanation: '',
-            meaning: `(Từ vựng: ${cleanWord})`,
-            wordType: 'Từ vựng',
-            forms,
-            examples: [
-              {
-                id: crypto.randomUUID(),
-                sentence: `${cleanWord}を勉強しましょう。`,
-                furigana: `${cleanWord}を勉強[べんきょう]しましょう。`,
-                reading: `${reading || cleanWord}をべんきょうしましょう。`,
-                romaji: `${romaji || cleanWord} o benkyou shimashou.`,
-                translation: `Hãy cùng học từ ${cleanWord}.`
-              }
-            ],
-            isFallback: true
-          });
-        } catch (innerErr) {
-          console.error('Fallback generation error:', innerErr);
-        }
+      let errorMsg = error?.message || 'Failed to generate vocabulary data';
+      const isQuota = error?.status === 429 || errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('Quota exceeded');
+      const is503 = error?.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE');
+      if (isQuota) {
+        return res.status(429).json({
+          error: 'Đã hết hạn mức gọi AI (429). Vui lòng đợi hoặc kiểm tra API Key / gói trả phí trong Settings > Secrets.',
+          code: 'QUOTA_EXHAUSTED'
+        });
       }
-      
-      let errorMsg = error.message || 'Failed to generate vocabulary data';
-      if (error.status === 503 || errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('UNAVAILABLE')) {
-        errorMsg = 'Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút (503).';
+      if (is503) {
+        return res.status(503).json({
+          error: 'Hệ thống AI đang quá tải, vui lòng thử lại sau ít phút (503).',
+          code: 'UNAVAILABLE'
+        });
       }
-      res.status(500).json({ error: errorMsg });
+      res.status(500).json({ error: errorMsg, code: 'AI_FAILED' });
     }
   });
 

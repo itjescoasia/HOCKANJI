@@ -44,6 +44,7 @@ export interface KanjiCard {
   examples?: KanjiExample[];
   forms?: { id: string; name: string; value: string; reading?: string; romaji?: string; meaning?: string; audioUrl?: string | null; hasAudio?: boolean; }[];
   wordType?: string;
+  aiAutoFilledAt?: number;
   freeStudyScore?: number;
   difficultScore?: number;
   isForgotten?: boolean;
