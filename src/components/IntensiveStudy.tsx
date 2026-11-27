@@ -1657,7 +1657,7 @@ export default function IntensiveStudy({
                                       const percent = calculateMasteryPercent(word);
                                       let colorClass = "text-theme-accent bg-theme-accent";
                                       if (percent >= 80) colorClass = "text-green-500 bg-green-500";
-                                      else if (percent >= 40) colorClass = " ";
+                                      else if (percent >= 40) colorClass = "text-amber-500 bg-amber-500";
                                       
                                       return (
                                         <div className="flex flex-col gap-1.5 w-24 border-l border-theme-subtle pl-4">
@@ -3834,7 +3834,7 @@ function StudyView({
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-6 right-6 bg-theme-accent text-theme-base px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 pointer-events-none"
+            className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6 right-4 sm:right-6 bg-theme-accent text-theme-inverted px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 pointer-events-none"
           >
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">Đã copy thành công</span>
@@ -3879,7 +3879,7 @@ function StudyView({
               }
             }, 80);
           }}
-          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted shadow-2xl rounded-full px-5 py-3.5 flex items-center gap-2.5 font-bold tracking-wider text-xs uppercase cursor-pointer transition-all hover:scale-105 active:scale-95 border-2 border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:bottom-8 right-4 sm:right-8 z-20 bg-theme-accent hover:bg-theme-accent-hover text-theme-inverted shadow-2xl rounded-full px-5 py-3.5 flex items-center gap-2.5 font-bold tracking-wider text-xs uppercase cursor-pointer transition-all hover:scale-105 active:scale-95 border-2 border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-200"
           title="Thêm câu ví dụ mới (Nút nổi luôn đi theo màn hình khi cuộn)"
         >
           <Plus className="w-5 h-5 stroke-[2.5]" />

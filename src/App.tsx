@@ -905,7 +905,7 @@ export default function App() {
         )}
         
         {view === 'short_study' && (
-          <div id="short-study-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
+          <div id="short-study-overlay" className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
             <Suspense fallback={<ViewLoader />}>
               <ShortStudySession
                 queue={shortStudyQueue}
@@ -1004,7 +1004,7 @@ export default function App() {
       )}
 
         {isSentenceReviewOpen && (
-          <div id="sentence-review-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
+          <div id="sentence-review-overlay" className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
             <Suspense fallback={<ViewLoader />}>
               <SentenceReview
                 deck={sentenceReviewTargetDeck || intensiveDeck}

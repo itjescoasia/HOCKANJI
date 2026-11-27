@@ -273,7 +273,7 @@ export default function AddVocab({ deck = [], onNavigateToWord, onAdd }: AddVoca
               type="button"
               onClick={autoFillAI}
               disabled={isGeneratingAI || !kanji.trim()}
-              className="px-4 py-3 sm:py-4 bg-theme-accent text-theme-base font-bold text-xs tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer min-h-[44px]"
+              className="px-4 py-3 sm:py-4 bg-theme-accent text-theme-inverted font-bold text-xs tracking-wider disabled:opacity-50 hover:opacity-90 transition-opacity whitespace-nowrap cursor-pointer min-h-[44px]"
             >
               {isGeneratingAI ? 'ĐANG TẠO...' : 'AI TỰ ĐỘNG ĐIỀN'}
             </button>

@@ -1007,8 +1007,8 @@ function ConversationDetail({
                   </div>
                 </div>
               ) : (
-                <div className="group relative">
-                  <h1 className="text-xl md:text-2xl font-serif text-theme-primary mb-1">
+                <div className="group relative pr-8">
+                  <h1 className="text-xl md:text-2xl font-serif text-theme-primary mb-1 break-words">
                     {conversation.title}
                   </h1>
                   {conversation.description && (
@@ -1418,7 +1418,7 @@ function ConversationDetail({
       ) : (
         <div className="mb-8">
           {conversation.dialogues.length > 0 ? (
-            <div className="relative border border-theme-subtle bg-theme-panel p-8 min-h-[300px] flex flex-col rounded-xl shadow-lg">
+            <div className="relative border border-theme-subtle bg-theme-panel px-11 py-8 sm:p-8 min-h-[300px] flex flex-col rounded-xl shadow-lg">
               <div className="flex-1 shrink-0 min-h-0" />
               <div className="absolute top-4 left-4 text-theme-primary/30 font-serif text-xl">
                 {String(currentSlideIndex + 1).padStart(2, "0")} / {String(conversation.dialogues.length).padStart(2, "0")}
@@ -1470,22 +1470,22 @@ function ConversationDetail({
                 </div>
               )}
 
-              <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+              <div className="absolute left-1.5 sm:-left-5 top-1/2 -translate-y-1/2 z-10">
                 <button
                   onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
                   disabled={currentSlideIndex === 0}
-                  className="p-3 bg-theme-panel border border-theme-subtle rounded-full text-theme-primary shadow-lg hover:text-theme-accent hover:border-theme-accent transition-all disabled:opacity-30 disabled:hover:text-theme-primary disabled:hover:border-theme-subtle"
+                  className="p-2 sm:p-3 bg-theme-panel border border-theme-subtle rounded-full text-theme-primary shadow-lg hover:text-theme-accent hover:border-theme-accent transition-all disabled:opacity-30 disabled:hover:text-theme-primary disabled:hover:border-theme-subtle cursor-pointer"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
-              <div className="absolute -right-6 top-1/2 -translate-y-1/2">
+              <div className="absolute right-1.5 sm:-right-5 top-1/2 -translate-y-1/2 z-10">
                 <button
                   onClick={() => setCurrentSlideIndex(Math.min(conversation.dialogues.length - 1, currentSlideIndex + 1))}
                   disabled={currentSlideIndex === conversation.dialogues.length - 1}
-                  className="p-3 bg-theme-panel border border-theme-subtle rounded-full text-theme-primary shadow-lg hover:text-theme-accent hover:border-theme-accent transition-all disabled:opacity-30 disabled:hover:text-theme-primary disabled:hover:border-theme-subtle"
+                  className="p-2 sm:p-3 bg-theme-panel border border-theme-subtle rounded-full text-theme-primary shadow-lg hover:text-theme-accent hover:border-theme-accent transition-all disabled:opacity-30 disabled:hover:text-theme-primary disabled:hover:border-theme-subtle cursor-pointer"
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
             </div>
@@ -1732,7 +1732,7 @@ function ConversationDetail({
       )}
 
       {!isAdding && viewMode === "list" && (
-        <div className="sticky bottom-4 sm:bottom-8 pb-safe z-[60] w-full mt-4 flex justify-center pointer-events-none">
+        <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:bottom-8 z-20 w-full mt-4 flex justify-center pointer-events-none">
           <button
             onClick={() => setIsAdding(true)}
             className="flex items-center gap-2 text-theme-inverted bg-theme-accent hover:bg-theme-accent-light uppercase tracking-widest text-xs font-bold transition-all py-3 px-6 sm:px-8 justify-center rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] pointer-events-auto hover:scale-105 min-h-[44px]"

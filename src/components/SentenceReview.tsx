@@ -1331,9 +1331,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                           <>
                             <Pause className="w-3.5 h-3.5" />
                             <span className="flex items-center gap-0.5 h-3">
-                              <span className="w-0.5 h-3 bg-white animate-pulse"></span>
-                              <span className="w-0.5 h-2 bg-white animate-pulse delay-75"></span>
-                              <span className="w-0.5 h-3.5 bg-white animate-pulse delay-150"></span>
+                              <span className="w-0.5 h-3 bg-current animate-pulse"></span>
+                              <span className="w-0.5 h-2 bg-current animate-pulse delay-75"></span>
+                              <span className="w-0.5 h-3.5 bg-current animate-pulse delay-150"></span>
                             </span>
                             <span className="text-[11px] font-bold uppercase tracking-wider">Dừng phát</span>
                           </>
@@ -1570,9 +1570,9 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
                           <>
                             <Pause className="w-3.5 h-3.5" />
                             <span className="flex items-center gap-0.5 h-3">
-                              <span className="w-0.5 h-3 bg-white animate-pulse"></span>
-                              <span className="w-0.5 h-2 bg-white animate-pulse delay-75"></span>
-                              <span className="w-0.5 h-3.5 bg-white animate-pulse delay-150"></span>
+                              <span className="w-0.5 h-3 bg-current animate-pulse"></span>
+                              <span className="w-0.5 h-2 bg-current animate-pulse delay-75"></span>
+                              <span className="w-0.5 h-3.5 bg-current animate-pulse delay-150"></span>
                             </span>
                             <span className="text-[11px] uppercase tracking-wider font-bold">Dừng phát</span>
                           </>
@@ -2042,7 +2042,7 @@ export const SentenceReview: React.FC<SentenceReviewProps> = ({
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 max-w-md z-50 px-4 py-2.5 rounded-xl bg-theme-panel border border-red-500/50 text-red-600 dark:text-red-400 shadow-2xl flex items-center justify-center gap-2.5 text-xs font-bold text-center"
+            className="fixed bottom-28 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 max-w-md z-50 px-4 py-2.5 rounded-xl bg-theme-panel border border-red-500/50 text-red-600 dark:text-red-400 shadow-2xl flex items-center justify-center gap-2.5 text-xs font-bold text-center"
           >
             <RotateCcw className="w-4 h-4 text-red-500 animate-spin shrink-0" />
             <span>Đã xếp lại câu này vào cuối phiên để củng cố trí nhớ!</span>

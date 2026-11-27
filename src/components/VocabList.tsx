@@ -1602,12 +1602,77 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       {viewingCard && (
         <div id="view-card-modal-overlay" className="fixed inset-0 bg-theme-base z-50 flex flex-col w-full h-full overflow-hidden pb-safe">
           <div className="bg-theme-base w-full h-full flex flex-col relative overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
-            {/* Header / Main Vocab */}
-            <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-20 border-b border-theme-subtle px-4 sm:px-8 py-3.5 sm:py-4 pt-safe flex flex-col sm:flex-row justify-between items-start gap-3 shrink-0 shadow-sm">
-              <div className="flex flex-col">
+            {/* Compact Sticky Action Bar */}
+            <div className="sticky top-0 bg-theme-panel/95 backdrop-blur z-20 border-b border-theme-subtle px-4 sm:px-8 py-2.5 sm:py-3 pt-safe flex items-center justify-between gap-2 sm:gap-3 shrink-0 shadow-xs">
+              <div className="min-w-0 flex items-center gap-2.5">
+                <span className="text-lg sm:text-xl font-serif font-bold text-theme-accent truncate">
+                  {viewingCard.kanji || viewingCard.reading}
+                </span>
+                {viewingCard.meaning && (
+                  <span className="hidden sm:inline text-xs text-theme-primary/65 truncate max-w-[260px] md:max-w-[420px]">
+                    — {viewingCard.meaning}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-1.5 sm:gap-2.5 items-center shrink-0">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const isNow = !viewingCard.isForgotten;
+                    const updates = {
+                      isForgotten: isNow,
+                      forgottenAt: isNow ? Date.now() : viewingCard.forgottenAt,
+                      forgottenCount: isNow ? (viewingCard.forgottenCount || 0) + 1 : viewingCard.forgottenCount,
+                      difficultScore: isNow ? Math.min(-1, (viewingCard.difficultScore || 0) - 2) : viewingCard.difficultScore,
+                    };
+                    setViewingCard(prev => prev ? { ...prev, ...updates } : null);
+                    if (onUpdate) await onUpdate(viewingCard.id, updates);
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+                    viewingCard.isForgotten
+                      ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
+                      : 'bg-theme-base-alt text-theme-primary/75 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40'
+                  }`}
+                  title={viewingCard.isForgotten ? "Đang gán nhãn HAY QUÊN (Bấm để gỡ bỏ)" : "Gán nhãn QUÊN"}
+                >
+                  <Flame className={`w-3.5 h-3.5 ${viewingCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
+                  <span>{viewingCard.isForgotten ? 'Hay Quên' : 'QUÊN'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cardToEdit = viewingCard;
+                    setViewingCard(null);
+                    startEdit(cardToEdit);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold border border-theme-subtle bg-theme-base-alt hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-all cursor-pointer shadow-xs"
+                  title="Chỉnh sửa nội dung từ vựng này"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Sửa</span>
+                </button>
+
+                <button 
+                  onClick={() => setViewingCard(null)}
+                  className="p-2 text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors cursor-pointer"
+                  aria-label="Đóng"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="max-w-5xl mx-auto w-full p-4 sm:p-8 flex flex-col gap-6 sm:gap-8">
+              {/* Hero Word Card (scrolls cleanly with content on mobile) */}
+              <div className="bg-theme-panel rounded-xl p-4 sm:p-6 border border-theme-subtle shadow-xs flex flex-col">
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <h2 className="text-4xl md:text-5xl font-serif text-theme-accent">{viewingCard.kanji || viewingCard.reading}</h2>
-                  
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif text-theme-accent break-words">
+                    {viewingCard.kanji || viewingCard.reading}
+                  </h2>
+
                   {/* Audio Controls for Main Word */}
                   {(() => {
                     const effectiveMainAudio = getEffectiveCardAudioUrl(viewingCard);
@@ -1654,12 +1719,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                     );
                   })()}
                 </div>
-                <div className="flex flex-wrap items-center gap-3 mt-2">
+                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-2">
                   {viewingCard.kanji && viewingCard.reading && viewingCard.kanji !== viewingCard.reading && (
-                    <span className="text-lg text-theme-primary opacity-80">{viewingCard.reading}</span>
+                    <span className="text-base sm:text-lg text-theme-primary opacity-80">{viewingCard.reading}</span>
                   )}
                   {viewingCard.romaji && (
-                    <span className="text-sm font-mono text-theme-primary opacity-60">[{viewingCard.romaji}]</span>
+                    <span className="text-xs sm:text-sm font-mono text-theme-primary opacity-60">[{viewingCard.romaji}]</span>
                   )}
                   {viewingCard.sinoVietnamese && (
                     <span className="text-xs uppercase tracking-widest bg-theme-accent/10 text-theme-accent px-2 py-1 rounded-sm border border-theme-accent/20">
@@ -1674,62 +1739,10 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                     badgeSize="large" 
                   />
                 </div>
-                <div className="text-xl text-theme-primary font-medium mt-3 uppercase tracking-wide">
+                <div className="text-lg sm:text-xl text-theme-primary font-medium mt-3 uppercase tracking-wide break-words">
                   {viewingCard.meaning}
                 </div>
               </div>
-
-              <div className="flex gap-3 items-center">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const isNow = !viewingCard.isForgotten;
-                    const updates = {
-                      isForgotten: isNow,
-                      forgottenAt: isNow ? Date.now() : viewingCard.forgottenAt,
-                      forgottenCount: isNow ? (viewingCard.forgottenCount || 0) + 1 : viewingCard.forgottenCount,
-                      difficultScore: isNow ? Math.min(-1, (viewingCard.difficultScore || 0) - 2) : viewingCard.difficultScore,
-                    };
-                    setViewingCard(prev => prev ? { ...prev, ...updates } : null);
-                    if (onUpdate) await onUpdate(viewingCard.id, updates);
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
-                    viewingCard.isForgotten
-                      ? 'bg-rose-500/20 text-rose-500 border-rose-500/50 hover:bg-rose-500/30'
-                      : 'bg-theme-base-alt text-theme-primary/75 hover:text-rose-500 border-theme-subtle hover:border-rose-500/40'
-                  }`}
-                  title={viewingCard.isForgotten ? "Đang gán nhãn HAY QUÊN (Bấm để gỡ bỏ)" : "Gán nhãn QUÊN"}
-                >
-                  <Flame className={`w-3.5 h-3.5 ${viewingCard.isForgotten ? 'text-rose-500 fill-rose-500/30' : 'text-theme-primary/60'}`} />
-                  <span>{viewingCard.isForgotten ? 'Đã gán: Hay Quên' : 'QUÊN'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const cardToEdit = viewingCard;
-                    setViewingCard(null);
-                    startEdit(cardToEdit);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-theme-subtle bg-theme-base-alt hover:border-theme-accent hover:text-theme-accent text-theme-primary/80 transition-all cursor-pointer shadow-xs"
-                  title="Chỉnh sửa nội dung từ vựng này"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>Sửa</span>
-                </button>
-
-                <button 
-                  onClick={() => setViewingCard(null)}
-                  className="p-2 text-theme-primary/50 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-            </div>
-
-            {/* Content Body */}
-            <div className="max-w-5xl mx-auto w-full p-4 sm:p-8 flex flex-col gap-8">
               
               {/* Kanji Explanation */}
               {viewingCard.kanjiExplanation && (
@@ -1850,7 +1863,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                     <button
                       type="button"
                       onClick={() => {
-                        onStartSentenceReview?.('VI_TO_JA', [viewingCard], true, true);
+                        const targetCard = viewingCard;
+                        setViewingCard(null);
+                        onStartSentenceReview?.('VI_TO_JA', [targetCard], true, true);
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-700 dark:text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer group"
                       title="Luyện dịch các câu ví dụ của từ này từ Việt sang Nhật theo nguyên tắc khoa học SRS"
@@ -1912,7 +1927,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onStartSentenceReview?.('VI_TO_JA', [viewingCard], true, true);
+                                const targetCard = viewingCard;
+                                setViewingCard(null);
+                                onStartSentenceReview?.('VI_TO_JA', [targetCard], true, true);
                               }}
                               className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 rounded-full transition-all cursor-pointer shadow-xs"
                               title="Luyện dịch câu ví dụ này (Việt → Nhật theo nguyên tắc khoa học SRS)"
@@ -2034,20 +2051,23 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
           >
             {/* Modal Sticky Header */}
             <div className="px-4 sm:px-6 py-3.5 pt-safe border-b border-theme-subtle bg-theme-panel flex items-center justify-between gap-2 shrink-0">
-              <div className="min-w-0 flex items-center gap-2.5">
-                <h3 className="text-base sm:text-lg font-bold text-theme-primary truncate">Sửa thẻ từ vựng</h3>
+              <div className="min-w-0 flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-theme-primary truncate">
+                  <span className="sm:hidden">Sửa thẻ</span>
+                  <span className="hidden sm:inline">Sửa thẻ từ vựng</span>
+                </h3>
                 {(editForm.kanji || editForm.reading) && (
-                  <span className="text-sm sm:text-base font-serif font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2.5 py-0.5 rounded-lg truncate max-w-[140px] sm:max-w-[220px]">
+                  <span className="text-sm sm:text-base font-serif font-bold text-theme-accent bg-theme-accent/10 border border-theme-accent/20 px-2 py-0.5 rounded-lg truncate max-w-[110px] sm:max-w-[220px]">
                     {editForm.kanji || editForm.reading}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={autoFillAI}
                   disabled={isGeneratingAI || !editForm.kanji?.trim()}
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] min-w-[146px] px-3 py-1.5 bg-theme-accent text-theme-inverted font-bold text-xs rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer shadow-xs whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[38px] min-w-[126px] sm:min-w-[146px] px-2.5 sm:px-3 py-1.5 bg-theme-accent text-theme-inverted font-bold text-xs rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer shadow-xs whitespace-nowrap"
                   title="Tự động điền nghĩa, cách đọc, các thể và câu ví dụ bằng AI"
                 >
                   {isGeneratingAI ? (

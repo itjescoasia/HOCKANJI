@@ -728,7 +728,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
   }
 
   return (
-    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-3 sm:px-6 pt-3 pb-36 sm:pb-8">
+    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-3 sm:px-6 pt-3 pb-48 sm:pb-8">
       {/* Compact Workspace Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-theme-subtle">
         <div className="flex items-center gap-3 min-w-0">
@@ -1061,7 +1061,7 @@ export default function N4VocabReview({ userId, onBack, onRecordReview }: N4Voca
             </div>
 
             {/* Pinned / Mobile-Friendly 2-Button Action Dock */}
-            <div className="fixed bottom-0 left-0 right-0 sm:static z-20 bg-theme-panel/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-t-0 border-theme-subtle px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,12px))] sm:p-0">
+            <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 sm:static z-[25] bg-theme-panel/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-t-0 border-theme-subtle px-3 py-2.5 sm:p-0 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] sm:shadow-none">
               <div className="max-w-5xl mx-auto flex flex-col gap-2">
                 {!isFlipped && (
                   <button
