@@ -1912,7 +1912,12 @@ export function trimAuxiliary(text: string) {
     }
   }
   return result;
-}export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {
+}
+
+type TokenizeResult = { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }[];
+const tokenizeCache = new WeakMap<KanjiCard[], Map<string, TokenizeResult>>();
+
+const tokenizeExampleTextInternal = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>): TokenizeResult => {
   if (!example) return [];
 
   const uniqueWords = new Map<string, KanjiCard>();
@@ -1986,7 +1991,7 @@ export function trimAuxiliary(text: string) {
   const uniqueCandidates = Array.from(new Map(allMatchCandidates.map(c => [c.matchStr, c])).values());
   uniqueCandidates.sort((a, b) => b.matchStr.length - a.matchStr.length);
 
-  let tokens: { text: string; status: 'good' | 'bad' | 'neutral' | 'target' | 'new', card?: KanjiCard, occurrenceIndex?: number, matchedForm?: any }[] = [];
+  let tokens: TokenizeResult = [];
   
   // Parse manual *highlights* first
   let currentExample = example;
@@ -2170,6 +2175,28 @@ export function trimAuxiliary(text: string) {
   });
 
   return tokens;
+};
+
+export const tokenizeExampleText = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {
+  if (!example) return [];
+  if (mainDeck && !vocabScores) {
+    let deckCache = tokenizeCache.get(mainDeck);
+    if (!deckCache) {
+      deckCache = new Map();
+      tokenizeCache.set(mainDeck, deckCache);
+    }
+    const cacheKey = `${example}\u0000${targetWord || ''}\u0000${fallbackTargetCard?.id || ''}`;
+    const cached = deckCache.get(cacheKey);
+    if (cached) return cached;
+    const result = tokenizeExampleTextInternal(example, targetWord, mainDeck, fallbackTargetCard, vocabScores);
+    if (deckCache.size >= 500) {
+      const firstKey = deckCache.keys().next().value;
+      if (firstKey !== undefined) deckCache.delete(firstKey);
+    }
+    deckCache.set(cacheKey, result);
+    return result;
+  }
+  return tokenizeExampleTextInternal(example, targetWord, mainDeck, fallbackTargetCard, vocabScores);
 };
 
 export const renderExampleHighlight = (example: string, targetWord: string, mainDeck?: KanjiCard[], fallbackTargetCard?: KanjiCard, vocabScores?: Record<string, number>) => {

@@ -86,9 +86,10 @@ export default function Dashboard({
 
   const [furiganaMode, setFuriganaMode] = usePersistentState<FuriganaMode>('app_furigana_mode', 'always');
   const [searchQuery, setSearchQuery] = React.useState("");
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
 
   const searchResults = React.useMemo(() => {
-    const q = searchQuery.trim();
+    const q = deferredSearchQuery.trim();
     if (!q) return [];
     
     const queryHasDiacritics = hasVietnameseDiacritics(q);
@@ -139,7 +140,7 @@ export default function Dashboard({
     scoredResults.sort((a, b) => b.score - a.score);
 
     return scoredResults.slice(0, 8);
-  }, [searchQuery, deck, intensiveDeck]);
+  }, [deferredSearchQuery, deck, intensiveDeck]);
 
   const playAudio = (e: React.MouseEvent, text: string, audioUrl?: string | null) => {
     e.stopPropagation();
@@ -153,12 +154,18 @@ export default function Dashboard({
 
   const isDue = dueCards.length > 0;
 
-  // Cấp độ ghi nhớ
-  const matureCards = deck.filter((c) => c.interval >= 21).length;
-  const learningCards = deck.filter(
-    (c) => c.interval > 0 && c.interval < 21,
-  ).length;
-  const newCards = deck.filter((c) => c.interval === 0).length;
+  // Cấp độ ghi nhớ (single-pass memoized)
+  const { matureCards, learningCards, newCards } = useMemo(() => {
+    let mature = 0;
+    let learning = 0;
+    let fresh = 0;
+    for (const c of deck) {
+      if (c.interval >= 21) mature++;
+      else if (c.interval > 0) learning++;
+      else fresh++;
+    }
+    return { matureCards: mature, learningCards: learning, newCards: fresh };
+  }, [deck]);
 
   const totalCards = deck.length;
 
@@ -211,36 +218,41 @@ export default function Dashboard({
       .filter((item) => item.value > 0);
   }, [deck, intensiveDeck]);
 
-  // Chart 2: 7-Day Forecast Data
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const forecastData = Array.from({ length: 7 }).map((_, i) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-    const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + 1);
-
-    const count = deck.filter((c) => {
-      if (i === 0) {
-        return c.nextReviewDate < nextDate.getTime();
-      } else {
-        return (
-          c.nextReviewDate >= date.getTime() &&
-          c.nextReviewDate < nextDate.getTime()
-        );
-      }
-    }).length;
-
-    return {
-      date: date.toLocaleDateString("vi-VN", { weekday: "short" }),
-      count,
-      name: "Số từ",
-    };
-  });
-
   // Calculate Progress Stats
   const todayStr = getLocalDateString();
+
+  // Chart 2: 7-Day Forecast Data
+  const forecastData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayStartTimestamps = Array.from({ length: 8 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      return { time: d.getTime(), label: d.toLocaleDateString("vi-VN", { weekday: "short" }) };
+    });
+
+    const counts = new Array(7).fill(0);
+    for (const c of deck) {
+      const nextReview = c.nextReviewDate;
+      if (nextReview < dayStartTimestamps[1].time) {
+        counts[0]++;
+      } else {
+        for (let i = 1; i < 7; i++) {
+          if (nextReview >= dayStartTimestamps[i].time && nextReview < dayStartTimestamps[i + 1].time) {
+            counts[i]++;
+            break;
+          }
+        }
+      }
+    }
+
+    return counts.map((count, i) => ({
+      date: dayStartTimestamps[i].label,
+      count,
+      name: "Số từ",
+    }));
+  }, [deck, todayStr]);
+
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterdayStr = getLocalDateString(yesterdayDate);
@@ -275,32 +287,44 @@ export default function Dashboard({
       : 0;
   const errorRateDiff = 100 - correctRateToday - (100 - correctRateYesterday); // negative means fewer errors today
 
-  const studyHistoryData = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dStr = getLocalDateString(d);
-    const s = stats[dStr] || {
-      reviewed: 0,
-      correct: 0,
-      mastered: 0,
-      newLearned: 0,
-      freeStudyTime: 0,
-      audioListens: 0,
-    };
+  const { studyHistoryData, totalWeekAudioListens, busiestListeningDay } = useMemo(() => {
+    const history = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dStr = getLocalDateString(d);
+      const s = stats[dStr] || {
+        reviewed: 0,
+        correct: 0,
+        mastered: 0,
+        newLearned: 0,
+        freeStudyTime: 0,
+        audioListens: 0,
+      };
+      return {
+        date: d.toLocaleDateString("vi-VN", { weekday: "short" }),
+        fullDate: dStr,
+        audioListens: Number(s.audioListens) || 0,
+        reviewed: Number(s.reviewed) || 0,
+        correct: Number(s.correct) || 0,
+        newLearned: Number(s.newLearned) || 0,
+        freeStudyTimeMinutes: Math.ceil((Number(s.freeStudyTime) || 0) / 60),
+      };
+    });
+
+    const totalAudio = history.reduce((acc, curr) => acc + curr.audioListens, 0);
+    let busiest = history[0];
+    for (const day of history) {
+      if (day.audioListens > busiest.audioListens) busiest = day;
+    }
+
     return {
-      date: d.toLocaleDateString("vi-VN", { weekday: "short" }),
-      fullDate: dStr,
-      audioListens: Number(s.audioListens) || 0,
-      reviewed: Number(s.reviewed) || 0,
-      correct: Number(s.correct) || 0,
-      newLearned: Number(s.newLearned) || 0,
-      freeStudyTimeMinutes: Math.ceil((Number(s.freeStudyTime) || 0) / 60),
+      studyHistoryData: history,
+      totalWeekAudioListens: totalAudio,
+      busiestListeningDay: busiest,
     };
-  });
+  }, [stats, todayStr]);
 
   const todayAudioListens = Number(todayStats.audioListens) || 0;
-  const totalWeekAudioListens = studyHistoryData.reduce((acc, curr) => acc + curr.audioListens, 0);
-  const busiestListeningDay = [...studyHistoryData].sort((a, b) => b.audioListens - a.audioListens)[0];
 
   // Calculate Sentence of the Day
   const todayForSeed = getVietnamDate();

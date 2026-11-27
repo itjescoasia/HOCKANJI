@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { IntensiveWord } from '../types';
 import { db, auth, removeUndefined } from '../lib/firebase';
 import { deleteCloudAudio } from '../utils/playTTS';
@@ -75,6 +75,9 @@ export function useIntensiveVocab() {
   const [intensiveDeck, setIntensiveDeck] = useState<IntensiveWord[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const intensiveDeckRef = useRef<IntensiveWord[]>(intensiveDeck);
+  intensiveDeckRef.current = intensiveDeck;
+
   // Fast offline load from IndexedDB
   useEffect(() => {
     deckStorage.getItem<IntensiveWord[]>('intensive_vocab_deck_v1').then((cached) => {
@@ -82,6 +85,7 @@ export function useIntensiveVocab() {
         const hasConv = cached.some(w => w.category === 'Hội thoại' || w.id === INITIAL_CONVERSATION_SAMPLE.id);
         const finalCached = hasConv ? cached : [...cached, INITIAL_CONVERSATION_SAMPLE];
         setIntensiveDeck(prev => prev.length === 0 ? finalCached : prev);
+        setIsLoaded(true);
       }
     }).catch(() => {});
   }, []);
@@ -117,12 +121,6 @@ export function useIntensiveVocab() {
       unsubscribeSnapshot();
     };
   }, []);
-
-  useEffect(() => {
-    if (intensiveDeck.length > 0) {
-      deckStorage.setItem('intensive_vocab_deck_v1', intensiveDeck).catch(() => {});
-    }
-  }, [intensiveDeck]);
 
   const addWord = async (word: IntensiveWord) => {
     setIntensiveDeck(prev => {
@@ -169,10 +167,10 @@ export function useIntensiveVocab() {
     }
   };
 
-  const updateWord = async (id: string, updates: Partial<IntensiveWord>) => {
+  const updateWord = useCallback(async (id: string, updates: Partial<IntensiveWord>) => {
     if (!id) return;
     
-    const oldWord = intensiveDeck.find(w => w.id === id);
+    const oldWord = intensiveDeckRef.current.find(w => w.id === id);
     let finalUpdates = { ...updates };
 
     // Protect existing example audio URLs if not provided in updates
@@ -196,14 +194,13 @@ export function useIntensiveVocab() {
     });
 
     if (auth.currentUser) {
-      const path = `users/${auth.currentUser.uid}/intensiveVocab/${id}`;
       try {
         await setDoc(doc(db, 'global_intensiveVocab', id), removeUndefined(finalUpdates), { merge: true });
       } catch (err) {
         console.warn("Firestore updateWord error:", err);
       }
     }
-  };
+  }, []);
 
   const reorderWords = async (reorderedWords: IntensiveWord[]) => {
     if (auth.currentUser) {
@@ -227,8 +224,7 @@ export function useIntensiveVocab() {
       const { text, audioUrl } = e.detail;
       if (!text || !audioUrl) return;
 
-      for (const word of intensiveDeck) {
-        let needsUpdate = false;
+      for (const word of intensiveDeckRef.current) {
         let examplesUpdated = false;
         const newExamples = word.examples.map(ex => {
           if (ex.sentence === text && ex.audioUrl !== audioUrl) {
@@ -239,7 +235,6 @@ export function useIntensiveVocab() {
         });
 
         if (examplesUpdated) {
-          console.log("Auto-syncing TTS audio to DB for intensive word:", word.word);
           await updateWord(word.id, { examples: newExamples });
         }
       }
@@ -247,7 +242,7 @@ export function useIntensiveVocab() {
     
     window.addEventListener('tts-generated', handleTTSGenerated);
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
-  }, [intensiveDeck, updateWord]);
+  }, [updateWord]);
 
   return { intensiveDeck, addWord, removeWord, updateWord, reorderWords, isLoaded };
 }

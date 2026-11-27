@@ -188,6 +188,7 @@ function VocabCardExamples({ card, deck, playAudio, onEditCard }: { card: KanjiC
 export default function VocabList({ deck, onRemove, onUpdate, onImport, initialSearchQuery = '', initialEditId = null, editCardReq = null, viewCardReq = null, onStartSentenceReview }: VocabListProps) {
   const isAdmin = auth.currentUser?.email === 'nguyenthetrung200126@gmail.com';
   const [search, setSearch] = usePersistentState('app_vocablist_search', initialSearchQuery);
+  const deferredSearch = React.useDeferredValue(search);
   const [filterType, setFilterType] = usePersistentState('app_vocablist_filterType', 'all');
   const [audioFilter, setAudioFilter] = usePersistentState<'all' | 'has_audio' | 'no_audio'>('app_vocablist_audioFilter', 'all');
   const [currentPage, setCurrentPage] = usePersistentState('app_vocablist_currentPage', 1);
@@ -1001,7 +1002,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   };
 
   const filteredDeck = React.useMemo(() => {
-    const q = String(search || "").trim();
+    const q = String(deferredSearch || "").trim();
 
     // Deduplicate cards by id in deck first
     const seen = new Set<string>();
@@ -1042,7 +1043,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     scoredList.sort((a, b) => b.score - a.score);
 
     return scoredList.map(item => item.card);
-  }, [deck, search, filterType, audioFilter]);
+  }, [deck, deferredSearch, filterType, audioFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredDeck.length / itemsPerPage));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);

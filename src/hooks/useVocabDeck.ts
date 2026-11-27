@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { KanjiCard, ReviewGrade } from '../types';
 import { notify } from '../utils/feedback';
 import { calculateNextReview } from '../lib/sm2';
@@ -28,9 +28,14 @@ export function useVocabDeck() {
   const [deck, setDeck] = useState<KanjiCard[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Fast offline load from IndexedDB
+  const deckRef = useRef<KanjiCard[]>(deck);
+  deckRef.current = deck;
+
+  // Fast offline load from IndexedDB so UI renders immediately
   useEffect(() => {
+    let active = true;
     deckStorage.getItem<KanjiCard[]>('kanji_srs_deck').then((cached) => {
+      if (!active) return;
       if (cached && Array.isArray(cached) && cached.length > 0) {
         const seenIds = new Set<string>();
         const uniqueCached: KanjiCard[] = [];
@@ -44,15 +49,17 @@ export function useVocabDeck() {
           }
         }
         setDeck(prev => prev.length === 0 ? uniqueCached : prev);
+        setIsLoaded(true);
       }
     }).catch(() => {});
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    // Listen directly to Firestore global_kanjiDeck (allow read: if true)
+    // Listen directly to Firestore global_kanjiDeck without double metadata emissions
     const q = query(collection(db, 'global_kanjiDeck'));
     
-    const unsubscribeSnapshot = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
       const loadedDeck: KanjiCard[] = [];
       const seenIds = new Set<string>();
       snapshot.forEach((docSnap) => {
@@ -65,7 +72,6 @@ export function useVocabDeck() {
         const card = { ...data, id: cardId } as KanjiCard;
         if ((card.id === '81556a75-57cd-467d-a9fd-04c234980a2c' || card.kanji === '乾かす') && card.wordType === 'Động từ nhóm I') {
           card.wordType = 'Động từ nhóm I (Tha động từ)';
-          // Persist to Firestore asynchronously
           setDoc(doc(db, 'global_kanjiDeck', card.id), { wordType: 'Động từ nhóm I (Tha động từ)' }, { merge: true })
             .catch(err => console.warn('Could not auto-update 乾かす wordType:', err));
         }
@@ -75,28 +81,15 @@ export function useVocabDeck() {
       setDeck(sorted);
       setIsLoaded(true);
       deckStorage.setItem('kanji_srs_deck', sorted).catch(() => {});
-      
-      if (snapshot.metadata.hasPendingWrites) {
-        console.log("Local changes haven't synced to server yet.");
-      } else {
-        console.log(`Synced ${loadedDeck.length} kanji cards from server.`);
-      }
     }, (error) => {
       console.error("Firestore error in onSnapshot global_kanjiDeck:", error);
-      setIsLoaded(true); // Don't block UI if error
+      setIsLoaded(true);
     });
 
     return () => {
       unsubscribeSnapshot();
     };
   }, []);
-
-  // Sync to IndexedDB whenever deck changes and has data
-  useEffect(() => {
-    if (deck.length > 0) {
-      deckStorage.setItem('kanji_srs_deck', deck).catch(() => {});
-    }
-  }, [deck]);
 
   const addCard = async (kanji: string, reading: string, meaning: string, sinoVietnamese?: string, example?: string, exampleTranslation?: string, wordType?: string, kanjiExplanation?: string, romaji?: string, examples?: any[], forms?: any[], audioUrl?: string | null, hasAudio?: boolean) => {
     const newCard: KanjiCard = {
@@ -290,11 +283,11 @@ export function useVocabDeck() {
   };
 
 
-  const updateCard = async (id: string, updates: Partial<KanjiCard>) => {
+  const updateCard = useCallback(async (id: string, updates: Partial<KanjiCard>) => {
     if (!id) return;
     
     // Check for deleted audio in examples or main word
-    const oldCard = deck.find(c => c.id === id);
+    const oldCard = deckRef.current.find(c => c.id === id);
     if (oldCard) {
        if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldCard.audioUrl)) {
           if (oldCard.audioUrl) await deleteCloudAudio(oldCard.audioUrl);
@@ -311,14 +304,7 @@ export function useVocabDeck() {
     
     if (auth.currentUser) {
       try {
-        // Removed base64 cleanup so that MP3 audio from AI can be saved to Firestore
-        let safeUpdates = JSON.parse(JSON.stringify(updates));
-        
-        const cleanedUpdates = removeUndefined(safeUpdates);
-        console.log("updateCard CALLED WITH:", id);
-        console.log("Raw updates:", updates);
-        console.log("Cleaned updates ready for Firestore:", cleanedUpdates);
-
+        const cleanedUpdates = removeUndefined(updates);
         await setDoc(doc(db, 'global_kanjiDeck', id), cleanedUpdates, { merge: true });
       } catch (err: any) {
         console.error("Error updating card:", err);
@@ -329,23 +315,24 @@ export function useVocabDeck() {
         }
       }
     } else {
-      setDeck(prev => prev.map(card => card.id === id ? { ...card, ...updates } : card));
+      setDeck(prev => {
+        const next = prev.map(card => card.id === id ? { ...card, ...updates } : card);
+        deckStorage.setItem('kanji_srs_deck', next).catch(() => {});
+        return next;
+      });
     }
-  };
+  }, []);
 
-  
   useEffect(() => {
     const handleTTSGenerated = async (e: Event) => {
       const customEvent = e as CustomEvent<{ text: string, audioUrl: string }>;
       const { text, audioUrl } = customEvent.detail;
+      const currentDeck = deckRef.current;
+      if (!currentDeck || currentDeck.length === 0) return;
       
-      // We don't want to scan if there's no deck or user
-      if (!deck || deck.length === 0) return;
-      
-      // Find cards to update
-      for (const card of deck) {
+      for (const card of currentDeck) {
          let needsUpdate = false;
-         let updates: Partial<KanjiCard> = {};
+         const updates: Partial<KanjiCard> = {};
          
          if ((card.kanji === text || card.reading === text) && card.audioUrl !== audioUrl) {
             updates.audioUrl = audioUrl;
@@ -384,7 +371,6 @@ export function useVocabDeck() {
          }
          
          if (needsUpdate) {
-            console.log("Auto-syncing TTS audio to DB for card:", card.kanji || card.reading);
             await updateCard(card.id, updates);
          }
       }
@@ -392,7 +378,7 @@ export function useVocabDeck() {
     
     window.addEventListener('tts-generated', handleTTSGenerated);
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
-  }, [deck, updateCard]);
+  }, [updateCard]);
 
   return { deck, addCard, removeCard, updateCard, reviewCard, getDueCards, importCards, isLoaded };
 }

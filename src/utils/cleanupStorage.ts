@@ -5,14 +5,21 @@ export const deckStorage = localforage.createInstance({
   storeName: 'decks'
 });
 
+let cleanupPromise: Promise<void> | null = null;
+
 /**
  * Migrates large data sets out of browser localStorage into IndexedDB (localforage)
  * and purges bloated keys to eliminate QuotaExceededError.
  */
-export async function cleanupAndMigrateStorage() {
-  if (typeof window === 'undefined' || !window.localStorage) return;
+export function cleanupAndMigrateStorage(): Promise<void> {
+  if (cleanupPromise) return cleanupPromise;
+  if (typeof window === 'undefined' || !window.localStorage) {
+    cleanupPromise = Promise.resolve();
+    return cleanupPromise;
+  }
 
-  try {
+  cleanupPromise = (async () => {
+    try {
     // 1. Remove firestore client state locks that may have caused quota exhaustion
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
@@ -67,6 +74,8 @@ export async function cleanupAndMigrateStorage() {
   } catch (err) {
     console.warn('[StorageCleanup] Error during storage cleanup:', err);
   }
+  })();
+  return cleanupPromise;
 }
 
 // Immediate execution on module load

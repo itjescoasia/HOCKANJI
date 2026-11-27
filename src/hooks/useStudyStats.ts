@@ -22,8 +22,21 @@ export interface UserStats {
 }
 
 export function useStudyStats() {
-  const [stats, setStats] = useState<UserStats>({});
-  const [isStatsLoaded, setIsStatsLoaded] = useState(false);
+  const [stats, setStats] = useState<UserStats>(() => {
+    try {
+      const localStats = localStorage.getItem("kanji_srs_stats");
+      return localStats ? JSON.parse(localStats) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [isStatsLoaded, setIsStatsLoaded] = useState<boolean>(() => {
+    try {
+      return Boolean(localStorage.getItem("kanji_srs_stats"));
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -40,7 +53,11 @@ export function useStudyStats() {
           statsRef,
           (docSnap) => {
             if (docSnap.exists()) {
-              setStats(docSnap.data() as UserStats);
+              const data = docSnap.data() as UserStats;
+              setStats(data);
+              try {
+                localStorage.setItem("kanji_srs_stats", JSON.stringify(data));
+              } catch {}
             } else {
               setStats({});
             }

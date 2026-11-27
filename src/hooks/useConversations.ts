@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Conversation, DialogueSentence } from '../types';
 import { db, auth, removeUndefined } from '../lib/firebase';
 import { deleteCloudAudio } from '../utils/playTTS';
@@ -40,6 +40,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const conversationsRef = useRef<Conversation[]>(conversations);
+  conversationsRef.current = conversations;
 
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | undefined;
@@ -123,10 +125,10 @@ export function useConversations() {
     }
   };
 
-  const updateConversation = async (id: string, updates: Partial<Conversation>) => {
+  const updateConversation = useCallback(async (id: string, updates: Partial<Conversation>) => {
     if (!id) return;
     
-    const oldConv = conversations.find(c => c.id === id);
+    const oldConv = conversationsRef.current.find(c => c.id === id);
     if (oldConv) {
        if (updates.audioUrl === null || (updates.audioUrl !== undefined && updates.audioUrl !== oldConv.audioUrl)) {
           if (oldConv.audioUrl) await deleteCloudAudio(oldConv.audioUrl);
@@ -151,19 +153,18 @@ export function useConversations() {
     } else {
       setConversations(prev => prev.map(conv => conv.id === id ? { ...conv, ...updates } : conv));
     }
-  };
+  }, []);
 
-  
   useEffect(() => {
     const handleTTSGenerated = async (e: Event) => {
       const customEvent = e as CustomEvent<{ text: string, audioUrl: string }>;
       const { text, audioUrl } = customEvent.detail;
+      const currentConversations = conversationsRef.current;
+      if (!currentConversations || currentConversations.length === 0) return;
       
-      if (!conversations || conversations.length === 0) return;
-      
-      for (const conv of conversations) {
+      for (const conv of currentConversations) {
          let needsUpdate = false;
-         let updates: Partial<Conversation> = {};
+         const updates: Partial<Conversation> = {};
          
          if (conv.dialogues) {
             let dialoguesUpdated = false;
@@ -181,7 +182,6 @@ export function useConversations() {
          }
          
          if (needsUpdate) {
-            console.log("Auto-syncing TTS audio to DB for conversation:", conv.title);
             await updateConversation(conv.id, updates);
          }
       }
@@ -189,7 +189,7 @@ export function useConversations() {
     
     window.addEventListener('tts-generated', handleTTSGenerated);
     return () => window.removeEventListener('tts-generated', handleTTSGenerated);
-  }, [conversations, updateConversation]);
+  }, [updateConversation]);
 
   return { conversations, addConversation, removeConversation, updateConversation, isLoaded };
 }

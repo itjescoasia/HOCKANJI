@@ -1,24 +1,13 @@
 import { usePersistentState } from './hooks/usePersistentState';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { ViewState, KanjiCard } from './types';
 import { useVocabDeck } from './hooks/useVocabDeck';
 import { useStudyStats } from './hooks/useStudyStats';
 import { useIntensiveVocab } from './hooks/useIntensiveVocab';
 import { getLocalDateString, getEndOfTodayTimestamp } from './lib/dateUtils';
 import Dashboard from './components/Dashboard';
-import AddVocab from './components/AddVocab';
-import VocabList from './components/VocabList';
-import ReviewSession from './components/ReviewSession';
-import IntensiveStudy from './components/IntensiveStudy';
-import ConversationView from './components/ConversationView';
-import ShortStudySession from './components/ShortStudySession';
-import { SentenceReview } from './components/SentenceReview';
 import Login from './components/Login';
-import AccountSettingsModal from './components/AccountSettingsModal';
-import N4QuizView from './components/N4QuizView';
-import ForgottenVocabSession from './components/ForgottenVocabSession';
-import N4VocabReview from './components/N4VocabReview';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical, Layers, Menu, ChevronDown, LayoutGrid } from 'lucide-react';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, MessageSquare, Settings, CheckSquare, Check, Palette, Brain, Layers, ChevronDown, LayoutGrid } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -26,6 +15,24 @@ import { useConversations } from './hooks/useConversations';
 import { UserProfile } from './types';
 import FeedbackHost from './components/FeedbackHost';
 import { notify } from './utils/feedback';
+
+const AddVocab = lazy(() => import('./components/AddVocab'));
+const VocabList = lazy(() => import('./components/VocabList'));
+const ReviewSession = lazy(() => import('./components/ReviewSession'));
+const IntensiveStudy = lazy(() => import('./components/IntensiveStudy'));
+const ConversationView = lazy(() => import('./components/ConversationView'));
+const ShortStudySession = lazy(() => import('./components/ShortStudySession'));
+const SentenceReview = lazy(() => import('./components/SentenceReview').then(m => ({ default: m.SentenceReview })));
+const AccountSettingsModal = lazy(() => import('./components/AccountSettingsModal'));
+const N4QuizView = lazy(() => import('./components/N4QuizView'));
+const ForgottenVocabSession = lazy(() => import('./components/ForgottenVocabSession'));
+const N4VocabReview = lazy(() => import('./components/N4VocabReview'));
+
+const ViewLoader = () => (
+  <div className="flex-1 flex items-center justify-center min-h-[45vh] py-12">
+    <div className="w-7 h-7 border-[3px] border-theme-subtle border-t-theme-accent rounded-full animate-spin" />
+  </div>
+);
 
 export type AppTheme = 'matcha' | 'washi' | 'charcoal' | 'ocean' | 'sepia' | 'dark' | 'light';
 
@@ -162,6 +169,8 @@ export default function App() {
     localStorage.setItem('app_theme', theme);
   }, [theme]);
 
+  const [isAddModalOpen, setIsAddModalOpen] = usePersistentState('app_isAddModalOpen', false);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
@@ -180,9 +189,10 @@ export default function App() {
         setIsMobileMenuOpen(false);
         setIsMoreMenuOpen(false);
         setIsAccountDropdownOpen(false);
+        setIsAddModalOpen(false);
       }
     };
-    if (isThemeMenuOpen || isMobileMenuOpen || isMoreMenuOpen || isAccountDropdownOpen) {
+    if (isThemeMenuOpen || isMobileMenuOpen || isMoreMenuOpen || isAccountDropdownOpen || isAddModalOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
@@ -190,7 +200,7 @@ export default function App() {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isThemeMenuOpen, isMobileMenuOpen, isMoreMenuOpen, isAccountDropdownOpen]);
+  }, [isThemeMenuOpen, isMobileMenuOpen, isMoreMenuOpen, isAccountDropdownOpen, isAddModalOpen, setIsAddModalOpen]);
 
   useEffect(() => {
     const calculateTimeUntilMidnight = () => {
@@ -267,23 +277,6 @@ export default function App() {
   const { intensiveDeck, addWord: addIntensiveWord, removeWord: removeIntensiveWord, updateWord: updateIntensiveWord, reorderWords: reorderIntensiveWords } = useIntensiveVocab();
   const { conversations, addConversation, removeConversation, updateConversation } = useConversations();
   const { stats, isStatsLoaded, recordReview, recordFreeStudyTime, recordWordOfTheDay } = useStudyStats();
-  
-  const [isAddModalOpen, setIsAddModalOpen] = usePersistentState('app_isAddModalOpen', false);
-
-  useEffect(() => {
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (isThemeMenuOpen) {
-        setIsThemeMenuOpen(false);
-      } else if (isMobileMenuOpen) {
-        setIsMobileMenuOpen(false);
-      } else if (isAddModalOpen) {
-        setIsAddModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleEscKey);
-    return () => window.removeEventListener('keydown', handleEscKey);
-  }, [isThemeMenuOpen, isMobileMenuOpen, isAddModalOpen]);
 
   const [view, setView] = usePersistentState<any>('app_currentView_v2', 'dashboard');
   const [isFreeStudyMode, setIsFreeStudyMode] = usePersistentState('app_isFreeStudyMode', false);
@@ -380,35 +373,53 @@ export default function App() {
     };
   }, [isFreeStudyMode, isDifficultReviewMode, view, recordFreeStudyTime]);
 
+  const { dueCards, leftoverNewCards } = useMemo(() => {
+    const rawDueCards = getDueCards();
+    const todayStr = dayTrigger || getLocalDateString();
+    const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
+
+    const newCards = rawDueCards.filter(c => c.interval === 0);
+    const reviewCards = rawDueCards.filter(c => c.interval > 0);
+
+    const maxNewPerDay = 25;
+    const newLearnedToday = todayStats.newLearned || 0;
+    const availableNewSlots = Math.max(0, maxNewPerDay - newLearnedToday);
+    const maxReviewPerDay = 150;
+
+    const limitedNew = newCards.slice(0, availableNewSlots);
+    const limitedReview = reviewCards
+      .sort((a, b) => a.nextReviewDate - b.nextReviewDate)
+      .slice(0, maxReviewPerDay);
+
+    return {
+      leftoverNewCards: Math.max(0, newCards.length - availableNewSlots),
+      dueCards: [...limitedNew, ...limitedReview]
+    };
+  }, [getDueCards, stats, dayTrigger]);
+
+  const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
+  const primaryNavItems = useMemo(() => [
+    { id: 'dashboard', label: 'Trang chủ', shortLabel: 'Trang chủ', icon: Home },
+    { id: 'n4_vocab', label: 'Từ vựng N4', shortLabel: 'Từ vựng N4', icon: Layers },
+    { id: 'sentence_srs', label: 'Dịch câu SRS', shortLabel: 'Dịch câu', icon: Brain },
+    { id: 'list', label: 'Kho từ vựng', shortLabel: 'Kho từ', icon: BookMarked },
+  ], []);
+  const secondaryNavItems = useMemo(() => [
+    { id: 'quiz', label: 'Trắc nghiệm N4', shortLabel: 'Trắc nghiệm', icon: CheckSquare },
+    { id: 'intensive_vocab', label: 'Chuyên đề', shortLabel: 'Chuyên đề', icon: Lightbulb },
+    { id: 'conversation', label: 'Hội thoại', shortLabel: 'Hội thoại', icon: MessageSquare },
+  ], []);
+  const navItems = useMemo(() => [
+    ...primaryNavItems,
+    ...secondaryNavItems,
+    ...(isAdmin ? [{ id: 'add', label: 'Thêm thẻ mới', shortLabel: 'Thêm thẻ', icon: PlusCircle }] : []),
+  ], [primaryNavItems, secondaryNavItems, isAdmin]);
+
   if (authLoading || !isLoaded || !isStatsLoaded) return <div className="min-h-screen-ios bg-theme-base-alt flex items-center justify-center font-sans"><div className="w-8 h-8 border-4 border-theme-subtle border-t-theme-accent rounded-full animate-spin"></div></div>;
 
   if (!user) {
     return <Login />;
   }
-
-  const rawDueCards = getDueCards();
-  const todayStr = getLocalDateString();
-  const todayStats = stats[todayStr] || { reviewed: 0, correct: 0, mastered: 0, newLearned: 0 };
-  
-  const newCards = rawDueCards.filter(c => c.interval === 0);
-  const reviewCards = rawDueCards.filter(c => c.interval > 0);
-
-  const maxNewPerDay = 25;
-  const newLearnedToday = todayStats.newLearned || 0;
-  const availableNewSlots = Math.max(0, maxNewPerDay - newLearnedToday);
-
-  // Limit review cards queue to a maximum manageable daily batch 
-  // (the algorithm handles priority, we just cap the daily session size so user doesn't get overwhelmed)
-  const maxReviewPerDay = 150;
-  
-  const limitedNew = newCards.slice(0, availableNewSlots);
-  const limitedReview = reviewCards
-    .sort((a,b) => a.nextReviewDate - b.nextReviewDate)
-    .slice(0, maxReviewPerDay);
-
-  const leftoverNewCards = Math.max(0, newCards.length - availableNewSlots);
-
-  const dueCards = [...limitedNew, ...limitedReview];
 
   const handleStartReview = () => {
     if (dueCards.length === 0 && deck.length > 0) {
@@ -570,23 +581,6 @@ export default function App() {
     });
   };
 
-  const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
-  const primaryNavItems = [
-    { id: 'dashboard', label: 'Trang chủ', shortLabel: 'Trang chủ', icon: Home },
-    { id: 'n4_vocab', label: 'Từ vựng N4', shortLabel: 'Từ vựng N4', icon: Layers },
-    { id: 'sentence_srs', label: 'Dịch câu SRS', shortLabel: 'Dịch câu', icon: Brain },
-    { id: 'list', label: 'Kho từ vựng', shortLabel: 'Kho từ', icon: BookMarked },
-  ];
-  const secondaryNavItems = [
-    { id: 'quiz', label: 'Trắc nghiệm N4', shortLabel: 'Trắc nghiệm', icon: CheckSquare },
-    { id: 'intensive_vocab', label: 'Chuyên đề', shortLabel: 'Chuyên đề', icon: Lightbulb },
-    { id: 'conversation', label: 'Hội thoại', shortLabel: 'Hội thoại', icon: MessageSquare },
-  ];
-  const navItems = [
-    ...primaryNavItems,
-    ...secondaryNavItems,
-    ...(isAdmin ? [{ id: 'add', label: 'Thêm thẻ mới', shortLabel: 'Thêm thẻ', icon: PlusCircle }] : []),
-  ];
   const isFullScreenStudy = view === 'review' || view === 'short_study' || view === 'difficult_review' || isSentenceReviewOpen || isTopicVocabReviewOpen;
   const activePageTitle = navItems.find((n) => n.id === view)?.label || 'KANJI FLOW';
 
@@ -847,7 +841,9 @@ export default function App() {
         )}
         
         {view === 'list' && (
-          <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} editCardReq={editCardReq} viewCardReq={viewCardReq} onStartSentenceReview={handleStartSentenceReview} />
+          <Suspense fallback={<ViewLoader />}>
+            <VocabList deck={deck} onRemove={removeCard} onUpdate={updateCard} onImport={importCards} initialSearchQuery={listSearchQuery} editCardReq={editCardReq} viewCardReq={viewCardReq} onStartSentenceReview={handleStartSentenceReview} />
+          </Suspense>
         )}
         
         {/* Modals */}
@@ -871,171 +867,189 @@ export default function App() {
                 <X className="w-6 h-6" />
               </button>
               <div className="p-2 sm:p-4 max-h-[88dvh] overflow-y-auto custom-scrollbar">
-                <AddVocab 
-                  deck={deck}
-                  onNavigateToWord={(kanji) => {
-                    setListSearchQuery(kanji);
-                    setIsAddModalOpen(false);
-                    setView('list');
-                  }}
-                  onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms, audioUrl, hasAudio) => {
-                    await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || [], audioUrl, hasAudio);
-                    notify.success('Vừa thêm từ vựng mới thành công!');
-                    setIsAddModalOpen(false);
-                  }} 
-                />
+                <Suspense fallback={<ViewLoader />}>
+                  <AddVocab 
+                    deck={deck}
+                    onNavigateToWord={(kanji) => {
+                      setListSearchQuery(kanji);
+                      setIsAddModalOpen(false);
+                      setView('list');
+                    }}
+                    onAdd={async (kanji, reading, meaning, sinoVietnamese, examples, wordType, kanjiExplanation, romaji, forms, audioUrl, hasAudio) => {
+                      await addCard(kanji, reading, meaning, sinoVietnamese || '', '', '', wordType || '', kanjiExplanation || '', romaji || '', examples || [], forms || [], audioUrl, hasAudio);
+                      notify.success('Vừa thêm từ vựng mới thành công!');
+                      setIsAddModalOpen(false);
+                    }} 
+                  />
+                </Suspense>
               </div>
             </div>
           </div>
         )}
 
         {view === 'intensive_vocab' && (
-          <IntensiveStudy 
-            deck={intensiveDeck}
-            mainDeck={deck}
-            onAddWord={addIntensiveWord}
-            onRemoveWord={removeIntensiveWord}
-            onUpdateWord={updateIntensiveWord}
-            onReorderDeck={reorderIntensiveWords}
-            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
-            onStartTopicVocabReview={handleStartTopicVocabReview}
-            initialSearchQuery={intensiveSearchQuery}
-            initialSelectedWordId={intensiveSelectedWordId}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <IntensiveStudy 
+              deck={intensiveDeck}
+              mainDeck={deck}
+              onAddWord={addIntensiveWord}
+              onRemoveWord={removeIntensiveWord}
+              onUpdateWord={updateIntensiveWord}
+              onReorderDeck={reorderIntensiveWords}
+              onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
+              onStartTopicVocabReview={handleStartTopicVocabReview}
+              initialSearchQuery={intensiveSearchQuery}
+              initialSelectedWordId={intensiveSelectedWordId}
+            />
+          </Suspense>
         )}
         
         {view === 'short_study' && (
           <div id="short-study-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
-            <ShortStudySession
-              queue={shortStudyQueue}
-              onExit={() => setView('dashboard')}
-              onUpdateCard={updateCard}
-              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
-            />
+            <Suspense fallback={<ViewLoader />}>
+              <ShortStudySession
+                queue={shortStudyQueue}
+                onExit={() => setView('dashboard')}
+                onUpdateCard={updateCard}
+                onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+              />
+            </Suspense>
           </div>
         )}
 
-
-
         {view === 'conversation' && (
-          <ConversationView
-            conversations={conversations}
-            onAddConversation={addConversation}
-            onRemoveConversation={removeConversation}
-            onUpdateConversation={updateConversation}
-            onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
-            mainDeck={deck}
-            onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
-            onAddIntensiveWord={addIntensiveWord}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <ConversationView
+              conversations={conversations}
+              onAddConversation={addConversation}
+              onRemoveConversation={removeConversation}
+              onUpdateConversation={updateConversation}
+              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+              mainDeck={deck}
+              onStartTopicReview={(topicDeck) => handleStartSentenceReview('VI_TO_JA', topicDeck, false)}
+              onAddIntensiveWord={addIntensiveWord}
+            />
+          </Suspense>
         )}
 
         {view === 'quiz' && (
-          <N4QuizView
-            onBackToDashboard={() => handleNavigate('dashboard')}
-            onNavigateToWord={(word) => {
-              setListSearchQuery(word);
-              handleNavigate('list');
-            }}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <N4QuizView
+              onBackToDashboard={() => handleNavigate('dashboard')}
+              onNavigateToWord={(word) => {
+                setListSearchQuery(word);
+                handleNavigate('list');
+              }}
+            />
+          </Suspense>
         )}
 
         {view === 'n4_vocab' && (
-          <N4VocabReview
-            userId={user?.uid || 'anonymous'}
-            onBack={() => handleNavigate('dashboard')}
-            onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <N4VocabReview
+              userId={user?.uid || 'anonymous'}
+              onBack={() => handleNavigate('dashboard')}
+              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+            />
+          </Suspense>
         )}
       </main>
 
       {/* Forgotten Vocab Scientific Review Overlay */}
       {view === 'difficult_review' && (
-        <ForgottenVocabSession
-          deck={deck}
-          onClose={() => setView('dashboard')}
-          onUpdateCard={updateCard}
-          onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-theme-base-alt flex items-center justify-center"><ViewLoader /></div>}>
+          <ForgottenVocabSession
+            deck={deck}
+            onClose={() => setView('dashboard')}
+            onUpdateCard={updateCard}
+            onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+          />
+        </Suspense>
       )}
 
       {/* Review Overlay */}
       {view === 'review' && (
-        <ReviewSession deck={deck} 
-          dueCards={isDifficultReviewMode ? getDifficultStudyDeck() : (isFreeStudyMode ? getFreeStudyDeck() : dueCards)}
-          onReview={handleReviewCard}
-          onFreeStudyReview={isDifficultReviewMode ? handleDifficultReview : handleFreeStudyReview}
-          onClose={handleCloseReview}
-          onRemoveCard={removeCard}
-          isFreeStudy={isFreeStudyMode || isDifficultReviewMode}
-          isDifficultReview={isDifficultReviewMode}
-          onUpdateCard={updateCard}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-theme-base-alt flex items-center justify-center"><ViewLoader /></div>}>
+          <ReviewSession deck={deck} 
+            dueCards={isDifficultReviewMode ? getDifficultStudyDeck() : (isFreeStudyMode ? getFreeStudyDeck() : dueCards)}
+            onReview={handleReviewCard}
+            onFreeStudyReview={isDifficultReviewMode ? handleDifficultReview : handleFreeStudyReview}
+            onClose={handleCloseReview}
+            onRemoveCard={removeCard}
+            isFreeStudy={isFreeStudyMode || isDifficultReviewMode}
+            isDifficultReview={isDifficultReviewMode}
+            onUpdateCard={updateCard}
+          />
+        </Suspense>
       )}
 
       {/* Topic Vocab Review Overlay */}
       {isTopicVocabReviewOpen && topicVocabReviewCards && (
         <div id="topic-vocab-review-overlay" className="fixed inset-0 z-50 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
-          <ReviewSession 
-            deck={deck} 
-            dueCards={topicVocabReviewCards}
-            onReview={handleReviewCard}
-            onFreeStudyReview={handleFreeStudyReview}
-            onClose={() => setIsTopicVocabReviewOpen(false)}
-            onRemoveCard={removeCard}
-            isFreeStudy={true}
-            isTopicReview={true}
-            topicTitle={topicVocabReviewTitle}
-            onUpdateCard={updateCard}
-          />
+          <Suspense fallback={<ViewLoader />}>
+            <ReviewSession 
+              deck={deck} 
+              dueCards={topicVocabReviewCards}
+              onReview={handleReviewCard}
+              onFreeStudyReview={handleFreeStudyReview}
+              onClose={() => setIsTopicVocabReviewOpen(false)}
+              onRemoveCard={removeCard}
+              isFreeStudy={true}
+              isTopicReview={true}
+              topicTitle={topicVocabReviewTitle}
+              onUpdateCard={updateCard}
+            />
+          </Suspense>
         </div>
       )}
 
         {isSentenceReviewOpen && (
           <div id="sentence-review-overlay" className="fixed inset-0 z-40 bg-theme-base-alt overflow-y-auto w-full h-full pt-safe pb-safe pl-safe pr-safe">
-            <SentenceReview
-              deck={sentenceReviewTargetDeck || intensiveDeck}
-              mainDeck={deck}
-              mode={sentenceReviewMode}
-              forceAll={sentenceReviewForceAll}
-              isRandom={sentenceReviewIsRandom}
-              onClose={() => setIsSentenceReviewOpen(false)}
-              onUpdateWord={(id, updates) => {
-                const conv = conversations.find(c => c.id === id);
-                if (conv) {
-                  const updatedDialogues = conv.dialogues.map(d => {
-                    const ex = updates.examples?.find(e => e.id === d.id);
-                    if (ex) {
-                      return {
-                        ...d,
-                        jaToViMastered: ex.jaToViMastered,
-                        viToJaMastered: ex.viToJaMastered,
-                        jaToViNextReviewDate: ex.jaToViNextReviewDate,
-                        viToJaNextReviewDate: ex.viToJaNextReviewDate,
-                        jaToViInterval: ex.jaToViInterval,
-                        viToJaInterval: ex.viToJaInterval,
-                        jaToViFailCount: ex.jaToViFailCount,
-                        viToJaFailCount: ex.viToJaFailCount,
-                        jaToViRepetition: ex.jaToViRepetition,
-                        viToJaRepetition: ex.viToJaRepetition,
-                        jaToViEaseFactor: ex.jaToViEaseFactor,
-                        viToJaEaseFactor: ex.viToJaEaseFactor
-                      };
-                    }
-                    return d;
-                  });
-                  updateConversation(id, { dialogues: updatedDialogues });
-                } else {
-                  const card = deck.find(c => c.id === id);
-                  if (card) {
-                    updateCard(id, updates);
+            <Suspense fallback={<ViewLoader />}>
+              <SentenceReview
+                deck={sentenceReviewTargetDeck || intensiveDeck}
+                mainDeck={deck}
+                mode={sentenceReviewMode}
+                forceAll={sentenceReviewForceAll}
+                isRandom={sentenceReviewIsRandom}
+                onClose={() => setIsSentenceReviewOpen(false)}
+                onUpdateWord={(id, updates) => {
+                  const conv = conversations.find(c => c.id === id);
+                  if (conv) {
+                    const updatedDialogues = conv.dialogues.map(d => {
+                      const ex = updates.examples?.find(e => e.id === d.id);
+                      if (ex) {
+                        return {
+                          ...d,
+                          jaToViMastered: ex.jaToViMastered,
+                          viToJaMastered: ex.viToJaMastered,
+                          jaToViNextReviewDate: ex.jaToViNextReviewDate,
+                          viToJaNextReviewDate: ex.viToJaNextReviewDate,
+                          jaToViInterval: ex.jaToViInterval,
+                          viToJaInterval: ex.viToJaInterval,
+                          jaToViFailCount: ex.jaToViFailCount,
+                          viToJaFailCount: ex.viToJaFailCount,
+                          jaToViRepetition: ex.jaToViRepetition,
+                          viToJaRepetition: ex.viToJaRepetition,
+                          jaToViEaseFactor: ex.jaToViEaseFactor,
+                          viToJaEaseFactor: ex.viToJaEaseFactor
+                        };
+                      }
+                      return d;
+                    });
+                    updateConversation(id, { dialogues: updatedDialogues });
                   } else {
-                    updateIntensiveWord(id, updates);
+                    const card = deck.find(c => c.id === id);
+                    if (card) {
+                      updateCard(id, updates);
+                    } else {
+                      updateIntensiveWord(id, updates);
+                    }
                   }
-                }
-              }}
-              onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
-            />
+                }}
+                onRecordReview={(isCorrect) => recordReview(isCorrect, false, false, isCorrect)}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -1307,14 +1321,18 @@ export default function App() {
       )}
 
       {/* Modal Cài đặt thông tin tài khoản & Phân quyền */}
-      <AccountSettingsModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        currentUser={user}
-        userProfile={userProfile}
-        isAdmin={isAdmin}
-        onProfileUpdated={(updated) => setUserProfile(updated)}
-      />
+      {isAccountModalOpen && (
+        <Suspense fallback={null}>
+          <AccountSettingsModal
+            isOpen={isAccountModalOpen}
+            onClose={() => setIsAccountModalOpen(false)}
+            currentUser={user}
+            userProfile={userProfile}
+            isAdmin={isAdmin}
+            onProfileUpdated={(updated) => setUserProfile(updated)}
+          />
+        </Suspense>
+      )}
       <FeedbackHost />
     </div>
   );
