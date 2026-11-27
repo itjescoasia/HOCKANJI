@@ -14,7 +14,7 @@ import {
 } from '../utils/stringUtils';
 import Markdown from 'react-markdown';
 import { KanjiCard, KanjiExample } from '../types';
-import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy, Flame, Zap } from 'lucide-react';
+import { Eye, Trash2, Search, Upload, Download, Edit2, Check, X, Plus, Volume2, Brain, Sparkles, Loader2, CheckCircle2, Circle, Shuffle, Copy, Flame, Zap, Clock } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -404,6 +404,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [batchScope, setBatchScope] = useState<'missing' | 'never_ai'>('missing');
+  const [batchLimit, setBatchLimit] = useState<10 | 20 | 50 | 'all'>('all');
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [isStoppingBatch, setIsStoppingBatch] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{
@@ -413,8 +414,9 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
     failed: number;
     currentWord: string;
     finished: boolean;
+    stoppedByQuota?: boolean;
     errorMessage?: string;
-  }>({ total: 0, current: 0, succeeded: 0, failed: 0, currentWord: '', finished: false });
+  }>({ total: 0, current: 0, succeeded: 0, failed: 0, currentWord: '', finished: false, stoppedByQuota: false });
   const stopBatchRef = useRef(false);
 
   const hasKanjiChar = (text: string) => /[\u4e00-\u9faf]/.test(text);
@@ -461,7 +463,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const openBatchModal = () => {
     setBatchScope(missingDataCards.length > 0 ? 'missing' : 'never_ai');
-    setBatchProgress({ total: 0, current: 0, succeeded: 0, failed: 0, currentWord: '', finished: false, errorMessage: undefined });
+    setBatchLimit('all');
+    setBatchProgress({ total: 0, current: 0, succeeded: 0, failed: 0, currentWord: '', finished: false, stoppedByQuota: false, errorMessage: undefined });
     setIsStoppingBatch(false);
     setShowBatchModal(true);
   };
@@ -514,7 +517,8 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
   const runBatchAutoFillAI = async () => {
     if (!onUpdate || isBatchRunning) return;
-    const queue = (batchScope === 'missing' ? missingDataCards : neverAiFilledCards).slice();
+    const allEligible = (batchScope === 'missing' ? missingDataCards : neverAiFilledCards);
+    const queue = batchLimit === 'all' ? allEligible.slice() : allEligible.slice(0, batchLimit);
     if (queue.length === 0) {
       notify.info('Tất cả từ vựng phù hợp đều đã được điền dữ liệu AI.');
       return;
@@ -530,12 +534,14 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       failed: 0,
       currentWord: queue[0].kanji || queue[0].reading || '',
       finished: false,
+      stoppedByQuota: false,
       errorMessage: undefined
     });
 
     let succeeded = 0;
     let failed = 0;
     let consecutiveErrors = 0;
+    let stoppedByQuota = false;
     let fatalErrorMsg: string | undefined;
 
     for (let i = 0; i < queue.length; i++) {
@@ -549,6 +555,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         failed,
         currentWord: wordToQuery,
         finished: false,
+        stoppedByQuota: false,
         errorMessage: undefined
       });
 
@@ -619,11 +626,29 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         await onUpdate(card.id, updates);
         succeeded++;
       } catch (err: any) {
+        const isQuota = err?.status === 429 || err?.code === 'QUOTA_EXHAUSTED';
+        const isAuth = err?.status === 403 || err?.status === 401 || err?.code === 'API_KEY_ERROR';
+
+        if (isQuota) {
+          stoppedByQuota = true;
+          fatalErrorMsg = err?.message || 'Đã hết hạn mức của gemini-4-hydrogen. Hệ thống đã dừng — các từ đã làm xong đã được lưu để hôm sau chạy tiếp.';
+          setBatchProgress({
+            total: queue.length,
+            current: i,
+            succeeded,
+            failed,
+            currentWord: wordToQuery,
+            finished: false,
+            stoppedByQuota: true,
+            errorMessage: fatalErrorMsg
+          });
+          break;
+        }
+
         failed++;
         consecutiveErrors++;
-        const isQuotaOrAuth = err?.status === 429 || err?.status === 403 || err?.status === 401 || err?.code === 'QUOTA_EXHAUSTED' || err?.code === 'API_KEY_ERROR';
-        if (isQuotaOrAuth || consecutiveErrors >= 3) {
-          fatalErrorMsg = err?.message || 'Đã tạm dừng do AI quá tải hoặc hết hạn mức.';
+        if (isAuth || consecutiveErrors >= 3) {
+          fatalErrorMsg = err?.message || 'Đã tạm dừng do AI gặp lỗi kết nối.';
           setBatchProgress({
             total: queue.length,
             current: i + 1,
@@ -631,6 +656,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
             failed,
             currentWord: wordToQuery,
             finished: false,
+            stoppedByQuota: false,
             errorMessage: fatalErrorMsg
           });
           break;
@@ -644,11 +670,12 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
         failed,
         currentWord: wordToQuery,
         finished: false,
+        stoppedByQuota: false,
         errorMessage: undefined
       });
 
       if (i < queue.length - 1 && !stopBatchRef.current) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 600));
       }
     }
 
@@ -661,10 +688,17 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
       succeeded,
       failed,
       finished: true,
+      stoppedByQuota,
       errorMessage: fatalErrorMsg
     }));
 
-    if (fatalErrorMsg) {
+    if (stoppedByQuota) {
+      notify.info(
+        succeeded > 0
+          ? `Đã lưu ${succeeded} từ bằng gemini-4-hydrogen và tạm dừng do hết hạn mức. Hôm sau bạn bấm chạy tiếp nhé!`
+          : 'Đã hết hạn mức gemini-4-hydrogen. Vui lòng đợi hoặc hôm sau chạy tiếp nhé!'
+      );
+    } else if (fatalErrorMsg) {
       notify.error(fatalErrorMsg);
     } else if (stopped) {
       notify.info(`Đã dừng. Đã điền thành công ${succeeded} từ.`);
@@ -2611,7 +2645,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                 <div className="min-w-0">
                   <h3 className="text-base font-bold text-theme-primary truncate">AI tự động điền hàng loạt</h3>
                   <p className="text-xs text-theme-primary/60 truncate">
-                    Tổng cộng {deck.length} từ • Đã AI điền {deck.length - neverAiFilledCards.length} từ
+                    gemini-4-hydrogen • Đã xong {deck.length - neverAiFilledCards.length} / {deck.length} từ
                   </p>
                 </div>
               </div>
@@ -2689,8 +2723,32 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                     </label>
                   </div>
 
+                  {/* Daily batch limit selector */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-theme-primary/80">Số từ mỗi lần chạy</span>
+                      <span className="text-theme-primary/55">Mỗi ngày làm 1 ít cũng được</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {([10, 20, 50, 'all'] as const).map((limitOption) => (
+                        <button
+                          key={String(limitOption)}
+                          type="button"
+                          onClick={() => setBatchLimit(limitOption)}
+                          className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                            batchLimit === limitOption
+                              ? 'bg-theme-accent text-theme-inverted border-theme-accent shadow-xs'
+                              : 'bg-theme-base-alt/60 border-theme-subtle text-theme-primary/75 hover:border-theme-accent/40'
+                          }`}
+                        >
+                          {limitOption === 'all' ? 'Tới hạn mức' : `${limitOption} từ`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="p-3 rounded-xl bg-theme-base-alt/70 border border-theme-subtle text-xs text-theme-primary/70 leading-relaxed">
-                    Hệ thống luôn giữ nguyên file MP3, tiến trình SRS và các trường bạn đã nhập trước đó. Mỗi từ xong sẽ được lưu ngay lên Cloud nên bạn có thể bấm dừng bất kỳ lúc nào.
+                    Dùng model <strong>gemini-4-hydrogen</strong>. Nếu hết hạn mức trong ngày, hệ thống tự dừng ngay và giữ nguyên file MP3, tiến trình SRS cùng các từ đã điền để hôm sau bạn chạy tiếp.
                   </div>
                 </>
               ) : (
@@ -2704,6 +2762,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                             {isStoppingBatch ? 'Đang dừng sau từ hiện tại...' : `Đang xử lý: `}
                             {!isStoppingBatch && <strong className="text-theme-accent font-serif text-sm">{batchProgress.currentWord}</strong>}
                           </span>
+                        </>
+                      ) : batchProgress.stoppedByQuota ? (
+                        <>
+                          <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span className="text-amber-700 dark:text-amber-300">Đã tạm dừng do hết hạn mức</span>
                         </>
                       ) : (
                         <>
@@ -2719,7 +2782,7 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
 
                   <div className="w-full h-2.5 bg-theme-base-alt border border-theme-subtle rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-theme-accent transition-all duration-300"
+                      className={`h-full transition-all duration-300 ${batchProgress.stoppedByQuota ? 'bg-amber-500' : 'bg-theme-accent'}`}
                       style={{
                         width: `${batchProgress.total > 0 ? Math.min(100, Math.round((batchProgress.current / batchProgress.total) * 100)) : 0}%`
                       }}
@@ -2729,15 +2792,25 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
                       <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{batchProgress.succeeded}</div>
-                      <div className="text-[11px] text-theme-primary/70 font-medium">Thành công</div>
+                      <div className="text-[11px] text-theme-primary/70 font-medium">Đã lưu thành công</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25">
-                      <div className="text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums">{batchProgress.failed}</div>
-                      <div className="text-[11px] text-theme-primary/70 font-medium">Lỗi / Bỏ qua</div>
+                    <div className="p-3 rounded-xl bg-theme-base-alt border border-theme-subtle">
+                      <div className="text-lg font-bold text-theme-primary tabular-nums">
+                        {batchScope === 'missing' ? missingDataCards.length : neverAiFilledCards.length}
+                      </div>
+                      <div className="text-[11px] text-theme-primary/70 font-medium">
+                        Còn lại cho lần sau{batchProgress.failed > 0 ? ` (${batchProgress.failed} lỗi)` : ''}
+                      </div>
                     </div>
                   </div>
                   {batchProgress.errorMessage && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-600 dark:text-rose-300 leading-relaxed">
+                    <div
+                      className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                        batchProgress.stoppedByQuota
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300'
+                      }`}
+                    >
                       {batchProgress.errorMessage}
                     </div>
                   )}
@@ -2784,7 +2857,11 @@ export default function VocabList({ deck, onRemove, onUpdate, onImport, initialS
                   >
                     <Sparkles className="w-4 h-4 shrink-0" />
                     <span>
-                      Bắt đầu ({batchScope === 'missing' ? missingDataCards.length : neverAiFilledCards.length} từ)
+                      {(() => {
+                        const eligible = batchScope === 'missing' ? missingDataCards.length : neverAiFilledCards.length;
+                        const planned = batchLimit === 'all' ? eligible : Math.min(eligible, batchLimit);
+                        return `Bắt đầu (${planned} từ)`;
+                      })()}
                     </span>
                   </button>
                 </>

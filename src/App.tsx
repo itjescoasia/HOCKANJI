@@ -18,7 +18,7 @@ import AccountSettingsModal from './components/AccountSettingsModal';
 import N4QuizView from './components/N4QuizView';
 import ForgottenVocabSession from './components/ForgottenVocabSession';
 import N4VocabReview from './components/N4VocabReview';
-import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical, Layers, Menu } from 'lucide-react';
+import { BookMarked, Home, X, PlusCircle, LogOut, Lightbulb, Sun, Moon, MessageSquare, Coffee, CloudMoon, Settings, CheckSquare, Check, Sparkles, Palette, Brain, MoreVertical, Layers, Menu, ChevronDown, LayoutGrid } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -132,6 +132,10 @@ export default function App() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.remove(
@@ -166,14 +170,30 @@ export default function App() {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
         setIsMobileMenuOpen(false);
       }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target as Node)) {
+        setIsAccountDropdownOpen(false);
+      }
     };
-    if (isThemeMenuOpen || isMobileMenuOpen) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsThemeMenuOpen(false);
+        setIsMobileMenuOpen(false);
+        setIsMoreMenuOpen(false);
+        setIsAccountDropdownOpen(false);
+      }
+    };
+    if (isThemeMenuOpen || isMobileMenuOpen || isMoreMenuOpen || isAccountDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isThemeMenuOpen, isMobileMenuOpen]);
+  }, [isThemeMenuOpen, isMobileMenuOpen, isMoreMenuOpen, isAccountDropdownOpen]);
 
   useEffect(() => {
     const calculateTimeUntilMidnight = () => {
@@ -482,6 +502,9 @@ export default function App() {
   };
 
   const handleNavigate = (newView: string) => {
+    setIsMobileMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setIsAccountDropdownOpen(false);
     // The active time saving is handled by the unmount effect of the tracker above
     if (newView === 'add') {
       setIsAddModalOpen(true);
@@ -551,57 +574,177 @@ export default function App() {
   };
 
   const isAdmin = userProfile?.role === 'admin' || user?.email === 'it@jescoasia.vn' || user?.email === 'nguyenthetrung200126@gmail.com';
-  const navItems = [
-    { id: 'dashboard', label: 'Trang chủ', icon: Home },
-    { id: 'n4_vocab', label: 'Từ vựng N4', icon: Layers },
-    { id: 'sentence_srs', label: 'Dịch câu SRS', icon: Brain },
-    { id: 'quiz', label: 'Trắc nghiệm N4', icon: CheckSquare },
-    { id: 'list', label: 'Danh sách', icon: BookMarked },
-    { id: 'intensive_vocab', label: 'Chuyên đề', icon: Lightbulb },
-    { id: 'conversation', label: 'Hội thoại', icon: MessageSquare },
-    ...(isAdmin ? [{ id: 'add', label: 'Thêm thẻ', icon: PlusCircle }] : []),
+  const primaryNavItems = [
+    { id: 'dashboard', label: 'Trang chủ', shortLabel: 'Trang chủ', icon: Home },
+    { id: 'n4_vocab', label: 'Từ vựng N4', shortLabel: 'Từ vựng N4', icon: Layers },
+    { id: 'sentence_srs', label: 'Dịch câu SRS', shortLabel: 'Dịch câu', icon: Brain },
+    { id: 'list', label: 'Kho từ vựng', shortLabel: 'Kho từ', icon: BookMarked },
   ];
+  const secondaryNavItems = [
+    { id: 'quiz', label: 'Trắc nghiệm N4', shortLabel: 'Trắc nghiệm', icon: CheckSquare },
+    { id: 'intensive_vocab', label: 'Chuyên đề', shortLabel: 'Chuyên đề', icon: Lightbulb },
+    { id: 'conversation', label: 'Hội thoại', shortLabel: 'Hội thoại', icon: MessageSquare },
+  ];
+  const navItems = [
+    ...primaryNavItems,
+    ...secondaryNavItems,
+    ...(isAdmin ? [{ id: 'add', label: 'Thêm thẻ mới', shortLabel: 'Thêm thẻ', icon: PlusCircle }] : []),
+  ];
+  const isFullScreenStudy = view === 'review' || view === 'short_study' || view === 'difficult_review' || isSentenceReviewOpen || isTopicVocabReviewOpen;
+  const activePageTitle = navItems.find((n) => n.id === view)?.label || 'KANJI FLOW';
 
   return (
     <div className="min-h-screen-ios bg-theme-base-alt text-theme-primary font-sans flex flex-col overflow-x-clip">
       {/* Header / Nav */}
-      <header id="app-header" className="bg-theme-panel border-b border-theme-subtle sticky top-0 z-30 pt-safe pl-safe pr-safe">
-        <div id="app-header-container" className="max-w-5xl mx-auto px-2.5 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
-          <div id="app-header-logo" className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0" onClick={() => handleNavigate('dashboard')}>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#8b0000] flex items-center justify-center rounded-sm border border-theme-accent shrink-0">
-              <span className="text-white font-serif text-xl sm:text-2xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
+      <header id="app-header" className="bg-theme-panel/95 backdrop-blur-md border-b border-theme-subtle sticky top-0 z-30 pt-safe pl-safe pr-safe">
+        <div id="app-header-container" className="max-w-7xl mx-auto px-3 sm:px-5 h-[52px] md:h-16 flex items-center justify-between gap-3 md:gap-6">
+          {/* Zone 1: Brand / Active View Title on Mobile */}
+          <button
+            id="app-header-logo"
+            type="button"
+            onClick={() => handleNavigate('dashboard')}
+            className="flex items-center gap-2.5 cursor-pointer shrink-0 min-w-0 text-left"
+          >
+            <div className="w-8 h-8 md:w-9 md:h-9 bg-[#8b0000] flex items-center justify-center rounded-md border border-theme-accent/70 shrink-0 shadow-xs">
+              <span className="text-white font-serif text-lg md:text-xl leading-none" style={{ fontFamily: 'serif' }}>漢</span>
             </div>
             <div className="flex flex-col min-w-0">
-              <h1 className="text-base sm:text-xl font-serif tracking-widest text-theme-accent leading-none truncate" style={{ fontFamily: 'serif' }}>KANJI FLOW</h1>
-              <span className="md:hidden text-[10px] font-semibold text-theme-muted truncate mt-0.5">
-                {navItems.find((n) => n.id === view)?.label || 'Trang chủ'}
+              <span className="hidden md:block text-lg font-serif tracking-widest text-theme-accent leading-none whitespace-nowrap" style={{ fontFamily: 'serif' }}>
+                KANJI FLOW
+              </span>
+              <span className="md:hidden text-sm font-bold text-theme-primary leading-tight truncate">
+                {view === 'dashboard' ? 'KANJI FLOW' : activePageTitle}
               </span>
             </div>
-          </div>
-          
-          <nav id="app-navbar" className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            {/* Menu Chế độ màu nền & bảo vệ mắt */}
+          </button>
+
+          {/* Zone 2: Clean Single-Row Desktop/Tablet Navigation */}
+          <nav id="app-navbar" className="hidden md:flex items-center justify-center gap-1 min-w-0">
+            {primaryNavItems.map((item) => {
+              const active = view === item.id;
+              return (
+                <button
+                  key={item.id}
+                  id={`nav-item-${item.id}`}
+                  type="button"
+                  onClick={() => handleNavigate(item.id)}
+                  className={`relative px-2.5 lg:px-3 min-h-[40px] rounded-lg text-[13px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                    active
+                      ? 'bg-theme-accent/12 text-theme-accent'
+                      : 'text-theme-primary/75 hover:text-theme-primary hover:bg-theme-hover'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span>{item.shortLabel}</span>
+                  {active && <span className="absolute bottom-1 left-2.5 right-2.5 h-0.5 rounded-full bg-theme-accent" />}
+                </button>
+              );
+            })}
+
+            {secondaryNavItems.map((item) => {
+              const active = view === item.id;
+              return (
+                <button
+                  key={item.id}
+                  id={`nav-item-${item.id}`}
+                  type="button"
+                  onClick={() => handleNavigate(item.id)}
+                  className={`hidden xl:inline-flex relative px-3 min-h-[40px] rounded-lg text-[13px] font-semibold transition-colors cursor-pointer items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                    active
+                      ? 'bg-theme-accent/12 text-theme-accent'
+                      : 'text-theme-primary/75 hover:text-theme-primary hover:bg-theme-hover'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span>{item.shortLabel}</span>
+                  {active && <span className="absolute bottom-1 left-3 right-3 h-0.5 rounded-full bg-theme-accent" />}
+                </button>
+              );
+            })}
+
+            {/* Secondary modes grouped cleanly on md..lg so nothing clips horizontally */}
+            <div className="relative xl:hidden shrink-0" ref={moreMenuRef}>
+              <button
+                id="nav-item-more"
+                type="button"
+                onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+                aria-expanded={isMoreMenuOpen}
+                className={`relative px-2.5 lg:px-3 min-h-[40px] rounded-lg text-[13px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1 whitespace-nowrap shrink-0 ${
+                  secondaryNavItems.some((s) => s.id === view) || isMoreMenuOpen
+                    ? 'bg-theme-accent/12 text-theme-accent'
+                    : 'text-theme-primary/75 hover:text-theme-primary hover:bg-theme-hover'
+                }`}
+              >
+                <span>{secondaryNavItems.find((s) => s.id === view)?.shortLabel || 'Luyện thêm'}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${isMoreMenuOpen ? 'rotate-180' : ''}`} />
+                {secondaryNavItems.some((s) => s.id === view) && (
+                  <span className="absolute bottom-1 left-2.5 right-2.5 h-0.5 rounded-full bg-theme-accent" />
+                )}
+              </button>
+
+              {isMoreMenuOpen && (
+                <div className="absolute left-0 top-full mt-2 w-52 bg-theme-panel border border-theme-subtle rounded-xl shadow-xl p-1.5 z-50 space-y-0.5">
+                  {secondaryNavItems.map((item) => {
+                    const active = view === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleNavigate(item.id)}
+                        className={`w-full flex items-center justify-between px-3 min-h-[42px] rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-theme-accent text-theme-inverted font-semibold'
+                            : 'text-theme-primary hover:bg-theme-hover'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <item.icon className="w-4 h-4 shrink-0" />
+                          <span>{item.label}</span>
+                        </span>
+                        {active && <Check className="w-4 h-4 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </nav>
+
+          {/* Zone 3: Right Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {isAdmin && (
+              <button
+                id="nav-item-add"
+                type="button"
+                onClick={() => handleNavigate('add')}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 min-h-[38px] rounded-lg bg-theme-accent text-theme-inverted hover:opacity-90 text-xs font-bold transition-opacity cursor-pointer whitespace-nowrap shrink-0 shadow-xs"
+                title="Thêm thẻ từ vựng mới"
+              >
+                <PlusCircle className="w-4 h-4 shrink-0" />
+                <span className="hidden lg:inline">Thêm thẻ</span>
+                <span className="lg:hidden">Thêm</span>
+              </button>
+            )}
+
+            {/* Theme Selector */}
             <div className="relative shrink-0" ref={themeMenuRef}>
               <button
                 id="btn-theme-toggle"
                 type="button"
                 onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
-                className={`px-2 sm:px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 border ${
+                className={`min-h-[40px] min-w-[40px] px-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 border ${
                   isThemeMenuOpen
                     ? 'bg-theme-hover text-theme-accent border-theme-accent shadow-xs'
-                    : 'bg-theme-panel text-theme-primary/70 hover:text-theme-accent border-theme-subtle hover:border-theme-accent/60'
+                    : 'bg-theme-panel text-theme-primary/80 hover:text-theme-accent border-theme-subtle hover:bg-theme-hover'
                 }`}
-                title="Chọn chế độ màu nền thân thiện với mắt"
+                title="Chế độ màu nền & Bảo vệ mắt"
                 aria-expanded={isThemeMenuOpen}
               >
                 <Palette className="w-4 h-4 text-theme-accent shrink-0" />
-                <span 
-                  className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border border-black/20 dark:border-white/20 shrink-0 shadow-xs" 
-                  style={{ backgroundColor: THEME_OPTIONS.find(t => t.id === theme)?.accentHex || '#1b693f' }} 
+                <span
+                  className="w-3 h-3 rounded-full border border-black/20 dark:border-white/20 shrink-0 shadow-xs"
+                  style={{ backgroundColor: THEME_OPTIONS.find(t => t.id === theme)?.accentHex || '#1b693f' }}
                 />
-                <span className="hidden lg:inline text-[11px] font-bold tracking-wider uppercase whitespace-nowrap">
-                  {THEME_OPTIONS.find(t => t.id === theme)?.name.split(' (')[0] || 'Màu nền'}
-                </span>
               </button>
 
               {/* Theme Dropdown Popover / Modal */}
@@ -612,7 +755,7 @@ export default function App() {
                     className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity"
                     onClick={() => setIsThemeMenuOpen(false)}
                   />
-                  <div 
+                  <div
                     id="theme-selection-menu"
                     className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-xl bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl z-50 p-4 sm:p-6 flex flex-col max-h-[85dvh] pb-safe overflow-hidden animate-in fade-in zoom-in-95 duration-150"
                   >
@@ -661,7 +804,7 @@ export default function App() {
                             <div className="flex items-center justify-between w-full gap-2">
                               {/* Swatch & Preview */}
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <div 
+                                <div
                                   className="w-8 h-8 rounded-lg border border-black/15 dark:border-white/20 shrink-0 flex items-center justify-center font-serif text-sm font-bold shadow-xs"
                                   style={{ backgroundColor: opt.bgHex, color: opt.textHex }}
                                 >
@@ -691,7 +834,7 @@ export default function App() {
                               {opt.badge && (
                                 <div className="mb-1">
                                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm tracking-wider inline-block ${
-                                    opt.badge.includes('Khuyên dùng') 
+                                    opt.badge.includes('Khuyên dùng')
                                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                       : 'bg-theme-accent/15 text-theme-accent border border-theme-accent/30'
                                   }`}>
@@ -727,138 +870,78 @@ export default function App() {
               )}
             </div>
 
-            {/* Logo Bánh răng: Cài đặt tài khoản & Phân quyền Admin/User */}
-            <button
-              id="btn-account-settings"
-              type="button"
-              onClick={() => setIsAccountModalOpen(true)}
-              className="p-2 text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover rounded-lg transition-all relative flex items-center justify-center group cursor-pointer shrink-0"
-              title={`Cài đặt tài khoản & Phân quyền (${isAdmin ? 'Admin' : 'User'})`}
-            >
-              <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
-              {isAdmin ? (
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-theme-panel" title="Quản trị viên (Admin)" />
-              ) : (
-                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-theme-muted rounded-full" />
-              )}
-            </button>
-
-            {/* Desktop / Tablet Nav Items */}
-            <div className="hidden md:flex items-center gap-1 lg:gap-1.5 overflow-x-auto no-scrollbar">
-              {navItems.map(item => (
-                <button
-                  key={item.id}
-                  id={`nav-item-${item.id}`}
-                  type="button"
-                  onClick={() => handleNavigate(item.id)}
-                  className={`flex items-center gap-1.5 px-2.5 lg:px-3 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer shrink-0 ${
-                    view === item.id 
-                      ? 'bg-theme-hover text-theme-accent border border-theme-subtle font-semibold' 
-                      : 'text-theme-primary/70 hover:text-theme-accent hover:bg-theme-hover'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4 shrink-0" />
-                  <span className="tracking-wider uppercase text-[10px] lg:text-[11px] whitespace-nowrap">{item.label}</span>
-                </button>
-              ))}
-
+            {/* Unified Account Menu */}
+            <div className="relative shrink-0" ref={accountDropdownRef}>
               <button
-                id="btn-logout"
+                id="btn-account-settings"
                 type="button"
-                onClick={() => signOut(auth)}
-                className="flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium transition-all rounded-lg text-theme-primary/70 hover:text-red-700 dark:hover:text-red-400 hover:bg-theme-hover cursor-pointer shrink-0"
-                title={`Đăng xuất (${user?.email})`}
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Mobile Home Shortcut + Hamburger Menu */}
-            <div className="flex md:hidden items-center gap-1 shrink-0" ref={mobileMenuRef}>
-              {view !== 'dashboard' && (
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('dashboard')}
-                  className="p-2 rounded-lg text-theme-primary/75 hover:text-theme-accent hover:bg-theme-hover border border-theme-subtle cursor-pointer"
-                  title="Trang chủ"
-                >
-                  <Home className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                id="btn-mobile-menu-toggle"
-                type="button"
-                onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-                aria-expanded={isMobileMenuOpen}
-                aria-label="Mở menu điều hướng"
-                className={`p-2 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  isMobileMenuOpen
-                    ? 'bg-theme-accent text-theme-inverted border-theme-accent'
-                    : 'bg-theme-panel text-theme-primary border-theme-subtle hover:bg-theme-hover'
+                onClick={() => setIsAccountDropdownOpen((prev) => !prev)}
+                aria-expanded={isAccountDropdownOpen}
+                aria-label="Menu tài khoản"
+                className={`min-h-[40px] min-w-[40px] px-2 rounded-lg border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isAccountDropdownOpen
+                    ? 'bg-theme-hover text-theme-accent border-theme-accent'
+                    : 'bg-theme-panel text-theme-primary/80 hover:text-theme-primary border-theme-subtle hover:bg-theme-hover'
                 }`}
+                title={`Tài khoản (${user?.email || ''})`}
               >
-                {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-                <span className="text-[11px] font-bold uppercase tracking-wider">Menu</span>
+                <span className="w-6 h-6 rounded-md bg-theme-accent/15 text-theme-accent font-bold text-xs flex items-center justify-center shrink-0 uppercase">
+                  {user?.email?.[0] || 'U'}
+                </span>
+                <ChevronDown className={`hidden sm:block w-3.5 h-3.5 text-theme-primary/60 transition-transform duration-150 ${isAccountDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {isMobileMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  />
-                  <div className="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.5rem)] right-3 left-3 max-w-sm ml-auto bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl z-50 p-3 space-y-1 max-h-[80dvh] overflow-y-auto custom-scrollbar">
-                    <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-theme-muted border-b border-theme-subtle mb-1 flex items-center justify-between">
-                      <span>Điều hướng</span>
-                      <span className="truncate max-w-[160px] font-normal lowercase">{user?.email}</span>
-                    </div>
-                    {navItems.map((item) => {
-                      const active = view === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            handleNavigate(item.id);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
-                            active
-                              ? 'bg-theme-accent text-theme-inverted shadow-xs'
-                              : 'text-theme-primary hover:bg-theme-hover'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <item.icon className="w-4 h-4 shrink-0" />
-                            <span>{item.label}</span>
-                          </div>
-                          {active && <Check className="w-4 h-4 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                    <div className="pt-1.5 mt-1.5 border-t border-theme-subtle">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          signOut(auth);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-700 dark:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
-                      >
-                        <LogOut className="w-4 h-4 shrink-0" />
-                        <span>Đăng xuất</span>
-                      </button>
-                    </div>
+              {isAccountDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-theme-panel border border-theme-subtle rounded-xl shadow-2xl p-2 z-50 space-y-1">
+                  <div className="px-3 py-2 border-b border-theme-subtle">
+                    <div className="text-xs font-bold text-theme-primary truncate">{user?.email || 'Người dùng'}</div>
+                    <div className="text-[11px] text-theme-muted mt-0.5">{isAdmin ? 'Quản trị viên' : 'Học viên'}</div>
                   </div>
-                </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountDropdownOpen(false);
+                      setIsAccountModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 min-h-[42px] rounded-lg text-sm font-medium text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-theme-primary/70 shrink-0" />
+                    <span>Cài đặt tài khoản</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAccountDropdownOpen(false);
+                      setIsThemeMenuOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 min-h-[42px] rounded-lg text-sm font-medium text-theme-primary hover:bg-theme-hover transition-colors cursor-pointer"
+                  >
+                    <Palette className="w-4 h-4 text-theme-accent shrink-0" />
+                    <span>Màu nền & Bảo vệ mắt</span>
+                  </button>
+                  <div className="pt-1 border-t border-theme-subtle">
+                    <button
+                      id="btn-logout"
+                      type="button"
+                      onClick={() => {
+                        setIsAccountDropdownOpen(false);
+                        signOut(auth);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 min-h-[42px] rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      <span>Đăng xuất</span>
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
-          </nav>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col pl-safe pr-safe pb-safe">
+      <main className={`flex-1 flex flex-col pl-safe pr-safe ${isFullScreenStudy ? 'pb-safe' : 'pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-safe'}`}>
         {view === 'dashboard' && (
           <Dashboard 
             deck={deck} 
@@ -1080,6 +1163,151 @@ export default function App() {
             />
           </div>
         )}
+
+      {/* Mobile Thumb-Zone Bottom Navigation Bar & Slide-Up Menu Sheet */}
+      {!isFullScreenStudy && (
+        <>
+          <nav
+            id="mobile-bottom-navbar"
+            className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-theme-panel/95 backdrop-blur-md border-t border-theme-subtle pb-safe pl-safe pr-safe"
+            aria-label="Điều hướng chính trên điện thoại"
+          >
+            <div className="grid grid-cols-5 h-14 items-center">
+              {[
+                { id: 'dashboard', label: 'Trang chủ', icon: Home },
+                { id: 'n4_vocab', label: 'Từ vựng', icon: Layers },
+                { id: 'sentence_srs', label: 'Dịch SRS', icon: Brain },
+                { id: 'list', label: 'Kho từ', icon: BookMarked },
+              ].map((tab) => {
+                const active = view === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleNavigate(tab.id)}
+                    className={`relative h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 px-1 transition-colors cursor-pointer ${
+                      active ? 'text-theme-accent' : 'text-theme-primary/65 hover:text-theme-primary'
+                    }`}
+                  >
+                    {active && <span className="absolute top-0 w-7 h-0.5 rounded-b-full bg-theme-accent" />}
+                    <tab.icon className="w-5 h-5 shrink-0" />
+                    <span className="text-[10px] font-semibold tracking-tight leading-none truncate max-w-full">
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <button
+                id="btn-mobile-menu-toggle"
+                type="button"
+                onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+                aria-expanded={isMobileMenuOpen}
+                aria-label="Mở menu điều hướng"
+                className={`relative h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 px-1 transition-colors cursor-pointer ${
+                  isMobileMenuOpen || secondaryNavItems.some((s) => s.id === view)
+                    ? 'text-theme-accent'
+                    : 'text-theme-primary/65 hover:text-theme-primary'
+                }`}
+              >
+                {(isMobileMenuOpen || secondaryNavItems.some((s) => s.id === view)) && (
+                  <span className="absolute top-0 w-7 h-0.5 rounded-b-full bg-theme-accent" />
+                )}
+                {isMobileMenuOpen ? <X className="w-5 h-5 shrink-0" /> : <LayoutGrid className="w-5 h-5 shrink-0" />}
+                <span className="text-[10px] font-semibold tracking-tight leading-none truncate max-w-full">
+                  Menu
+                </span>
+              </button>
+            </div>
+          </nav>
+
+          {isMobileMenuOpen && (
+            <div ref={mobileMenuRef}>
+              <div
+                className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-40"
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+              <div className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-theme-panel border-t border-theme-subtle rounded-t-3xl shadow-2xl pb-safe max-h-[82dvh] flex flex-col overflow-hidden">
+                <div className="w-10 h-1.5 bg-theme-subtle rounded-full mx-auto my-2.5 shrink-0" />
+                <div className="px-5 pb-3 border-b border-theme-subtle flex items-center justify-between gap-3 shrink-0">
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-theme-primary">Tất cả chức năng</div>
+                    <div className="text-xs text-theme-muted truncate">{user?.email || 'Học viên'}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-theme-primary/60 hover:bg-theme-hover cursor-pointer"
+                    aria-label="Đóng menu"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-4 overflow-y-auto custom-scrollbar space-y-4">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {navItems.map((item) => {
+                      const active = view === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleNavigate(item.id)}
+                          className={`min-h-[54px] px-3.5 py-2.5 rounded-2xl border text-left flex items-center gap-3 transition-colors cursor-pointer ${
+                            active
+                              ? 'bg-theme-accent text-theme-inverted border-theme-accent shadow-xs'
+                              : 'bg-theme-base-alt/60 text-theme-primary border-theme-subtle hover:bg-theme-hover'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5 shrink-0" />
+                          <span className="text-sm font-semibold leading-tight truncate">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-3 border-t border-theme-subtle grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setIsThemeMenuOpen(true);
+                      }}
+                      className="min-h-[46px] px-3.5 py-2 rounded-xl border border-theme-subtle bg-theme-base-alt/50 text-theme-primary text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Palette className="w-4 h-4 text-theme-accent shrink-0" />
+                      <span>Màu nền</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setIsAccountModalOpen(true);
+                      }}
+                      className="min-h-[46px] px-3.5 py-2 rounded-xl border border-theme-subtle bg-theme-base-alt/50 text-theme-primary text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 shrink-0" />
+                      <span>Tài khoản</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      signOut(auth);
+                    }}
+                    className="w-full min-h-[46px] px-4 py-2.5 rounded-xl border border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Modal Cài đặt thông tin tài khoản & Phân quyền */}
       <AccountSettingsModal

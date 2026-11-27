@@ -49,21 +49,26 @@ async function startServer() {
     }
   }));
 
-  const modelCooldownMap = new Map<string, number>();
+  const modelCooldownMap = new Map<string, { until: number; quotaType: 'daily' | 'minute' }>();
 
   async function generateGeminiContentWithFallback(ai: GoogleGenAI, promptText: string): Promise<string> {
-    // Current supported free-tier Google GenAI models
     const candidateModels = [
       'gemini-4-hydrogen',
-      'gemini-3.1-flash-lite',
     ];
     let lastErr: any = null;
     const now = Date.now();
 
     for (const model of candidateModels) {
-      const cooldownUntil = modelCooldownMap.get(model) || 0;
-      if (now < cooldownUntil) {
-        continue;
+      const cooldown = modelCooldownMap.get(model);
+      if (cooldown && now < cooldown.until) {
+        const cooldownErr: any = new Error(
+          cooldown.quotaType === 'daily'
+            ? 'Đã hết hạn mức ngày của gemini-4-hydrogen (429). Hệ thống đã dừng — các từ đã làm xong đã được lưu để hôm sau chạy tiếp.'
+            : 'Đã chạm giới hạn tốc độ phút của gemini-4-hydrogen (429). Vui lòng đợi khoảng 1 phút rồi chạy tiếp.'
+        );
+        cooldownErr.status = 429;
+        cooldownErr.quotaType = cooldown.quotaType;
+        throw cooldownErr;
       }
 
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -85,19 +90,29 @@ async function startServer() {
           const is503 = err?.status === 503 || errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE') || errMsg.includes('overloaded');
 
           if (is404) {
-            modelCooldownMap.set(model, Infinity);
+            modelCooldownMap.set(model, { until: Infinity, quotaType: 'daily' });
             break;
           }
 
           if (isQuota) {
             const isDailyQuota = errMsg.includes('PerDay') || errMsg.includes('FreeTier');
-            modelCooldownMap.set(model, Date.now() + (isDailyQuota ? 15 * 60 * 1000 : 60 * 1000));
-            break;
+            const quotaType: 'daily' | 'minute' = isDailyQuota ? 'daily' : 'minute';
+            modelCooldownMap.set(model, {
+              until: Date.now() + (isDailyQuota ? 15 * 60 * 1000 : 60 * 1000),
+              quotaType
+            });
+            err.status = 429;
+            err.quotaType = quotaType;
+            throw err;
           }
 
           if (is503) {
-            modelCooldownMap.set(model, Date.now() + 30 * 1000);
-            break;
+            if (attempt === 0) {
+              await new Promise(r => setTimeout(r, 1200));
+              continue;
+            }
+            err.status = 503;
+            throw err;
           }
 
           if (attempt === 0) {
@@ -107,8 +122,9 @@ async function startServer() {
       }
     }
     if (!lastErr) {
-      const cooldownErr: any = new Error('Hạn mức gọi Gemini AI tạm thời đang được giới hạn (429). Vui lòng thử lại sau ít phút.');
+      const cooldownErr: any = new Error('Đã hết hạn mức của gemini-4-hydrogen (429). Hệ thống đã dừng — các từ đã làm xong đã được lưu để hôm sau chạy tiếp.');
       cooldownErr.status = 429;
+      cooldownErr.quotaType = 'daily';
       throw cooldownErr;
     }
     throw lastErr;
@@ -229,6 +245,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
       let text = '';
       let success = false;
       let lastError = null;
+      let geminiHitQuota = false;
       if (process.env.GEMINI_API_KEY && !success) {
         try {
           const ai = new GoogleGenAI({
@@ -244,10 +261,12 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
         } catch (e: any) {
           e.provider = 'Gemini';
           lastError = e;
+          const rawMsg = e?.message || String(e || '');
+          geminiHitQuota = e?.status === 429 || rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('Quota exceeded') || rawMsg.includes('rate limit');
         }
       }
 
-      if (process.env.OPENAI_API_KEY && !success) {
+      if (process.env.OPENAI_API_KEY && !success && !geminiHitQuota) {
         try {
           const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
           const chatCompletion = await openai.chat.completions.create({
@@ -263,7 +282,7 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
           if (!e.message.includes('429')) console.error('OpenAI failed:', e.message);
         }
       }
-      if (process.env.GROQ_API_KEY && !success) {
+      if (process.env.GROQ_API_KEY && !success && !geminiHitQuota) {
         try {
           const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
           const chatCompletion = await groq.chat.completions.create({
@@ -282,14 +301,19 @@ Vui lòng trả về thông tin dưới dạng JSON hợp lệ, tuân thủ đú
 
       if (!success) {
         const rawMsg = lastError?.message || String(lastError || 'Không thể kết nối AI');
-        const isQuota = lastError?.status === 429 || rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('Quota exceeded') || rawMsg.includes('rate limit');
+        const isQuota = geminiHitQuota || lastError?.status === 429 || rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('Quota exceeded') || rawMsg.includes('rate limit');
         const isAuth = lastError?.status === 403 || lastError?.status === 401 || rawMsg.includes('PERMISSION_DENIED') || rawMsg.includes('API_KEY_INVALID');
         const is503 = lastError?.status === 503 || rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('UNAVAILABLE');
 
         if (isQuota) {
+          const isMinute = lastError?.quotaType === 'minute';
           return res.status(429).json({
-            error: 'Đã hết hạn mức gọi AI (429). Vui lòng đợi hoặc kiểm tra API Key / gói trả phí trong Settings > Secrets.',
-            code: 'QUOTA_EXHAUSTED'
+            error: isMinute
+              ? 'Đã chạm giới hạn tốc độ của gemini-4-hydrogen (429). Hệ thống đã dừng — đợi khoảng 1 phút hoặc hôm sau chạy tiếp nhé.'
+              : 'Đã hết hạn mức của gemini-4-hydrogen (429). Hệ thống đã dừng — các từ đã làm xong đã được lưu để hôm sau chạy tiếp.',
+            code: 'QUOTA_EXHAUSTED',
+            model: 'gemini-4-hydrogen',
+            quotaType: lastError?.quotaType || 'daily'
           });
         }
         if (isAuth) {
