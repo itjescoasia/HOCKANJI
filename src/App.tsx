@@ -164,9 +164,6 @@ export default function App() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
-        setIsThemeMenuOpen(false);
-      }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
         setIsMobileMenuOpen(false);
       }
@@ -726,7 +723,7 @@ export default function App() {
               </button>
             )}
 
-            {/* Theme Selector */}
+            {/* Theme Selector Trigger */}
             <div className="relative shrink-0" ref={themeMenuRef}>
               <button
                 id="btn-theme-toggle"
@@ -746,128 +743,6 @@ export default function App() {
                   style={{ backgroundColor: THEME_OPTIONS.find(t => t.id === theme)?.accentHex || '#1b693f' }}
                 />
               </button>
-
-              {/* Theme Dropdown Popover / Modal */}
-              {isThemeMenuOpen && (
-                <>
-                  <div
-                    id="theme-selection-backdrop"
-                    className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity"
-                    onClick={() => setIsThemeMenuOpen(false)}
-                  />
-                  <div
-                    id="theme-selection-menu"
-                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-xl bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl z-50 p-4 sm:p-6 flex flex-col max-h-[85dvh] pb-safe overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-                  >
-                    {/* Header */}
-                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-theme-subtle shrink-0">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-theme-accent/10 border border-theme-accent/30 text-theme-accent">
-                          <Palette className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm sm:text-base font-bold text-theme-primary flex items-center gap-2">
-                            <span>Chế độ màu nền & Bảo vệ mắt</span>
-                          </h3>
-                          <p className="text-xs text-theme-primary/60 mt-0.5">
-                            Bấm chọn để xem trước màu nền ngay trên trang
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        id="btn-close-theme-menu"
-                        type="button"
-                        onClick={() => setIsThemeMenuOpen(false)}
-                        className="p-1.5 text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover rounded-lg transition-colors cursor-pointer"
-                        title="Đóng bảng màu"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* Options Grid */}
-                    <div className="overflow-y-auto space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2.5 pr-1 custom-scrollbar my-1">
-                      {THEME_OPTIONS.map((opt) => {
-                        const isSelected = theme === opt.id;
-                        return (
-                          <button
-                            key={opt.id}
-                            id={`theme-opt-${opt.id}`}
-                            type="button"
-                            onClick={() => setTheme(opt.id)}
-                            className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 cursor-pointer relative ${
-                              isSelected
-                                ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent/30 shadow-sm'
-                                : 'border-theme-subtle/80 bg-theme-base/50 hover:border-theme-accent/60 hover:bg-theme-hover'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between w-full gap-2">
-                              {/* Swatch & Preview */}
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div
-                                  className="w-8 h-8 rounded-lg border border-black/15 dark:border-white/20 shrink-0 flex items-center justify-center font-serif text-sm font-bold shadow-xs"
-                                  style={{ backgroundColor: opt.bgHex, color: opt.textHex }}
-                                >
-                                  漢
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="text-xs font-bold text-theme-primary truncate">
-                                    {opt.name.split(' (')[0]}
-                                  </div>
-                                  <div className="text-[10px] text-theme-primary/50 truncate">
-                                    {opt.name.includes('(') ? `(${opt.name.split('(')[1]}` : ''}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {isSelected ? (
-                                <div className="w-5 h-5 rounded-full bg-theme-accent text-theme-inverted flex items-center justify-center shrink-0 shadow-xs">
-                                  <Check className="w-3 h-3 stroke-[3]" />
-                                </div>
-                              ) : (
-                                <div className="w-5 h-5 rounded-full border border-theme-subtle shrink-0" />
-                              )}
-                            </div>
-
-                            {/* Badge & Description */}
-                            <div className="w-full">
-                              {opt.badge && (
-                                <div className="mb-1">
-                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm tracking-wider inline-block ${
-                                    opt.badge.includes('Khuyên dùng')
-                                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                                      : 'bg-theme-accent/15 text-theme-accent border border-theme-accent/30'
-                                  }`}>
-                                    {opt.badge}
-                                  </span>
-                                </div>
-                              )}
-                              <p className="text-[11px] text-theme-primary/60 leading-tight">
-                                {opt.description}
-                              </p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="pt-3 mt-2 border-t border-theme-subtle flex items-center justify-between shrink-0">
-                      <span className="text-[11px] text-theme-primary/50 hidden sm:inline">
-                        Đã tự động lưu lựa chọn của bạn
-                      </span>
-                      <button
-                        id="btn-apply-theme"
-                        type="button"
-                        onClick={() => setIsThemeMenuOpen(false)}
-                        className="w-full sm:w-auto px-5 py-2 bg-theme-accent text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-theme-accent-hover transition-colors cursor-pointer shadow-xs ml-auto"
-                      >
-                        Áp dụng & Đóng
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
 
             {/* Unified Account Menu */}
@@ -1307,6 +1182,128 @@ export default function App() {
             </div>
           )}
         </>
+      )}
+
+      {/* Theme Selection Modal (rendered at root layer outside backdrop-blur header) */}
+      {isThemeMenuOpen && (
+        <div
+          id="theme-selection-backdrop"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe"
+          onClick={() => setIsThemeMenuOpen(false)}
+        >
+          <div
+            id="theme-selection-menu"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl bg-theme-panel border border-theme-subtle rounded-2xl shadow-2xl p-4 sm:p-6 flex flex-col max-h-[85dvh] overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-theme-subtle shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-theme-accent/10 border border-theme-accent/30 text-theme-accent">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-theme-primary flex items-center gap-2">
+                    <span>Chế độ màu nền & Bảo vệ mắt</span>
+                  </h3>
+                  <p className="text-xs text-theme-primary/60 mt-0.5">
+                    Bấm chọn để xem trước màu nền ngay trên trang
+                  </p>
+                </div>
+              </div>
+              <button
+                id="btn-close-theme-menu"
+                type="button"
+                onClick={() => setIsThemeMenuOpen(false)}
+                className="p-2 text-theme-primary/50 hover:text-theme-primary hover:bg-theme-hover rounded-lg transition-colors cursor-pointer"
+                title="Đóng bảng màu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Options Grid */}
+            <div className="overflow-y-auto space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2.5 pr-1 custom-scrollbar my-1">
+              {THEME_OPTIONS.map((opt) => {
+                const isSelected = theme === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    id={`theme-opt-${opt.id}`}
+                    type="button"
+                    onClick={() => setTheme(opt.id)}
+                    className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 cursor-pointer relative ${
+                      isSelected
+                        ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent/30 shadow-sm'
+                        : 'border-theme-subtle/80 bg-theme-base/50 hover:border-theme-accent/60 hover:bg-theme-hover'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full gap-2">
+                      {/* Swatch & Preview */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className="w-8 h-8 rounded-lg border border-black/15 dark:border-white/20 shrink-0 flex items-center justify-center font-serif text-sm font-bold shadow-xs"
+                          style={{ backgroundColor: opt.bgHex, color: opt.textHex }}
+                        >
+                          漢
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-theme-primary truncate">
+                            {opt.name.split(' (')[0]}
+                          </div>
+                          <div className="text-[10px] text-theme-primary/50 truncate">
+                            {opt.name.includes('(') ? `(${opt.name.split('(')[1]}` : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isSelected ? (
+                        <div className="w-5 h-5 rounded-full bg-theme-accent text-theme-inverted flex items-center justify-center shrink-0 shadow-xs">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border border-theme-subtle shrink-0" />
+                      )}
+                    </div>
+
+                    {/* Badge & Description */}
+                    <div className="w-full">
+                      {opt.badge && (
+                        <div className="mb-1">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm tracking-wider inline-block ${
+                            opt.badge.includes('Khuyên dùng')
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              : 'bg-theme-accent/15 text-theme-accent border border-theme-accent/30'
+                          }`}>
+                            {opt.badge}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-theme-primary/60 leading-tight">
+                        {opt.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-3 mt-2 border-t border-theme-subtle flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-theme-primary/50 hidden sm:inline">
+                Đã tự động lưu lựa chọn của bạn
+              </span>
+              <button
+                id="btn-apply-theme"
+                type="button"
+                onClick={() => setIsThemeMenuOpen(false)}
+                className="w-full sm:w-auto min-h-[42px] px-5 py-2 bg-theme-accent text-theme-inverted font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-theme-accent-hover transition-colors cursor-pointer shadow-xs ml-auto"
+              >
+                Áp dụng & Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal Cài đặt thông tin tài khoản & Phân quyền */}
